@@ -3,6 +3,12 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.2.4 (2026-09-30)
+
+- **Fixed:** on the sign-in page, when the browser (e.g. Google autofill) fills in the email and password, the
+  "Email" and "Password" labels now move up out of the way instead of sitting on top of the text, and the fields
+  stay dark instead of taking Chrome's light autofill colour.
+
 ## 0.2.3 (2026-09-30)
 
 - **Removed:** explanatory text on the dashboard: the "fixtures appear here…" line under "Season 1 kicks off

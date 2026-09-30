@@ -84,6 +84,16 @@ a { color: var(--brand); }
 .float input:hover { border-color: rgba(160,190,230,.3); }
 .float input:focus { outline: none; border-color: var(--blue-400); background: var(--surface); box-shadow: 0 0 0 4px rgba(66,165,245,.16); }
 .float input[aria-invalid="true"] { border-color: rgba(255,255,255,.6); }
+/* Browser autofill: the value isn't "shown" to CSS until the page is touched, so lift the label for autofilled
+   fields too, and paint over Chrome's light autofill background. Separate rules: an unknown pseudo-class would
+   void a combined selector. */
+.float input:-webkit-autofill + label { transform: translateY(-10px) scale(.76); color: var(--muted); }
+.float input:autofill + label { transform: translateY(-10px) scale(.76); color: var(--muted); }
+.float input:-webkit-autofill {
+  -webkit-text-fill-color: var(--text); caret-color: var(--text);
+  -webkit-box-shadow: inset 0 0 0 100px #131b2b; box-shadow: inset 0 0 0 100px #131b2b;
+}
+.float input:-webkit-autofill:focus { -webkit-box-shadow: inset 0 0 0 100px var(--surface), 0 0 0 4px rgba(66,165,245,.16); box-shadow: inset 0 0 0 100px var(--surface), 0 0 0 4px rgba(66,165,245,.16); }
 .pw input { padding-right: 72px; }
 .pw button {
   position: absolute; right: 8px; top: 50%; transform: translateY(-50%); padding: 7px 10px; border: 0; border-radius: 8px;
