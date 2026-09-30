@@ -1,42 +1,54 @@
 # Backend: Supabase (free)
 
-vLeague's sign-in and data live in **Supabase**, a hosted Postgres database with built-in accounts. The free plan
-covers this easily: 50,000 monthly active users (we need about 10), a 500 MB database, and no credit card.
+vLeague's accounts and data live in **Supabase**, a hosted Postgres database with built-in accounts. The free plan
+covers this easily: 50,000 monthly active users (we need about 10), a 500 MB database, 1 GB of file storage.
 The website stays on GitHub Pages; it talks to Supabase directly from the browser.
 
-One thing to know about the free plan: a project that gets **no activity for 7 days is paused**. It's restored
-from the Supabase dashboard with one click (nothing is lost). During the season the site keeps it active.
+A project that gets **no activity for 7 days is paused**. It's restored from the Supabase dashboard with one click
+(nothing is lost). During the season the site keeps it active.
 
-## 1. Make the project (about 5 minutes)
+## How it's set up (as of 0.3.0)
 
-1. Go to <https://supabase.com> and sign up (a GitHub login works).
-2. **New project**: name `vleague`, pick a strong database password (save it somewhere), region **Sydney**
-   (ap-southeast-2), plan **Free**. Wait a minute for it to start.
+Project `ywkhjpfzqtfssbxbvnbl` (Sydney). The URL and the **anon public** key are in `js/config.js`; both are safe to
+publish, because the database rules decide what they can do. The `service_role` key never goes in the website.
 
-## 2. Accounts: only the ones you make
+**Authentication settings**
 
-1. **Authentication → Sign In / Providers**: under **Email**, keep Email enabled, and turn **off**
-   "Allow new users to sign up". Now nobody can create their own account.
-   (Also turn off "Confirm email", or accounts you create will need to click a link first.)
-2. **Authentication → Users → Add user → Create new user** for each manager and the league office:
-   their email, a temporary password, and tick **Auto Confirm User**. Send each person their details.
-3. Optional: to show names on the site, open a user and set **User metadata** to `{"name": "Luke Grogan"}`.
+| Setting | Value |
+|---|---|
+| New sign-ups | **Off**. Accounts are made or invited by the league office. |
+| Site URL | `https://ldg224.github.io/vLeague/` |
+| Allowed redirects | `https://ldg224.github.io/vLeague/**`, `http://localhost:8767/**` (local testing) |
+| Minimum password | 8 characters |
+| Email | Gmail SMTP from **vLeague &lt;vleague.admin@gmail.com&gt;** (an app password, not the account password). Up to 30 emails an hour. |
 
-## 3. Connect the website
+Supabase's built-in email only reaches members of the Supabase organisation, 2 an hour, so the Gmail sender is what
+makes invites and password resets work.
 
-1. **Project Settings → API**: copy the **Project URL** and the **anon public** key.
-2. Put them in `js/config.js`:
-   ```js
-   export const SUPABASE_URL = 'https://xxxxxxxx.supabase.co';
-   export const SUPABASE_ANON_KEY = 'eyJhbGciOi…';
-   ```
-   Both are safe to publish. The anon key can only do what the database rules allow, and sign-ups are off.
-   **Never** put the `service_role` key in the website.
-3. **Authentication → URL Configuration**: set **Site URL** to `https://ldg224.github.io/vLeague/`.
-4. Commit and push. Signing in on the site now works; a wrong password shows a clear message.
+**Database** (`supabase/migrations/`, run in order):
 
-## 4. Later: league data
+| Table | What | Who can read | Who can change |
+|---|---|---|---|
+| `clubs` | Each club's public identity: code, name, colours, crest, manager name, status | Everyone, guests too | League office |
+| `profiles` | One per account: role (`manager` or `office`) and club. Made automatically for every new account. | Yourself; the office reads all | League office only (nobody can promote themselves) |
+| `team_sheets` | Each club's current team sheet (formation, tactics, XI, set pieces) | That club's manager and the office | That club's manager and the office |
 
-League data (teams, fixtures, results, press) will go in Supabase tables with **Row Level Security** on,
-so each manager can only change their own team and only the league office can change the league. That comes
-with the next steps; nothing to do yet.
+Storage bucket **`crests`**: public to read; PNG or WebP up to 500 KB; a manager can upload only into their own club's
+folder (`tur/…`), the office anywhere. Crests are 512 px.
+
+The league office is **lukedanielgrogan@gmail.com** (role `office`), and it's the only one.
+
+**Checking the rules:** `python supabase/tests/rls_check.py` acts as a guest, a manager, an account with no club
+and the office, and checks what each can read and change (15 checks; nothing is left behind). Run it after any
+database change. It needs the Management API token in `C:\Users\offic\.vleague\supabase-token.txt`.
+
+## Adding a manager
+
+1. Invite them with the redirect set to the "Set your password" page, e.g. with the admin API:
+   `inviteUserByEmail(email, { redirectTo: 'https://ldg224.github.io/vLeague/set-password.html' })`.
+   **Always** set that redirect: without it the link signs them in on the home page and they never choose a password.
+2. They get an email from vLeague, choose a password, and land on their Home.
+3. Link the account to its club: `update public.profiles set club = 'TUR' where id = (select id from auth.users where email = '…')`.
+   (The Editor gets buttons for invite and linking in a later version.)
+
+Forgotten passwords: "Forgot password?" on the sign-in page emails a link to `set-password.html`.

@@ -28,6 +28,8 @@ While we're on 0.x, minor versions can change things freely.
    gh release create v0.2.1 --title "0.2.1" --notes "<that version's changelog section>"
    ```
 7. Check the live site once Pages has rebuilt (about a minute): the footer shows the new number.
+   Pages sometimes skips a push. If `gh api repos/ldg224/vLeague/pages/builds/latest` still shows the previous
+   commit after a couple of minutes, start the build yourself: `gh api -X POST repos/ldg224/vLeague/pages/builds`.
 
 One version per push to the live site. Several commits can go into one version; tag the last one.
 

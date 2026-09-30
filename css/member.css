@@ -1,0 +1,48 @@
+/* vLeague signed-in pages (home, editor). The page stays vLeague navy; a manager's club shows only as accents
+   (the band across the top and a soft glow of club colour), per the roadmap. --club is set by the page. */
+
+.member {
+  --club: var(--blue-300);
+  min-height: 100%; display: grid; grid-template-rows: auto auto 1fr auto;
+  background: radial-gradient(70vmax 40vmax at 50% 0%, color-mix(in srgb, var(--club) 14%, transparent), transparent 70%), var(--bg);
+}
+.club-band { height: 0; background: var(--club); }
+.club-band.on { height: 4px; }
+
+.member-top { max-width: 1180px; width: 100%; margin: 0 auto; padding: 12px 24px; display: flex; align-items: center; gap: 16px; }
+.member .brand { margin-right: auto; display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; font-family: var(--font-display); font-weight: 500; font-size: 1.3rem; letter-spacing: .02em; line-height: 1; }
+.member .brand img { width: 26px; height: 33px; }
+.member .brand b { font-weight: 700; }
+.member .brand em { font-style: normal; font-family: var(--font); font-weight: 600; font-size: .85rem; color: var(--muted); margin-left: 6px; padding-left: 10px; border-left: 1px solid var(--line); }
+.member .account { padding: 8px 16px; border-radius: 999px; border: 1px solid rgba(255,255,255,.28); background: transparent; color: var(--text); font: 700 .9rem var(--font); cursor: pointer; }
+.member .account:hover { background: rgba(255,255,255,.08); }
+
+.member-main { width: min(560px, 100%); margin: 0 auto; padding: 48px 16px; align-self: center; }
+.member-main.wide { width: min(880px, 100%); align-self: start; }
+.quiet { color: var(--muted); margin: 0; }
+.member-main a { color: var(--brand); }
+
+.club-card { display: grid; justify-items: center; gap: 10px; text-align: center; }
+.club-crest { width: 120px; height: 120px; object-fit: contain; filter: drop-shadow(0 14px 40px color-mix(in srgb, var(--club) 40%, transparent)); }
+.member-main .club-card h1 { color: var(--text); margin: 8px 0 0; font-family: var(--font-display); font-weight: 700; font-size: clamp(2.2rem, 7vw, 3.4rem); line-height: 1; text-transform: uppercase; }
+.soon { margin: 18px 0 0; color: var(--faint); font-size: .92rem; }
+
+.member-main h1 { font-family: var(--font-display); font-weight: 700; font-size: 1.8rem; text-transform: uppercase; letter-spacing: .02em; color: var(--brand); margin: 0 0 12px; }
+.club-rows { list-style: none; margin: 0; padding: 0; }
+.club-rows li { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto auto; align-items: center; gap: 14px; padding: 12px 8px; border-bottom: 1px solid var(--line); box-shadow: inset 3px 0 0 var(--club); padding-left: 14px; }
+.club-rows img, .club-rows .no-crest { width: 36px; height: 36px; object-fit: contain; }
+.club-rows .no-crest { display: grid; place-items: center; border-radius: 50%; background: var(--surface-raised); font: 700 .7rem var(--font-display); color: var(--muted); }
+.club-rows .who { display: grid; min-width: 0; }
+.club-rows .who b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.club-rows small { color: var(--faint); font-size: .8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.club-rows .state { font-size: .82rem; color: var(--muted); white-space: nowrap; }
+.club-rows .state.ok { color: var(--blue-100); }
+
+.member-foot { padding: 16px; text-align: center; font-size: .75rem; }
+.member-foot a { color: var(--faint); text-decoration: none; }
+
+@media (max-width: 640px) {
+  .member-top { padding: 10px 16px; }
+  .club-rows li { grid-template-columns: 32px minmax(0, 1fr) auto; }
+  .club-rows .status { display: none; }
+}

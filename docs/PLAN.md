@@ -1,129 +1,91 @@
-# vLeague app: plan
+# vLeague app: roadmap
 
-What's still to do on the vLeague app, roughly in order. Tick items off (or delete them) as they ship.
-Last updated 2026-09-30.
+Agreed on 30 September 2026 (Alpha and Bravo's research and plan, reviewed and approved by the user).
+One minor version per step, released with the rules in `docs/RELEASING.md`. Tick items off as they ship.
 
-**Where we are:** sign-in page (`index.html`) and a placeholder signed-in page (`hello.html`), backed by
-Supabase Auth with sign-ups off. League data still lives in the s3 site (`hcl-s3\data\season.json`,
-`matches/`, `data/teams/`).
+**The idea:** a manager doesn't "open the manager portal"; they sign in and walk into their club (their colours,
+next match, XI, inbox). Guests get one beautiful matchday page. One league, one site.
 
----
+## Decisions
 
-## 1. Guest access
+- **Club colours lean the design; they don't change the page.** The page stays vLeague navy with blue buttons and a
+  white LIVE. A club shows only as accents: the band across the top, the crest, a soft glow behind its Home match
+  card, its pitch, its charts, its table row. The accent is worked out once when colours are saved and lifted if
+  too dark to see (Lads United's navy); white or grey clubs use vLeague blue.
+- **Guests stay fully signed out.** The dashboard is the guest profile and signs out anyone who arrives signed in.
+  No guest accounts for now.
+- **No chat, ever, and nothing sent to the league's WhatsApp group** (it stays for personal messages). Reactions on
+  the site instead. The league doesn't use Discord.
+- **Registration:** "Set up your club" at a manager's first sign-in now (0.4); a public "Enter a club" page with a
+  registration window only after 1.0.
+- **Deadline day:** not now, but the Editor gets the option to set one up (off by default).
+- **No history import** for now.
+- **Match files (about 2 MB each) stay on GitHub Pages**; Supabase keeps only result summaries. Its free plan allows
+  5 GB of downloads a month.
+- Four places for managers: **Home, My club, Inbox, League**. The office also gets the **Editor**.
 
-Visitors without an account can still follow the league: **watch matches, see results and the table, and read
-league news**. They don't see anything that belongs to a club or the league office.
+## Steps
 
-### How it works
+### 0.1 – 0.2: done
+Sign-in page, "View as guest", the guest dashboard, the dashboard as the guest profile, version numbers.
 
-- [x] **"View as guest"** button (Bravo, 2026-09-30) under the Sign in button on `index.html`. No account, no Supabase session:
-      guests just browse the public pages. Remember the choice (`localStorage` `vleague-guest`) so a returning
-      guest skips the sign-in screen; "Sign in" stays in the top bar for them.
-- [x] **Guests and members are separate.** The dashboard is the guest profile: arriving there signed in (e.g.
-      with Back) signs you out (0.2.5). Members get their own pages. Pages that are members-only (manager hub,
-      press, editor) send guests back to sign in instead of showing a blank page.
-- [ ] **The rule is enforced by the database, not the page.** Hiding things in the HTML isn't security. Guests
-      use the anon key with no session (Postgres role `anon`); Row Level Security gives `anon` read access
-      only to public tables/views. Everything else needs `authenticated`.
-- [ ] Add a `mode` helper to `js/auth.js` (`'member' | 'guest'`) so pages don't repeat the check.
-- [x] Guest dashboard `dashboard.html` (Alpha, 2026-09-30): matchday board, matches by week, table, news, leaders. Top bar: just the crest and "Sign in" (no section links; it's one page). Member top bar adds My club, Press,
-      and (for the league office) Editor.
+### 0.3: Foundation (done in 0.3.0)
+- [x] Supabase tables `clubs`, `profiles`, `team_sheets` with row-level security; `crests` bucket; 8 clubs imported
+      with crests; the league office account.
+- [x] Auth settings: sign-ups off, site URL, redirects, Gmail sender, 8-character passwords.
+- [x] "Set your password" page (invites and resets), "Forgot password?", sign-in goes to Home or Editor by role.
+- [x] Placeholder Home and Editor; security checks (`supabase/tests/rls_check.py`).
+- Line-ups can't be revealed at T-10 in the database yet, because kick-off times only move in with fixtures (0.8).
+  Until then, team sheets are private to the club and the office.
 
-### What guests see vs. members
+### 0.4: Set up your club
+- [ ] Four-step wizard at first sign-in: name (≤25) / short name (≤12) / 3-letter code; primary and secondary
+      colour with live contrast check; crest upload with previews; manager name, stadium, motto, notes for the office.
+- [ ] The accent colour computed on save and previewed exactly.
+- [ ] Office approval queue (approve, or send back with a note); a crest reveal posted to news on approval.
+      Later changes to name, code or crest go back for approval; colours and motto change instantly.
+- [ ] Editor: invite a manager and link them to a club.
 
-Decided 2026-09-30: guests see **all league information** (ratings, stats, everything public). What they don't get
-is anything personalised: no "my club" views, no voting or forms. Everything for guests lives on **one central
-dashboard** (`dashboard.html`); news is a small section on it, not its own page.
+### 0.5: Home
+- [ ] Home, My club, Inbox and League, with the club band and accents.
+- [ ] Home: next match with countdown and "line-up locks in …", what needs doing, last result, table position,
+      league activity feed.
 
-| Area | Guest | Member (manager) | League office |
-|---|---|---|---|
-| Fixtures, kick-off times, results | ✅ | ✅ | ✅ |
-| Live match broadcast + full-time match viewer | ✅ | ✅ | ✅ |
-| League table, finals bracket, awards, top scorers | ✅ | ✅ | ✅ |
-| Player ratings, detailed match stats | ✅ | ✅ | ✅ |
-| Club pages: name, crest, colours, squad list, manager name | ✅ | ✅ | ✅ |
-| Line-ups | ✅ from 10 min before kick-off | own club always; others from 10 min before | ✅ |
-| News: posts sent to "guests only" or "everyone" | ✅ (small section on the dashboard) | ❌ guest-only / ✅ everyone | ✅ |
-| News: posts sent to all teams, or to one or more teams | ❌ | ✅ if in the audience | ✅ |
-| Poll results | ❌ never (guests can read a poll post, not vote or see results) | ✅ | ✅ |
-| Forms, registration, read receipts | ❌ | ✅ | ✅ |
-| Tactics, formation, set-piece takers | ❌ | own club only | ✅ |
-| Manager hub, press room, personalised views | ❌ | ✅ | ✅ |
-| Editor (fixtures, simulate, teams, history) | ❌ | ❌ | ✅ |
+### 0.6: My club
+- [ ] The XI on a pitch (tap to swap, formation, captain, set pieces, tactics), saved to `team_sheets`.
+- [ ] Lock at T-10 and the team-sheet reveal graphic on both clubs' sites and the dashboard.
+- [ ] The s3 editor's Simulate reads team sheets from Supabase; the s3 Manager Hub retires.
 
-### News audiences (new)
+### 0.7: Inbox and press
+- [ ] One inbox: news for this club, press conferences, deadlines; only things that need action or matter.
+- [ ] News audiences: one club, several, all clubs, guests only, everyone.
+- [ ] Press conference opening 24 hours before kick-off; answers quoted in the match preview; the press effect kept.
+- [ ] Reactions on results, news and press answers.
 
-Each post goes to exactly one of these (replaces the s3 site's `visibility` + `audience` pair):
+### 0.8: The Editor moves in
+- [ ] Fixtures, results, Simulate, news composer, approvals and history in the app, on Supabase.
+- [ ] Results hidden until kick-off and line-ups until T-10, both enforced by the database.
+- [ ] season.json retired as the source of truth; match files published to this site's Pages.
+- [ ] Optional league events such as deadline day, set up and scheduled from the Editor (off by default).
 
-| Send to | Stored as | Who sees it |
-|---|---|---|
-| One team or a group of teams | `audience: ["TUR", "LAU"]` | Those clubs' managers + league office |
-| All teams | `audience: "teams"` | Every manager + league office |
-| Guests only | `audience: "guests"` | Guests (dashboard) + league office |
-| Everyone | `audience: "all"` | Guests, managers, league office |
+### 0.9: Match centre
+- [ ] The 3D broadcast view, live and after full time.
+- [ ] Momentum graph and shot map from the engine; ratings on coloured chips; match report; Man of the Match.
+- [ ] Team and Player of the Week after each round.
 
-- [x] Dashboard reads old s3 posts as: `visibility: "public"` → everyone; `visibility: "managers"` → teams
-      (by their `audience`). Done in `js/dashboard-data.js`.
-- [ ] Editor: the "Send to" picker with those four options.
+### 0.10: Installable app and notifications
+- [ ] Add to home screen; opt-in push (asked only on a tap): line-ups out, kick-off, goals for your club, full time,
+      "your line-up locks in 1 hour and isn't set", news for your club. (iPhone: works once installed, iOS 16.4+.)
 
-### Line-ups: hidden until 10 minutes before kick-off
+### 0.11: Predictor
+- [ ] Managers predict every fixture, with a leaderboard; guests predict on their own device with a personal streak.
 
-- [x] Dashboard shows the line-ups of the featured match from kick-off −10 min, with a "Line-ups at 7:50 pm"
-      note before that.
-- [ ] **Enforce it in the database** (a view over `team_settings` that only returns another club's XI once
-      `kickoff - interval '10 minutes' <= now()`). Right now the s3 team files (`data/teams/*.json`) are public
-      files, so anyone who knows the URL can read an XI early. This is fixed only when line-ups move to Supabase.
+### 0.12: Club pages
+- [ ] A page per club (with its accents): squad, results, derbies, head-to-head.
 
-### Still open
+### 1.0: vLeague runs on its own
+- [ ] The s3 site becomes a read-only archive pointing here; final design, accessibility and phone-speed pass.
 
-- [ ] Any rate limit / abuse concern with guest reads? (Free plan limits are generous; probably fine.)
-
----
-
-## 2. League data into Supabase
-
-- [ ] Design tables: `seasons`, `teams`, `players`, `fixtures`, `results` (summary), `match_files`
-      (Supabase Storage bucket for the `.json.gz` files), `news`, `news_responses`, `team_settings`
-      (tactics/XI), `profiles` (user → role + club).
-- [ ] Roles: `profiles.role` = `manager` | `office`; `profiles.team` for managers.
-- [ ] RLS policies, written and tested per role (anon / manager / office). Keep them in `docs/SCHEMA.sql`.
-- [ ] **Results hidden until kick-off, enforced server-side**: a view (or policy) that only returns a result
-      once `kickoff <= now()`. Today this is only a front-end rule in `hcl-s3\js\data.js`.
-- [ ] One-off import script from `season.json`, `data/teams/*.json` and `matches/` (Python, run locally with
-      the service_role key from an env var, never committed).
-- [ ] Decide when the s3 site stops being the source of truth (read-only archive? redirect?).
-
-## 3. Public pages (guest + member)
-
-Port from the s3 site, reading from Supabase instead of `season.json`. Reuse the existing modules where possible.
-
-- [ ] Matches / home: week tabs, each match once, live and full-time states (`status`, `liveSimTime`).
-- [ ] Match page: live broadcast + viewer (`match.html` equivalent, loading the match file from Storage).
-- [ ] Table (`ladder()` from `js/league.js`, points adjustments, finals).
-- [ ] News feed using the shared renderer (`js/news.js` + `css/news.css`), filtered by visibility.
-- [ ] Awards.
-- [ ] Club pages.
-- [ ] "League updated" refresh popup → Supabase Realtime instead of polling `season.json`.
-
-## 4. Member pages
-
-- [ ] Replace `hello.html` with a real landing page ("My club": next match, deadlines, unread news).
-- [ ] Manager hub (formation, tactics, XI, captain, set pieces) writing to `team_settings`; retire the
-      Google Apps Script relay.
-- [ ] Press room.
-- [ ] News interactions: read receipts, polls, forms, registration.
-- [ ] Account: change password, "Forgot password" (Supabase reset email; needs the Site URL set).
-
-## 5. League office (editor)
-
-- [ ] Port edit mode (`admin.html` tabs: Needs attention, Fixtures, News, Teams, League, History, Settings) to
-      write to Supabase; drop the encrypted GitHub token + PIN flow.
-- [ ] Simulate in the browser (Pyodide engine from `hcl-s3\js\sim\`) and upload the result to Storage.
-- [ ] History / undo: replace git-commit history with an `audit` table.
-
-## 6. Housekeeping
-
-- [ ] Keep the free project from pausing out of season (7 days idle): a weekly GitHub Action ping, or accept it.
-- [ ] Brand check on every new page (`hcl-s3\docs\BRAND.md`): never show "Heineken", "HCL" or "Season 3".
-- [ ] Cache busting like the s3 site's `tools/stamp_version.py` once there are more JS modules.
-- [ ] Update `README.md` pages table and root `CLAUDE.md` as pages land.
+### After 1.0
+- Public "Enter a club" page with a registration window. Deadline day's free-agent claim window and live ticker.
+  Scheduled kit reveals.

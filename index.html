@@ -35,9 +35,24 @@
         <label for="password">Password</label>
         <button type="button" id="show" aria-controls="password" aria-pressed="false">Show</button>
       </div>
-      <label class="check"><input id="remember" type="checkbox" checked> Keep me signed in</label>
+      <div class="login-row">
+        <label class="check"><input id="remember" type="checkbox" checked> Keep me signed in</label>
+        <button type="button" class="quiet" id="forgot">Forgot password?</button>
+      </div>
       <button class="btn" id="go" type="submit"><span class="spin" aria-hidden="true"></span><span class="label">Sign in</span></button>
       <p class="msg info" id="setup" hidden></p>
+    </form>
+
+    <form id="reset" novalidate hidden>
+      <p class="login-lead">Enter your email and we’ll send you a link to choose a new password.</p>
+      <p class="msg error" id="reset-error" role="alert" hidden></p>
+      <p class="msg info" id="reset-sent" role="status" hidden>If that email has an account, we’ve sent a link. It can take a minute to arrive.</p>
+      <div class="float">
+        <input id="reset-email" name="email" type="email" autocomplete="username" inputmode="email" placeholder=" " required>
+        <label for="reset-email">Email</label>
+      </div>
+      <button class="btn" id="reset-go" type="submit"><span class="spin" aria-hidden="true"></span><span class="label">Send link</span></button>
+      <button type="button" class="quiet back" id="reset-back">Back to sign in</button>
     </form>
 
     <a class="btn ghost guest-btn" id="guest" href="dashboard.html">View as guest</a>

@@ -3,6 +3,24 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.3.0 (2026-09-30)
+
+Foundation: accounts, clubs and roles in the database.
+
+- **Added:** Supabase tables for clubs, profiles (manager or league office, and their club) and team sheets, each
+  with row-level security, so the database decides who can read and change what. A public `crests` storage bucket
+  with the six club crests. The 8 Season 1 clubs imported. Security checks for guest, manager and office
+  (`supabase/tests/rls_check.py`, 15 checks).
+- **Added:** "Set your password" page for invite and reset emails, and "Forgot password?" on the sign-in page.
+  Emails come from vLeague (vleague.admin@gmail.com).
+- **Added:** Home (for managers; shows their club for now) and Editor (for the league office; lists the clubs and
+  which have a manager account). Signing in takes you to the right one.
+- **Changed:** sign-ups are off in Supabase (they had been left on), the site address is set for email links, and
+  passwords need at least 8 characters.
+- **Removed:** the placeholder Hello page, its photo slideshow and the two photos only it used.
+- **Changed:** `docs/PLAN.md` is now the agreed roadmap to 1.0; `docs/BACKEND.md` describes the new setup;
+  `docs/RELEASING.md` explains how to restart a GitHub Pages build that doesn't start.
+
 ## 0.2.5 (2026-09-30)
 
 - **Changed:** the dashboard is the guest profile. Anyone who reaches it while signed in (for example with the

@@ -1,6 +1,6 @@
-// The sign-in page: send an already signed-in visitor straight in, a returning guest to the dashboard
+// The sign-in page: send an already signed-in visitor to their home (editor.html for the league office, home.html for managers), a returning guest to the dashboard
 // (unless they came via index.html?signin to sign in), otherwise handle the form.
-import { signIn, currentUser, ready, setGuest, isGuest } from './auth.js';
+import { signIn, currentUser, myProfile, landingPage, sendPasswordReset, ready, setGuest, isGuest } from './auth.js';
 import { VERSION } from './version.js';
 
 const $ = s => document.querySelector(s);
@@ -26,8 +26,10 @@ if (!ready) {
 $('#guest').addEventListener('click', () => setGuest(true));
 
 const wantsSignIn = new URLSearchParams(location.search).has('signin');
+const goHome = async () => location.replace(landingPage(await myProfile()));
+
 currentUser().then(user => {
-  if (user) location.replace('hello.html');
+  if (user) goHome();
   else if (isGuest() && !wantsSignIn) location.replace('dashboard.html');
 });
 
@@ -46,11 +48,49 @@ form.addEventListener('submit', async e => {
   btn.disabled = true; label.textContent = 'Signing in…';
   try {
     await signIn(email.value, password.value, $('#remember').checked);
-    location.replace('hello.html');
+    await goHome();
   } catch (x) {
     showError(x.message, password);
     password.select();
   } finally {
     btn.disabled = false; label.textContent = 'Sign in';
+  }
+});
+
+// Forgot password: swap the sign-in form for a one-field form. The reply is the same whether or not the
+// email has an account, so the page never reveals who is signed up.
+const reset = $('#reset'), resetEmail = $('#reset-email'), resetErr = $('#reset-error'), resetSent = $('#reset-sent');
+const resetBtn = $('#reset-go'), resetLabel = resetBtn.querySelector('.label');
+
+function showReset(on) {
+  form.hidden = on; reset.hidden = !on;
+  if (on) {
+    resetErr.hidden = resetSent.hidden = true;
+    resetEmail.value = email.value.trim();
+    resetEmail.focus();
+  } else {
+    $('#forgot').focus();
+  }
+}
+$('#forgot').addEventListener('click', () => showReset(true));
+$('#reset-back').addEventListener('click', () => showReset(false));
+
+reset.addEventListener('submit', async e => {
+  e.preventDefault();
+  resetErr.hidden = resetSent.hidden = true;
+  resetEmail.removeAttribute('aria-invalid');
+  if (!/^\S+@\S+\.\S+$/.test(resetEmail.value.trim())) {
+    resetErr.textContent = 'Enter your email address.'; resetErr.hidden = false;
+    resetEmail.setAttribute('aria-invalid', 'true'); resetEmail.focus();
+    return;
+  }
+  resetBtn.disabled = true; resetLabel.textContent = 'Sending…';
+  try {
+    await sendPasswordReset(resetEmail.value);
+    resetSent.hidden = false;
+  } catch (x) {
+    resetErr.textContent = x.message; resetErr.hidden = false;
+  } finally {
+    resetBtn.disabled = false; resetLabel.textContent = 'Send link';
   }
 });
