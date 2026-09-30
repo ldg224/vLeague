@@ -8,14 +8,16 @@ export const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ESC[c]);
 export const safeColour = c => (/^#[0-9a-f]{6}$/i.test(c || '') ? c : '#64b5f6');
 export const crestUrl = path => (path ? `${SUPABASE_URL}/storage/v1/object/public/crests/${path}` : '');
 
-// Load the signed-in account for a page that belongs to `page` ('home.html' or 'editor.html').
-// No session -> sign in. Signed in but this isn't your page -> your page. Otherwise { user, profile }.
+// Load the signed-in account for 'home.html' or 'editor.html'. No session -> sign in. The Editor is for the
+// league office only; Home is for anyone with a club (or anyone who isn't office). Otherwise { user, profile }.
 export async function enter(page) {
   const user = await currentUser();
   if (!user) { location.replace('index.html?signin'); return null; }
   const profile = await myProfile();
-  const mine = landingPage(profile);
-  if (mine !== page) { location.replace(mine); return null; }
+  const office = profile?.role === 'office';
+  const allowed = page === 'editor.html' ? office : landingPage(profile) === 'home.html';
+  if (!allowed) { location.replace(landingPage(profile)); return null; }
+  document.body.classList.toggle('is-office', office);
   return { user, profile };
 }
 

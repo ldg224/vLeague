@@ -3,7 +3,7 @@
 //   currentUser()                      -> the signed-in user, or null
 //   signOut()
 //   myProfile()                        -> { role, club, display_name } for the signed-in user, or null
-//   landingPage(profile)               -> where a signed-in user goes: editor.html (office) or home.html
+//   landingPage(profile)               -> where a signed-in user goes: home.html, or editor.html for an office account with no club
 //   sendPasswordReset(email)           -> emails a link to set-password.html (same result whether or not the account exists)
 //   setPassword(password)              -> sets a new password for the session from an invite or reset link
 //   setGuest(on), isGuest()            -> the "View as guest" choice, remembered in localStorage
@@ -90,7 +90,9 @@ export async function myProfile() {
 // The same client for table queries elsewhere (home, editor), so there's one session.
 export const db = () => sb();
 
-export const landingPage = profile => (profile?.role === 'office' ? 'editor.html' : 'home.html');
+// Anyone with a club lands on their club's Home (the league office reaches the Editor from there);
+// an office account without a club goes straight to the Editor.
+export const landingPage = profile => (profile?.role === 'office' && !profile.club ? 'editor.html' : 'home.html');
 
 // Supabase answers the same way for unknown emails, so this never tells anyone which accounts exist.
 export async function sendPasswordReset(email) {

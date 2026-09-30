@@ -3,6 +3,12 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.3.1 (2026-09-30)
+
+- **Changed:** anyone with a club now signs in to their club's Home, including the league office account, which
+  also manages FC Turtle. Office accounts get a quiet "Editor" link in Home's footer, and the Editor has a
+  "My club" link back. Only an office account with no club goes straight to the Editor.
+
 ## 0.3.0 (2026-09-30)
 
 Foundation: accounts, clubs and roles in the database.

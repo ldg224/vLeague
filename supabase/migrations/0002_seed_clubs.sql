@@ -15,3 +15,6 @@ on conflict (code) do nothing;
 insert into public.profiles (id, role, display_name)
 select id, 'office', 'League office' from auth.users where email = 'lukedanielgrogan@gmail.com'
 on conflict (id) do update set role = 'office';
+
+-- 0.3.1: the league office also manages FC Turtle, so the account lands on FC Turtle's Home (Editor via the footer).
+update public.profiles set club = 'TUR' where id = (select id from auth.users where email = 'lukedanielgrogan@gmail.com');

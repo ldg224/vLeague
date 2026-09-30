@@ -36,7 +36,8 @@ makes invites and password resets work.
 Storage bucket **`crests`**: public to read; PNG or WebP up to 500 KB; a manager can upload only into their own club's
 folder (`tur/…`), the office anywhere. Crests are 512 px.
 
-The league office is **lukedanielgrogan@gmail.com** (role `office`), and it's the only one.
+The league office is **lukedanielgrogan@gmail.com** (role `office`), and it's the only one. It also manages
+FC Turtle (club `TUR`), so it signs in to FC Turtle's Home and reaches the Editor from the footer.
 
 **Checking the rules:** `python supabase/tests/rls_check.py` acts as a guest, a manager, an account with no club
 and the office, and checks what each can read and change (15 checks; nothing is left behind). Run it after any

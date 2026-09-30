@@ -38,7 +38,12 @@
 .club-rows .state { font-size: .82rem; color: var(--muted); white-space: nowrap; }
 .club-rows .state.ok { color: var(--blue-100); }
 
-.member-foot { padding: 16px; text-align: center; font-size: .75rem; }
+.member-foot { padding: 16px; display: flex; justify-content: center; gap: 18px; font-size: .75rem; }
+/* The league office's way into the Editor: quiet, and only for office accounts. */
+.to-editor { display: none; }
+.is-office .to-editor { display: inline; }
+.member .to-home { color: var(--muted); font-weight: 600; font-size: .9rem; text-decoration: none; }
+.member .to-home:hover { color: var(--text); }
 .member-foot a { color: var(--faint); text-decoration: none; }
 
 @media (max-width: 640px) {

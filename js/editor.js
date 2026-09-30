@@ -6,6 +6,7 @@ import { db } from './auth.js';
 chrome();
 const me = await enter('editor.html');
 if (me) {
+  document.getElementById('to-home').hidden = !me.profile?.club;
   const main = document.getElementById('main');
   try {
     const [list, { data: profiles }] = await Promise.all([clubs(), (await db()).from('profiles').select('club, role')]);
