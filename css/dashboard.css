@@ -94,6 +94,7 @@
 .matches { grid-area: matches; }
 .rail { grid-area: rail; display: grid; gap: 8px; }
 .leaders { grid-area: leaders; }
+.leaders[hidden] { display: none; }
 .block { padding-bottom: 20px; scroll-margin-top: 70px; }
 .block-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
 .block-head h2 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 1.35rem; letter-spacing: .03em; text-transform: uppercase; color: var(--brand); }
@@ -178,9 +179,9 @@ a.fx:hover + .fx { box-shadow: none; }
 .lead .who { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lead b { font-family: var(--font-display); font-size: 1.05rem; color: var(--white); font-variant-numeric: tabular-nums; }
 
-.foot { max-width: var(--wrap); margin: 0 auto; padding: 20px 24px 40px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: .82rem; color: var(--faint); border-top: 1px solid var(--line); }
+.foot { max-width: var(--wrap); margin: 0 auto; padding: 20px 24px 40px; text-align: center; font-size: .75rem; color: var(--faint); border-top: 1px solid var(--line); }
 .foot p { margin: 0; }
-.foot .ver { color: var(--faint); margin-left: 6px; }
+.foot .ver { color: var(--faint); }
 .foot .ver:hover { color: var(--muted); text-decoration: underline; }
 
 /* ---------- Smaller screens ---------- */

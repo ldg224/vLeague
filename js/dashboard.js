@@ -67,7 +67,7 @@ function goalLines(fx, side, now) {
 function lineupHtml(fx, now) {
   const opens = lineupsOutAt(fx);
   if (now < opens) {
-    return `<p class="xi-note">Line-ups are announced 10 minutes before kick-off, at <b>${esc(time(opens))}</b>${sameDate(opens, now) ? '' : ` on ${esc(day(opens, now).toLowerCase())}`}.</p>`;
+    return `<p class="xi-note">Out at <b>${esc(time(opens))}</b>${sameDate(opens, now) ? '' : ` ${esc(/^Tomorrow$/.test(day(opens, now)) ? 'tomorrow' : `on ${day(opens, now)}`)}`}</p>`;
   }
   const got = lineups.get(fx.id);
   if (!got) { fetchLineups(fx); return '<p class="xi-note">Loading line-ups…</p>'; }
@@ -75,7 +75,7 @@ function lineupHtml(fx, now) {
     const t = teamOf(code);
     const rows = xi ? xi.xi.map(p => `<li><span class="slot">${esc(p.slot)}</span><span>${esc(p.name)}${p.id === xi.captain ? ' <abbr title="Captain">(c)</abbr>' : ''}</span></li>`).join('') : '';
     return `<div class="xi" style="--c:${esc(safeColour(t.colour))}"><h3>${esc(t.name)}${xi?.formation ? ` <span>${esc(xi.formation)}</span>` : ''}</h3>`
-      + (xi ? `<ol>${rows}</ol>` : '<p class="xi-note">No line-up sent yet.</p>') + '</div>';
+      + (xi ? `<ol>${rows}</ol>` : '<p class="xi-note">Not sent yet</p>') + '</div>';
   };
   return `<div class="xis">${side(fx.home, got.home)}${side(fx.away, got.away)}</div>`;
 }
@@ -97,7 +97,6 @@ function drawBoard(now = new Date()) {
     const clubs = season.teams.filter(t => !t.withdrawn);
     el.innerHTML = `<div class="board-empty">
       <h2>Season ${esc(season.season || 1)} kicks off soon</h2>
-      <p>The fixtures appear here as soon as the league office sets them. Until then, meet the ${clubs.length} clubs.</p>
       <ul class="clubs">${clubs.map(t => `<li>${crest(t, 44)}<span>${esc(t.name)}</span></li>`).join('')}</ul>
     </div>`;
     return;
@@ -117,7 +116,7 @@ function drawBoard(now = new Date()) {
   } else if (why === 'awaiting') {
     state = `<span class="tag">Kicked off</span>`;
     centre = `<span class="ko">${esc(time(k))}</span>`;
-    action = '<p class="board-sub">The match is being played. The score appears here as soon as it’s in.</p>';
+    action = '<p class="board-sub">Result soon</p>';
   } else {
     state = `<span class="tag">Next match</span><span class="when">${esc(day(k, now))}</span>`;
     centre = `<span class="ko">${esc(time(k))}</span>`;
@@ -167,7 +166,7 @@ function drawMatches(now = new Date()) {
   const weeks = weeksList(), box = $('#fixtures');
   if (!weeks.length) {
     $('#weeks').hidden = true;
-    box.innerHTML = '<p class="empty">No fixtures yet. They’re listed here week by week once the season is scheduled.</p>';
+    box.innerHTML = '<p class="empty">No fixtures yet.</p>';
     return;
   }
   if (!weekPinned || !weeks.includes(week)) week = activeWeek(season, now);
@@ -198,13 +197,13 @@ function drawTable(now = new Date()) {
       <th scope="row" class="club">${crest(r.team, 22)}<span>${esc(r.team.name)}</span></th>
       <td>${r.p}</td><td class="wide">${r.w}</td><td class="wide">${r.d}</td><td class="wide">${r.l}</td>
       <td>${r.gd > 0 ? '+' : ''}${r.gd}</td><td class="pts">${r.pts}</td></tr>`).join('')}</tbody>
-  </table>${played ? formStrip(rows) : '<p class="empty small">Everyone starts on zero. The table moves after the first results.</p>'}`;
+  </table>${played ? formStrip(rows) : ''}`;
 }
 function formStrip(rows) {
   const top = rows.filter(r => r.form.length).slice(0, 3);
   if (!top.length) return '';
   const label = { W: 'Won', D: 'Drew', L: 'Lost' };
-  return `<div class="form"><h3>Form, top three</h3>${top.map(r => `<p><span>${esc(r.team.name)}</span><span class="chips">${r.form.map(o => `<abbr class="res-${o}" title="${label[o]}">${o}</abbr>`).join('')}</span></p>`).join('')}</div>`;
+  return `<div class="form"><h3>Form</h3>${top.map(r => `<p><span>${esc(r.team.name)}</span><span class="chips">${r.form.map(o => `<abbr class="res-${o}" title="${label[o]}">${o}</abbr>`).join('')}</span></p>`).join('')}</div>`;
 }
 
 // ---------- News ----------
@@ -221,7 +220,7 @@ function markdown(text) {
 
 function drawNews() {
   const posts = guestNews(season).slice(0, 4);
-  if (!posts.length) { $('#newslist').innerHTML = '<p class="empty small">No news yet. League announcements for everyone show up here.</p>'; return; }
+  if (!posts.length) { $('#newslist').innerHTML = '<p class="empty small">No news yet.</p>'; return; }
   $('#newslist').innerHTML = posts.map(p => {
     const blocks = p.blocks || [];
     const embed = blocks.find(b => b.type === 'embed') || {};
@@ -230,11 +229,11 @@ function drawNews() {
     const poll = blocks.find(b => b.type === 'poll');
     const body = [markdown(embed.description),
       ...(embed.fields || []).filter(f => f.name || f.value).map(f => `<p><b>${esc(f.name)}</b><br>${inline(esc(f.value || ''))}</p>`),
-      poll ? `<p class="poll">${poll.question ? `Clubs are voting on “${esc(poll.question)}”` : 'Clubs are voting in a poll'}. Results aren’t shown on this page.</p>` : '',
+      poll ? `<p class="poll">Club poll${poll.question ? `: ${esc(poll.question)}` : ''}</p>` : '',
     ].join('');
     return `<details class="post" style="--c:${esc(safeColour(embed.colour || '#1e88e5'))}">
       <summary><span class="post-title">${esc(title)}</span><span class="post-meta">${p.pinned ? 'Pinned, ' : ''}${sent ? esc(ago(sent)) : ''}</span></summary>
-      <div class="post-body">${body || '<p>No details.</p>'}</div>
+      <div class="post-body">${body}</div>
     </details>`;
   }).join('');
 }
@@ -243,9 +242,9 @@ function drawNews() {
 
 function drawLeaders(now = new Date()) {
   const L = leaders(season, now);
-  const list = (title, rows, value) => `<div class="lead"><h3>${title}</h3>${rows.length
-    ? `<ol>${rows.map(p => `<li>${crest(teamOf(p.team), 20)}<span class="who">${esc(p.name)}</span><b>${value(p)}</b></li>`).join('')}</ol>`
-    : '<p class="empty small">After the first results.</p>'}</div>`;
+  $('#leaders').hidden = !L.goals.length && !L.assists.length && !L.rating.length;
+  const list = (title, rows, value) => (rows.length ? `<div class="lead"><h3>${title}</h3>`
+    + `<ol>${rows.map(p => `<li>${crest(teamOf(p.team), 20)}<span class="who">${esc(p.name)}</span><b>${value(p)}</b></li>`).join('')}</ol></div>` : '');
   $('#leaderlists').innerHTML = `<div class="leads">${list('Goals', L.goals, p => p.g)}${list('Assists', L.assists, p => p.a)}${list('Average rating', L.rating, p => p.avg.toFixed(2))}</div>`;
 }
 
@@ -257,9 +256,6 @@ function drawAll() {
   const now = new Date();
   drawClock(now); drawTable(now); drawLeaders(now);
   if (JSON.stringify(season.news || []) !== newsShown) { newsShown = JSON.stringify(season.news || []); drawNews(); }
-  $('#season-no').textContent = season.season || 1;
-  const up = parseStamp(season.updated);
-  $('#updated').textContent = up ? `League data updated ${ago(up, now)}.` : '';
 }
 
 async function refresh() {
@@ -271,7 +267,7 @@ async function refresh() {
     console.error(e);
     if (!season) {
       $('#board').setAttribute('aria-busy', 'false');
-      $('#board-in').innerHTML = `<div class="board-empty"><h2>The league didn’t load</h2><p>${esc(e.message)} Check your connection, then <a href="dashboard.html">reload the page</a>.</p></div>`;
+      $('#board-in').innerHTML = `<div class="board-empty"><h2>The league didn’t load</h2><p><a href="dashboard.html">Try again</a></p></div>`;
     }
   }
 }
@@ -285,7 +281,7 @@ for (const [id, step] of [['#week-prev', -1], ['#week-next', 1]]) {
   });
 }
 
-$('#version').textContent = `Version ${VERSION}`;
+$('#version').textContent = `v${VERSION}`;
 
 currentUser().then(user => {
   if (!user) return;

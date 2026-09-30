@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.2.3 (2026-09-30)
+
+- **Removed:** explanatory text on the dashboard: the "fixtures appear here…" line under "Season 1 kicks off
+  soon", the empty-table note, the footer tagline and "League data updated…", and the long empty-state and poll
+  wording. The Leaders section stays hidden until there are results.
+- **Changed:** shorter wording: line-ups "Out at 7:50 pm", "No fixtures yet.", "No news yet.", "Result soon",
+  "Club poll: …". The footer is just the version number.
+
 ## 0.2.2 (2026-09-30)
 
 - **Removed:** the Matches / Table / News links in the dashboard's top bar. They only scrolled down the same
