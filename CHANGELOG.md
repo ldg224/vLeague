@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.2.1 (2026-09-30)
+
+- **Changed:** a new sign-in page: one centred column (crest, email, password, Sign in, View as guest) on the
+  pitch's centre circle and halfway line, which draw in once on load. Labels sit inside the fields.
+- **Removed:** the photos and the extra text on the sign-in page (the subtitle, the "or" divider, the guest
+  explanation and the note about accounts).
+- **Added:** the version number at the bottom of the sign-in page.
+
 ## 0.2.0 (2026-09-30)
 
 Guest access.

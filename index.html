@@ -11,56 +11,38 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Figtree:wght@400;500;600;700&display=swap">
-  <link rel="preload" as="image" href="assets/img/kick-night.jpg">
   <link rel="stylesheet" href="css/site.css">
   <script type="module" src="js/signin.js"></script>
 </head>
-<body>
-  <div class="signin">
-    <section class="showcase" aria-label="vLeague">
-      <div class="photos" aria-hidden="true">
-        <img class="on" src="assets/img/kick-night.jpg" alt="">
-        <img src="assets/img/stadium-dusk.jpg" alt="" loading="lazy">
-        <img src="assets/img/floodlights-turf.jpg" alt="" loading="lazy">
-      </div>
-      <a class="lockup" href="index.html"><img src="assets/brand/crest.svg" alt=""><span><b>vLEAGUE</b><small>VIRTUAL FOOTBALL</small></span></a>
-      <p class="credit">Photos: <a href="https://unsplash.com/photos/cuhQcfp3By4" target="_blank" rel="noopener">Jannes Glas</a>, <a href="https://unsplash.com/photos/0oMsWA8yLN0" target="_blank" rel="noopener">Pascal Müller</a> and <a href="https://unsplash.com/photos/NGVZJPD3UVw" target="_blank" rel="noopener">Sudhanshu Walzade</a> on Unsplash</p>
-    </section>
+<body class="login">
+  <!-- The pitch's centre circle and halfway line, drawn once behind the form -->
+  <svg class="pitch" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <line class="halfway" x1="-200" y1="500" x2="1200" y2="500" pathLength="1" />
+    <circle class="ring" cx="500" cy="500" r="300" pathLength="1" />
+  </svg>
 
-    <main class="panel">
-      <div class="card">
-        <div class="card-head">
-          <img src="assets/brand/crest.svg" alt="">
-          <h2>Sign in</h2>
-          <p>For club managers and the league office.</p>
-        </div>
-        <form id="signin" novalidate>
-          <p class="msg error" id="error" role="alert" hidden></p>
-          <div class="field">
-            <label for="email">Email</label>
-            <input id="email" name="email" type="email" autocomplete="username" inputmode="email" placeholder="you@example.com" required>
-          </div>
-          <div class="field">
-            <label for="password">Password</label>
-            <div class="pw">
-              <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Your password" required>
-              <button type="button" id="show" aria-controls="password" aria-pressed="false">Show</button>
-            </div>
-          </div>
-          <div class="row">
-            <label class="check"><input id="remember" type="checkbox" checked> Keep me signed in</label>
-          </div>
-          <button class="btn" id="go" type="submit"><span class="spin" aria-hidden="true"></span><span class="label">Sign in</span></button>
-          <p class="msg info" id="setup" hidden></p>
-        </form>
-        <div class="guest">
-          <p class="or" aria-hidden="true"><span>or</span></p>
-          <a class="btn ghost" id="guest" href="dashboard.html" aria-describedby="guest-help">View as guest</a>
-          <p class="guest-help" id="guest-help">Watch matches, results and league news. No account needed.</p>
-        </div>
-        <p class="note">Accounts are made by the league office. Forgotten your password or need an account? Ask the league office.</p>
+  <main class="login-main">
+    <h1 class="mark"><img src="assets/brand/crest.svg" alt=""><span>v<b>LEAGUE</b></span><span class="sr-only">: sign in</span></h1>
+
+    <form id="signin" novalidate>
+      <p class="msg error" id="error" role="alert" hidden></p>
+      <div class="float">
+        <input id="email" name="email" type="email" autocomplete="username" inputmode="email" placeholder=" " required>
+        <label for="email">Email</label>
       </div>
-    </main>
-  </div>
+      <div class="float pw">
+        <input id="password" name="password" type="password" autocomplete="current-password" placeholder=" " required>
+        <label for="password">Password</label>
+        <button type="button" id="show" aria-controls="password" aria-pressed="false">Show</button>
+      </div>
+      <label class="check"><input id="remember" type="checkbox" checked> Keep me signed in</label>
+      <button class="btn" id="go" type="submit"><span class="spin" aria-hidden="true"></span><span class="label">Sign in</span></button>
+      <p class="msg info" id="setup" hidden></p>
+    </form>
+
+    <a class="btn ghost guest-btn" id="guest" href="dashboard.html">View as guest</a>
+  </main>
+
+  <footer class="login-foot"><a id="version" href="https://github.com/ldg224/vLeague/releases" target="_blank" rel="noopener"></a></footer>
 </body>
 </html>

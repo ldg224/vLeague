@@ -1,10 +1,10 @@
 // The sign-in page: send an already signed-in visitor straight in, a returning guest to the dashboard
 // (unless they came via index.html?signin to sign in), otherwise handle the form.
 import { signIn, currentUser, ready, setGuest, isGuest } from './auth.js';
-import { startPhotos } from './photos.js';
+import { VERSION } from './version.js';
 
 const $ = s => document.querySelector(s);
-startPhotos();
+$('#version').textContent = `v${VERSION}`;
 
 const form = $('#signin'), err = $('#error'), btn = $('#go'), label = btn.querySelector('.label');
 const email = $('#email'), password = $('#password');
@@ -18,7 +18,7 @@ function showError(text, field) {
 
 if (!ready) {
   const setup = $('#setup');
-  setup.textContent = 'The sign-in service is being set up. Signing in will work once the league office connects it.';
+  setup.textContent = 'Signing in isn’t available yet. You can still view as a guest.';
   setup.hidden = false;
 }
 
