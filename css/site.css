@@ -1,0 +1,140 @@
+/* vLeague: brand tokens and the sign-in / hello pages.
+   Colour: the Material Blue ramp, white as the accent, dark navy-black neutrals (see docs/BRAND.md in the s3 repo).
+   Type: Oswald for display, Figtree for text. */
+:root {
+  --blue-50: #e3f2fd; --blue-100: #bbdefb; --blue-200: #90caf9; --blue-300: #64b5f6; --blue-400: #42a5f5;
+  --blue-500: #2196f3; --blue-600: #1e88e5; --blue-700: #1976d2; --blue-800: #1565c0; --blue-900: #0d47a1;
+  --navy: #061a38;
+  --white: #ffffff;
+
+  --bg: #0a0f19;
+  --surface: #111827;
+  --surface-raised: #182133;
+  --line: rgba(160, 190, 230, 0.12);
+  --text: var(--white);
+  --muted: #b0bac9;
+  --faint: #808b9c;
+  --brand: var(--blue-300);
+  --brand-grad: linear-gradient(135deg, var(--blue-400) 0%, var(--blue-800) 100%);
+  --focus: var(--blue-200);
+  --error: #ffffff;
+
+  --font: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Oswald', 'Arial Narrow', 'Roboto Condensed', sans-serif;
+  --r-md: 14px;
+  --r-sm: 10px;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 16px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--brand); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 6px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- Photo layer: the football photography in the league's blues ---------- */
+.photos { position: absolute; inset: 0; overflow: hidden; background: var(--blue-900); }
+.photos img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  mix-blend-mode: luminosity; opacity: 0; transform: scale(1.06);
+  transition: opacity 1.6s ease, transform 9s ease-out;
+}
+.photos img.on { opacity: .92; transform: scale(1); }
+.photos::after {       /* navy fade so the words on top stay readable */
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(10,15,25,.15) 0%, rgba(10,15,25,.25) 45%, rgba(10,15,25,.92) 100%),
+              linear-gradient(90deg, rgba(13,71,161,.35), rgba(13,71,161,0) 60%);
+}
+@media (prefers-reduced-motion: reduce) { .photos img { transition: opacity .01s; transform: none !important; } }
+
+/* ---------- Sign-in page: photo panel + form panel ---------- */
+.signin { min-height: 100%; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(360px, 1fr); }
+.showcase { position: relative; min-height: 100vh; display: flex; flex-direction: column; justify-content: space-between; padding: 40px 48px; }
+.showcase > *:not(.photos) { position: relative; z-index: 1; }
+.lockup { display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--text); }
+.lockup img { width: 44px; height: 56px; }
+.lockup b { font-family: var(--font-display); font-weight: 700; font-size: 1.5rem; letter-spacing: .02em; line-height: 1; }
+.lockup small { display: block; font-family: var(--font-display); font-weight: 500; font-size: .72rem; letter-spacing: .28em; color: var(--blue-200); margin-top: 4px; }
+.showcase-copy { max-width: 560px; }
+.eyebrow { margin: 0 0 12px; font-family: var(--font-display); font-weight: 500; font-size: .85rem; letter-spacing: .3em; text-transform: uppercase; color: var(--blue-200); }
+.showcase h1 {
+  margin: 0; font-family: var(--font-display); font-weight: 700; font-size: clamp(3.4rem, 8vw, 6.5rem); line-height: 1; letter-spacing: .01em;
+  text-wrap: balance;
+}
+.showcase h1 span { color: var(--blue-300); }
+.showcase p { margin: 18px 0 0; max-width: 46ch; color: #dde5f0; font-size: 1.05rem; }
+.credit, .showcase .credit { margin: 0; max-width: none; font-size: .72rem; color: rgba(255,255,255,.55); }
+.credit a { color: inherit; }
+
+.panel { display: grid; place-items: center; padding: 40px 24px; background:
+  radial-gradient(700px 420px at 100% 0%, rgba(30,136,229,.12), transparent 70%), var(--bg); }
+.card { width: min(420px, 100%); display: grid; gap: 24px; }
+.card-head { display: grid; gap: 6px; }
+.card-head img { width: 40px; height: 52px; margin-bottom: 6px; }
+.card-head h2 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 2rem; letter-spacing: .02em; text-transform: uppercase; }
+.card-head p { margin: 0; color: var(--muted); }
+
+form { display: grid; gap: 16px; }
+.field { display: grid; gap: 6px; }
+.field label { font-size: .85rem; font-weight: 600; color: var(--muted); }
+.field input {
+  width: 100%; padding: 13px 14px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-raised);
+  color: var(--text); font: inherit; transition: border-color .15s, background .15s;
+}
+.field input::placeholder { color: var(--faint); }
+.field input:hover { border-color: rgba(160,190,230,.25); }
+.field input:focus { outline: none; border-color: var(--blue-400); background: var(--surface); box-shadow: 0 0 0 3px rgba(66,165,245,.2); }
+.pw { position: relative; }
+.pw input { padding-right: 70px; }
+.pw button {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%); padding: 6px 10px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--blue-300); font: 600 .8rem var(--font); cursor: pointer;
+}
+.pw button:hover { background: rgba(100,181,246,.1); }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; font-size: .88rem; }
+.check { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); cursor: pointer; }
+.check input { width: 17px; height: 17px; accent-color: var(--blue-500); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 14px 18px; border: 0; border-radius: var(--r-sm);
+  background: var(--brand-grad); color: var(--white); font: 700 1rem var(--font); letter-spacing: .01em; cursor: pointer;
+  box-shadow: 0 10px 30px rgba(21,101,192,.35); transition: transform .12s, box-shadow .2s, filter .2s;
+}
+.btn:hover { filter: brightness(1.08); box-shadow: 0 12px 36px rgba(21,101,192,.45); }
+.btn:active { transform: translateY(1px); }
+.btn[disabled] { opacity: .65; cursor: progress; }
+.btn .spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; animation: spin .8s linear infinite; display: none; }
+.btn[disabled] .spin { display: inline-block; }
+.btn.ghost { width: auto; background: transparent; border: 1px solid rgba(255,255,255,.28); box-shadow: none; }
+.btn.ghost:hover { background: rgba(255,255,255,.06); filter: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.msg { margin: 0; padding: 11px 14px; border-radius: var(--r-sm); font-size: .9rem; display: flex; gap: 10px; align-items: flex-start; }
+.msg[hidden] { display: none; }
+.msg.error { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.35); color: var(--error); }
+.msg.info { background: rgba(30,136,229,.12); border: 1px solid rgba(100,181,246,.3); color: var(--blue-50); }
+.note { margin: 0; font-size: .85rem; color: var(--faint); border-top: 1px solid var(--line); padding-top: 18px; }
+
+@media (max-width: 880px) {
+  .signin { grid-template-columns: 1fr; }
+  .showcase { min-height: 46vh; padding: 24px 20px 28px; }
+  .showcase h1 { font-size: clamp(2.8rem, 13vw, 4rem); }
+  .showcase p { font-size: .98rem; }
+  .credit { display: none; }
+  .panel { padding: 32px 16px 48px; place-items: start center; }
+}
+
+/* ---------- Hello page ---------- */
+.hello { position: relative; min-height: 100%; display: grid; grid-template-rows: auto 1fr auto; }
+.hello > *:not(.photos) { position: relative; z-index: 1; }
+.hello header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 24px 32px; }
+.hello main { display: grid; place-items: center; text-align: center; padding: 24px 16px; }
+.hello h1 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: clamp(5rem, 20vw, 13rem); line-height: .9; letter-spacing: .01em; }
+.hello .who { margin: 14px 0 0; font-size: 1.1rem; color: #dde5f0; }
+.hello footer { padding: 18px 32px; }
+.hello .photos::after { background: radial-gradient(ellipse at center, rgba(10,15,25,.35), rgba(10,15,25,.88) 75%); }
+@media (max-width: 560px) { .hello header, .hello footer { padding-inline: 16px; } }
