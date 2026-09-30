@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Set up your club | vLeague</title>
+  <meta name="theme-color" content="#0a0f19">
+  <meta name="robots" content="noindex">
+  <link rel="icon" type="image/png" href="assets/brand/favicon.png">
+  <link rel="apple-touch-icon" href="assets/brand/app-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Figtree:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/site.css">
+  <link rel="stylesheet" href="css/member.css">
+  <link rel="stylesheet" href="css/setup.css">
+  <script type="module" src="js/setup.js"></script>
+</head>
+<body class="member setup">
+  <div class="club-band on" id="band" aria-hidden="true"></div>
+  <header class="member-top">
+    <a class="brand" href="home.html"><img src="assets/brand/crest.svg" alt=""><span>v<b>LEAGUE</b></span><em id="page-label">Set up your club</em></a>
+    <a class="to-home" id="to-home" href="home.html" hidden>Home</a>
+    <button class="account" id="signout" type="button">Sign out</button>
+  </header>
+
+  <main class="member-main su-main" id="main" aria-busy="true">
+    <p class="quiet" id="loading">Loading…</p>
+
+    <form id="form" novalidate hidden>
+      <div class="su-head">
+        <p class="su-kicker" id="kicker"></p>
+        <h1 id="title">Set up your club</h1>
+        <p class="su-lead" id="lead"></p>
+        <div class="msg info" id="request-note" hidden></div>
+        <ol class="su-steps" id="steps" aria-label="Steps">
+          <li data-go="1"><span>1</span>Name</li>
+          <li data-go="2"><span>2</span>Colours</li>
+          <li data-go="3"><span>3</span>Crest</li>
+          <li data-go="4"><span>4</span>Details</li>
+          <li data-go="5"><span>✓</span>Review</li>
+        </ol>
+      </div>
+
+      <!-- 1: Name -->
+      <section class="su-step" data-step="1" aria-labelledby="h1-name">
+        <h2 id="h1-name">Name</h2>
+        <p class="su-approval" data-edit-only>Changes here go to the league office for approval.</p>
+        <div class="su-field">
+          <label for="name">Club name</label>
+          <input id="name" name="name" maxlength="25" autocomplete="off" required>
+          <p class="su-hint"><span>As it appears on your Home and in the news.</span><span class="count" data-for="name"></span></p>
+        </div>
+        <div class="su-field">
+          <label for="short_name">Short name</label>
+          <input id="short_name" name="short_name" maxlength="12" autocomplete="off">
+          <p class="su-hint"><span>For tight spaces like the league table. Leave it blank to use the club name.</span><span class="count" data-for="short_name"></span></p>
+        </div>
+        <div class="su-field su-code">
+          <label for="code">Three-letter code</label>
+          <input id="code" name="code" maxlength="3" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" required>
+          <p class="su-hint"><span id="code-state">Three letters, like TUR. No two clubs share one.</span></p>
+        </div>
+      </section>
+
+      <!-- 2: Colours -->
+      <section class="su-step" data-step="2" aria-labelledby="h2-col">
+        <h2 id="h2-col">Colours</h2>
+        <p class="su-approval ok" data-edit-only>Colours change straight away.</p>
+        <div class="su-colours">
+          <div class="su-field">
+            <label for="colour">Main colour</label>
+            <div class="su-swatch"><input type="color" id="colour-pick" aria-label="Pick the main colour"><input id="colour" name="colour" maxlength="7" spellcheck="false" autocomplete="off"></div>
+          </div>
+          <div class="su-field">
+            <label for="colour2">Second colour</label>
+            <div class="su-swatch"><input type="color" id="colour2-pick" aria-label="Pick the second colour"><input id="colour2" name="colour2" maxlength="7" spellcheck="false" autocomplete="off"></div>
+          </div>
+        </div>
+        <ul class="su-checks" id="checks" aria-live="polite"></ul>
+        <p class="su-sub">How it looks in vLeague</p>
+        <p class="su-hint">vLeague stays navy. Your club shows as an accent: the band at the top, a soft glow and highlights.</p>
+        <div class="su-preview" id="accent-preview"></div>
+      </section>
+
+      <!-- 3: Crest -->
+      <section class="su-step" data-step="3" aria-labelledby="h3-crest">
+        <h2 id="h3-crest">Crest</h2>
+        <p class="su-approval" data-edit-only>A new crest goes to the league office for approval.</p>
+        <label class="su-drop" id="drop">
+          <input type="file" id="crest" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml">
+          <img id="crest-img" alt="" hidden>
+          <span class="su-drop-text"><b id="drop-title">Choose a picture</b><small>PNG, JPG or WebP. A square one with a transparent background looks best. We'll make it 512 px.</small></span>
+        </label>
+        <div class="msg error" id="crest-error" role="alert" hidden></div>
+        <p class="su-sub">Where it appears</p>
+        <div class="su-crest-previews" id="crest-previews"></div>
+      </section>
+
+      <!-- 4: Details -->
+      <section class="su-step" data-step="4" aria-labelledby="h4-det">
+        <h2 id="h4-det">Details</h2>
+        <p class="su-approval ok" data-edit-only>Manager name, stadium and motto change straight away.</p>
+        <div class="su-field">
+          <label for="manager_name">Manager name</label>
+          <input id="manager_name" name="manager_name" maxlength="40" autocomplete="name">
+          <p class="su-hint"><span>Shown to the league.</span><span class="count" data-for="manager_name"></span></p>
+        </div>
+        <div class="su-field">
+          <label for="stadium">Stadium</label>
+          <input id="stadium" name="stadium" maxlength="40" autocomplete="off">
+          <p class="su-hint"><span>Optional.</span><span class="count" data-for="stadium"></span></p>
+        </div>
+        <div class="su-field">
+          <label for="motto">Motto</label>
+          <input id="motto" name="motto" maxlength="80" autocomplete="off">
+          <p class="su-hint"><span>Optional.</span><span class="count" data-for="motto"></span></p>
+        </div>
+        <div class="su-field">
+          <label for="notes">Notes for the league office</label>
+          <textarea id="notes" name="notes" maxlength="500" rows="3"></textarea>
+          <p class="su-hint"><span>Only the office sees these. Optional.</span><span class="count" data-for="notes"></span></p>
+        </div>
+      </section>
+
+      <!-- 5: Review (wizard only) -->
+      <section class="su-step" data-step="5" aria-labelledby="h5-rev">
+        <h2 id="h5-rev">Review</h2>
+        <p class="su-hint">Your colours and details go live straight away. The league office checks your name, code and crest, and reveals your crest to the league.</p>
+        <div id="review"></div>
+      </section>
+
+      <div class="msg error" id="error" role="alert" hidden></div>
+      <div class="su-nav" id="nav">
+        <button class="btn ghost" type="button" id="back">Back</button>
+        <button class="btn" type="submit" id="next"><span class="spin" aria-hidden="true"></span><span id="next-label">Continue</span></button>
+      </div>
+    </form>
+
+    <div class="su-done" id="done" hidden>
+      <img class="club-crest" id="done-crest" alt="">
+      <h1 id="done-title">Sent to the league office</h1>
+      <p class="quiet" id="done-text"></p>
+      <a class="btn" href="home.html">Go to Home</a>
+    </div>
+  </main>
+  <footer class="member-foot"><a class="to-editor" href="editor.html">Editor</a><a id="version" href="https://github.com/ldg224/vLeague/releases" target="_blank" rel="noopener"></a></footer>
+</body>
+</html>

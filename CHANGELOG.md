@@ -3,6 +3,27 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.4.0 (2026-10-01)
+
+Set up your club.
+
+- **Added:** "Set up your club" (setup.html), a wizard every manager goes through once at sign-in, the league
+  office's own club included: name, short name and 3-letter code (checked live); primary and secondary colour with a
+  contrast check and an exact preview of the club's accent; crest upload (fitted to 512 px, with previews on the
+  band, the Home card and a table row); manager name, stadium, motto and notes for the office. It isn't shown again
+  once sent, until the office switches it back on for that club.
+- **Added:** colours, accent, motto, manager name and stadium change straight away. Name, short name, code and crest
+  go to the league office for approval; Home shows "Waiting for the league office", or the office's note with
+  "Fix and resend". "Edit club" on Home for later changes.
+- **Added:** Editor tabs. **Requests**: each request against the club as it is, with the crest, colours and a
+  preview; Approve (applies it, a new code carries through everywhere, and a crest reveal is posted to the new
+  news table) or Send back with a note. **Clubs**: status, manager account, and "Set up again". **Managers**:
+  invite a manager by email (the new `invite-manager` Edge Function), link or unlink an account, send a password link.
+- **Changed:** managers can only add crest files, never replace or delete them, so a new crest goes live only when
+  the office approves it.
+- **Added:** database tables `club_requests` and `news`, the functions behind all of this, and 26 more security
+  checks (41 in all, `supabase/tests/rls_check.py`). Migrations `0003_club_setup.sql` and `0004_crest_storage.sql`.
+
 ## 0.3.1 (2026-09-30)
 
 - **Changed:** anyone with a club now signs in to their club's Home, including the league office account, which

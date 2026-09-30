@@ -7,7 +7,7 @@ The website stays on GitHub Pages; it talks to Supabase directly from the browse
 A project that gets **no activity for 7 days is paused**. It's restored from the Supabase dashboard with one click
 (nothing is lost). During the season the site keeps it active.
 
-## How it's set up (as of 0.3.0)
+## How it's set up (as of 0.4.0)
 
 Project `ywkhjpfzqtfssbxbvnbl` (Sydney). The URL and the **anon public** key are in `js/config.js`; both are safe to
 publish, because the database rules decide what they can do. The `service_role` key never goes in the website.
@@ -32,24 +32,45 @@ makes invites and password resets work.
 | `clubs` | Each club's public identity: code, name, colours, crest, manager name, status | Everyone, guests too | League office |
 | `profiles` | One per account: role (`manager` or `office`) and club. Made automatically for every new account. | Yourself; the office reads all | League office only (nobody can promote themselves) |
 | `team_sheets` | Each club's current team sheet (formation, tactics, XI, set pieces) | That club's manager and the office | That club's manager and the office |
+| `club_requests` | A manager's request to set up or change their club's name, short name, code or crest, and the office's answer | That club's manager and the office | Only through the functions below |
+| `news` | League news. For now only the crest reveal posted when the office approves a club (the full news system comes in 0.7) | Everyone, guests too | League office (and the approval function) |
 
-Storage bucket **`crests`**: public to read; PNG or WebP up to 500 KB; a manager can upload only into their own club's
-folder (`tur/…`), the office anywhere. Crests are 512 px.
+`clubs.setup_at` is empty until the club's manager has sent "Set up your club" (setup.html). Every manager, the
+office's own club included, is taken there at sign-in while it's empty, and never again once it's sent, until the
+office presses "Set up again" (Editor → Clubs), which empties it and starts the process again.
+
+**Functions** (0.4, in `0003_club_setup.sql`). Managers never write `clubs` or `club_requests` directly; these check
+everything and give readable errors:
+
+| Function | Who | What |
+|---|---|---|
+| `update_club_style(p)` | A manager, for their own club | Colours, accent, motto, manager name, stadium. Applies straight away. |
+| `submit_club_request(p)` | A manager, for their own club | Name, short name, code, crest, notes. Replaces any pending request; it's a `setup` until one is approved, then `change` (only what differs). Marks the wizard done. |
+| `code_available(code)` | Signed in | Is a 3-letter code free (not another club's, not asked for by another club)? |
+| `review_club_request(id, approve, note)` | League office | Approve (applies it; a new code cascades everywhere; posts the crest reveal) or send back with a note. |
+| `reopen_club_setup(code)` | League office | Show that club's manager the wizard again at their next sign-in; the process starts again. |
+| `office_accounts()` | League office | Every account with its email, club and sign-in state, for the Editor. |
+
+**Edge Function `invite-manager`** (`supabase/functions/invite-manager/`): the Editor's "Invite a manager". Only the
+office may call it. It emails the invite (link to `set-password.html`) and links the account to its club. It runs
+on Supabase because it needs the service role key. Deploy or update it with
+`python supabase/functions/deploy.py invite-manager`.
+
+Storage bucket **`crests`**: public to read; PNG or WebP up to 500 KB; a manager can only add new files, and only in
+their own club's folder (`tur/…`); only the office can replace or delete a file (0.4), so a new crest goes live only
+when the office approves it. Crests are 512 px.
 
 The league office is **lukedanielgrogan@gmail.com** (role `office`), and it's the only one. It also manages
 FC Turtle (club `TUR`), so it signs in to FC Turtle's Home and reaches the Editor from the footer.
 
 **Checking the rules:** `python supabase/tests/rls_check.py` acts as a guest, a manager, an account with no club
-and the office, and checks what each can read and change (15 checks; nothing is left behind). Run it after any
+and the office, and checks what each can read and change (41 checks; nothing is left behind). Run it after any
 database change. It needs the Management API token in `C:\Users\offic\.vleague\supabase-token.txt`.
 
 ## Adding a manager
 
-1. Invite them with the redirect set to the "Set your password" page, e.g. with the admin API:
-   `inviteUserByEmail(email, { redirectTo: 'https://ldg224.github.io/vLeague/set-password.html' })`.
-   **Always** set that redirect: without it the link signs them in on the home page and they never choose a password.
-2. They get an email from vLeague, choose a password, and land on their Home.
-3. Link the account to its club: `update public.profiles set club = 'TUR' where id = (select id from auth.users where email = '…')`.
-   (The Editor gets buttons for invite and linking in a later version.)
+In the **Editor → Managers**: enter their email, name and club, and press **Send invite**. They get an email from
+vLeague, choose a password, and go through "Set up your club". Their request then appears in **Editor → Requests**.
+The same list links an existing account to a club (or unlinks it) and sends a password link.
 
 Forgotten passwords: "Forgot password?" on the sign-in page emails a link to `set-password.html`.

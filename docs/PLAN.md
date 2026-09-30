@@ -38,13 +38,17 @@ Sign-in page, "View as guest", the guest dashboard, the dashboard as the guest p
 - Line-ups can't be revealed at T-10 in the database yet, because kick-off times only move in with fixtures (0.8).
   Until then, team sheets are private to the club and the office.
 
-### 0.4: Set up your club
-- [ ] Four-step wizard at first sign-in: name (≤25) / short name (≤12) / 3-letter code; primary and secondary
+### 0.4: Set up your club (done in 0.4.0)
+- [x] Four-step wizard at first sign-in: name (≤25) / short name (≤12) / 3-letter code; primary and secondary
       colour with live contrast check; crest upload with previews; manager name, stadium, motto, notes for the office.
-- [ ] The accent colour computed on save and previewed exactly.
-- [ ] Office approval queue (approve, or send back with a note); a crest reveal posted to news on approval.
+- [x] The accent colour computed on save and previewed exactly.
+- [x] Office approval queue (approve, or send back with a note); a crest reveal posted to news on approval.
       Later changes to name, code or crest go back for approval; colours and motto change instantly.
-- [ ] Editor: invite a manager and link them to a club.
+- [x] Editor: invite a manager and link them to a club.
+- Every manager (the office's club too) sees the wizard once; it isn't shown again until the office presses
+  "Set up again" for that club, which starts the process again. (User's decision, 1 October 2026.)
+- Known limits, for a later patch: a short name can't be cleared once set; the accent a manager saves isn't
+  re-checked by the database; a crest path isn't checked to exist.
 
 ### 0.5: Home
 - [ ] Home, My club, Inbox and League, with the club band and accents.

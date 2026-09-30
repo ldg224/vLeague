@@ -2,8 +2,9 @@
 //   signIn(email, password, remember)  -> { user } or throws with a readable message
 //   currentUser()                      -> the signed-in user, or null
 //   signOut()
-//   myProfile()                        -> { role, club, display_name } for the signed-in user, or null
-//   landingPage(profile)               -> where a signed-in user goes: home.html, or editor.html for an office account with no club
+//   myProfile()                        -> { role, club, display_name, needs_setup } for the signed-in user, or null
+//   landingPage(profile)               -> where a signed-in user goes: setup.html while their club isn't set up (setup_at null),
+//                                         home.html, or editor.html for an office account with no club
 //   sendPasswordReset(email)           -> emails a link to set-password.html (same result whether or not the account exists)
 //   setPassword(password)              -> sets a new password for the session from an invite or reset link
 //   setGuest(on), isGuest()            -> the "View as guest" choice, remembered in localStorage
@@ -82,17 +83,27 @@ export async function myProfile() {
   const user = await currentUser();
   if (!user) return null;
   try {
-    const { data, error } = await (await sb()).from('profiles').select('role, club, display_name').eq('id', user.id).maybeSingle();
-    return error ? null : data;
+    const c = await sb();
+    const { data, error } = await c.from('profiles').select('role, club, display_name').eq('id', user.id).maybeSingle();
+    if (error || !data) return null;
+    // A club that hasn't been through the setup wizard (or that the office reopened) has setup_at = null (0.4).
+    // Everyone with a club goes through it, the office too. If the column can't be read, don't send anyone there.
+    data.needs_setup = false;
+    if (data.club) {
+      const { data: club, error: e2 } = await c.from('clubs').select('setup_at').eq('code', data.club).maybeSingle();
+      data.needs_setup = !e2 && club?.setup_at === null;
+    }
+    return data;
   } catch { return null; }
 }
 
 // The same client for table queries elsewhere (home, editor), so there's one session.
 export const db = () => sb();
 
-// Anyone with a club lands on their club's Home (the league office reaches the Editor from there);
-// an office account without a club goes straight to the Editor.
-export const landingPage = profile => (profile?.role === 'office' && !profile.club ? 'editor.html' : 'home.html');
+// Anyone whose club isn't set up yet goes to the setup wizard. Anyone else with a club lands on their club's Home
+// (the league office reaches the Editor from there); an office account without a club goes straight to the Editor.
+export const landingPage = profile => (profile?.needs_setup ? 'setup.html'
+  : profile?.role === 'office' && !profile.club ? 'editor.html' : 'home.html');
 
 // Supabase answers the same way for unknown emails, so this never tells anyone which accounts exist.
 export async function sendPasswordReset(email) {

@@ -1,0 +1,94 @@
+/* vLeague Editor (0.4): tabs, the requests queue, manager accounts. Builds on site.css and member.css.
+   Each request card sets --club to that club's accent, which shows only as accents (band, glow, crest shadow). */
+
+.ed-tabs { display: flex; gap: 4px; margin: 0 0 28px; border-bottom: 1px solid var(--line); }
+.ed-tabs a { padding: 10px 14px; color: var(--muted); font-weight: 600; text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.ed-tabs a:hover { color: var(--text); }
+.ed-tabs a[aria-current] { color: var(--text); border-bottom-color: var(--brand); }
+.ed-count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; margin-left: 4px; border-radius: 999px; background: var(--brand); color: var(--bg); font-size: .75rem; font-weight: 700; }
+
+.member-main h2 { font-family: var(--font-display); font-weight: 500; font-size: 1.1rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 32px 0 10px; }
+.member-main .ed-invite h2 { margin-top: 0; }
+
+.member-main .btn { width: auto; padding: 10px 18px; font-size: .95rem; }
+.member-main .btn.small { padding: 7px 12px; font-size: .82rem; }
+.ed-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.ed-msg { margin: 8px 0 0; color: var(--blue-100); font-size: .88rem; min-height: 0; }
+.ed-msg:empty { display: none; }
+
+/* ---------- a request ---------- */
+.ed-request {
+  position: relative; overflow: hidden; margin: 0 0 18px; padding: 22px 20px 18px; border-radius: var(--r-md);
+  background: radial-gradient(60% 80% at 0% 0%, color-mix(in srgb, var(--club) 16%, transparent), transparent 70%), var(--surface);
+  border: 1px solid var(--line); display: grid; gap: 14px;
+}
+.ed-request::before { content: ''; position: absolute; inset: 0 0 auto; height: 4px; background: var(--club); }
+.ed-request header { display: flex; align-items: center; gap: 16px; }
+.ed-request h3 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 1.5rem; text-transform: uppercase; line-height: 1.1; }
+.ed-request header small { color: var(--faint); }
+.ed-request img, .ed-request .no-crest { width: 36px; height: 36px; object-fit: contain; }
+.ed-request .big { width: 72px; height: 72px; filter: drop-shadow(0 8px 24px color-mix(in srgb, var(--club) 45%, transparent)); }
+.ed-request .was { opacity: .55; }
+.no-crest { display: inline-grid; place-items: center; border-radius: 50%; background: var(--surface-raised); font: 700 .7rem var(--font-display); color: var(--muted); }
+
+.ed-diff { border-collapse: collapse; width: 100%; font-size: .92rem; }
+.ed-diff th { text-align: left; font-weight: 600; color: var(--faint); width: 110px; padding: 6px 12px 6px 0; vertical-align: middle; }
+.ed-diff td { padding: 6px 0; }
+.ed-diff tr.changed th { color: var(--brand); }
+.ed-diff tr.changed td { font-weight: 700; }
+.ed-diff s { color: var(--faint); font-weight: 400; }
+.ed-crests { display: flex; align-items: center; gap: 10px; color: var(--faint); }
+.ed-swatches { display: flex; flex-wrap: wrap; gap: 14px; color: var(--muted); }
+.ed-swatches span { display: inline-flex; align-items: center; gap: 6px; }
+.ed-swatches i { width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(255,255,255,.25); }
+.ed-request blockquote { margin: 0; padding: 10px 14px; border-left: 3px solid var(--line); color: var(--muted); background: rgba(255,255,255,.03); border-radius: 0 var(--r-sm) var(--r-sm) 0; white-space: pre-wrap; }
+
+.ed-preview { border-radius: var(--r-sm); overflow: hidden; background: var(--bg); border: 1px solid var(--line); }
+.ed-preview .band { height: 4px; background: var(--club); }
+.ed-preview .row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; box-shadow: inset 3px 0 0 var(--club); }
+.ed-preview .row img, .ed-preview .row .no-crest { width: 28px; height: 28px; }
+.ed-preview .row span { margin-left: auto; color: var(--faint); font: 700 .8rem var(--font-display); letter-spacing: .06em; }
+
+.ed-return { display: grid; gap: 10px; }
+.ed-return[hidden] { display: none; }
+.ed-return label, .ed-fields label { display: grid; gap: 6px; font-size: .85rem; font-weight: 600; color: var(--muted); }
+.ed-return textarea, .ed-fields input, .ed-fields select, .ed-accounts select {
+  width: 100%; padding: 10px 12px; border-radius: var(--r-sm); border: 1px solid rgba(160,190,230,.16);
+  background: var(--bg); color: var(--text); font: 500 .95rem var(--font);
+}
+.ed-return textarea { resize: vertical; }
+
+.ed-history { list-style: none; margin: 0; padding: 0; }
+.ed-history li { padding: 10px 0; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.ed-history small { flex-basis: 100%; color: var(--faint); }
+.ed-pill { font-size: .75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--surface-raised); color: var(--muted); }
+.ed-pill.approved { color: var(--blue-100); }
+
+/* ---------- clubs ---------- */
+.member-main .ed-clubs { margin-top: 16px; }
+.ed-clubs li { grid-template-columns: 36px minmax(0, 1fr) auto auto auto; }
+.ed-clubs .ed-confirm { grid-column: 2 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--muted); font-size: .9rem; }
+.ed-clubs .ed-confirm[hidden] { display: none; }
+.ed-clubs .ed-msg { grid-column: 2 / -1; margin: 0; }
+
+/* ---------- managers ---------- */
+.ed-invite { padding: 20px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); display: grid; gap: 14px; margin-bottom: 28px; }
+.ed-fields { display: grid; grid-template-columns: 2fr 1.4fr 1.6fr; gap: 12px; }
+
+.ed-accounts { list-style: none; margin: 0; padding: 0; }
+.ed-accounts li { display: grid; grid-template-columns: minmax(0, 1fr) 190px auto; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.ed-accounts .who { display: grid; min-width: 0; }
+.ed-accounts .who b, .ed-accounts .who small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ed-accounts small { color: var(--faint); font-size: .8rem; }
+.ed-accounts .ed-msg { grid-column: 1 / -1; margin: 0; }
+
+@media (max-width: 640px) {
+  .ed-tabs { overflow-x: auto; }
+  .ed-fields { grid-template-columns: 1fr; }
+  .ed-accounts li { grid-template-columns: minmax(0, 1fr) auto; }
+  .ed-accounts .who { grid-column: 1 / -1; }
+  .ed-diff th { width: 90px; }
+  .ed-clubs li { grid-template-columns: 32px minmax(0, 1fr) auto; }
+  .ed-clubs li > .state:not(.status) { grid-column: 2 / -1; }
+  .ed-clubs .ed-setup { grid-column: 2 / -1; justify-self: start; }
+}
