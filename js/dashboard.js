@@ -1,7 +1,7 @@
 // The dashboard: one page for everyone who isn't managing a club (guests), and the league at a glance.
 // The matchday board leads with the live match (or the next one), then this week's matches, the table,
 // league news and the leaders. It redraws every 15 s so live scores tick on, and reloads the data every minute.
-import { currentUser } from './auth.js';
+import { currentUser, signOut, setGuest } from './auth.js';
 import { VERSION } from './version.js';
 import {
   loadSeason, loadLineup, logoUrl, matchUrl, kickoff, status, shownScore, shownGoals, liveMinute, lineupsOutAt,
@@ -283,12 +283,9 @@ for (const [id, step] of [['#week-prev', -1], ['#week-next', 1]]) {
 
 $('#version').textContent = `v${VERSION}`;
 
-currentUser().then(user => {
-  if (!user) return;
-  const a = $('#account');
-  a.textContent = 'My club';
-  a.href = 'hello.html';
-});
+// The dashboard is the guest profile: anyone who arrives signed in (e.g. with Back from the members' pages)
+// is signed out and treated as a guest from then on, so the button always reads "Sign in".
+currentUser().then(async user => { if (user) { await signOut(); setGuest(true); } });
 
 await refresh();
 setInterval(() => { if (season && !document.hidden) drawClock(); }, 15000);

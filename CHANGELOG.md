@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.2.5 (2026-09-30)
+
+- **Changed:** the dashboard is the guest profile. Anyone who reaches it while signed in (for example with the
+  browser's Back button) is signed out and treated as a guest from then on, and the top bar always shows
+  "Sign in".
+- **Removed:** the "My club" button that signed-in visitors saw on the dashboard (it only led to the
+  placeholder Hello page).
+
 ## 0.2.4 (2026-09-30)
 
 - **Fixed:** on the sign-in page, when the browser (e.g. Google autofill) fills in the email and password, the

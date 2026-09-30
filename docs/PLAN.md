@@ -19,9 +19,9 @@ league news**. They don't see anything that belongs to a club or the league offi
 - [x] **"View as guest"** button (Bravo, 2026-09-30) under the Sign in button on `index.html`. No account, no Supabase session:
       guests just browse the public pages. Remember the choice (`localStorage` `vleague-guest`) so a returning
       guest skips the sign-in screen; "Sign in" stays in the top bar for them.
-- [ ] **One page shell for both.** Every page checks `currentUser()`: signed in → full view; no session →
-      guest view. Pages that are members-only (manager hub, press, editor) send guests back to sign in with a
-      short "Sign in to manage your club" message instead of a blank page.
+- [x] **Guests and members are separate.** The dashboard is the guest profile: arriving there signed in (e.g.
+      with Back) signs you out (0.2.5). Members get their own pages. Pages that are members-only (manager hub,
+      press, editor) send guests back to sign in instead of showing a blank page.
 - [ ] **The rule is enforced by the database, not the page.** Hiding things in the HTML isn't security. Guests
       use the anon key with no session (Postgres role `anon`); Row Level Security gives `anon` read access
       only to public tables/views. Everything else needs `authenticated`.
