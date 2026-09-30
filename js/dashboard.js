@@ -2,6 +2,7 @@
 // The matchday board leads with the live match (or the next one), then this week's matches, the table,
 // league news and the leaders. It redraws every 15 s so live scores tick on, and reloads the data every minute.
 import { currentUser } from './auth.js';
+import { VERSION } from './version.js';
 import {
   loadSeason, loadLineup, logoUrl, matchUrl, kickoff, status, shownScore, shownGoals, liveMinute, lineupsOutAt,
   byKickoff, activeWeek, featured, ladder, leaders, guestNews, parseStamp,
@@ -283,6 +284,8 @@ for (const [id, step] of [['#week-prev', -1], ['#week-next', 1]]) {
     drawMatches();
   });
 }
+
+$('#version').textContent = `Version ${VERSION}`;
 
 currentUser().then(user => {
   if (!user) return;

@@ -1,0 +1,28 @@
+# Changelog
+
+Every published version of the vLeague app. Newest first. How versions work and how to roll back:
+`docs/RELEASING.md`.
+
+## 0.2.0 (2026-09-30)
+
+Guest access.
+
+- **Added:** "View as guest" on the sign-in page. Guests need no account; a returning guest goes straight to the
+  dashboard, and `index.html?signin` always shows the form.
+- **Added:** the dashboard (`dashboard.html`): matchday board (live score and scorers, or the next kick-off with
+  a countdown), line-ups from 10 minutes before kick-off, matches by week, the table, league news for guests
+  (no poll results) and the leaders. It reads the s3 site's public data until the league moves to Supabase.
+- **Added:** `docs/PLAN.md` (roadmap, what guests and members see, news audiences), this changelog,
+  `docs/RELEASING.md`, and the version number in the dashboard footer.
+
+## 0.1.1 (2026-09-30)
+
+- **Changed:** the sign-in page no longer has a headline over the photos.
+- **Added:** the connection to the vLeague Supabase project (project URL and anon public key in `js/config.js`),
+  so signing in works.
+
+## 0.1.0 (2026-09-30)
+
+First version.
+
+- **Added:** the sign-in page (email and password, "Keep me signed in") and the first signed-in page (`hello.html`).

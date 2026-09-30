@@ -183,6 +183,8 @@ a.fx:hover + .fx { box-shadow: none; }
 
 .foot { max-width: var(--wrap); margin: 0 auto; padding: 20px 24px 40px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: .82rem; color: var(--faint); border-top: 1px solid var(--line); }
 .foot p { margin: 0; }
+.foot .ver { color: var(--faint); margin-left: 6px; }
+.foot .ver:hover { color: var(--muted); text-decoration: underline; }
 
 /* ---------- Smaller screens ---------- */
 @media (max-width: 960px) {
