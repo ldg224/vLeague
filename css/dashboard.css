@@ -14,13 +14,10 @@
 /* ---------- Top bar ---------- */
 .topbar { position: sticky; top: 0; z-index: 10; background: rgba(10,15,25,.86); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
 .topbar-in { max-width: var(--wrap); margin: 0 auto; padding: 10px 24px; display: flex; align-items: center; gap: 28px; }
-.brand { display: flex; align-items: center; gap: 10px; color: var(--text); font-family: var(--font-display); font-weight: 700; font-size: 1.3rem; letter-spacing: .02em; line-height: 1; }
+.brand { margin-right: auto; display: flex; align-items: center; gap: 10px; color: var(--text); font-family: var(--font-display); font-weight: 700; font-size: 1.3rem; letter-spacing: .02em; line-height: 1; }
 .brand img { width: 26px; height: 33px; }
 .brand span { font-weight: 500; }
 .brand b { font-weight: 700; }
-.jump { display: flex; gap: 4px; margin-right: auto; }
-.jump a { padding: 8px 12px; border-radius: 8px; color: var(--muted); font-weight: 600; font-size: .92rem; }
-.jump a:hover { color: var(--text); background: var(--surface); }
 .account { padding: 8px 16px; border-radius: 999px; border: 1px solid rgba(255,255,255,.28); color: var(--text); font-weight: 700; font-size: .9rem; white-space: nowrap; }
 .account:hover { background: rgba(255,255,255,.08); }
 
@@ -193,8 +190,6 @@ a.fx:hover + .fx { box-shadow: none; }
 }
 @media (max-width: 640px) {
   .topbar-in { padding: 10px 16px; gap: 12px; }
-  .jump { display: none; }
-  .brand { margin-right: auto; }
   .board-in { padding: 24px 16px 30px; }
   .fixture { gap: 10px; margin-top: 20px; }
   .fixture .crest { --s: 52px !important; }

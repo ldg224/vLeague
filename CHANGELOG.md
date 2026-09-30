@@ -3,6 +3,11 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.2.2 (2026-09-30)
+
+- **Removed:** the Matches / Table / News links in the dashboard's top bar. They only scrolled down the same
+  page; the bar is now just the vLeague crest and Sign in.
+
 ## 0.2.1 (2026-09-30)
 
 - **Changed:** a new sign-in page: one centred column (crest, email, password, Sign in, View as guest) on the

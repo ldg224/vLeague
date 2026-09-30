@@ -26,7 +26,7 @@ league news**. They don't see anything that belongs to a club or the league offi
       use the anon key with no session (Postgres role `anon`); Row Level Security gives `anon` read access
       only to public tables/views. Everything else needs `authenticated`.
 - [ ] Add a `mode` helper to `js/auth.js` (`'member' | 'guest'`) so pages don't repeat the check.
-- [x] Guest dashboard `dashboard.html` (Alpha, 2026-09-30): matchday board, matches by week, table, news, leaders. Top bar: crest, Matches, Table, News, and a "Sign in" button. Member top bar adds My club, Press,
+- [x] Guest dashboard `dashboard.html` (Alpha, 2026-09-30): matchday board, matches by week, table, news, leaders. Top bar: just the crest and "Sign in" (no section links; it's one page). Member top bar adds My club, Press,
       and (for the league office) Editor.
 
 ### What guests see vs. members
