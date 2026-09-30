@@ -1,5 +1,6 @@
-// The sign-in page: send an already signed-in visitor straight in, otherwise handle the form.
-import { signIn, currentUser, ready } from './auth.js';
+// The sign-in page: send an already signed-in visitor straight in, a returning guest to the dashboard
+// (unless they came via index.html?signin to sign in), otherwise handle the form.
+import { signIn, currentUser, ready, setGuest, isGuest } from './auth.js';
 import { startPhotos } from './photos.js';
 
 const $ = s => document.querySelector(s);
@@ -21,7 +22,14 @@ if (!ready) {
   setup.hidden = false;
 }
 
-currentUser().then(user => { if (user) location.replace('hello.html'); });
+// Guests need no Supabase, so this works even before the sign-in service is connected.
+$('#guest').addEventListener('click', () => setGuest(true));
+
+const wantsSignIn = new URLSearchParams(location.search).has('signin');
+currentUser().then(user => {
+  if (user) location.replace('hello.html');
+  else if (isGuest() && !wantsSignIn) location.replace('dashboard.html');
+});
 
 $('#show').addEventListener('click', e => {
   const on = password.type === 'password';

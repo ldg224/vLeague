@@ -2,6 +2,7 @@
 //   signIn(email, password, remember)  -> { user } or throws with a readable message
 //   currentUser()                      -> the signed-in user, or null
 //   signOut()
+//   setGuest(on), isGuest()            -> the "View as guest" choice, remembered in localStorage
 //   ready                              -> false until js/config.js has the project's URL and key
 
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
@@ -15,6 +16,15 @@ function storage() {
   let remember = true;
   try { remember = localStorage.getItem(REMEMBER) !== 'no'; } catch { /* storage blocked */ }
   try { return remember ? window.localStorage : window.sessionStorage; } catch { return undefined; }
+}
+
+// A guest browses without an account or a Supabase session; the choice is remembered so a returning guest skips sign-in.
+const GUEST = 'vleague-guest';
+export function setGuest(on) {
+  try { on ? localStorage.setItem(GUEST, 'yes') : localStorage.removeItem(GUEST); } catch { /* storage blocked */ }
+}
+export function isGuest() {
+  try { return localStorage.getItem(GUEST) === 'yes'; } catch { return false; }
 }
 
 async function sb() {
@@ -42,6 +52,7 @@ export async function signIn(email, password, remember = true) {
   const c = await sb();
   const { data, error } = await c.auth.signInWithPassword({ email: email.trim(), password });
   if (error) throw new Error(explain(error));
+  setGuest(false);
   return data;
 }
 
@@ -54,5 +65,6 @@ export async function currentUser() {
 }
 
 export async function signOut() {
+  setGuest(false);
   if (ready) try { await (await sb()).auth.signOut(); } catch { /* already signed out */ }
 }

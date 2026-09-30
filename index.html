@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Sign in | vLeague</title>
-  <meta name="description" content="vLeague, virtual football. Sign in to manage your club.">
+  <meta name="description" content="vLeague, virtual football. Sign in to manage your club, or view as a guest to watch matches, results and league news.">
   <meta name="theme-color" content="#0a0f19">
   <link rel="icon" type="image/png" href="assets/brand/favicon.png">
   <link rel="apple-touch-icon" href="assets/brand/app-icon.png">
@@ -32,7 +32,7 @@
         <div class="card-head">
           <img src="assets/brand/crest.svg" alt="">
           <h2>Sign in</h2>
-          <p>Managers and the league office.</p>
+          <p>For club managers and the league office.</p>
         </div>
         <form id="signin" novalidate>
           <p class="msg error" id="error" role="alert" hidden></p>
@@ -53,6 +53,11 @@
           <button class="btn" id="go" type="submit"><span class="spin" aria-hidden="true"></span><span class="label">Sign in</span></button>
           <p class="msg info" id="setup" hidden></p>
         </form>
+        <div class="guest">
+          <p class="or" aria-hidden="true"><span>or</span></p>
+          <a class="btn ghost" id="guest" href="dashboard.html" aria-describedby="guest-help">View as guest</a>
+          <p class="guest-help" id="guest-help">Watch matches, results and league news. No account needed.</p>
+        </div>
         <p class="note">Accounts are made by the league office. Forgotten your password or need an account? Ask the league office.</p>
       </div>
     </main>

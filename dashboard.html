@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Matchday | vLeague</title>
+  <meta name="description" content="vLeague, virtual football. Live matches, results, the table and league news.">
+  <meta name="theme-color" content="#0a0f19">
+  <link rel="icon" type="image/png" href="assets/brand/favicon.png">
+  <link rel="apple-touch-icon" href="assets/brand/app-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Figtree:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/site.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <script type="module" src="js/dashboard.js"></script>
+</head>
+<body class="dash">
+  <a class="skip" href="#matches">Skip to matches</a>
+  <header class="topbar">
+    <div class="topbar-in">
+      <a class="brand" href="dashboard.html" aria-label="vLeague home"><img src="assets/brand/crest.svg" alt=""><span>v<b>LEAGUE</b></span></a>
+      <nav class="jump" aria-label="Sections">
+        <a href="#matches">Matches</a><a href="#table">Table</a><a href="#news">News</a>
+      </nav>
+      <a class="account" id="account" href="index.html?signin">Sign in</a>
+    </div>
+  </header>
+
+  <h1 class="sr-only">vLeague matchday</h1>
+  <section class="board" id="board" aria-busy="true">
+    <div class="board-bg" aria-hidden="true"></div>
+    <div class="board-in" id="board-in">
+      <p class="board-loading">Loading the league…</p>
+    </div>
+  </section>
+
+  <main class="grid">
+    <section class="block matches" id="matches" aria-labelledby="matches-h">
+      <div class="block-head">
+        <h2 id="matches-h">Matches</h2>
+        <div class="weeks" id="weeks" hidden>
+          <button type="button" id="week-prev" aria-label="Previous week">‹</button>
+          <span id="week-label" aria-live="polite"></span>
+          <button type="button" id="week-next" aria-label="Next week">›</button>
+        </div>
+      </div>
+      <div id="fixtures"></div>
+    </section>
+
+    <aside class="rail">
+      <section class="block" id="table" aria-labelledby="table-h">
+        <div class="block-head"><h2 id="table-h">Table</h2></div>
+        <div id="ladder"></div>
+      </section>
+      <section class="block" id="news" aria-labelledby="news-h">
+        <div class="block-head"><h2 id="news-h">League news</h2></div>
+        <div id="newslist"></div>
+      </section>
+    </aside>
+
+    <section class="block leaders" id="leaders" aria-labelledby="leaders-h">
+      <div class="block-head"><h2 id="leaders-h">Leaders</h2></div>
+      <div id="leaderlists"></div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>vLeague, virtual football. Season <span id="season-no">1</span>.</p>
+    <p id="updated"></p>
+  </footer>
+</body>
+</html>

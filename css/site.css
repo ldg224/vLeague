@@ -111,6 +111,13 @@ form { display: grid; gap: 16px; }
 .btn[disabled] .spin { display: inline-block; }
 .btn.ghost { width: auto; background: transparent; border: 1px solid rgba(255,255,255,.28); box-shadow: none; }
 .btn.ghost:hover { background: rgba(255,255,255,.06); filter: none; }
+/* "View as guest": secondary to Sign in (outline, full width), under an "or" divider */
+.guest { display: grid; gap: 12px; }
+.or { margin: 0; display: flex; align-items: center; gap: 14px; color: var(--faint); font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; }
+.or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.guest .btn.ghost { width: 100%; color: var(--white); text-decoration: none; font-weight: 600; }
+.guest .btn.ghost:hover { border-color: rgba(255,255,255,.45); }
+.guest-help { margin: 0; text-align: center; font-size: .85rem; color: var(--muted); text-wrap: balance; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .msg { margin: 0; padding: 11px 14px; border-radius: var(--r-sm); font-size: .9rem; display: flex; gap: 10px; align-items: flex-start; }
