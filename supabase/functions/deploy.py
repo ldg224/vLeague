@@ -13,13 +13,16 @@ from pathlib import Path
 
 REF = 'ywkhjpfzqtfssbxbvnbl'
 TOKEN = (Path.home() / '.vleague' / 'supabase-token.txt').read_text().strip()
+# These check their own secret or signed link (pg_cron and email links carry no session), so Supabase must not
+# require a signed-in caller. Every other function does.
+OPEN = {'send-reminders', 'email-unsubscribe'}
 
 
 def deploy(slug):
     folder = Path(__file__).parent / slug
     files = sorted(p for p in folder.rglob('*') if p.is_file())
     boundary = uuid.uuid4().hex
-    meta = {'name': slug, 'entrypoint_path': 'index.ts', 'verify_jwt': True}
+    meta = {'name': slug, 'entrypoint_path': 'index.ts', 'verify_jwt': slug not in OPEN}
     parts = [f'--{boundary}\r\nContent-Disposition: form-data; name="metadata"\r\n\r\n{json.dumps(meta)}\r\n'.encode()]
     for f in files:
         rel = f.relative_to(folder).as_posix()

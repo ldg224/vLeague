@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Inbox | vLeague</title>
   <meta name="theme-color" content="#0a0f19">
+  <script>try{var d=JSON.parse(localStorage.getItem('vleague-device')||'{}');if(d.text&&d.text!=='100')document.documentElement.style.fontSize=d.text+'%';if(d.motion==='reduce')document.documentElement.classList.add('reduce-motion')}catch(e){}</script>
   <link rel="icon" type="image/png" href="assets/brand/favicon.png">
   <link rel="apple-touch-icon" href="assets/brand/app-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,7 +22,7 @@
   <header class="member-top">
     <a class="brand" href="home.html"><img src="assets/brand/crest.svg" alt=""><span>v<b>LEAGUE</b></span></a>
     <nav class="places" id="places"></nav>
-    <button class="account" id="signout" type="button">Sign out</button>
+    <a class="account-btn" id="account" href="settings.html" aria-label="Settings"></a>
   </header>
   <main class="member-main wide" id="main" aria-busy="true">
     <p class="quiet">Loading…</p>

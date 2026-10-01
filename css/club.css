@@ -102,6 +102,7 @@
 .squad .pos { width: 44px; text-align: left; color: var(--muted); font-size: .78rem; font-weight: 700; }
 .squad .who { text-align: left; font-weight: 600; width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .squad .avg { color: var(--text); font-weight: 700; }
+.spoil { margin: 10px 0 0; font-size: .85rem; color: var(--faint); }
 
 @media (max-width: 640px) {
   .club-head { gap: 12px; }

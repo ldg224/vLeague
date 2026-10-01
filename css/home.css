@@ -41,6 +41,13 @@
 .hm-score i { font-style: normal; margin: 0 6px; color: var(--faint); }
 .hm-live { padding: 2px 8px; border-radius: 6px; background: var(--white); color: var(--bg); font: 700 .72rem var(--font); letter-spacing: .06em; }
 .hm-live.sm { padding: 1px 5px; font-size: .62rem; vertical-align: 1px; }
+.hm-show, .hm-hidden button {
+  padding: 6px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,.3); background: transparent; color: var(--text);
+  font: 700 .85rem var(--font); cursor: pointer;
+}
+.hm-show:hover, .hm-hidden button:hover { border-color: var(--white); }
+.hm-hidden { display: flex; align-items: center; gap: 10px; margin: 12px 0 0; color: var(--faint); font-size: .85rem; }
+.hm-hidden button { padding: 4px 12px; font-size: .8rem; }
 .hm-foot { display: grid; justify-items: center; gap: 12px; margin-top: 20px; }
 .hm-lock { margin: 0; color: var(--muted); font-size: .9rem; }
 .hm-lock b { color: var(--text); font-variant-numeric: tabular-nums; }
@@ -86,7 +93,9 @@
 .hm-lastline { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); text-decoration: none; min-width: 0; }
 .member-main .hm-lastline { color: var(--text); }
 .hm-lastline .hm-k { margin-right: 4px; }
-.hm-lastline strong { font: 700 1.1rem var(--font-display); font-variant-numeric: tabular-nums; }
+.hm-lastline strong { font: 700 1.1rem var(--font-display); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hm-lastline { flex-wrap: wrap; row-gap: 6px; }
+.hm-lastline .hm-k { white-space: nowrap; }
 .hm-lastline .hm-vs { color: var(--faint); font-size: .85rem; }
 .hm-lastline b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hm-lastline:hover b { text-decoration: underline; text-decoration-color: var(--faint); }
@@ -101,6 +110,9 @@
 .hm-fix .hm-time { color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums; }
 
 @media (max-width: 480px) {
+  /* Coming up: the date gets its own line so club names have room (and at large text sizes). */
+  .hm-fix li { grid-template-columns: 22px minmax(0, 1fr) auto auto; row-gap: 2px; }
+  .hm-fix .hm-wk { grid-column: 1 / -1; }
   .hm-crest { width: 60px; height: 60px; }
   .hm-ko { font-size: 1.6rem; }
   .hm-card { padding: 16px 14px; }

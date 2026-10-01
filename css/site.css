@@ -31,7 +31,7 @@
 *, *::before, *::after { box-sizing: border-box; }
 html, body { height: 100%; }
 body {
-  margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 16px; line-height: 1.5;
+  margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 1rem; line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 a { color: var(--brand); }
@@ -135,3 +135,8 @@ a { color: var(--brand); }
 .msg[hidden] { display: none; }
 .msg.error { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.35); color: var(--error); }
 .msg.info { background: rgba(30,136,229,.12); border: 1px solid rgba(100,181,246,.3); color: var(--blue-50); }
+
+/* Settings → Reduce motion (0.7): the same as the system setting, for this device. */
+html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after {
+  animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important;
+}

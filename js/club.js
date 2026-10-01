@@ -6,6 +6,7 @@ import { esc, crestUrl } from './member.js';
 import { db } from './auth.js';
 import { finished, logoUrl } from './dashboard-data.js';
 import { rating } from './places.js';
+import { prefsNow, spoilerHidden, revealScore } from './prefs.js';
 import { renderPitch, FORMATIONS, TACTICS, STEPS, PRESETS, POS_ORDER, normaliseSheet, reshape, benchOf } from './pitch.js';
 
 const POS_NAME = { GK: 'Goalkeeper', DEF: 'Defender', MID: 'Midfielder', FWD: 'Forward' };
@@ -26,9 +27,12 @@ function totals(season, now = new Date()) {
   return tot;
 }
 
+// Spoiler-free results (0.7): the stats leave out results the account hasn't revealed.
 function statsHtml(season, squad) {
   if (!squad.length) return '<p class="empty">No players yet.</p>';
-  const tot = totals(season);
+  const hidden = (season.fixtures || []).filter(f => spoilerHidden(f, season)).map(f => f.id);
+  const seen = hidden.length ? { ...season, fixtures: season.fixtures.map(f => (hidden.includes(f.id) ? { ...f, result: null } : f)) } : season;
+  const tot = totals(seen);
   return `<table class="squad">
     <thead><tr><th scope="col" class="pos"><abbr title="Position">Pos</abbr></th><th scope="col" class="who">Player</th><th scope="col"><abbr title="Appearances">Apps</abbr></th><th scope="col"><abbr title="Goals">G</abbr></th><th scope="col"><abbr title="Assists">A</abbr></th><th scope="col"><abbr title="Average rating">Avg</abbr></th></tr></thead>
     <tbody>${squad.map(p => {
@@ -37,13 +41,15 @@ function statsHtml(season, squad) {
         <th scope="row" class="who">${esc(p.name)}</th><td>${t.apps}</td><td>${t.g}</td><td>${t.a}</td>
         <td class="avg">${t.apps ? rating(t.rsum / t.apps) : '–'}</td></tr>`;
     }).join('')}</tbody>
-  </table>`;
+  </table>${hidden.length ? `<p class="spoil">${hidden.length === 1 ? '1 result' : `${hidden.length} results`} hidden · <button type="button" class="link-btn" data-reveal-all="${esc(hidden.join(' '))}">Show all</button></p>` : ''}`;
 }
 
 // ---------- Deadlines (league time: Melbourne) ----------
 
-const dayTime = new Intl.DateTimeFormat('en-AU', { timeZone: TZ, weekday: 'short', hour: 'numeric', minute: '2-digit' });
-const dateTime = new Intl.DateTimeFormat('en-AU', { timeZone: TZ, weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+// Formatters follow the 12/24-hour clock setting.
+const h12 = () => prefsNow().clock !== '24';
+const dayTime = { format: d => new Intl.DateTimeFormat('en-AU', { timeZone: TZ, weekday: 'short', hour: 'numeric', minute: '2-digit', hour12: h12() }).format(d) };
+const dateTime = { format: d => new Intl.DateTimeFormat('en-AU', { timeZone: TZ, weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: h12() }).format(d) };
 const tidy = s => s.replace(/\s/g, ' ').replace(/ (am|pm)$/i, (m, x) => ` ${x.toLowerCase()}`).replace(',', '');
 const when = (d, now = new Date()) => tidy((d > now && d - now < 6 * 86400000 ? dayTime : dateTime).format(d));
 function left(d, now = new Date()) {
@@ -80,7 +86,7 @@ if (ctx) {
       </div>
       <section id="sheet" role="tabpanel" aria-labelledby="tab-sheet"><p class="quiet">Loading…</p></section>
       <section id="squad" role="tabpanel" aria-labelledby="tab-squad" hidden>
-        <div class="sect">${season ? statsHtml(season, squad) : '<p class="empty">The squad didn’t load. <a href="club.html">Try again</a></p>'}</div>
+        <div class="sect" id="stats">${season ? statsHtml(season, squad) : '<p class="empty">The squad didn’t load. <a href="club.html">Try again</a></p>'}</div>
       </section>
     </div>`;
 
@@ -108,6 +114,12 @@ if (ctx) {
       next.focus(); next.click();
     });
     if (location.hash === '#squad') showTab('squad');
+    main.querySelector('#stats').addEventListener('click', async e => {
+      const b = e.target.closest('[data-reveal-all]');
+      if (!b) return;
+      await revealScore(b.dataset.revealAll.split(' '));
+      main.querySelector('#stats').innerHTML = statsHtml(season, squad);
+    });
 
     if (!season || !squad.length) {
       $('#sheet').innerHTML = `<div class="sect"><p class="empty">${season ? 'No players yet.' : 'The squad didn’t load. <a href="club.html">Try again</a>'}</p></div>`;

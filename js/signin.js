@@ -1,6 +1,7 @@
 // The sign-in page: send an already signed-in visitor to their home (editor.html for the league office, home.html for managers), a returning guest to the dashboard
 // (unless they came via index.html?signin to sign in), otherwise handle the form.
 import { signIn, currentUser, myProfile, landingPage, sendPasswordReset, ready, setGuest, isGuest } from './auth.js';
+import { startPage } from './prefs.js';
 import { VERSION } from './version.js';
 
 const $ = s => document.querySelector(s);
@@ -26,7 +27,7 @@ if (!ready) {
 $('#guest').addEventListener('click', () => setGuest(true));
 
 const wantsSignIn = new URLSearchParams(location.search).has('signin');
-const goHome = async () => location.replace(landingPage(await myProfile()));
+const goHome = async () => location.replace(await startPage(landingPage(await myProfile())));
 
 currentUser().then(user => {
   if (user) goHome();

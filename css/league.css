@@ -11,7 +11,7 @@
 
 /* Table */
 .ladder { width: 100%; border-collapse: collapse; font-size: .92rem; font-variant-numeric: tabular-nums; }
-.ladder th, .ladder td { padding: 9px 4px; text-align: center; min-width: 30px; }
+.ladder th, .ladder td { padding: 9px 4px; text-align: center; min-width: 1.9rem; }
 .ladder th.club { min-width: 0; }
 .ladder thead th { font-size: .78rem; font-weight: 700; color: var(--faint); border-bottom: 1px solid var(--line); }
 .ladder abbr { text-decoration: none; }
@@ -37,14 +37,14 @@
 /* Match rows */
 .day { margin: 16px 0 4px; font-size: .86rem; font-weight: 700; color: var(--muted); }
 .fxs { display: grid; }
-.fx { display: grid; grid-template-columns: 64px minmax(0, 1fr) 60px minmax(0, 1fr); align-items: center; gap: 10px; padding: 10px 8px; border-radius: var(--r-sm); color: var(--text); }
+.fx { display: grid; grid-template-columns: 4rem minmax(0, 1fr) 3.75rem minmax(0, 1fr); align-items: center; gap: 10px; padding: 10px 8px; border-radius: var(--r-sm); color: var(--text); }
 .member-main a.fx { color: var(--text); }
 .fxs .fx + .fx { box-shadow: 0 -1px 0 var(--line); }
 a.fx:hover { background: var(--surface); }
 .fx.me { box-shadow: inset 3px 0 0 var(--club); background: color-mix(in srgb, var(--club) 14%, transparent); }
 .fxs .fx.me + .fx, .fxs .fx + .fx.me { box-shadow: inset 3px 0 0 var(--club); }
 .fxs .fx.me + .fx:not(.me) { box-shadow: none; }
-.fx .when { white-space: nowrap; font-size: .85rem; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+.fx .when { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .85rem; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
 .fx .t { color: var(--blue-300); }
 .fx .team { display: flex; align-items: center; gap: 9px; min-width: 0; font-weight: 600; }
 .fx .nm { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -58,6 +58,16 @@ a.fx:hover { background: var(--surface); }
 .res.is-live b { background: var(--white); color: var(--navy); }
 .res.none { display: block; }
 .res .v { display: block; line-height: 1; color: var(--faint); font-family: var(--font); font-weight: 600; font-size: .85rem; }
+
+/* Spoiler-free results (0.7): the row still opens the match; Show score sits above that link */
+.fx.hid { position: relative; }
+.fx-open { position: absolute; inset: 0; border-radius: inherit; }
+.fx-open:hover { background: var(--surface); }
+.fx.hid > :not(.fx-open) { position: relative; pointer-events: none; }
+.fx.hid .show-score { pointer-events: auto; z-index: 1; padding: 4px 0; border: 1px dashed rgba(160,190,230,.35); border-radius: 6px; background: var(--surface); color: var(--muted); font: 700 .72rem var(--font); line-height: 1.2; cursor: pointer; }
+.fx.hid .show-score:hover { color: var(--text); border-color: var(--blue-400); }
+.spoil { margin: 10px 0 0; font-size: .85rem; color: var(--faint); }
+.link-btn { padding: 0; border: 0; background: none; color: var(--brand); font: 700 .85rem var(--font); cursor: pointer; }
 
 /* Top players */
 .leads { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; }
@@ -73,7 +83,7 @@ a.fx:hover { background: var(--surface); }
 @media (max-width: 640px) {
   .ladder .wide { display: none; }
   .ladder .chips abbr { width: 16px; height: 16px; font-size: .6rem; }
-  .fx { grid-template-columns: 52px minmax(0, 1fr) 50px minmax(0, 1fr); gap: 7px; padding: 10px 4px 10px 6px; font-size: .9rem; }
+  .fx { grid-template-columns: 3.4rem minmax(0, 1fr) 3.25rem minmax(0, 1fr); gap: 7px; padding: 10px 4px 10px 6px; font-size: .9rem; }
   .fx .team { gap: 6px; }
   .fx .when { font-size: .78rem; }
   .leads { grid-template-columns: minmax(0, 1fr); }
@@ -81,4 +91,21 @@ a.fx:hover { background: var(--surface); }
 @media (max-width: 420px) {
   .fx .team .crest { display: none; }
   .ladder .chips abbr:nth-child(-n+2):not(:nth-last-child(-n+3)) { display: none; }
+}
+/* Larger text sizes (0.7): on a narrow table, the form column gives way to the club names. */
+.table-sect { container-type: inline-size; }
+@container (max-width: 18rem) { .ladder .form { display: none; } }
+/* …and on a narrow card, each match stacks home over away so the names have room. */
+.fixtures-sect { container-type: inline-size; }
+@container (max-width: 19rem) {
+  .fx { grid-template-columns: 3.6rem minmax(0, 1fr) 2.4rem; grid-template-areas: 'when h res' 'when a res'; row-gap: 4px; }
+  .fx .when { grid-area: when; }
+  .fx .team.h { grid-area: h; flex-direction: row-reverse; justify-content: flex-end; text-align: left; }
+  .fx .team.a { grid-area: a; }
+  .fx .res, .fx .show-score { grid-area: res; align-self: stretch; }
+  .fx .res { grid-template-columns: 1fr; align-content: center; }
+  .fx .res b:first-child { border-radius: 6px 6px 0 0; }
+  .fx .res b:last-child { border-radius: 0 0 6px 6px; }
+  .fx .res.none { display: grid; place-items: center; }
+  .fx .team .crest { display: inline-grid; }
 }

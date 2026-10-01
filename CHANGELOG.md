@@ -3,6 +3,28 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.7.0 (2026-10-01)
+
+Settings, and email reminders that only arrive when they're useful.
+
+- **Added:** Settings, behind your club crest at the top right (it replaces the Sign out button; Sign out is in
+  Settings now). Account: name, email, password, sign out, sign out on all devices. Appearance: accent (club colour
+  or vLeague blue) and text size (four steps, with a preview). Matches: spoiler-free results, 12 or 24-hour clock,
+  start page. Accessibility: reduce motion. Text size and motion are kept on this device; the rest follows your
+  account.
+- **Added:** spoiler-free results. Scores you haven't seen show as "Show score" on Home and League, and your place,
+  points and form leave those results out until you show them ("N results hidden · Show all"). Opening a match
+  counts as seeing it.
+- **Added:** email reminders. A deadline reminder only if your club hasn't picked a team since the last week locked
+  (24 hours before, 3 hours before, both, or off). Also: club changes sent back (on), line-ups out with your
+  opponent's XI (off), a Monday round-up of the week's results (off), and for the league office, clubs without a team
+  (on). Never twice, never between 10 pm and 8 am, and every email has a one-click "Turn these off". "Send me a test
+  email" in Settings.
+- **Changed:** every page follows the text size setting, including body text.
+- **Added:** database tables `user_settings` and `email_log`, the reminder rules, and Edge Functions `send-reminders`
+  and `email-unsubscribe` (migration `0006_settings_and_reminders.sql`). 16 more security checks (69 in all).
+- **Changed:** the roadmap: 0.8 is light mode (a Theme setting), and everything after moves back one.
+
 ## 0.6.0 (2026-10-01)
 
 Pick your team, with a line-up deadline each week.

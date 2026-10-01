@@ -37,6 +37,8 @@ makes invites and password resets work.
 | `deadlines` | The line-up deadline for each week (0.6), and when that week was locked | Everyone, guests too | League office; a locked week can't be moved or deleted |
 | `team_sheet_versions` | Every save of every team sheet, with the time (kept by a trigger on `team_sheets`) | League office | Nobody directly |
 | `week_sheets` | Each club's team sheet as it was at the week's deadline: what Simulate plays with, and the reveal | Everyone, guests too | Nobody directly; only `lock_due_weeks()` |
+| `user_settings` | Settings that follow an account (0.7): accent, spoiler-free results and revealed matches, clock, start page, email choices (`prefs` jsonb) | Yourself | Yourself |
+| `email_log` | Every reminder email sent (account, kind, key), so none is sent twice | League office | Nobody directly; only `send-reminders` |
 
 `clubs.setup_at` is empty until the club's manager has sent "Set up your club" (setup.html). Every manager, the
 office's own club included, is taken there at sign-in while it's empty, and never again once it's sent, until the
@@ -50,6 +52,22 @@ changes count for week N+1. Clubs that never saved get no row and the engine pic
 Simulate reads the fixture's week from `week_sheets` (with the anon key) and refuses to run before the week is
 locked. The league's time zone is Australia/Melbourne; deadlines are stored as exact instants (timestamptz).
 
+**Settings and email reminders** (0.7, `0006_settings_and_reminders.sql`). How the app looks on one screen (text
+size, reduce motion) stays in that browser (`localStorage` key `vleague-device`, applied by a one-line script in each
+page's `<head>`); everything else is `user_settings.prefs` (`js/prefs.js`). Emails: pg_cron job
+`vleague-send-reminders` calls the Edge Function `send-reminders` every 5 minutes (pg_net, with the secret stored in
+Supabase Vault as `vleague_cron_secret`). The function sends what `due_emails()` lists, logging each first so
+nothing goes twice. The rules live in `due_emails()`: a deadline reminder only for clubs that haven't saved a team
+since the last week locked, at each account's chosen lead (24 h, 3 h, both, off); `send_at()` moves anything that
+would land between 10 pm and 8 am Melbourne time to 9:30 pm the evening before. Other kinds: club changes sent back,
+line-ups out (opt-in), weekly round-up on Monday mornings (opt-in, skipped if there were no results), and clubs
+without a team (office). Only accounts that have signed in and confirmed their email get any. Every email has a
+signed one-click unsubscribe (`email-unsubscribe`, also the `List-Unsubscribe` header). Mail goes from
+vleague.admin@gmail.com over SMTP on port 465 (Supabase blocks 587). Edge Function secrets: `SMTP_USER`,
+`SMTP_PASS` (the Gmail app password), `CRON_SECRET` (the same value as the Vault secret), `UNSUB_SECRET`. Deploy with
+`python supabase/functions/deploy.py send-reminders` (and `email-unsubscribe`); both run without a session and
+check their own secret or signed link.
+
 **Functions** (0.4, in `0003_club_setup.sql`). Managers never write `clubs` or `club_requests` directly; these check
 everything and give readable errors:
 
@@ -61,6 +79,7 @@ everything and give readable errors:
 | `review_club_request(id, approve, note)` | League office | Approve (applies it; a new code cascades everywhere; posts the crest reveal) or send back with a note. |
 | `reopen_club_setup(code)` | League office | Show that club's manager the wizard again at their next sign-in; the process starts again. |
 | `office_accounts()` | League office | Every account with its email, club and sign-in state, for the Editor. |
+| `set_display_name(name)` | Anyone signed in | Their own display name (2 to 40 characters), from Settings (0.7). |
 
 **Edge Function `invite-manager`** (`supabase/functions/invite-manager/`): the Editor's "Invite a manager". Only the
 office may call it. It emails the invite (link to `set-password.html`) and links the account to its club. It runs
@@ -75,7 +94,7 @@ The league office is **lukedanielgrogan@gmail.com** (role `office`), and it's th
 FC Turtle (club `TUR`), so it signs in to FC Turtle's Home and reaches the Editor from the footer.
 
 **Checking the rules:** `python supabase/tests/rls_check.py` acts as a guest, a manager, an account with no club
-and the office, and checks what each can read and change (53 checks; nothing is left behind). Run it after any
+and the office, and checks what each can read and change (69 checks; nothing is left behind). Run it after any
 database change. It needs the Management API token in `C:\Users\offic\.vleague\supabase-token.txt`.
 
 ## Adding a manager

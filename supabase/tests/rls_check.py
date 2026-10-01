@@ -193,6 +193,53 @@ DEADLINE_CHECKS = [
 ]
 
 
+# 0.7: settings and email reminders. The fake manager is FC Turtle's, with a confirmed email and a past sign-in so
+# due_emails() counts them (pre runs with full rights; everything is rolled back).
+MAILABLE = f"update auth.users set email_confirmed_at = now(), last_sign_in_at = now() where id = '{FAKE_MANAGER}';"
+SETTINGS_CHECKS = [
+    ('manager', 'manager saves own settings', '',
+     f"""insert into public.user_settings (user_id, prefs) values ('{FAKE_MANAGER}', '{{"clock":"24"}}');
+        select prefs->>'clock' = '24' as ok from public.user_settings;"""),
+    ('manager', "manager cannot write another account's settings", '', {'error': 'row-level security'},
+     f"insert into public.user_settings (user_id, prefs) values ('{FAKE_NOCLUB}', '{{}}');"),
+    ('manager', "manager cannot read another account's settings",
+     f"insert into public.user_settings (user_id, prefs) values ('{FAKE_NOCLUB}', '{{\"clock\":\"24\"}}');",
+     "select count(*) = 0 as ok from public.user_settings;"),
+    ('manager', 'manager changes own display name', '',
+     f"select public.set_display_name('  Luke  '); reset role; select display_name = 'Luke' as ok from public.profiles where id = '{FAKE_MANAGER}';"),
+    ('manager', 'a one-letter name is refused', '', {'error': '2 to 40 characters'}, "select public.set_display_name('L');"),
+    ('anon', 'guest cannot change a name', '', {'error': 'permission denied'}, "select public.set_display_name('Luke');"),
+    ('manager', 'manager cannot list due emails', '', {'error': 'permission denied'}, "select * from public.due_emails();"),
+    ('manager', 'manager cannot read the email log', f"insert into public.email_log (user_id, kind, key) values ('{FAKE_MANAGER}', 'test', 'x');",
+     "select count(*) = 0 as ok from public.email_log;"),
+    ('manager', 'manager cannot read other accounts\u2019 emails', '', {'error': 'permission denied'}, "select * from public.mail_accounts;"),
+    ('anon', 'quiet hours: a reminder due at 2 am goes at 9:30 pm the evening before', '',
+     """select public.send_at('2026-10-08 05:00+11', interval '3 hours') = '2026-10-07 21:30+11' as ok;"""),
+    ('anon', 'quiet hours: a reminder due at 11 pm goes at 9:30 pm', '',
+     """select public.send_at('2026-10-09 02:00+11', interval '3 hours') = '2026-10-08 21:30+11' as ok;"""),
+    ('anon', 'a reminder due at 3 pm goes at 3 pm', '',
+     """select public.send_at('2026-10-08 18:00+11', interval '3 hours') = '2026-10-08 15:00+11' as ok;"""),
+    ('office', 'a club that hasn\u2019t picked a team gets a deadline reminder',
+     MAILABLE + " delete from public.team_sheet_versions where club = 'TUR'; "
+     "insert into public.deadlines (week, locks_at) values (98, now() + interval '2 hours');",
+     f"reset role; select exists (select 1 from public.due_emails() where user_id = '{FAKE_MANAGER}' and kind = 'deadline' and key like '98-%') as ok;"),
+    ('office', 'a club that has picked a team gets no reminder',
+     MAILABLE + " insert into public.deadlines (week, locks_at) values (98, now() + interval '2 hours'); "
+     "insert into public.team_sheet_versions (club, sheet, saved_at) values ('TUR', '{}', now());",
+     f"reset role; select not exists (select 1 from public.due_emails() where user_id = '{FAKE_MANAGER}' and kind = 'deadline') as ok;"),
+    ('office', 'a reminder already sent is not sent again',
+     MAILABLE + " delete from public.team_sheet_versions where club = 'TUR'; "
+     "insert into public.deadlines (week, locks_at) values (98, now() + interval '2 hours'); "
+     f"insert into public.email_log (user_id, kind, key) values ('{FAKE_MANAGER}', 'deadline', '98-24h');",
+     f"reset role; select not exists (select 1 from public.due_emails() where user_id = '{FAKE_MANAGER}' and kind = 'deadline' and key = '98-24h') as ok;"),
+    ('office', 'reminders switched off are not sent',
+     MAILABLE + " delete from public.team_sheet_versions where club = 'TUR'; "
+     "insert into public.deadlines (week, locks_at) values (98, now() + interval '2 hours'); "
+     f"""insert into public.user_settings (user_id, prefs) values ('{FAKE_MANAGER}', '{{"email":{{"deadline":"off"}}}}');""",
+     f"reset role; select not exists (select 1 from public.due_emails() where user_id = '{FAKE_MANAGER}' and kind = 'deadline') as ok;"),
+]
+
+
 def main():
     failed = 0
     for who, desc, body in CHECKS:
@@ -221,12 +268,21 @@ def main():
             ok = bool(rows_of(r) and r[-1].get('ok'))
         failed += not ok
         print(f"{'PASS' if ok else 'FAIL'}  [{who:7}] {desc}" + ('' if ok else f'  -> {r}'))
+    for who, desc, pre, *rest in SETTINGS_CHECKS:
+        expect, body = (rest[0], rest[1]) if len(rest) == 2 else (None, rest[0])
+        r = as_user(who, body, pre)
+        if expect:
+            ok = isinstance(r, dict) and expect['error'].lower() in r.get('error', '').lower()
+        else:
+            ok = bool(rows_of(r) and r[-1].get('ok'))
+        failed += not ok
+        print(f"{'PASS' if ok else 'FAIL'}  [{who:7}] {desc}" + ('' if ok else f'  -> {r}'))
     # Make sure nothing leaked out of the rolled-back transactions.
     left = sql(f"select count(*) as n from auth.users where id in ('{FAKE_MANAGER}', '{FAKE_NOCLUB}');")
     clean = rows_of(left) and left[0]['n'] == 0
     print('PASS  test accounts cleaned up' if clean else f'FAIL  test accounts left behind: {left}')
     failed += not clean
-    total = len(CHECKS) + len(SETUP_CHECKS) + len(DEADLINE_CHECKS) + 1
+    total = len(CHECKS) + len(SETUP_CHECKS) + len(DEADLINE_CHECKS) + len(SETTINGS_CHECKS) + 1
     print(f'\n{total - failed}/{total} passed')
     sys.exit(1 if failed else 0)
 

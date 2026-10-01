@@ -15,7 +15,7 @@ function onColour(c) {
 export const teamOf = (season, code) => season.teams.find(t => t.code === code)
   || { code: code || '?', name: code || 'To be decided', colour: '#475569' };
 
-// The office approves names, codes and crests in Supabase (0.4), while season.json keeps the old ones until 0.8, so
+// The office approves names, codes and crests in Supabase (0.4), while season.json keeps the old ones until 0.10, so
 // a page hands over the clubs rows once (useClubs) and names and crests come from them first.
 let rows = new Map();
 export const useClubs = list => { rows = new Map((list || []).map(r => [r.code, r])); };

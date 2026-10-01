@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Home | vLeague</title>
+  <title>Settings | vLeague</title>
   <meta name="theme-color" content="#0a0f19">
   <script>try{var d=JSON.parse(localStorage.getItem('vleague-device')||'{}');if(d.text&&d.text!=='100')document.documentElement.style.fontSize=d.text+'%';if(d.motion==='reduce')document.documentElement.classList.add('reduce-motion')}catch(e){}</script>
   <link rel="icon" type="image/png" href="assets/brand/favicon.png">
@@ -13,9 +13,9 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Figtree:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="css/site.css">
   <link rel="stylesheet" href="css/member.css">
-  <link rel="stylesheet" href="css/pitch.css">
-  <link rel="stylesheet" href="css/home.css">
-  <script type="module" src="js/home.js"></script>
+  <link rel="stylesheet" href="css/places.css">
+  <link rel="stylesheet" href="css/settings.css">
+  <script type="module" src="js/settings.js"></script>
 </head>
 <body class="member">
   <div class="club-band" id="band" aria-hidden="true"></div>
@@ -24,7 +24,7 @@
     <nav class="places" id="places"></nav>
     <a class="account-btn" id="account" href="settings.html" aria-label="Settings"></a>
   </header>
-  <main class="member-main wide" id="main" aria-busy="true">
+  <main class="member-main wide settings-main" id="main" aria-busy="true">
     <p class="quiet">Loading…</p>
   </main>
   <footer class="member-foot"><a class="to-editor" href="editor.html">Editor</a><a id="version" href="https://github.com/ldg224/vLeague/releases" target="_blank" rel="noopener"></a></footer>

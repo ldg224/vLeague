@@ -94,3 +94,13 @@
   .club-rows li { grid-template-columns: 32px minmax(0, 1fr) auto; }
   .club-rows .status { display: none; }
 }
+
+/* The account button (0.7): the club crest in a ring, linking to Settings. */
+.account-btn {
+  flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.22); background: var(--surface); text-decoration: none; transition: border-color .15s, box-shadow .15s;
+}
+.account-btn:hover { border-color: rgba(255,255,255,.5); }
+.account-btn[aria-current="page"] { border-color: var(--club); box-shadow: 0 0 0 3px color-mix(in srgb, var(--club) 25%, transparent); }
+.account-btn img { width: 28px; height: 28px; object-fit: contain; }
+.account-btn svg { width: 20px; height: 20px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; }

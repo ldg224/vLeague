@@ -1,6 +1,7 @@
 // Choose a password: the page that invite emails and "Forgot password?" emails link to.
 // supabase-js turns the link into a session on load; without one, the link has expired (or was already used).
 import { currentUser, myProfile, landingPage, setPassword } from './auth.js';
+import { startPage } from './prefs.js';
 import { VERSION } from './version.js';
 
 const $ = s => document.querySelector(s);
@@ -51,7 +52,7 @@ form.addEventListener('submit', async e => {
   btn.disabled = true; label.textContent = 'Saving…';
   try {
     await setPassword(password.value);
-    location.replace(landingPage(await myProfile()));
+    location.replace(await startPage(landingPage(await myProfile())));
   } catch (x) {
     if (/expired/i.test(x.message)) return showExpired();
     showError(x.message, password);

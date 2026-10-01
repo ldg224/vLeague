@@ -18,6 +18,7 @@ export async function enter(page) {
   const office = profile?.role === 'office';
   const allowed = page === 'editor.html' ? office
     : page === 'setup.html' ? Boolean(profile?.club)
+    : page === 'settings.html' ? Boolean(profile) && !profile.needs_setup
     : landingPage(profile) === 'home.html';
   if (!allowed) { location.replace(landingPage(profile)); return null; }
   document.body.classList.toggle('is-office', office);

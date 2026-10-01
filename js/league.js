@@ -1,23 +1,28 @@
 // League (0.5): the table with the manager's club marked, fixtures and results by week, and the top scorers.
-// Scores follow the broadcast rules (hidden before kick-off, live while it plays). Redraws every 15 s, reloads every minute.
+// Scores follow the broadcast rules (hidden before kick-off, live while it plays). With spoiler-free results on (0.7),
+// a result stays behind "Show score" until revealed, and the table and top players leave hidden results out.
+// Redraws every 15 s, reloads every minute.
 import { enterPlace } from './shell.js';
 import { esc, clubs } from './member.js';
 import {
   loadSeason, matchUrl, kickoff, status, shownScore, liveMinute, byKickoff, activeWeek, ladder, leaders,
 } from './dashboard-data.js';
-import { crest, teamOf, nameOf, useClubs, time, day } from './places.js';
+import { crest, teamOf, nameOf, useClubs, day } from './places.js';
+import { prefs, fmtTime, spoilerHidden, revealScore } from './prefs.js';
 
 const ctx = await enterPlace('league');
 if (ctx) {
   useClubs(await clubs().catch(() => []));
+  await prefs().catch(() => null);
   const { main } = ctx;
   let season = ctx.season, week = null;
+  let hidden = new Set(), seen = season;   // fixtures whose result is hidden; the season without them
   const mine = ctx.club?.code;
 
   const weeksList = () => [...new Set(season.fixtures.map(f => f.week))].filter(w => w != null).sort((a, b) => a - b);
 
   function tableHtml(now) {
-    const rows = ladder(season, now);
+    const rows = ladder(seen, now);
     const label = { W: 'Won', D: 'Drew', L: 'Lost' };
     return `<table class="ladder">
       <thead><tr><th scope="col"><abbr title="Position">#</abbr></th><th scope="col" class="club">Club</th><th scope="col"><abbr title="Played">P</abbr></th><th scope="col" class="wide"><abbr title="Won">W</abbr></th><th scope="col" class="wide"><abbr title="Drawn">D</abbr></th><th scope="col" class="wide"><abbr title="Lost">L</abbr></th><th scope="col"><abbr title="Goal difference">GD</abbr></th><th scope="col"><abbr title="Points">Pts</abbr></th><th scope="col" class="form">Form</th></tr></thead>
@@ -27,27 +32,30 @@ if (ctx) {
         <td>${r.p}</td><td class="wide">${r.w}</td><td class="wide">${r.d}</td><td class="wide">${r.l}</td>
         <td>${r.gd > 0 ? '+' : ''}${r.gd}</td><td class="pts">${r.pts}</td>
         <td class="form"><span class="chips">${r.form.map(o => `<abbr class="res-${o}" title="${label[o]}">${o}</abbr>`).join('')}</span></td></tr>`).join('')}</tbody>
-    </table>`;
+    </table>${hidden.size ? `<p class="spoil">${hidden.size === 1 ? '1 result' : `${hidden.size} results`} hidden · <button type="button" class="link-btn" data-reveal-all>Show all</button></p>` : ''}`;
   }
 
   function row(fx, now) {
     const st = status(fx, season, now), k = kickoff(fx), h = teamOf(season, fx.home), a = teamOf(season, fx.away);
-    const sc = shownScore(fx, season, now);
+    const hid = hidden.has(fx.id), sc = hid ? null : shownScore(fx, season, now);
     const left = {
       live: () => `<span class="live"><span class="dot"></span>${liveMinute(fx, season, now)}'</span>`,
       ft: () => 'FT',
-      upcoming: () => `<span class="t">${esc(time(k))}</span>`,
+      upcoming: () => `<span class="t">${esc(fmtTime(k))}</span>`,
       awaiting: () => 'Playing',
       postponed: () => 'Postponed',
       tba: () => 'TBA',
     }[st]();
-    const won = side => (st === 'ft' && (side === 'home' ? sc.home > sc.away : sc.away > sc.home) ? ' won' : '');
+    const won = side => (st === 'ft' && sc && (side === 'home' ? sc.home > sc.away : sc.away > sc.home) ? ' won' : '');
     const cls = `fx is-${st}${fx.home === mine || fx.away === mine ? ' me' : ''}`;
     const inner = `<span class="when">${left}</span>
       <span class="team h${won('home')}"><span class="nm">${esc(nameOf(h))}</span>${crest(h, 24)}</span>
-      <span class="res${sc ? '' : ' none'}${st === 'live' ? ' is-live' : ''}">${sc ? `<b>${sc.home}</b><b>${sc.away}</b>` : '<span class="v">v</span>'}</span>
+      ${hid ? `<button type="button" class="show-score" data-reveal="${esc(fx.id)}" aria-label="Show score: ${esc(nameOf(h))} against ${esc(nameOf(a))}">Show score</button>`
+        : `<span class="res${sc ? '' : ' none'}${st === 'live' ? ' is-live' : ''}">${sc ? `<b>${sc.home}</b><b>${sc.away}</b>` : '<span class="v">v</span>'}</span>`}
       <span class="team a${won('away')}">${crest(a, 24)}<span class="nm">${esc(nameOf(a))}</span></span>`;
     const label = `${nameOf(h)} ${sc ? `${sc.home}, ${nameOf(a)} ${sc.away}` : `against ${nameOf(a)}`}`;
+    // A hidden result: the row still opens the match (which reveals it), with the Show score button above the link.
+    if (hid) return `<div class="${cls} hid"><a class="fx-open" href="${esc(matchUrl(fx))}" data-open="${esc(fx.id)}" aria-label="Watch ${esc(nameOf(h))} against ${esc(nameOf(a))}"></a>${inner}</div>`;
     return st === 'live' || st === 'ft'
       ? `<a class="${cls}" href="${esc(matchUrl(fx))}" aria-label="${esc(label)}, ${st === 'live' ? 'live now' : 'full time'}">${inner}</a>`
       : `<div class="${cls}">${inner}</div>`;
@@ -68,7 +76,7 @@ if (ctx) {
   }
 
   function leadersHtml(now) {
-    const L = leaders(season, now);
+    const L = leaders(seen, now);
     const list = (title, rows, value) => (rows.length ? `<div class="lead"><h3>${title}</h3><ol>${rows.map(p => `<li${p.team === mine ? ' class="me"' : ''}>${crest(teamOf(season, p.team), 20)}<span class="who">${esc(p.name)}</span><b>${value(p)}</b></li>`).join('')}</ol></div>` : '');
     const html = list('Goals', L.goals, p => p.g) + list('Assists', L.assists, p => p.a);
     return html ? `<section class="sect"><div class="sect-head"><h2>Top players</h2></div><div class="leads">${html}</div></section>` : '';
@@ -76,6 +84,8 @@ if (ctx) {
 
   function draw() {
     const now = new Date();
+    hidden = new Set(season.fixtures.filter(f => spoilerHidden(f, season)).map(f => f.id));
+    seen = hidden.size ? { ...season, fixtures: season.fixtures.map(f => (hidden.has(f.id) ? { ...f, result: null } : f)) } : season;
     const scroll = main.querySelector('.weektabs')?.scrollLeft;
     main.innerHTML = `<div class="league">
       <section class="sect table-sect"><div class="sect-head"><h2>Table</h2></div>${tableHtml(now)}</section>
@@ -93,7 +103,18 @@ if (ctx) {
   }
 
   main.classList.add('league-main');
-  main.addEventListener('click', e => {
+  main.addEventListener('click', async e => {
+    const show = e.target.closest('[data-reveal]'), all = e.target.closest('[data-reveal-all]'), open = e.target.closest('[data-open]');
+    if (show || all || open) {
+      e.preventDefault();
+      const ids = show ? [show.dataset.reveal] : open ? [open.dataset.open] : [...hidden];
+      await revealScore(ids);
+      if (open) { location.href = open.href; return; }
+      for (const id of ids) hidden.delete(id);
+      draw();
+      if (show) main.querySelector(`a.fx[href$="=${CSS.escape(encodeURIComponent(show.dataset.reveal))}"]`)?.focus();
+      return;
+    }
     const b = e.target.closest('.weektabs button');
     if (!b) return;
     week = Number(b.dataset.week);

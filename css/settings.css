@@ -1,0 +1,65 @@
+/* Settings (0.7): one column of Home-style cards; each row is a label and its control, saving on change. */
+
+.member-main.settings-main { width: min(640px, 100%); }
+.settings-main .sect-head { align-items: baseline; }
+.sect-note { font-size: .82rem; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+.set-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 12px 0; }
+.set-row + .set-row { border-top: 1px solid var(--line); }
+.set-label { font-weight: 600; }
+.set-ctl { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px 10px; min-width: 0; margin-left: auto; }
+
+/* Saved / error note beside a control */
+.tick { font-size: .8rem; font-weight: 600; color: var(--faint); }
+.tick:empty { display: none; }
+.tick.ok { color: var(--res-w); }
+.tick.ok::before { content: '✓ '; }
+.tick.err { color: #ff8a80; flex-basis: 100%; text-align: right; }
+.tick.busy::after { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--faint); border-top-color: transparent; animation: spin .7s linear infinite; }
+.tick.busy:empty { display: inline-block; }
+@keyframes spin { to { transform: rotate(1turn); } }
+
+/* Segmented choice */
+.seg { display: inline-flex; flex-wrap: wrap; gap: 3px; padding: 3px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); }
+.seg button { padding: 7px 12px; border: 0; border-radius: 9px; background: none; color: var(--muted); font: 600 .86rem var(--font); cursor: pointer; white-space: nowrap; }
+.seg button:hover { color: var(--text); }
+.seg button[aria-checked="true"] { background: var(--blue-700); color: var(--white); }
+
+/* On/off switch */
+.switch { position: relative; width: 46px; height: 28px; flex: none; padding: 0; border: 0; border-radius: 999px; background: var(--surface-raised); box-shadow: inset 0 0 0 1px var(--line); cursor: pointer; transition: background .15s; }
+.switch span { position: absolute; left: 3px; top: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--muted); transition: transform .15s, background .15s; }
+.switch[aria-checked="true"] { background: var(--blue-600); box-shadow: none; }
+.switch[aria-checked="true"] span { transform: translateX(18px); background: var(--white); }
+
+/* Text fields */
+.field { width: min(280px, 100%); padding: 9px 12px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 500 .92rem var(--font); }
+.field:focus { outline: none; border-color: var(--blue-400); box-shadow: 0 0 0 3px rgba(66,165,245,.16); }
+select.field { width: auto; min-width: 140px; }
+.inline { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; min-width: 0; }
+.inline .field { flex: 1 1 180px; }
+.small-btn { padding: 8px 14px; border: 0; border-radius: var(--r-sm); background: var(--blue-600); color: var(--white); font: 700 .86rem var(--font); cursor: pointer; }
+.small-btn:disabled { background: var(--surface-raised); color: var(--faint); cursor: default; }
+.small-btn[hidden] { display: none; }
+
+.set-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding-top: 14px; border-top: 1px solid var(--line); }
+.ghost-btn { padding: 8px 16px; border-radius: 999px; border: 1px solid rgba(255,255,255,.28); background: transparent; color: var(--text); font: 600 .88rem var(--font); cursor: pointer; }
+.ghost-btn:hover { background: rgba(255,255,255,.06); }
+.ghost-btn:disabled { opacity: .5; cursor: default; }
+.test-result { font-size: .85rem; color: var(--muted); }
+.test-result.ok { color: var(--res-w); }
+.test-result.err { color: #ff8a80; }
+
+.sample { margin: 4px 0 2px; padding: 10px 12px; border-radius: var(--r-sm); background: var(--surface); color: var(--muted); font-size: 1rem; }
+
+@media (max-width: 520px) {
+  .set-row { flex-direction: column; align-items: stretch; }
+  .set-ctl { justify-content: flex-start; margin-left: 0; }
+  .set-row:has(.switch) { flex-direction: row; align-items: center; }
+  .set-row:has(.switch) .set-ctl { margin-left: auto; }
+  .set-ctl > .seg { display: flex; flex: 1 1 100%; }
+  .seg button { flex: 1 1 auto; padding: 8px 6px; }
+  .field, .inline { width: 100%; }
+  .tick.err { text-align: left; }
+}
+@media (prefers-reduced-motion: reduce) { .switch, .switch span { transition: none; } .tick.busy::after { animation-duration: 2s; } }
+.reduce-motion .switch, .reduce-motion .switch span { transition: none; }

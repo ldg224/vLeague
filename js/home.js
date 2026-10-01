@@ -1,9 +1,10 @@
 // A manager's Home (0.5): your club, right now. The match card (countdown, when the line-up locks, live score), a
 // notice while club changes are with the office, your season in numbers and your next matches. Everything
 // league-wide is on League; news is in Inbox (its unread count is on the Inbox tab).
-// League data still comes from the s3 site's season.json (dashboard-data.js) until fixtures move to Supabase (0.8).
+// League data still comes from the s3 site's season.json (dashboard-data.js) until fixtures move to Supabase (0.10).
 import { enterPlace, badge } from './shell.js';
 import { renderPitch } from './pitch.js';
+import { spoilerHidden, revealScore, fmtTime, fmtDay } from './prefs.js';
 import { clubs, esc, crestUrl } from './member.js';
 import { db } from './auth.js';
 import {
@@ -32,9 +33,8 @@ function until(ms) {
   if (h >= 1) return `${d ? `${d}d ` : ''}${h % 24}h ${String(m % 60).padStart(2, '0')}m`;
   return `${m} min`;
 }
-const day = (d, now) => sameDay(d, now) ? 'Today' : sameDay(d, new Date(+now + 864e5)) ? 'Tomorrow'
-  : d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
-const time = d => d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+const day = (d, now) => sameDay(d, now) ? 'Today' : sameDay(d, new Date(+now + 864e5)) ? 'Tomorrow' : fmtDay(d);
+const time = d => fmtTime(d);
 
 const mine = (s, code) => s.fixtures.filter(f => f.home === code || f.away === code).sort(byKickoff);
 
@@ -42,6 +42,15 @@ const mine = (s, code) => s.fixtures.filter(f => f.home === code || f.away === c
 function current(s, code, now) {
   const list = mine(s, code);
   return list.find(f => status(f, s, now) === 'live') || list.find(f => ['upcoming', 'awaiting'].includes(status(f, s, now))) || null;
+}
+
+// ---------------------------------------------------------------- spoiler-free results (Settings, 0.7)
+// Hidden matches: scores shown as "Show score". Everything worked out from results (place, points, form, last match)
+// uses the season as this account has seen it, without the hidden results.
+const hiddenIds = (s, now) => s.fixtures.filter(f => f.result && spoilerHidden(f, s, now)).map(f => f.id);
+function seenSeason(s, now) {
+  const hide = new Set(hiddenIds(s, now));
+  return hide.size ? { ...s, fixtures: s.fixtures.map(f => (hide.has(f.id) ? { ...f, result: null } : f)) } : s;
 }
 
 // ---------------------------------------------------------------- the match card
@@ -57,8 +66,10 @@ function matchCard(s, code, now) {
   const side = c => `<div class="hm-side${c === code ? ' us' : ''}">${crest(c, 'hm-crest')}<b>${esc(nameOf(c))}</b></div>`;
   let mid, foot = '';
   if (st === 'live') {
-    mid = `<span class="hm-live">LIVE ${liveMinute(fx, s, now) ?? ''}′</span><strong class="hm-score">${sc.home}<i>–</i>${sc.away}</strong>`;
-    foot = `<a class="btn" href="${esc(matchUrl(fx))}" target="_blank" rel="noopener">Watch live</a>`;
+    mid = `<span class="hm-live">LIVE ${liveMinute(fx, s, now) ?? ''}′</span>${spoilerHidden(fx, s, now)
+      ? `<button class="hm-show" type="button" data-reveal="${esc(fx.id)}">Show score</button>`
+      : `<strong class="hm-score">${sc.home}<i>–</i>${sc.away}</strong>`}`;
+    foot = `<a class="btn" href="${esc(matchUrl(fx))}" target="_blank" rel="noopener" data-opens="${esc(fx.id)}">Watch live</a>`;
   } else {
     mid = `<span class="hm-when">${day(ko, now)}</span><strong class="hm-ko">${time(ko)}</strong>`;
     const d = deadlines.find(x => x.week === fx.week), lock = d && new Date(d.locks_at);
@@ -119,7 +130,8 @@ const outcome = (fx, code) => {
   return us > them ? 'W' : us < them ? 'L' : 'D';
 };
 
-function season(s, code, now) {
+function season(all, code, now) {
+  const s = seenSeason(all, now), hidden = hiddenIds(all, now).length;
   const rows = ladder(s, now), r = rows.find(x => x.team.code === code);
   if (!r) return '';
   const mineDone = finished(s, now).filter(f => f.home === code || f.away === code);
@@ -129,7 +141,7 @@ function season(s, code, now) {
   if (last) {
     const opp = last.home === code ? last.away : last.home, o = outcome(last, code);
     const score = last.home === code ? `${last.result.home}–${last.result.away}` : `${last.result.away}–${last.result.home}`;
-    lastHtml = `<a class="hm-lastline" href="${esc(matchUrl(last))}" target="_blank" rel="noopener">
+    lastHtml = `<a class="hm-lastline" href="${esc(matchUrl(last))}" target="_blank" rel="noopener" data-opens="${esc(last.id)}">
         <span class="hm-k">Last match</span><span class="hm-out ${o}">${o}</span><strong>${score}</strong>
         <span class="hm-vs">${last.home === code ? 'v' : 'at'}</span>${crest(opp, 'hm-mini')}<b>${esc(nameOf(opp))}</b></a>`;
   }
@@ -142,6 +154,7 @@ function season(s, code, now) {
       </div>
       ${form.length ? `<p class="hm-form"><span class="hm-k">Form</span>${form.map(o => `<abbr class="hm-out ${o}" title="${{ W: 'Win', D: 'Draw', L: 'Loss' }[o]}">${o}</abbr>`).join('')}</p>` : ''}
       ${lastHtml}
+      ${hidden ? `<p class="hm-hidden">${hidden} result${hidden === 1 ? '' : 's'} hidden <button type="button" data-reveal-all>Show all</button></p>` : ''}
     </section>`;
 }
 
@@ -191,6 +204,13 @@ async function refreshDeadlines() {
   await loadReveal();
 }
 
+function onClick(e) {
+  const one = e.target.closest('[data-reveal]'), all = e.target.closest('[data-reveal-all]'), open = e.target.closest('[data-opens]');
+  if (one) revealScore(one.dataset.reveal).then(render);
+  else if (all) revealScore(hiddenIds(ctx.season, new Date())).then(render);
+  else if (open && spoilerHidden(ctx.season.fixtures.find(f => f.id === open.dataset.opens), ctx.season)) revealScore(open.dataset.opens).then(render);
+}
+
 // Countdowns tick every 20 s; the whole page redraws each minute so live scores and states move on.
 function tick() {
   const now = Date.now();
@@ -225,6 +245,7 @@ if (ctx) {
     } catch { unread = 0; }
     badge('inbox', unread);
     render();
+    ctx.main.addEventListener('click', onClick);
     setInterval(tick, 20000);
     // Each minute: redraw, and fetch the locked sheets once the week's deadline passes.
     setInterval(async () => { await refreshDeadlines(); render(); }, 60000);

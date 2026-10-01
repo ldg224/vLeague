@@ -60,33 +60,45 @@ Sign-in page, "View as guest", the guest dashboard, the dashboard as the guest p
       locked for that week and revealed on both clubs' Homes and the dashboard. Managers keep editing; changes
       count for the next week. (User's decision, 1 October 2026: not T-10, because results are often simulated in
       advance. League time zone: Australia/Melbourne.)
-- [x] The s3 editor's Simulate reads team sheets from Supabase; the s3 Manager Hub's line-up and tactics tabs point to My club (press stays there until 0.7).
+- [x] The s3 editor's Simulate reads team sheets from Supabase; the s3 Manager Hub's line-up and tactics tabs point to My club (press stays there until 0.9).
 
-### 0.7: Inbox and press
+### 0.7: Settings and email reminders
+- [ ] Settings (settings.html) behind the club crest in the top bar: account (name, email, password, sign out, sign
+      out everywhere), email reminders, accent (club colour or vLeague blue), text size, spoiler-free results,
+      12/24-hour clock, start page, reduce motion. Appearance stays per device; the rest follows the account.
+- [ ] Email reminders that are useful, not annoying: a deadline reminder only when the club hasn't picked a team
+      (24 h, 3 h, both or off), club changes sent back, line-ups out (opt-in), weekly round-up (opt-in), and for the
+      office, clubs without a team. Never twice, never between 10 pm and 8 am, one-click unsubscribe in every email.
+
+### 0.8: Light mode
+- [ ] A Theme setting (Dark / Light / System). Colour tokens replace the hard-coded colours, a second accent per club
+      that reads on white, the pitch and matchday board stay dark on purpose.
+
+### 0.9: Inbox and press
 - [ ] One inbox: news for this club, press conferences, deadlines; only things that need action or matter.
 - [ ] News audiences: one club, several, all clubs, guests only, everyone.
 - [ ] Press conference opening 24 hours before kick-off; answers quoted in the match preview; the press effect kept.
 - [ ] Reactions on results, news and press answers.
 
-### 0.8: The Editor moves in
+### 0.10: The Editor moves in
 - [ ] Fixtures, results, Simulate, news composer, approvals and history in the app, on Supabase.
 - [ ] Results hidden until kick-off, enforced by the database.
 - [ ] season.json retired as the source of truth; match files published to this site's Pages.
 - [ ] Optional league events such as deadline day, set up and scheduled from the Editor (off by default).
 
-### 0.9: Match centre
+### 0.11: Match centre
 - [ ] The 3D broadcast view, live and after full time.
 - [ ] Momentum graph and shot map from the engine; ratings on coloured chips; match report; Man of the Match.
 - [ ] Team and Player of the Week after each round.
 
-### 0.10: Installable app and notifications
+### 0.12: Installable app and notifications
 - [ ] Add to home screen; opt-in push (asked only on a tap): line-ups out, kick-off, goals for your club, full time,
       "your line-up locks in 1 hour and isn't set", news for your club. (iPhone: works once installed, iOS 16.4+.)
 
-### 0.11: Predictor
+### 0.13: Predictor
 - [ ] Managers predict every fixture, with a leaderboard; guests predict on their own device with a personal streak.
 
-### 0.12: Club pages
+### 0.14: Club pages
 - [ ] A page per club (with its accents): squad, results, derbies, head-to-head.
 
 ### 1.0: vLeague runs on its own

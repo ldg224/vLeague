@@ -1,7 +1,9 @@
-// The four places a manager moves between (0.5): Home, My club, Inbox, League. Each page calls enterPlace() once:
-// it signs the visitor in (or sends them on), wires the top bar and footer, paints the club accent and band, draws
-// the nav, and loads the club row and the league data together.
-import { enter, chrome, safeColour, esc } from './member.js';
+// The four places a manager moves between (0.5): Home, My club, Inbox, League, plus Settings (0.7) behind the
+// round crest button in the top bar. Each page calls enterPlace() once: it signs the visitor in (or sends them on),
+// wires the top bar and footer, paints the club accent and band, draws the nav, and loads the club row, the league
+// data and the account's settings together.
+import { enter, chrome, safeColour, esc, crestUrl } from './member.js';
+import { prefs } from './prefs.js';
 import { db } from './auth.js';
 import { loadSeason } from './dashboard-data.js';
 
@@ -35,27 +37,50 @@ export function badge(place, n) {
   dot.hidden = !n;
 }
 
-export function paintClub(club) {
+// The club's accent, or vLeague blue if the account chose that in Settings.
+export function paintClub(club, accent = 'club') {
   if (!club) return;
-  document.body.style.setProperty('--club', safeColour(club.accent || club.colour));
+  document.body.style.setProperty('--club', accent === 'blue' ? 'var(--blue-300)' : safeColour(club.accent || club.colour));
   document.getElementById('band')?.classList.add('on');
 }
 
-// ctx = { me: { user, profile }, club, season, team, main } or null if the visitor was sent elsewhere.
+// The account button: the club crest (or a gear), linking to Settings. Replaces the old Sign out button.
+function drawAccount(club, current) {
+  let el = document.getElementById('account');
+  const old = document.getElementById('signout');
+  if (!el && old) {
+    el = document.createElement('a');
+    el.id = 'account';
+    old.replaceWith(el);
+  }
+  if (!el) return;
+  el.className = 'account-btn';
+  el.href = 'settings.html';
+  el.setAttribute('aria-label', 'Settings');
+  if (current) el.setAttribute('aria-current', 'page');
+  el.innerHTML = club?.crest_path
+    ? `<img src="${esc(crestUrl(club.crest_path))}" alt="">`
+    : '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/></svg>';
+}
+
+// ctx = { me: { user, profile }, club, season, team, prefs, main } or null if the visitor was sent elsewhere.
+// place is 'home' | 'club' | 'inbox' | 'league' | 'settings' (Settings marks no tab as current).
 // club: the Supabase clubs row (null if the account has none). season: the league's season.json (null if it didn't
 // load). team: the season's entry for this club (matched on code; the two stay in step until fixtures move to
-// Supabase in 0.8).
+// Supabase in 0.10).
 export async function enterPlace(place) {
   chrome();
   drawNav(place);
   const me = await enter(`${place}.html`);
   if (!me) return null;
   const code = me.profile?.club;
-  const [club, season] = await Promise.all([
+  const [club, season, settings] = await Promise.all([
     code ? db().then(c => c.from('clubs').select('*').eq('code', code).maybeSingle()).then(r => r.data || null).catch(() => null) : null,
     loadSeason().catch(() => null),
+    prefs(),
   ]);
-  paintClub(club);
+  paintClub(club, settings.accent);
+  drawAccount(club, place === 'settings');
   const team = club && season ? season.teams.find(t => t.code === club.code) || null : null;
-  return { me, club, season, team, main: document.getElementById('main') };
+  return { me, club, season, team, prefs: settings, main: document.getElementById('main') };
 }
