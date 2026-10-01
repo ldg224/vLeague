@@ -1,0 +1,30 @@
+/* Shared by My club, Inbox and League (0.5): crests, section heads, result chips. Page styles are in their own files. */
+
+.member-main.wide { padding-top: 28px; }
+.member-main a { text-decoration: none; }
+
+/* Crest with coloured initials when a club has no logo yet */
+.crest { position: relative; display: inline-grid; place-items: center; width: var(--s); height: var(--s); flex: none; }
+.crest img { width: 100%; height: 100%; object-fit: contain; }
+.crest i { display: none; }
+.crest.none i { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--c); color: var(--on, #fff); font: 700 calc(var(--s) * .34)/1 var(--font-display); font-style: normal; box-shadow: inset 0 0 0 2px rgba(255,255,255,.25); }
+
+.sect { margin: 0 0 16px; padding: 18px; border: 1px solid var(--line); border-radius: var(--r-md); background: rgba(17,24,39,.72); min-width: 0; }
+.sect-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 8px; }
+.sect-head h2 { margin: 0; font: 700 .82rem var(--font); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+@media (max-width: 640px) { .sect { padding: 16px 14px; } }
+.member-main .page-title { margin: 0 0 18px; color: var(--text); font: 700 clamp(1.6rem, 5vw, 2.2rem)/1 var(--font-display); text-transform: uppercase; letter-spacing: .02em; }
+.page-title:focus { outline: none; }
+.empty { margin: 14px 0; color: var(--muted); }
+
+.chips { display: inline-flex; gap: 3px; }
+.chips abbr { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 4px; font-size: .7rem; font-weight: 800; text-decoration: none; }
+.res-W { background: var(--res-w); color: #fff; } .res-D { background: var(--res-d); color: #fff; } .res-L { background: var(--res-l); color: #fff; }
+
+.rating { display: inline-block; min-width: 34px; padding: 2px 5px; border-radius: 5px; font-weight: 800; font-size: .82rem; text-align: center; color: #fff; font-variant-numeric: tabular-nums; }
+.r-hi { background: var(--res-w); } .r-mid { background: #c98a14; } .r-lo { background: var(--res-l); }
+
+.live { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; background: var(--white); color: var(--navy); font-family: var(--font-display); font-weight: 700; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
+.live .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--navy); animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .live .dot { animation: none; } }

@@ -1,0 +1,26 @@
+/* My club (0.5): the club's card on the left, the squad on the right. */
+
+.member-main.club-main { width: min(1040px, 100%); }
+.club { display: grid; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 860px) {
+  .club { grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); grid-template-areas: 'id squad'; gap: 0 16px; align-items: start; }
+  .club-id { grid-area: id; } .squad-sect { grid-area: squad; }
+}
+
+.club-id { display: grid; justify-items: center; gap: 8px; text-align: center; padding-top: 26px; padding-bottom: 22px;
+  background: radial-gradient(60% 50% at 50% 0%, color-mix(in srgb, var(--club) 16%, transparent), transparent) no-repeat, rgba(17,24,39,.72); }
+.club-id .club-crest { width: 112px; height: 112px; }
+.member-main .club-id h1 { margin: 6px 0 0; color: var(--text); font: 700 clamp(1.8rem, 6vw, 2.4rem)/1.05 var(--font-display); text-transform: uppercase; letter-spacing: .02em; overflow-wrap: anywhere; }
+.club-facts { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 22px; margin: 8px 0 4px; }
+.club-facts div { display: grid; }
+.club-facts dt { font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.club-facts dd { margin: 0; font-weight: 600; }
+
+.squad { width: 100%; border-collapse: collapse; font-size: .92rem; font-variant-numeric: tabular-nums; }
+.squad th, .squad td { padding: 8px 4px; text-align: center; min-width: 34px; }
+.squad thead th { font-size: .78rem; font-weight: 700; color: var(--faint); border-bottom: 1px solid var(--line); }
+.squad abbr { text-decoration: none; }
+.squad tbody tr + tr { border-top: 1px solid var(--line); }
+.squad .pos { width: 44px; text-align: left; color: var(--muted); font-size: .78rem; font-weight: 700; }
+.squad .who { text-align: left; font-weight: 600; width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.squad .avg { color: var(--text); font-weight: 700; }

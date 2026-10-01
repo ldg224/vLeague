@@ -3,6 +3,22 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.5.0 (2026-10-01)
+
+Home, and the four places a manager moves between.
+
+- **Added:** Home, My club, Inbox and League, with a nav in the top bar (a bar along the bottom on phones) and an
+  unread count on Inbox.
+- **Added:** Home: the next match with a countdown and when the line-up locks (a live score and minute during the
+  match), what needs doing (pick your XI, unread inbox, club changes sent back), the last result, your place in the
+  table and what's happening around the league.
+- **Added:** League: the full table with your club's row marked and form, matches by week with live and full-time
+  scores, top scorers and assists.
+- **Added:** My club: crest, motto, manager and code, Edit club, and the squad with appearances, goals, assists and
+  average rating.
+- **Added:** Inbox: league news for your club and crest reveals, newest first, with read and unread.
+- **Changed:** win, draw and loss colours are shared by every page (`css/site.css`).
+
 ## 0.4.2 (2026-10-01)
 
 - **Fixed:** on long signed-in pages (like Edit club), the club-colour glow repeated down the page every screen

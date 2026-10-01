@@ -1,0 +1,84 @@
+/* League (0.5): table, matches by week, top players. The manager's own club is marked with its accent (--club). */
+
+.member-main.league-main { width: min(1140px, 100%); }
+.league { display: grid; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 980px) {
+  .league { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); grid-template-areas: 'table fixtures' 'leaders fixtures'; gap: 0 16px; align-items: start; }
+  .table-sect { grid-area: table; }
+  .fixtures-sect { grid-area: fixtures; }
+  .leaders-sect { grid-area: leaders; }
+}
+
+/* Table */
+.ladder { width: 100%; border-collapse: collapse; font-size: .92rem; font-variant-numeric: tabular-nums; }
+.ladder th, .ladder td { padding: 9px 4px; text-align: center; min-width: 30px; }
+.ladder th.club { min-width: 0; }
+.ladder thead th { font-size: .78rem; font-weight: 700; color: var(--faint); border-bottom: 1px solid var(--line); }
+.ladder abbr { text-decoration: none; }
+.ladder tbody tr + tr { border-top: 1px solid var(--line); }
+.ladder .pos { width: 30px; color: var(--muted); font-weight: 600; }
+.ladder .club { text-align: left; font-weight: 600; }
+.ladder .cl { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ladder .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ladder th.club { max-width: 0; width: 100%; }
+.ladder .pts { font-weight: 800; color: var(--white); }
+.ladder .form { text-align: right; padding-right: 6px; }
+.ladder tr.me { box-shadow: inset 3px 0 0 var(--club); background: color-mix(in srgb, var(--club) 14%, transparent); }
+.ladder tr.me .pos { color: var(--text); }
+
+/* Week tabs: one row that scrolls sideways on its own */
+.weektabs { position: relative; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 8px 0 4px; }
+.weektabs::-webkit-scrollbar { display: none; }
+.weektabs::before { content: 'Week'; align-self: center; margin-right: 4px; font-size: .82rem; font-weight: 700; color: var(--faint); }
+.weektabs button { flex: none; min-width: 38px; height: 34px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font: 700 .9rem var(--font); cursor: pointer; }
+.weektabs button:hover { color: var(--text); border-color: var(--blue-400); }
+.weektabs button[aria-selected="true"] { background: var(--blue-700); border-color: var(--blue-700); color: var(--white); }
+
+/* Match rows */
+.day { margin: 16px 0 4px; font-size: .86rem; font-weight: 700; color: var(--muted); }
+.fxs { display: grid; }
+.fx { display: grid; grid-template-columns: 64px minmax(0, 1fr) 60px minmax(0, 1fr); align-items: center; gap: 10px; padding: 10px 8px; border-radius: var(--r-sm); color: var(--text); }
+.member-main a.fx { color: var(--text); }
+.fxs .fx + .fx { box-shadow: 0 -1px 0 var(--line); }
+a.fx:hover { background: var(--surface); }
+.fx.me { box-shadow: inset 3px 0 0 var(--club); background: color-mix(in srgb, var(--club) 14%, transparent); }
+.fxs .fx.me + .fx, .fxs .fx + .fx.me { box-shadow: inset 3px 0 0 var(--club); }
+.fxs .fx.me + .fx:not(.me) { box-shadow: none; }
+.fx .when { white-space: nowrap; font-size: .85rem; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+.fx .t { color: var(--blue-300); }
+.fx .team { display: flex; align-items: center; gap: 9px; min-width: 0; font-weight: 600; }
+.fx .nm { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fx .team.h { justify-content: flex-end; text-align: right; }
+.fx .team.won { color: var(--white); font-weight: 800; }
+.fx.is-ft .team:not(.won) { color: var(--muted); }
+.res { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; text-align: center; }
+.res b { background: var(--surface-raised); padding: 2px 0; font-variant-numeric: tabular-nums; }
+.res b:first-child { border-radius: 6px 0 0 6px; }
+.res b:last-child { border-radius: 0 6px 6px 0; }
+.res.is-live b { background: var(--white); color: var(--navy); }
+.res.none { display: block; }
+.res .v { display: block; line-height: 1; color: var(--faint); font-family: var(--font); font-weight: 600; font-size: .85rem; }
+
+/* Top players */
+.leads { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; }
+.lead h3 { margin: 10px 0 4px; font-size: .86rem; font-weight: 700; color: var(--muted); }
+.lead ol { list-style: none; margin: 0; padding: 0; counter-reset: lead; }
+.lead li { display: flex; align-items: center; gap: 8px; padding: 6px 0 6px 6px; font-size: .9rem; }
+.lead li + li { border-top: 1px solid var(--line); }
+.lead li::before { counter-increment: lead; content: counter(lead); width: 14px; color: var(--faint); font-size: .8rem; font-variant-numeric: tabular-nums; }
+.lead li.me { box-shadow: inset 3px 0 0 var(--club); }
+.lead .who { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lead b { font-family: var(--font-display); font-size: 1.05rem; color: var(--white); font-variant-numeric: tabular-nums; }
+
+@media (max-width: 640px) {
+  .ladder .wide { display: none; }
+  .ladder .chips abbr { width: 16px; height: 16px; font-size: .6rem; }
+  .fx { grid-template-columns: 52px minmax(0, 1fr) 50px minmax(0, 1fr); gap: 7px; padding: 10px 4px 10px 6px; font-size: .9rem; }
+  .fx .team { gap: 6px; }
+  .fx .when { font-size: .78rem; }
+  .leads { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 420px) {
+  .fx .team .crest { display: none; }
+  .ladder .chips abbr:nth-child(-n+2):not(:nth-last-child(-n+3)) { display: none; }
+}

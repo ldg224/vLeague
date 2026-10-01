@@ -50,9 +50,9 @@ Sign-in page, "View as guest", the guest dashboard, the dashboard as the guest p
 - Known limits, for a later patch: a short name can't be cleared once set; the accent a manager saves isn't
   re-checked by the database; a crest path isn't checked to exist.
 
-### 0.5: Home
-- [ ] Home, My club, Inbox and League, with the club band and accents.
-- [ ] Home: next match with countdown and "line-up locks in …", what needs doing, last result, table position,
+### 0.5: Home (done in 0.5.0)
+- [x] Home, My club, Inbox and League, with the club band and accents.
+- [x] Home: next match with countdown and "line-up locks in …", what needs doing, last result, table position,
       league activity feed.
 
 ### 0.6: My club

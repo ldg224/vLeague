@@ -57,6 +57,38 @@
 .member .to-home:hover { color: var(--text); }
 .member-foot a { color: var(--faint); text-decoration: none; }
 
+/* The four places (0.5, js/shell.js): tabs in the top bar on wide screens, a bar fixed to the bottom on phones. */
+.places { display: flex; gap: 4px; }
+.places:empty { display: none; }
+.places a {
+  position: relative; display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px;
+  color: var(--muted); font-weight: 600; font-size: .92rem; text-decoration: none; transition: color .15s, background .15s;
+}
+.places a:hover { color: var(--text); background: rgba(255,255,255,.05); }
+.places a[aria-current="page"] { color: var(--text); background: color-mix(in srgb, var(--club) 16%, transparent); }
+.places svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.places a[aria-current="page"] svg { stroke: var(--club); }
+.places .dot {
+  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--club); color: var(--bg);
+  font: 700 .7rem/18px var(--font); text-align: center;
+}
+.places .dot[hidden] { display: none; }
+.has-places .member-top .brand { margin-right: 0; }
+.has-places .member-top .places { margin: 0 auto; }
+
+@media (max-width: 760px) {
+  .has-places { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  .places {
+    position: fixed; z-index: 20; left: 0; right: 0; bottom: 0; justify-content: space-around; gap: 0;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line);
+    background: rgba(10,15,25,.94); backdrop-filter: blur(10px);
+  }
+  .places a { flex: 1; flex-direction: column; gap: 2px; padding: 6px 4px; border-radius: 12px; font-size: .7rem; }
+  .places a[aria-current="page"] { background: none; }
+  .places .dot { position: absolute; top: 2px; left: calc(50% + 6px); }
+  .has-places .member-top .brand { margin-right: auto; }
+}
+
 @media (max-width: 640px) {
   .member-top { padding: 10px 16px; }
   .club-rows li { grid-template-columns: 32px minmax(0, 1fr) auto; }

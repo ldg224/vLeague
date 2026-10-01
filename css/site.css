@@ -18,6 +18,8 @@
   --brand-grad: linear-gradient(135deg, var(--blue-400) 0%, var(--blue-800) 100%);
   --focus: var(--blue-200);
   --error: #ffffff;
+  /* Results (W/D/L form chips and result badges): status colours, deliberately outside the blue ramp. */
+  --res-w: #22a55b; --res-d: #7c8594; --res-l: #e5484d;
 
   --font: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-display: 'Oswald', 'Arial Narrow', 'Roboto Condensed', sans-serif;
