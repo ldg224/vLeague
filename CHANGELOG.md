@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.4.1 (2026-10-01)
+
+Tidier "Set up your club".
+
+- **Changed:** much less text in the wizard and on Edit club: no intro paragraph or step counter, fewer hints,
+  "Optional" next to optional fields, and the colour step only speaks up when it changes your colour.
+- **Changed:** on Edit club, each section shows a small "Needs approval" or "Saves instantly" tag. The review step
+  has tighter rows with Edit links.
+- **Fixed:** an empty blue box under the title on every step.
+
 ## 0.4.0 (2026-10-01)
 
 Set up your club.

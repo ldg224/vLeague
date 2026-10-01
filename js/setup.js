@@ -4,7 +4,7 @@
 // (rpc submit_club_request). Submit order: upload the crest (if new) -> update_club_style -> submit_club_request.
 import { enter, chrome, esc, crestUrl } from './member.js';
 import { db } from './auth.js';
-import { accentInfo, contrast, isHex, NAVY } from './club-colour.js';
+import { accentInfo, contrast } from './club-colour.js';
 import { prepareCrest, uploadCrest } from './crest.js';
 
 const $ = id => document.getElementById(id);
@@ -64,9 +64,9 @@ function counters() {
 function showCode() {
   const el = $('code-state');
   const msg = {
-    ok: val('code').toUpperCase() === club.code ? `${club.code} is your current code.` : `${val('code').toUpperCase()} is free.`,
-    checking: 'Checking…', taken: 'That code is taken. Pick another.', bad: 'Use three letters, A to Z.',
-    unknown: 'Three letters, like TUR. No two clubs share one.',
+    ok: val('code').toUpperCase() === club.code ? 'Your current code' : 'Available',
+    checking: 'Checking…', taken: 'Taken by another club', bad: 'Letters only',
+    unknown: 'Three letters, like TUR.',
   }[codeState];
   el.textContent = msg;
   el.className = codeState === 'taken' || codeState === 'bad' ? 'bad' : codeState === 'ok' ? 'good' : '';
@@ -94,8 +94,6 @@ function checkCode() {
   }, 300);
 }
 
-const ratio = r => `${r.toFixed(1)}:1`;
-
 function paintColours() {
   const v = values();
   const info = accent();
@@ -105,24 +103,13 @@ function paintColours() {
     if (v[k]) pick.value = v[k];
     form.elements[k].setAttribute('aria-invalid', v[k] ? 'false' : 'true');
   }
+  // Only say something when it changes what the manager sees.
   const checks = [];
-  if (!v.colour) checks.push(['bad', 'Enter the main colour as a hex code, like #1e88e5.']);
-  else if (info.from === 'colour') {
-    const r = contrast(v.colour, NAVY);
-    checks.push(info.lifted
-      ? ['warn', `Your main colour is dark on the navy (${ratio(r)}), so vLeague lifts it to <code>${info.accent}</code>.`]
-      : ['good', `Your main colour reads well on the navy (${ratio(r)}).`]);
-  } else {
-    checks.push(['warn', info.from === 'colour2'
-      ? `White, grey and black don't show as an accent, so vLeague uses your second colour${info.lifted ? `, lifted to <code>${info.accent}</code>` : ''}.`
-      : `White, grey and black don't show as an accent, so vLeague uses its own blue for your club.`]);
-  }
-  if (v.colour && v.colour2) {
-    const r = contrast(v.colour, v.colour2);
-    checks.push(r < 1.5
-      ? ['warn', `Your two colours are hard to tell apart (${ratio(r)}). A second colour that stands out works better on badges and kits.`]
-      : ['good', `Your two colours stand apart (${ratio(r)}).`]);
-  } else if (!v.colour2) checks.push(['bad', 'Enter the second colour as a hex code.']);
+  if (!v.colour) checks.push(['bad', 'Enter a hex code, like #1e88e5.']);
+  else if (info.from === 'colour') { if (info.lifted) checks.push(['warn', `Too dark on navy, so it's lightened to <code>${info.accent}</code>.`]); }
+  else checks.push(['warn', info.from === 'colour2' ? 'Neutral colours don’t show, so your second colour is used.' : 'Neutral colours don’t show, so vLeague blue is used.']);
+  if (!v.colour2) checks.push(['bad', 'Enter a hex code for the second colour.']);
+  else if (v.colour && contrast(v.colour, v.colour2) < 1.5) checks.push(['warn', 'Your two colours are hard to tell apart.']);
   $('checks').innerHTML = checks.map(([k, t]) => `<li class="${k}"><span>${t}</span></li>`).join('');
   $('accent-preview').innerHTML = accentPreview(v, info);
   paintCrests();
@@ -141,8 +128,6 @@ function accentPreview(v, info) {
       </div>
     </div>
     <div class="su-accent-key">
-      <span class="su-chip" style="background:${esc(v.colour || '#000')}"></span><span>Main</span>
-      <span class="su-chip" style="background:${esc(v.colour2 || '#000')}"></span><span>Second</span>
       <span class="su-chip" style="background:${info.accent}"></span><span>Accent <code>${info.accent}</code></span>
     </div>`;
 }
@@ -153,12 +138,12 @@ function paintCrests() {
   const short = v.short_name || v.name || club.name;
   $('crest-img').hidden = !src;
   if (src) $('crest-img').src = src;
-  $('drop-title').textContent = src ? 'Choose a different picture' : 'Choose a picture';
+  $('drop-title').textContent = src ? 'Replace crest' : 'Upload crest';
   $('crest-previews').innerHTML = `
-    <figure style="--club:${info.accent}"><div class="su-pv su-pv-band"><div class="club-band on"></div><div class="su-pv-bar">${img('su-pv-26')}<b>${esc(v.name || club.name)}</b></div></div><figcaption>Top of your Home</figcaption></figure>
-    <figure style="--club:${info.accent}"><div class="su-pv su-pv-card"><div class="club-card">${img('club-crest')}<b class="su-pv-title">${esc(v.name || club.name)}</b></div></div><figcaption>Home card</figcaption></figure>
-    <figure style="--club:${info.accent}"><div class="su-pv"><ul class="club-rows"><li>${img()}<span class="who"><b>${esc(short)}</b><small>${esc(v.code || club.code)}</small></span></li></ul></div><figcaption>League table</figcaption></figure>
-    <figure><div class="su-pv su-pv-icon">${img('su-pv-20')}<b>${esc(v.code || club.code)}</b><span>2 – 1</span><b>OPP</b></div><figcaption>Small icon</figcaption></figure>`;
+    <figure style="--club:${info.accent}"><div class="su-pv su-pv-band"><div class="club-band on"></div><div class="su-pv-bar">${img('su-pv-26')}<b>${esc(v.name || club.name)}</b></div></div><figcaption>Header</figcaption></figure>
+    <figure style="--club:${info.accent}"><div class="su-pv su-pv-card"><div class="club-card">${img('club-crest')}<b class="su-pv-title">${esc(v.name || club.name)}</b></div></div><figcaption>Home</figcaption></figure>
+    <figure style="--club:${info.accent}"><div class="su-pv"><ul class="club-rows"><li>${img()}<span class="who"><b>${esc(short)}</b><small>${esc(v.code || club.code)}</small></span></li></ul></div><figcaption>Table</figcaption></figure>
+    <figure><div class="su-pv su-pv-icon">${img('su-pv-20')}<b>${esc(v.code || club.code)}</b><span>2 – 1</span><b>OPP</b></div><figcaption>Scores</figcaption></figure>`;
 }
 
 // ---------------------------------------------------------------- steps
@@ -166,15 +151,15 @@ function validate(n) {
   const v = values();
   const bad = (field, msg) => { form.elements[field]?.focus(); return msg; };
   if (n === 1 || n === 0) {
-    if (v.name.length < 2) return bad('name', 'Give your club a name (2 to 25 characters).');
-    if (!/^[A-Z]{3}$/.test(v.code)) return bad('code', 'The code is three letters, like TUR.');
-    if (codeState === 'taken') return bad('code', 'That code is taken. Pick another.');
+    if (v.name.length < 2) return bad('name', 'Enter a club name.');
+    if (!/^[A-Z]{3}$/.test(v.code)) return bad('code', 'The code needs three letters.');
+    if (codeState === 'taken') return bad('code', 'That code is taken.');
   }
   if (n === 2 || n === 0) {
-    if (!v.colour) return bad('colour', 'Enter the main colour as a hex code, like #1e88e5.');
-    if (!v.colour2) return bad('colour2', 'Enter the second colour as a hex code, like #ffffff.');
+    if (!v.colour) return bad('colour', 'Pick a main colour.');
+    if (!v.colour2) return bad('colour2', 'Pick a second colour.');
   }
-  if ((n === 3 || n === 0) && !crestSrc()) return 'Add your club’s crest.';
+  if ((n === 3 || n === 0) && !crestSrc()) return 'Upload a crest.';
   return '';
 }
 
@@ -194,7 +179,6 @@ function go(n) {
     li.classList.toggle('done', i < n);
     li.toggleAttribute('aria-current', i === n);
   });
-  $('kicker').textContent = n < 5 ? `Step ${n} of 4` : 'Last step';
   $('back').hidden = n === 1;
   $('next-label').textContent = n < 4 ? 'Continue' : n === 4 ? 'Review' : 'Send to the league office';
   if (n === 5) $('review').innerHTML = review();
@@ -204,12 +188,12 @@ function go(n) {
 
 function review() {
   const v = values(), info = accent();
-  const row = (label, value, s) => `<div class="su-rev-row"><dt>${label}</dt><dd>${value || '<span class="quiet">None</span>'}</dd><button type="button" class="quiet" data-go="${s}">Change</button></div>`;
+  const row = (label, value, s) => `<div class="su-rev-row"><dt>${label}</dt><dd>${value || '<span class="quiet">–</span>'}</dd><button type="button" data-go="${s}">Edit</button></div>`;
   return `<dl class="su-rev">
       ${row('Club name', esc(v.name), 1)}
       ${row('Short name', esc(v.short_name), 1)}
       ${row('Code', esc(v.code), 1)}
-      ${row('Colours', `<span class="su-chip" style="background:${esc(v.colour)}"></span><span class="su-chip" style="background:${esc(v.colour2)}"></span> accent <code>${info.accent}</code>`, 2)}
+      ${row('Colours', `<span class="su-chip" style="background:${esc(v.colour)}"></span><span class="su-chip" style="background:${esc(v.colour2)}"></span>`, 2)}
       ${row('Crest', crestSrc() ? `<img class="su-rev-crest" src="${esc(crestSrc())}" alt="">` : '', 3)}
       ${row('Manager', esc(v.manager_name), 4)}
       ${row('Stadium', esc(v.stadium), 4)}
@@ -270,8 +254,8 @@ async function submit(e) {
     if (!editMode) {
       clearDraft();
       $('done-crest').src = crestSrc() || 'assets/brand/crest.svg';
-      $('done-title').textContent = 'Sent to the league office';
-      $('done-text').textContent = 'Your colours and details are live. The league office will check your name, code and crest, and reveal your crest to the league. You’ll see how it went on your Home.';
+      $('done-title').textContent = 'Sent';
+      $('done-text').textContent = 'Your colours are live. The league office will check your name, code and crest.';
       form.hidden = true;
       $('done').hidden = false;
       window.scrollTo({ top: 0 });
@@ -279,10 +263,9 @@ async function submit(e) {
     }
     const parts = [];
     if (styled) parts.push('Saved.');
-    if (sent === 'none') parts.push('Your name, code and crest match what’s live, so there’s nothing for the office to approve.');
-    else if (sent) parts.push('Your name, code and crest changes went to the league office for approval.');
+    if (sent && sent !== 'none') parts.push('Name, code and crest sent for approval.');
     await load();
-    note(parts.join(' ') || 'Nothing had changed.', 'info');
+    note(parts.join(' ') || 'No changes.', 'info');
   } catch (err) {
     showError(explain(err, 'That didn’t save. Try again.'));
   } finally {
@@ -317,9 +300,9 @@ async function load() {
   const fill = { ...base, colour: club.colour || '', colour2: club.colour2 || '#ffffff', manager_name: club.manager_name ?? me.profile.display_name ?? '', stadium: club.stadium ?? '', motto: club.motto ?? '' };
   const draft = editMode ? null : loadDraft();
   for (const k of TEXT) form.elements[k].value = (draft && k in draft ? draft[k] : fill[k]) ?? '';
-  if (!editMode && request?.status === 'returned' && request.office_note) note(`<b>The league office sent this back:</b> ${esc(request.office_note)}`);
-  else if (editMode && open?.status === 'pending') note('<b>Waiting for the league office.</b> Your name, code and crest changes below are waiting for approval. Changing them again replaces the request.');
-  else if (editMode && open?.status === 'returned') note(`<b>The league office sent this back:</b> ${esc(open.office_note || 'No note.')} Fix it below and save to resend.`);
+  if (!editMode && request?.status === 'returned' && request.office_note) note(`<b>Sent back:</b> ${esc(request.office_note)}`);
+  else if (editMode && open?.status === 'pending') note('<b>Waiting for approval.</b> Saving new changes replaces the request.');
+  else if (editMode && open?.status === 'returned') note(`<b>Sent back:</b> ${esc(open.office_note || 'No note.')} Fix it and save to resend.`);
   else note('');
   codeState = 'ok';
   checkCode(); counters(); paintColours();
@@ -345,12 +328,10 @@ if (me) {
       $('page-label').textContent = 'Edit club';
       $('title').textContent = 'Edit your club';
       $('kicker').textContent = club.name;
-      $('lead').textContent = 'Colours, motto, manager name and stadium change straight away. A new name, code or crest goes to the league office first.';
       $('steps').hidden = true;
       $('back').hidden = true;
       $('next-label').textContent = 'Save';
     } else {
-      $('lead').textContent = 'Four quick steps to make your club yours. The league office checks your name, code and crest before they go live.';
       form.querySelectorAll('[data-edit-only]').forEach(el => { el.hidden = true; });
     }
 

@@ -6,13 +6,13 @@
 .su-main form[hidden], .su-done[hidden], .su-step[hidden], .su-main [hidden] { display: none; }
 
 .su-head { display: grid; gap: 6px; }
+.su-kicker:empty { display: none; }
 .su-kicker { margin: 0; color: var(--club); font: 600 .78rem var(--font); letter-spacing: .12em; text-transform: uppercase; }
 .su-main .su-head h1 { margin: 0; color: var(--text); font-size: clamp(1.9rem, 6vw, 2.5rem); line-height: 1.05; }
-.su-lead { margin: 0 0 6px; color: var(--muted); font-size: .95rem; text-wrap: pretty; }
-.su-head .msg { display: block; margin-top: 6px; }
+.su-head .msg:not([hidden]) { display: block; margin-top: 6px; }
 
 /* Step list: numbered pills; done steps can be clicked back to. */
-.su-steps { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; counter-reset: none; }
+.su-steps { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; counter-reset: none; }
 .su-steps[hidden] { display: none; }
 .su-steps li {
   display: grid; justify-items: center; gap: 6px; padding-top: 10px; border-top: 3px solid var(--line);
@@ -25,15 +25,16 @@
 .su-steps li.on span { background: var(--club); color: var(--bg); }
 
 .su-step { display: grid; gap: 16px; padding: 20px; border: 1px solid var(--line); border-radius: var(--r-md); background: rgba(17,24,39,.72); }
+.su-step-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .su-main .su-step h2 { margin: 0; font: 700 1.25rem var(--font-display); letter-spacing: .03em; text-transform: uppercase; }
-.su-sub { margin: 6px 0 -8px; font-weight: 700; font-size: .92rem; }
-.su-approval { margin: -8px 0 0; padding-left: 10px; border-left: 2px solid var(--blue-300); color: var(--muted); font-size: .85rem; }
-.su-approval.ok { border-left-color: var(--line); }
-.su-approval[hidden] { display: none; }
+body:not(.su-edit) .su-step-head { display: none; }
+.su-tag { flex: none; padding: 3px 10px; border-radius: 999px; border: 1px solid rgba(100,181,246,.35); color: var(--blue-200); font-size: .74rem; font-weight: 600; }
+.su-tag.ok { border-color: var(--line); color: var(--faint); }
 
 /* Fields */
 .su-field { display: grid; gap: 6px; min-width: 0; }
 .su-field label { font-weight: 600; font-size: .9rem; }
+.su-field label i { margin-left: 4px; font-style: normal; font-weight: 500; color: var(--faint); font-size: .8rem; }
 .su-field input, .su-field textarea {
   width: 100%; min-height: 48px; padding: 11px 14px; border-radius: 12px; border: 1px solid rgba(160,190,230,.16);
   background: var(--surface); color: var(--text); font: 500 1rem var(--font); transition: border-color .15s, box-shadow .15s;
@@ -42,6 +43,7 @@
 .su-field input:hover, .su-field textarea:hover { border-color: rgba(160,190,230,.3); }
 .su-field input:focus, .su-field textarea:focus { outline: none; border-color: var(--blue-400); box-shadow: 0 0 0 4px rgba(66,165,245,.16); }
 .su-field input[aria-invalid="true"] { border-color: rgba(255,255,255,.6); }
+.su-hint:has(> span:empty + .count:empty) { display: none; }
 .su-hint { margin: 0; display: flex; justify-content: space-between; gap: 12px; color: var(--faint); font-size: .82rem; }
 .su-hint .count { flex: none; font-variant-numeric: tabular-nums; }
 .su-code input { width: 7.5em; font: 700 1.3rem var(--font-display); letter-spacing: .18em; text-transform: uppercase; }
@@ -61,6 +63,7 @@
 .su-swatch input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 7px; }
 .su-swatch input[type="color"]::-moz-color-swatch { border: 0; border-radius: 7px; }
 .su-swatch input:not([type="color"]) { padding-left: 52px; font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; text-transform: lowercase; }
+.su-checks:empty { display: none; }
 .su-checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: .88rem; }
 .su-checks li { display: grid; grid-template-columns: 18px 1fr; gap: 8px; color: var(--muted); }
 .su-checks li::before { content: '✓'; color: var(--blue-100); font-weight: 700; }
@@ -70,7 +73,7 @@
 .su-main code { font: 600 .85em ui-monospace, 'Cascadia Mono', Consolas, monospace; color: var(--text); }
 
 /* The accent preview: a miniature Home. */
-.su-preview { display: grid; justify-items: center; gap: 12px; }
+.su-preview { display: grid; justify-items: center; gap: 12px; padding-top: 6px; }
 .su-phone {
   width: min(280px, 100%); border-radius: 18px; overflow: hidden; border: 1px solid var(--line);
   background: radial-gradient(160% 70% at 50% 0%, color-mix(in srgb, var(--club) 16%, transparent), transparent 70%), var(--bg);
@@ -87,7 +90,7 @@
 .su-phone-link { color: var(--club); font-size: .82rem; font-weight: 700; }
 .su-nocrest { display: grid; place-items: center; border-radius: 50%; background: var(--surface-raised); color: var(--muted); font: 700 1rem var(--font-display); }
 .su-accent-key { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 8px; color: var(--muted); font-size: .8rem; }
-.su-accent-key span:not(.su-chip) { margin-right: 6px; }
+
 .su-chip { display: inline-block; width: 16px; height: 16px; border-radius: 5px; border: 1px solid rgba(255,255,255,.25); vertical-align: -3px; }
 
 /* Crest */
@@ -127,11 +130,14 @@
 
 /* Review */
 .su-rev { margin: 0; display: grid; }
-.su-rev-row { display: grid; grid-template-columns: 7.5em minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.su-rev-row { display: grid; grid-template-columns: 7.5em minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.su-rev-row:last-child { border-bottom: 0; }
 .su-rev dt { color: var(--faint); font-size: .85rem; }
 .su-rev dd { margin: 0; overflow-wrap: anywhere; }
-.su-rev .quiet { font-size: .85rem; }
-.su-rev dd .quiet { padding: 0; font-size: inherit; }
+.su-rev dd .quiet { color: var(--faint); }
+.su-rev button { padding: 4px 2px; border: 0; background: none; color: var(--brand); font: 600 .85rem var(--font); cursor: pointer; }
+.su-rev button:hover { color: var(--text); }
+.su-rev dd .su-chip + .su-chip { margin-left: 4px; }
 .su-rev-crest { width: 44px; height: 44px; object-fit: contain; vertical-align: middle; }
 .su-rev + .su-preview { margin-top: 18px; }
 

@@ -31,7 +31,6 @@
       <div class="su-head">
         <p class="su-kicker" id="kicker"></p>
         <h1 id="title">Set up your club</h1>
-        <p class="su-lead" id="lead"></p>
         <div class="msg info" id="request-note" hidden></div>
         <ol class="su-steps" id="steps" aria-label="Steps">
           <li data-go="1"><span>1</span>Name</li>
@@ -44,29 +43,33 @@
 
       <!-- 1: Name -->
       <section class="su-step" data-step="1" aria-labelledby="h1-name">
-        <h2 id="h1-name">Name</h2>
-        <p class="su-approval" data-edit-only>Changes here go to the league office for approval.</p>
+        <div class="su-step-head">
+          <h2 id="h1-name">Name</h2>
+          <span class="su-tag" data-edit-only>Needs approval</span>
+        </div>
         <div class="su-field">
           <label for="name">Club name</label>
           <input id="name" name="name" maxlength="25" autocomplete="off" required>
-          <p class="su-hint"><span>As it appears on your Home and in the news.</span><span class="count" data-for="name"></span></p>
+          <p class="su-hint"><span></span><span class="count" data-for="name"></span></p>
         </div>
         <div class="su-field">
-          <label for="short_name">Short name</label>
+          <label for="short_name">Short name <i>Optional</i></label>
           <input id="short_name" name="short_name" maxlength="12" autocomplete="off">
-          <p class="su-hint"><span>For tight spaces like the league table. Leave it blank to use the club name.</span><span class="count" data-for="short_name"></span></p>
+          <p class="su-hint"><span>Used in the table.</span><span class="count" data-for="short_name"></span></p>
         </div>
         <div class="su-field su-code">
           <label for="code">Three-letter code</label>
           <input id="code" name="code" maxlength="3" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" required>
-          <p class="su-hint"><span id="code-state">Three letters, like TUR. No two clubs share one.</span></p>
+          <p class="su-hint"><span id="code-state">Three letters, like TUR.</span></p>
         </div>
       </section>
 
       <!-- 2: Colours -->
       <section class="su-step" data-step="2" aria-labelledby="h2-col">
-        <h2 id="h2-col">Colours</h2>
-        <p class="su-approval ok" data-edit-only>Colours change straight away.</p>
+        <div class="su-step-head">
+          <h2 id="h2-col">Colours</h2>
+          <span class="su-tag ok" data-edit-only>Saves instantly</span>
+        </div>
         <div class="su-colours">
           <div class="su-field">
             <label for="colour">Main colour</label>
@@ -78,55 +81,55 @@
           </div>
         </div>
         <ul class="su-checks" id="checks" aria-live="polite"></ul>
-        <p class="su-sub">How it looks in vLeague</p>
-        <p class="su-hint">vLeague stays navy. Your club shows as an accent: the band at the top, a soft glow and highlights.</p>
         <div class="su-preview" id="accent-preview"></div>
       </section>
 
       <!-- 3: Crest -->
       <section class="su-step" data-step="3" aria-labelledby="h3-crest">
-        <h2 id="h3-crest">Crest</h2>
-        <p class="su-approval" data-edit-only>A new crest goes to the league office for approval.</p>
+        <div class="su-step-head">
+          <h2 id="h3-crest">Crest</h2>
+          <span class="su-tag" data-edit-only>Needs approval</span>
+        </div>
         <label class="su-drop" id="drop">
           <input type="file" id="crest" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml">
           <img id="crest-img" alt="" hidden>
-          <span class="su-drop-text"><b id="drop-title">Choose a picture</b><small>PNG, JPG or WebP. A square one with a transparent background looks best. We'll make it 512 px.</small></span>
+          <span class="su-drop-text"><b id="drop-title">Upload crest</b><small>PNG, JPG or WebP. Square, transparent background.</small></span>
         </label>
         <div class="msg error" id="crest-error" role="alert" hidden></div>
-        <p class="su-sub">Where it appears</p>
         <div class="su-crest-previews" id="crest-previews"></div>
       </section>
 
       <!-- 4: Details -->
       <section class="su-step" data-step="4" aria-labelledby="h4-det">
-        <h2 id="h4-det">Details</h2>
-        <p class="su-approval ok" data-edit-only>Manager name, stadium and motto change straight away.</p>
+        <div class="su-step-head">
+          <h2 id="h4-det">Details</h2>
+          <span class="su-tag ok" data-edit-only>Saves instantly</span>
+        </div>
         <div class="su-field">
           <label for="manager_name">Manager name</label>
           <input id="manager_name" name="manager_name" maxlength="40" autocomplete="name">
-          <p class="su-hint"><span>Shown to the league.</span><span class="count" data-for="manager_name"></span></p>
+          <p class="su-hint"><span></span><span class="count" data-for="manager_name"></span></p>
         </div>
         <div class="su-field">
-          <label for="stadium">Stadium</label>
+          <label for="stadium">Stadium <i>Optional</i></label>
           <input id="stadium" name="stadium" maxlength="40" autocomplete="off">
-          <p class="su-hint"><span>Optional.</span><span class="count" data-for="stadium"></span></p>
+          <p class="su-hint"><span></span><span class="count" data-for="stadium"></span></p>
         </div>
         <div class="su-field">
-          <label for="motto">Motto</label>
+          <label for="motto">Motto <i>Optional</i></label>
           <input id="motto" name="motto" maxlength="80" autocomplete="off">
-          <p class="su-hint"><span>Optional.</span><span class="count" data-for="motto"></span></p>
+          <p class="su-hint"><span></span><span class="count" data-for="motto"></span></p>
         </div>
         <div class="su-field">
-          <label for="notes">Notes for the league office</label>
+          <label for="notes">Notes for the league office <i>Optional</i></label>
           <textarea id="notes" name="notes" maxlength="500" rows="3"></textarea>
-          <p class="su-hint"><span>Only the office sees these. Optional.</span><span class="count" data-for="notes"></span></p>
+          <p class="su-hint"><span>Only the office sees these.</span><span class="count" data-for="notes"></span></p>
         </div>
       </section>
 
       <!-- 5: Review (wizard only) -->
       <section class="su-step" data-step="5" aria-labelledby="h5-rev">
         <h2 id="h5-rev">Review</h2>
-        <p class="su-hint">Your colours and details go live straight away. The league office checks your name, code and crest, and reveals your crest to the league.</p>
         <div id="review"></div>
       </section>
 
