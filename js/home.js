@@ -1,19 +1,18 @@
-// A manager's Home (0.5): everything for the next match on one screen. The match card (countdown, when the line-up
-// locks, live score), what needs doing, the last result, the club's place in the table and a league activity feed.
+// A manager's Home (0.5): your club, right now. The match card (countdown, when the line-up locks, live score), a
+// notice while club changes are with the office, your season in numbers and your next matches. Everything
+// league-wide is on League; news is in Inbox (its unread count is on the Inbox tab).
 // League data still comes from the s3 site's season.json (dashboard-data.js) until fixtures move to Supabase (0.8).
 import { enterPlace, badge } from './shell.js';
 import { clubs, esc, crestUrl } from './member.js';
 import { db } from './auth.js';
 import {
-  kickoff, status, shownScore, liveMinute, lineupsOutAt, ladder, finished, byKickoff, matchUrl, logoUrl,
-  audienceOf, parseStamp, sameDay,
+  kickoff, status, shownScore, liveMinute, lineupsOutAt, ladder, finished, byKickoff, matchUrl, logoUrl, sameDay,
 } from './dashboard-data.js';
 
 const ctx = await enterPlace('home');
 let all = [];          // every club row, for crests and names
-let sheet = null;      // this club's team sheet, if it has one
 let request = null;    // this club's latest setup/change request
-let sbNews = [];       // Supabase news rows
+let sbNews = [];       // Supabase news rows (for the unread count)
 let unread = 0;
 
 // ---------------------------------------------------------------- small helpers
@@ -29,13 +28,11 @@ function until(ms) {
   if (h >= 1) return `${d ? `${d}d ` : ''}${h % 24}h ${String(m % 60).padStart(2, '0')}m`;
   return `${m} min`;
 }
-const ago = ms => { const m = Math.round(ms / 60000); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`; };
 const day = (d, now) => sameDay(d, now) ? 'Today' : sameDay(d, new Date(+now + 864e5)) ? 'Tomorrow'
   : d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
 const time = d => d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 
 const mine = (s, code) => s.fixtures.filter(f => f.home === code || f.away === code).sort(byKickoff);
-const lineupSet = () => Boolean(sheet && Object.keys(sheet.lineup || {}).length);
 
 // The match the card shows: ours live now, else our next, else null.
 function current(s, code, now) {
@@ -63,8 +60,7 @@ function matchCard(s, code, now) {
     const lock = lineupsOutAt(fx);
     if (st === 'awaiting') foot = '<p class="hm-lock">Kicking off</p>';
     else if (now < lock) {
-      foot = `<p class="hm-lock">Kick-off in <b data-until="${+ko}">${until(ko - now)}</b> · line-up locks in <b data-until="${+lock}">${until(lock - now)}</b></p>
-        <a class="btn${lineupSet() ? ' ghost' : ''}" href="club.html">${lineupSet() ? 'Change your XI' : 'Pick your XI'}</a>`;
+      foot = `<p class="hm-lock">Kick-off in <b data-until="${+ko}">${until(ko - now)}</b> · line-up locks in <b data-until="${+lock}">${until(lock - now)}</b></p>`;
     } else foot = `<p class="hm-lock">Line-ups are out · kick-off in <b data-until="${+ko}">${until(ko - now)}</b></p>
         <a class="btn ghost" href="${esc(matchUrl(fx))}" target="_blank" rel="noopener">Match centre</a>`;
   }
@@ -75,83 +71,58 @@ function matchCard(s, code, now) {
     </section>`;
 }
 
-// ---------------------------------------------------------------- what needs doing
-function todo(s, code, now) {
-  const items = [];
-  if (request?.status === 'returned') items.push(['urgent', `The league office sent your club changes back${request.office_note ? `: “${esc(request.office_note)}”` : ''}`, 'setup.html?edit', 'Fix']);
-  else if (request?.status === 'pending') items.push(['wait', 'Club changes waiting for the league office', '', '']);
-  const fx = s && current(s, code, now);
-  if (fx && status(fx, s, now) === 'upcoming' && now < lineupsOutAt(fx)) {
-    const soon = lineupsOutAt(fx) - now < 864e5;
-    if (!lineupSet()) items.push([soon ? 'urgent' : '', `Pick your XI for ${esc(nameOf(fx.home === code ? fx.away : fx.home))}`, 'club.html', 'Pick']);
-  }
-  if (unread) items.push(['', `${unread} unread in your inbox`, 'inbox.html', 'Read']);
-  const body = items.length
-    ? `<ul class="hm-todo">${items.map(([k, t, href, act]) => `<li class="${k}"><span>${t}</span>${href ? `<a href="${href}">${act}</a>` : ''}</li>`).join('')}</ul>`
-    : '<p class="hm-clear">All done</p>';
-  return `<section class="hm-card hm-todo-card"><h2>To do</h2>${body}</section>`;
+// ---------------------------------------------------------------- club changes with the league office
+function notice() {
+  if (request?.status === 'returned') return `<div class="hm-notice back"><span><b>Club changes sent back.</b>
+      ${request.office_note ? esc(request.office_note) : ''}</span><a href="setup.html?edit">Fix and resend</a></div>`;
+  if (request?.status === 'pending') return '<div class="hm-notice"><span><b>Club changes sent.</b> Waiting for the league office.</span></div>';
+  return '';
 }
 
-// ---------------------------------------------------------------- last result
-function lastResult(s, code, now) {
-  const fx = finished(s, now).filter(f => f.home === code || f.away === code).pop();
-  if (!fx) return '';
+// ---------------------------------------------------------------- your season (League has the full table)
+const ordinal = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
+const outcome = (fx, code) => {
   const us = fx.home === code ? fx.result.home : fx.result.away, them = fx.home === code ? fx.result.away : fx.result.home;
-  const o = us > them ? 'W' : us < them ? 'L' : 'D';
-  const motm = fx.result.motm && fx.result.players?.[fx.result.motm];
-  return `<section class="hm-card hm-last"><h2>Last result</h2>
-      <a class="hm-result" href="${esc(matchUrl(fx))}" target="_blank" rel="noopener">
-        <span class="hm-out ${o}">${o}</span>
-        ${crest(fx.home, 'hm-mini')}<b>${esc(nameOf(fx.home))}</b>
-        <strong>${fx.result.home}–${fx.result.away}</strong>
-        <b>${esc(nameOf(fx.away))}</b>${crest(fx.away, 'hm-mini')}
-      </a>
-      ${motm ? `<p class="hm-sub">Player of the match: ${esc(motm.name)}</p>` : ''}
-    </section>`;
-}
+  return us > them ? 'W' : us < them ? 'L' : 'D';
+};
 
-// ---------------------------------------------------------------- table
-function table(s, code, now) {
-  const rows = ladder(s, now);
-  const at = rows.findIndex(r => r.team.code === code);
-  if (at < 0) return '';
-  const from = Math.max(0, Math.min(at - 2, rows.length - 5));
-  const played = rows[at].p > 0;
-  return `<section class="hm-card hm-table-card"><h2>Table <a href="league.html">Full table</a></h2>
-      <ol class="hm-table"><li class="head" aria-hidden="true"><span></span><span></span><span></span><span class="p">P</span><span class="gd">GD</span><span class="pts">Pts</span></li>${rows.slice(from, from + 5).map(r => `<li class="${r.team.code === code ? 'us' : ''}">
-        <span class="pos">${r.rank}</span>${crest(r.team.code, 'hm-mini')}<b>${esc(nameOf(r.team.code))}</b>
-        <span class="p">${r.p}</span><span class="gd">${r.gd > 0 ? '+' : ''}${r.gd}</span><strong>${r.pts}</strong></li>`).join('')}</ol>
-      ${played ? '' : '<p class="hm-sub">No games played yet</p>'}
-    </section>`;
-}
-
-// ---------------------------------------------------------------- league activity
-function feed(s, code, now) {
-  const items = [];
-  if (s) {
-    for (const f of s.fixtures) {
-      const st = status(f, s, now);
-      if (st === 'live') {
-        const sc = shownScore(f, s, now);
-        items.push({ at: +now, html: `<span class="hm-live sm">LIVE</span> ${esc(nameOf(f.home))} ${sc.home}–${sc.away} ${esc(nameOf(f.away))}`, href: matchUrl(f) });
-      } else if (st === 'ft') {
-        items.push({ at: +kickoff(f), html: `${esc(nameOf(f.home))} <b>${f.result.home}–${f.result.away}</b> ${esc(nameOf(f.away))}`, href: matchUrl(f) });
-      }
-    }
-    for (const p of s.news || []) {
-      const aud = audienceOf(p);
-      if (!['live', 'closed'].includes(p.status) || !(aud === 'all' || aud === 'teams' || (Array.isArray(aud) && aud.includes(code)))) continue;
-      const title = p.blocks?.find(b => b.title)?.title;
-      if (title) items.push({ at: parseStamp(p.sent)?.getTime() || 0, html: `News: ${esc(title)}`, href: 'inbox.html' });
-    }
+function season(s, code, now) {
+  const rows = ladder(s, now), r = rows.find(x => x.team.code === code);
+  if (!r) return '';
+  const mineDone = finished(s, now).filter(f => f.home === code || f.away === code);
+  const form = mineDone.filter(f => !f.stage).slice(-5).map(f => outcome(f, code));
+  const last = mineDone[mineDone.length - 1];
+  let lastHtml = '';
+  if (last) {
+    const opp = last.home === code ? last.away : last.home, o = outcome(last, code);
+    const score = last.home === code ? `${last.result.home}–${last.result.away}` : `${last.result.away}–${last.result.home}`;
+    lastHtml = `<a class="hm-lastline" href="${esc(matchUrl(last))}" target="_blank" rel="noopener">
+        <span class="hm-k">Last match</span><span class="hm-out ${o}">${o}</span><strong>${score}</strong>
+        <span class="hm-vs">${last.home === code ? 'v' : 'at'}</span>${crest(opp, 'hm-mini')}<b>${esc(nameOf(opp))}</b></a>`;
   }
-  for (const n of sbNews) items.push({ at: Date.parse(n.created_at), html: esc(n.title), href: n.kind === 'post' ? 'inbox.html' : '', crest: n.club });
-  const list = items.filter(i => i.at <= +now).sort((a, b) => b.at - a.at).slice(0, 6);
-  if (!list.length) return '';
-  return `<section class="hm-card hm-feed-card"><h2>Around the league</h2><ul class="hm-feed">${list.map(i => {
-    const inner = `${i.crest ? crest(i.crest, 'hm-mini') : ''}<span>${i.html}</span><time>${ago(now - i.at)}</time>`;
-    return `<li>${i.href ? `<a href="${esc(i.href)}"${/^https?:/.test(i.href) ? ' target="_blank" rel="noopener"' : ''}>${inner}</a>` : `<div>${inner}</div>`}</li>`;
-  }).join('')}</ul></section>`;
+  return `<section class="hm-card hm-season-card"><h2>Your season <a href="league.html">Table</a></h2>
+      <div class="hm-season">
+        <div class="hm-stat big"><strong>${r.p ? ordinal(r.rank) : '–'}</strong><span>of ${rows.length}</span></div>
+        <div class="hm-stat"><strong>${r.pts}</strong><span>pts</span></div>
+        <div class="hm-stat"><strong>${r.w}-${r.d}-${r.l}</strong><span>W-D-L</span></div>
+        <div class="hm-stat"><strong>${r.gd > 0 ? '+' : ''}${r.gd}</strong><span>GD</span></div>
+      </div>
+      ${form.length ? `<p class="hm-form"><span class="hm-k">Form</span>${form.map(o => `<abbr class="hm-out ${o}" title="${{ W: 'Win', D: 'Draw', L: 'Loss' }[o]}">${o}</abbr>`).join('')}</p>` : ''}
+      ${lastHtml}
+    </section>`;
+}
+
+function comingUp(s, code, now) {
+  const hero = current(s, code, now);
+  const next = mine(s, code).filter(f => f !== hero && ['upcoming', 'tba'].includes(status(f, s, now))).slice(0, 4);
+  if (!next.length) return '';
+  return `<section class="hm-card hm-fix-card"><h2>Coming up <a href="league.html">All matches</a></h2>
+      <ol class="hm-fix">${next.map(f => {
+        const ko = kickoff(f), opp = f.home === code ? f.away : f.home;
+        return `<li><span class="hm-wk">${ko ? esc(day(ko, now)) : 'TBA'}</span>${crest(opp, 'hm-mini')}<b>${esc(nameOf(opp))}</b>
+          <small>${f.home === code ? 'H' : 'A'}</small><span class="hm-time">${ko ? time(ko) : ''}</span></li>`;
+      }).join('')}</ol>
+    </section>`;
 }
 
 // ---------------------------------------------------------------- page
@@ -160,13 +131,11 @@ function render() {
   const top = `<header class="hm-club">${crest(code, 'hm-club-crest')}
       <div><h1>${esc(club.name)}</h1>${club.motto ? `<p>${esc(club.motto)}</p>` : ''}</div></header>`;
   if (!s) {
-    main.innerHTML = `${top}${todo(null, code, now)}<p class="quiet">The league data didn’t load. <a href="home.html">Try again</a></p>`;
+    main.innerHTML = `${top}${notice()}<p class="quiet">The league data didn’t load. <a href="home.html">Try again</a></p>`;
     return;
   }
-  main.innerHTML = `${top}<div class="hm-grid">
-      <div class="hm-col">${matchCard(s, code, now)}${lastResult(s, code, now)}</div>
-      <div class="hm-col">${todo(s, code, now)}${table(s, code, now)}${feed(s, code, now)}</div>
-    </div>`;
+  main.innerHTML = `${top}${notice()}${matchCard(s, code, now)}
+    <div class="hm-grid">${season(s, code, now)}${comingUp(s, code, now)}</div>`;
 }
 
 // Countdowns tick every 20 s; the whole page redraws each minute so live scores and states move on.
@@ -184,14 +153,12 @@ if (ctx) {
   } else {
     document.title = `${club.name} | vLeague`;
     const c = await db();
-    const [clubRows, sheetRes, reqRes, newsRes] = await Promise.all([
+    const [clubRows, reqRes, newsRes] = await Promise.all([
       clubs().catch(() => []),
-      c.from('team_sheets').select('lineup, updated_at').eq('club', club.code).maybeSingle(),
       c.from('club_requests').select('status, office_note, created_at').eq('club', club.code).order('created_at', { ascending: false }).limit(1),
       c.from('news').select('*').order('created_at', { ascending: false }).limit(20),
     ].map(p => Promise.resolve(p).catch(() => ({}))));
     all = Array.isArray(clubRows) ? clubRows : [];
-    sheet = sheetRes?.data || null;
     request = reqRes?.data?.[0] || null;
     sbNews = newsRes?.data || [];
     try {

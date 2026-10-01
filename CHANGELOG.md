@@ -3,6 +3,17 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.5.1 (2026-10-01)
+
+Home is about your club; League is about everyone.
+
+- **Changed:** Home no longer repeats League. It shows the match card (full width), then **Your season** (position,
+  points, W-D-L, goal difference, form and your last match) and **Coming up** (your next matches). The mini table
+  and "Around the league" are gone: the full table and every match are on League, news is in Inbox.
+- **Changed:** the To do card is gone. Unread news shows as the count on the Inbox tab; club changes with the league
+  office show as a notice at the top of Home (with "Fix and resend" when they come back).
+- **Removed:** the "Pick your XI" button on the match card until the XI picker arrives in 0.6.
+
 ## 0.5.0 (2026-10-01)
 
 Home, and the four places a manager moves between.

@@ -1,5 +1,5 @@
-/* A manager's Home (0.5, js/home.js). Navy page; the club shows in the match card's glow, its crest, its table row
-   and the buttons' outline. Phones: one column. Wide screens: the match and last result left, the rest right. */
+/* A manager's Home (0.5, js/home.js). Navy page; the club shows in the match card's glow, its crest
+   and the position stat. The match card runs full width; Your season and Coming up sit side by side on wide screens. */
 
 .member-main.wide:has(.hm-club) { width: min(1040px, 100%); padding-top: 24px; }
 
@@ -8,14 +8,8 @@
 .member-main .hm-club h1 { margin: 0; color: var(--text); font: 700 clamp(1.6rem, 5vw, 2.2rem)/1 var(--font-display); text-transform: uppercase; letter-spacing: .02em; }
 .hm-club p { margin: 4px 0 0; color: var(--muted); font-size: .9rem; font-style: italic; }
 
-.hm-grid { display: grid; gap: 16px; }
-.hm-col { display: grid; gap: 16px; align-content: start; min-width: 0; }
-@media (min-width: 860px) { .hm-grid { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; } }
-/* One column: the match, then what needs doing, then the rest. */
-@media (max-width: 859px) {
-  .hm-col { display: contents; }
-  .hm-todo-card { order: 1; } .hm-last { order: 2; } .hm-table-card { order: 3; } .hm-feed-card { order: 4; }
-}
+.hm-grid { display: grid; gap: 16px; margin-top: 16px; }
+@media (min-width: 760px) { .hm-grid:has(> :nth-child(2)) { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: start; } }
 
 .hm-card { padding: 18px; border: 1px solid var(--line); border-radius: var(--r-md); background: rgba(17,24,39,.72); min-width: 0; }
 .hm-card h2 {
@@ -54,46 +48,47 @@
 .member-main .hm-foot a.btn { color: var(--white); }
 .hm-foot .btn.ghost { border-color: color-mix(in srgb, var(--club) 55%, transparent); }
 
-/* To do */
-.hm-todo { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.hm-todo li {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: var(--r-sm);
-  background: var(--surface-raised); font-size: .92rem;
+/* Club changes with the league office */
+.hm-notice {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 16px; padding: 12px 16px;
+  border-radius: var(--r-md); border: 1px solid var(--line); background: var(--surface-raised); color: var(--muted); font-size: .92rem;
 }
-.hm-todo li.urgent { box-shadow: inset 3px 0 0 var(--club); }
-.hm-todo li.wait { color: var(--muted); }
-.hm-todo a { flex: none; padding: 5px 14px; border-radius: 999px; background: var(--club); color: var(--bg); font-weight: 700; font-size: .82rem; text-decoration: none; }
-.member-main .hm-todo a { color: var(--bg); }
-.hm-clear { margin: 0; color: var(--muted); }
-.hm-clear::before { content: '✓ '; color: var(--club); font-weight: 700; }
+.hm-notice b { color: var(--text); }
+.hm-notice.back { box-shadow: inset 3px 0 0 var(--res-l); }
+.hm-notice a { flex: none; padding: 6px 14px; border-radius: 999px; background: var(--white); font-weight: 700; font-size: .85rem; text-decoration: none; }
+.member-main .hm-notice a { color: var(--bg); }
 
-/* Last result */
-.hm-result { display: flex; align-items: center; gap: 8px; color: var(--text); text-decoration: none; min-width: 0; }
-.member-main .hm-result { color: var(--text); }
-.hm-result b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.hm-result strong { margin: 0 auto; font: 700 1.3rem var(--font-display); font-variant-numeric: tabular-nums; }
-.hm-out { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 7px; font: 800 .8rem var(--font); color: #fff; }
+/* W/D/L badges (shared result colours from site.css) */
+.hm-out { flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; font: 800 .75rem var(--font); color: #fff; text-decoration: none; }
 .hm-out.W { background: var(--res-w); } .hm-out.D { background: var(--res-d); } .hm-out.L { background: var(--res-l); }
 
-/* Table */
-.hm-table { list-style: none; margin: 0; padding: 0; }
-.hm-table li { display: grid; grid-template-columns: 22px 22px minmax(0, 1fr) 26px 34px 30px; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 8px; font-size: .9rem; }
-.hm-table li.us { background: color-mix(in srgb, var(--club) 14%, transparent); box-shadow: inset 3px 0 0 var(--club); }
-.hm-table li.head { padding-top: 0; padding-bottom: 4px; color: var(--faint); font-size: .72rem; font-weight: 600; }
-.hm-table .head .pts { text-align: right; }
-.hm-table .pos { color: var(--faint); font-variant-numeric: tabular-nums; }
-.hm-table b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hm-table .p, .hm-table .gd { color: var(--faint); text-align: right; font-variant-numeric: tabular-nums; }
-.hm-table strong { text-align: right; font-variant-numeric: tabular-nums; }
+/* Your season */
+.hm-season { display: grid; grid-template-columns: 1.3fr 1fr 1.3fr 1fr; gap: 8px; }
+.hm-stat { display: grid; gap: 2px; padding: 10px 8px; border-radius: var(--r-sm); background: var(--surface-raised); text-align: center; min-width: 0; }
+.hm-stat strong { font: 700 1.35rem/1.1 var(--font-display); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hm-stat span { color: var(--faint); font-size: .75rem; font-weight: 600; }
+.hm-stat.big { background: color-mix(in srgb, var(--club) 16%, var(--surface-raised)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--club) 35%, transparent); }
+.hm-stat.big strong { color: var(--club); }
+.hm-form { display: flex; align-items: center; gap: 5px; margin: 14px 0 0; }
+.hm-form .hm-k { margin-right: 6px; }
 
-/* Around the league */
-.hm-feed { list-style: none; margin: 0; padding: 0; }
-.hm-feed li + li { border-top: 1px solid var(--line); }
-.hm-feed a, .hm-feed div { display: flex; align-items: center; gap: 10px; padding: 9px 2px; color: var(--text); text-decoration: none; font-size: .9rem; }
-.member-main .hm-feed a { color: var(--text); }
-.hm-feed a:hover span { text-decoration: underline; text-decoration-color: var(--faint); }
-.hm-feed span { min-width: 0; flex: 1; }
-.hm-feed time { flex: none; color: var(--faint); font-size: .78rem; }
+.hm-k { color: var(--faint); font-size: .8rem; font-weight: 600; }
+.hm-lastline { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); text-decoration: none; min-width: 0; }
+.member-main .hm-lastline { color: var(--text); }
+.hm-lastline .hm-k { margin-right: 4px; }
+.hm-lastline strong { font: 700 1.1rem var(--font-display); font-variant-numeric: tabular-nums; }
+.hm-lastline .hm-vs { color: var(--faint); font-size: .85rem; }
+.hm-lastline b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-lastline:hover b { text-decoration: underline; text-decoration-color: var(--faint); }
+
+/* Coming up */
+.hm-fix { list-style: none; margin: 0; padding: 0; }
+.hm-fix li { display: grid; grid-template-columns: 6.2em 22px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 10px 2px; font-size: .92rem; }
+.hm-fix li + li { border-top: 1px solid var(--line); }
+.hm-fix .hm-wk { color: var(--faint); font-size: .8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-fix b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-fix small { color: var(--faint); font-size: .72rem; font-weight: 700; }
+.hm-fix .hm-time { color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums; }
 
 @media (max-width: 480px) {
   .hm-crest { width: 60px; height: 60px; }
