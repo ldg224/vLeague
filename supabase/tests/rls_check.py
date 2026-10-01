@@ -36,6 +36,9 @@ insert into auth.users (id, instance_id, aud, role, email) values
   ('{FAKE_NOCLUB}',  '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'rls-test-noclub@example.invalid');
 update public.profiles set club = 'TUR' where id = '{FAKE_MANAGER}';
 insert into public.team_sheets (club, formation) values ('TUR', '4-4-2'), ('LAU', '4-3-3') on conflict (club) do nothing;
+-- Start from clubs nobody has set up yet (real requests and set-ups are hidden only inside this rolled-back transaction).
+delete from public.club_requests;
+update public.clubs set setup_at = null;
 """
 
 
@@ -149,6 +152,47 @@ SETUP_CHECKS = [
 ]
 
 
+# 0.6: line-up deadlines. Week 98/99 are test weeks; everything is rolled back. A version is "saved" at a set time by
+# inserting into team_sheet_versions directly (pre runs with full rights).
+VER = "insert into public.team_sheet_versions (club, sheet, saved_at) values "
+DEADLINE_CHECKS = [
+    ('anon', 'guest can read deadlines', "insert into public.deadlines (week, locks_at) values (99, now() + interval '1 day');",
+     "select count(*) >= 1 as ok from public.deadlines where week = 99;"),
+    ('anon', 'guest cannot set a deadline', '', {'error': 'row-level security'},
+     "insert into public.deadlines (week, locks_at) values (99, now());"),
+    ('manager', 'manager cannot set a deadline', '', {'error': 'row-level security'},
+     "insert into public.deadlines (week, locks_at) values (99, now());"),
+    ('office', 'office can set and move an open deadline', '',
+     """insert into public.deadlines (week, locks_at) values (99, now() + interval '1 day');
+        with u as (update public.deadlines set locks_at = now() + interval '2 days' where week = 99 returning 1) select count(*) = 1 as ok from u;"""),
+    ('manager', "manager cannot read saved versions", VER + "('TUR', '{}', now());",
+     "select count(*) = 0 as ok from public.team_sheet_versions;"),
+    ('manager', 'saving a team sheet keeps a version', '',
+     """update public.team_sheets set formation = '4-3-3' where club = 'TUR'; reset role;
+        select count(*) >= 1 as ok from public.team_sheet_versions where club = 'TUR' and sheet->>'formation' = '4-3-3';"""),
+    ('anon', 'a week locks with each club\u2019s last save before the deadline, and everyone can read it',
+     "insert into public.deadlines (week, locks_at) values (99, now() - interval '1 hour'); "
+     + VER + """('TUR', '{"formation":"4-4-2","captain":"0015"}', now() - interval '3 hours'),
+                ('TUR', '{"formation":"3-5-2","captain":"0001"}', now() - interval '2 hours'),
+                ('TUR', '{"formation":"4-3-3","captain":"9999"}', now() - interval '30 minutes');
+        select public.lock_due_weeks();""",
+     """select (select formation = '3-5-2' and captain = '0001' from public.week_sheets where week = 99 and club = 'TUR')
+          and (select locked_at is not null from public.deadlines where week = 99) as ok;"""),
+    ('anon', 'a deadline still to come locks nothing',
+     "insert into public.deadlines (week, locks_at) values (99, now() + interval '1 hour'); select public.lock_due_weeks();",
+     "select count(*) = 0 as ok from public.week_sheets where week = 99;"),
+    ('manager', 'manager cannot write a locked sheet', "insert into public.deadlines (week, locks_at) values (99, now() - interval '1 hour'); select public.lock_due_weeks();",
+     {'error': 'row-level security'}, "insert into public.week_sheets (week, club) values (99, 'LAU');"),
+    ('manager', 'manager cannot lock weeks', '', {'error': 'permission denied'}, "select public.lock_due_weeks();"),
+    ('office', 'office cannot move a locked week',
+     "insert into public.deadlines (week, locks_at) values (99, now() - interval '1 hour'); select public.lock_due_weeks();",
+     {'error': 'already locked'}, "update public.deadlines set locks_at = now() + interval '1 day' where week = 99;"),
+    ('office', 'office cannot delete a locked week',
+     "insert into public.deadlines (week, locks_at) values (99, now() - interval '1 hour'); select public.lock_due_weeks();",
+     {'error': 'already locked'}, "delete from public.deadlines where week = 99;"),
+]
+
+
 def main():
     failed = 0
     for who, desc, body in CHECKS:
@@ -168,12 +212,21 @@ def main():
             ok = bool(rows_of(r) and r[-1].get('ok'))
         failed += not ok
         print(f"{'PASS' if ok else 'FAIL'}  [{who:7}] {desc}" + ('' if ok else f'  -> {r}'))
+    for who, desc, pre, *rest in DEADLINE_CHECKS:
+        expect, body = (rest[0], rest[1]) if len(rest) == 2 else (None, rest[0])
+        r = as_user(who, body, pre)
+        if expect:
+            ok = isinstance(r, dict) and expect['error'].lower() in r.get('error', '').lower()
+        else:
+            ok = bool(rows_of(r) and r[-1].get('ok'))
+        failed += not ok
+        print(f"{'PASS' if ok else 'FAIL'}  [{who:7}] {desc}" + ('' if ok else f'  -> {r}'))
     # Make sure nothing leaked out of the rolled-back transactions.
     left = sql(f"select count(*) as n from auth.users where id in ('{FAKE_MANAGER}', '{FAKE_NOCLUB}');")
     clean = rows_of(left) and left[0]['n'] == 0
     print('PASS  test accounts cleaned up' if clean else f'FAIL  test accounts left behind: {left}')
     failed += not clean
-    total = len(CHECKS) + len(SETUP_CHECKS) + 1
+    total = len(CHECKS) + len(SETUP_CHECKS) + len(DEADLINE_CHECKS) + 1
     print(f'\n{total - failed}/{total} passed')
     sys.exit(1 if failed else 0)
 

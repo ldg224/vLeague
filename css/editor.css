@@ -92,3 +92,18 @@
   .ed-clubs li > .state:not(.status) { grid-column: 2 / -1; }
   .ed-clubs .ed-setup { grid-column: 2 / -1; justify-self: start; }
 }
+
+/* Deadlines (0.6) */
+.ed-dls { list-style: none; margin: 0 0 28px; padding: 0; }
+.ed-dl { display: grid; grid-template-columns: 6em minmax(0, 1fr) auto auto; align-items: center; gap: 6px 14px; padding: 12px 4px; border-bottom: 1px solid var(--line); }
+.ed-dl small { color: var(--faint); font-size: .82rem; }
+.ed-dl input { min-height: 40px; padding: 6px 10px; border-radius: 10px; border: 1px solid rgba(160,190,230,.16); background: var(--surface); color: var(--text); font: 500 .92rem var(--font); color-scheme: dark; }
+.ed-dl input.suggested { color: var(--muted); border-style: dashed; }
+.ed-dl .ed-msg { grid-column: 2 / -1; margin: 0; color: var(--muted); font-size: .82rem; }
+.ed-dl.locked { grid-template-columns: 6em minmax(0, 1fr) auto; }
+.ed-dl.locked .state { grid-column: 2 / -1; color: var(--muted); font-size: .85rem; }
+.ed-dl-add { max-width: 520px; }
+@media (max-width: 640px) {
+  .ed-dl { grid-template-columns: 1fr auto; }
+  .ed-dl small, .ed-dl .ed-msg, .ed-dl.locked .state { grid-column: 1 / -1; }
+}

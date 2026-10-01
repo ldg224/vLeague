@@ -3,6 +3,24 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.6.0 (2026-10-01)
+
+Pick your team, with a line-up deadline each week.
+
+- **Added:** My club → Team sheet: your XI on a pitch. Pick one of the engine's four formations, tap a slot then a
+  player (or two players to swap), choose the captain, penalty, free-kick and corner takers, and set tactics with
+  presets or five sliders. It saves itself as you go. Squad (ratings and stats) is its own tab.
+- **Added:** a line-up deadline for each week, set by the league office (Editor → Deadlines). At the deadline every
+  club's team sheet is locked for that week; managers can keep editing and changes count for the next week.
+- **Added:** the reveal. Once a week locks, both clubs' XIs show on pitches on each club's Home, and the line-ups
+  show on the dashboard's matchday board.
+- **Changed:** Home's match card shows when your line-up locks and has "Pick your XI" again.
+- **Changed:** line-ups now come out at the week's deadline instead of 10 minutes before kick-off.
+- **Added:** database tables `deadlines`, `team_sheet_versions` and `week_sheets`, and a job that locks each week on
+  time, to the second (migration `0005_lineup_deadlines.sql`). 12 more security checks (53 in all).
+- **Changed (s3 site):** the Editor's Simulate plays each match with its week's locked team sheets and waits until
+  the week is locked. The old Manager Hub's Lineup and Tactics tabs point to My club; press stays there for now.
+
 ## 0.5.1 (2026-10-01)
 
 Home is about your club; League is about everyone.

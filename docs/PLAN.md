@@ -35,8 +35,7 @@ Sign-in page, "View as guest", the guest dashboard, the dashboard as the guest p
 - [x] Auth settings: sign-ups off, site URL, redirects, Gmail sender, 8-character passwords.
 - [x] "Set your password" page (invites and resets), "Forgot password?", sign-in goes to Home or Editor by role.
 - [x] Placeholder Home and Editor; security checks (`supabase/tests/rls_check.py`).
-- Line-ups can't be revealed at T-10 in the database yet, because kick-off times only move in with fixtures (0.8).
-  Until then, team sheets are private to the club and the office.
+- Team sheets are private to the club and the office; from 0.6 each week's locked copy is public.
 
 ### 0.4: Set up your club (done in 0.4.0)
 - [x] Four-step wizard at first sign-in: name (≤25) / short name (≤12) / 3-letter code; primary and secondary
@@ -55,10 +54,13 @@ Sign-in page, "View as guest", the guest dashboard, the dashboard as the guest p
 - [x] Home: next match with countdown and "line-up locks in …", what needs doing, last result, table position,
       league activity feed.
 
-### 0.6: My club
-- [ ] The XI on a pitch (tap to swap, formation, captain, set pieces, tactics), saved to `team_sheets`.
-- [ ] Lock at T-10 and the team-sheet reveal graphic on both clubs' sites and the dashboard.
-- [ ] The s3 editor's Simulate reads team sheets from Supabase; the s3 Manager Hub retires.
+### 0.6: My club (done in 0.6.0)
+- [x] The XI on a pitch (tap to swap, formation, captain, set pieces, tactics), saved to `team_sheets`.
+- [x] A line-up deadline per week, set by the office (Editor → Deadlines). At the deadline every club's sheet is
+      locked for that week and revealed on both clubs' Homes and the dashboard. Managers keep editing; changes
+      count for the next week. (User's decision, 1 October 2026: not T-10, because results are often simulated in
+      advance. League time zone: Australia/Melbourne.)
+- [x] The s3 editor's Simulate reads team sheets from Supabase; the s3 Manager Hub's line-up and tactics tabs point to My club (press stays there until 0.7).
 
 ### 0.7: Inbox and press
 - [ ] One inbox: news for this club, press conferences, deadlines; only things that need action or matter.
@@ -68,7 +70,7 @@ Sign-in page, "View as guest", the guest dashboard, the dashboard as the guest p
 
 ### 0.8: The Editor moves in
 - [ ] Fixtures, results, Simulate, news composer, approvals and history in the app, on Supabase.
-- [ ] Results hidden until kick-off and line-ups until T-10, both enforced by the database.
+- [ ] Results hidden until kick-off, enforced by the database.
 - [ ] season.json retired as the source of truth; match files published to this site's Pages.
 - [ ] Optional league events such as deadline day, set up and scheduled from the Editor (off by default).
 

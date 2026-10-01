@@ -1,15 +1,17 @@
-// The league office's Editor (0.4): club requests to approve or send back, the clubs, and manager accounts
-// (invite, link to a club, send a password link). Fixtures, results, Simulate and news move in later (docs/PLAN.md).
+// The league office's Editor (0.4): club requests to approve or send back, the clubs, manager accounts (invite,
+// link to a club, send a password link) and, from 0.6, each week's line-up deadline. Fixtures, results, Simulate
+// and news move in later (docs/PLAN.md).
 // The database checks everything again (supabase/migrations/0003_club_setup.sql); this page only asks.
 import { enter, clubs, chrome, esc, safeColour, crestUrl } from './member.js';
 import { db, sendPasswordReset } from './auth.js';
 import { accentFor } from './club-colour.js';
+import { loadSeason, kickoff } from './dashboard-data.js';
 
 chrome();
 const me = await enter('editor.html');
 const main = document.getElementById('main');
-const TABS = { requests: 'Requests', clubs: 'Clubs', managers: 'Managers' };
-let state = { clubs: [], requests: [], accounts: [] };
+const TABS = { requests: 'Requests', clubs: 'Clubs', managers: 'Managers', deadlines: 'Deadlines' };
+let state = { clubs: [], requests: [], accounts: [], deadlines: null, locked: [], season: null };
 
 // The accent a club shows: the one saved with its colours, or worked out the same way the wizard does.
 const accentOf = c => safeColour(c.accent || accentFor(c.colour, c.colour2));
@@ -21,13 +23,19 @@ const crest = (path, code, cls = '') => (path
 
 async function load() {
   const c = await db();
-  const [list, req, acc] = await Promise.all([
+  const [list, req, acc, dl, ws, season] = await Promise.all([
     clubs(),
     c.from('club_requests').select('*').order('created_at', { ascending: false }).limit(60),
     c.rpc('office_accounts'),
+    c.from('deadlines').select('*').order('week'),
+    c.from('week_sheets').select('week, club'),
+    loadSeason().catch(() => null),
   ]);
   if (req.error || acc.error) throw new Error((req.error || acc.error).message);
-  state = { clubs: list, requests: req.data || [], accounts: acc.data || [] };
+  state = {
+    clubs: list, requests: req.data || [], accounts: acc.data || [],
+    deadlines: dl.error ? null : dl.data || [], locked: ws.data || [], season,
+  };
 }
 
 function tab() {
@@ -40,7 +48,7 @@ function render() {
   const pending = state.requests.filter(r => r.status === 'pending').length;
   main.innerHTML = `<nav class="ed-tabs" aria-label="Editor">${Object.entries(TABS).map(([k, label]) =>
     `<a href="#${k}" ${k === t ? 'aria-current="page"' : ''}>${label}${k === 'requests' && pending ? ` <span class="ed-count">${pending}</span>` : ''}</a>`).join('')}</nav>
-    <section id="view">${{ requests: requestsView, clubs: clubsView, managers: managersView }[t]()}</section>`;
+    <section id="view">${{ requests: requestsView, clubs: clubsView, managers: managersView, deadlines: deadlinesView }[t]()}</section>`;
 }
 
 // ---------------------------------------------------------------- requests
@@ -213,6 +221,70 @@ async function link(li, club) {
   if (!clash) msg.textContent = club ? 'Linked.' : 'Unlinked.';
 }
 
+// ---------------------------------------------------------------- line-up deadlines (0.6)
+// At a week's deadline the database copies every club's team sheet: that copy is what Simulate uses for the week
+// and what everyone sees from then on. A locked week can't be moved (supabase/migrations/0005_lineup_deadlines.sql).
+
+const pad = n => String(n).padStart(2, '0');
+const localInput = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const full = t => new Date(t).toLocaleString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+
+// Each week in the season with its first kick-off, plus any week that only has a deadline.
+function weeks() {
+  const first = new Map();
+  for (const f of state.season?.fixtures || []) {
+    const k = kickoff(f);
+    if (f.week == null) continue;
+    const had = first.get(f.week);
+    if (!first.has(f.week) || (k && (!had || k < had))) first.set(f.week, k);
+  }
+  for (const d of state.deadlines || []) if (!first.has(d.week)) first.set(d.week, null);
+  return [...first.entries()].sort((a, b) => a[0] - b[0]);
+}
+
+function deadlinesView() {
+  if (!state.deadlines) return '<h1>Deadlines</h1><p class="quiet">Line-up deadlines aren’t switched on in the database.</p>';
+  const list = weeks();
+  const byWeek = new Map(state.deadlines.map(d => [d.week, d]));
+  const sheets = w => state.locked.filter(s => s.week === w).length;
+  const rows = list.map(([w, first]) => {
+    const d = byWeek.get(w);
+    const kick = first ? `First kick-off ${full(first)}` : 'No fixtures';
+    if (d?.locked_at) {
+      return `<li class="ed-dl locked"><b>Week ${w}</b><small>${esc(kick)}</small><span class="ed-pill approved">Locked</span>
+        <span class="state">${esc(full(d.locks_at))} · ${sheets(w)} of ${state.clubs.length} team sheets</span></li>`;
+    }
+    const value = d ? localInput(new Date(d.locks_at)) : first ? localInput(new Date(first - 3600e3)) : '';
+    const late = d && first && new Date(d.locks_at) > first;
+    return `<li class="ed-dl" data-week="${w}"><b>Week ${w}</b><small>${esc(kick)}</small>
+      <label class="sr-only" for="dl-${w}">Week ${w} deadline</label>
+      <input id="dl-${w}" type="datetime-local" value="${value}"${d ? '' : ' class="suggested"'}>
+      <span class="ed-actions"><button class="btn small" data-act="dl-save" type="button">${d ? 'Save' : 'Set'}</button>
+        ${d ? '<button class="btn ghost small" data-act="dl-remove" type="button">Remove</button>' : ''}</span>
+      <p class="ed-msg" role="status">${d ? `Locks ${esc(full(d.locks_at))}` : 'Not set'}${late ? ' · after the first kick-off' : ''}</p></li>`;
+  }).join('');
+  return `<h1>Deadlines</h1>
+    <p class="quiet">Team sheets lock at their week's deadline and are shown to everyone.</p>
+    ${list.length ? `<ul class="ed-dls">${rows}</ul>` : '<p class="quiet">No fixtures.</p>'}
+    <form class="ed-dl-add" id="dl-add"><h2>Another week</h2><div class="ed-fields">
+      <label>Week<input name="week" type="number" min="1" max="99" required></label>
+      <label>Deadline<input name="at" type="datetime-local" required></label></div>
+      <div class="ed-actions"><button class="btn">Set</button></div><p class="ed-msg" role="status"></p></form>`;
+}
+
+async function saveDeadline(week, value, msg) {
+  if (!value) { msg.textContent = 'Pick a date and time.'; return; }
+  const { error } = await (await db()).from('deadlines').upsert({ week, locks_at: new Date(value).toISOString() });
+  if (error) { msg.textContent = error.message; return; }
+  await refresh();
+}
+
+async function removeDeadline(li) {
+  const { error } = await (await db()).from('deadlines').delete().eq('week', Number(li.dataset.week));
+  if (error) { li.querySelector('.ed-msg').textContent = error.message; return; }
+  await refresh();
+}
+
 // ---------------------------------------------------------------- events
 
 main.addEventListener('click', e => {
@@ -225,6 +297,11 @@ main.addEventListener('click', e => {
   if (b.dataset.act === 'reopen') b.closest('li').querySelector('.ed-confirm').hidden = false;
   if (b.dataset.act === 'reopen-no') b.closest('.ed-confirm').hidden = true;
   if (b.dataset.act === 'reopen-yes') reopen(b.closest('li'));
+  if (b.dataset.act === 'dl-save') {
+    const li = b.closest('li');
+    saveDeadline(Number(li.dataset.week), li.querySelector('input').value, li.querySelector('.ed-msg'));
+  }
+  if (b.dataset.act === 'dl-remove') removeDeadline(b.closest('li'));
   if (b.dataset.act === 'reset') {
     const li = b.closest('li');
     b.disabled = true;
@@ -236,6 +313,7 @@ main.addEventListener('click', e => {
 main.addEventListener('submit', e => {
   e.preventDefault();
   if (e.target.id === 'invite') return invite(e.target);
+  if (e.target.id === 'dl-add') return saveDeadline(Number(e.target.week.value), e.target.at.value, e.target.querySelector('.ed-msg'));
   if (e.target.classList.contains('ed-return')) review(e.target.closest('.ed-request'), false, e.target.note.value);
 });
 main.addEventListener('change', e => {

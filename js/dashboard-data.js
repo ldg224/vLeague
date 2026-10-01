@@ -1,6 +1,6 @@
 // League data for the guest dashboard.
 // Until the league moves to Supabase (docs/PLAN.md, step 2) this reads the s3 site's public files:
-// data/season.json, data/teams/<code>.json and assets/teams/<code>.png.
+// data/season.json and assets/teams/<code>.png. Line-ups come from Supabase (week_sheets, 0.6).
 // The rules below (kick-off, status, ladder, player totals) are ports of hcl-s3/js/data.js; keep them in step.
 
 const LIVE_SITE = 'https://ldg224.github.io/s3/';
@@ -21,18 +21,6 @@ export async function loadSeason() {
   return res.json();
 }
 
-// A club's chosen line-up, or null if the club hasn't sent one. Only asked for inside the line-up window.
-export async function loadLineup(season, code) {
-  try {
-    const res = await fetch(`${SOURCE}data/teams/${code.toLowerCase()}.json?t=${Date.now()}`, { cache: 'no-store' });
-    if (!res.ok) return null;
-    const file = await res.json();
-    const players = Object.fromEntries(season.players.map(p => [String(p.id), p]));
-    const xi = Object.entries(file.lineup || {}).map(([slot, id]) => ({ slot, id: String(id), name: players[id]?.name || 'Unknown player' }));
-    return xi.length ? { formation: file.formation || '', xi, captain: file.captain ? String(file.captain) : null } : null;
-  } catch { return null; }
-}
-
 // ---------- Time and status ----------
 
 export function kickoff(fx) {
@@ -43,8 +31,6 @@ export function kickoff(fx) {
 }
 
 const liveMs = s => (s.live_minutes || 10) * 60000;
-export const LINEUP_LEAD_MS = 10 * 60000;
-export const lineupsOutAt = fx => new Date(kickoff(fx) - LINEUP_LEAD_MS);
 
 // upcoming | live | ft | awaiting (kicked off, no result yet) | tba | postponed
 export function status(fx, s, now = new Date()) {

@@ -1,10 +1,10 @@
 // The dashboard: one page for everyone who isn't managing a club (guests), and the league at a glance.
 // The matchday board leads with the live match (or the next one), then this week's matches, the table,
 // league news and the leaders. It redraws every 15 s so live scores tick on, and reloads the data every minute.
-import { currentUser, signOut, setGuest } from './auth.js';
+import { currentUser, signOut, setGuest, db } from './auth.js';
 import { VERSION } from './version.js';
 import {
-  loadSeason, loadLineup, logoUrl, matchUrl, kickoff, status, shownScore, shownGoals, liveMinute, lineupsOutAt,
+  loadSeason, logoUrl, matchUrl, kickoff, status, shownScore, shownGoals, liveMinute,
   byKickoff, activeWeek, featured, ladder, leaders, guestNews, parseStamp,
 } from './dashboard-data.js';
 
@@ -19,7 +19,8 @@ function onColour(hex) {
 }
 
 let season = null, week = null, weekPinned = false, newsShown = null;
-const lineups = new Map();   // fixture id -> { home, away } once the line-up window has opened
+const lineups = new Map();   // week -> { CODE: locked sheet } once that week's deadline has passed
+let deadlines = [];          // line-up deadline per week, set by the league office (0.6)
 
 // ---------- Formatting ----------
 
@@ -64,29 +65,54 @@ function goalLines(fx, side, now) {
   return `<ul class="scorers">${[...by].map(([n, m]) => `<li>${esc(n)} <span>${m.join(', ')}</span></li>`).join('')}</ul>`;
 }
 
+// Line-ups are the team sheets each club locked at the week's deadline (Supabase week_sheets, public from then).
 function lineupHtml(fx, now) {
-  const opens = lineupsOutAt(fx);
-  if (now < opens) {
-    return `<p class="xi-note">Out at <b>${esc(time(opens))}</b>${sameDate(opens, now) ? '' : ` ${esc(/^Tomorrow$/.test(day(opens, now)) ? 'tomorrow' : `on ${day(opens, now)}`)}`}</p>`;
+  const d = deadlines.find(x => x.week === fx.week);
+  if (!d) return '';
+  const opens = new Date(d.locks_at);
+  if (now < opens || !d.locked_at) {
+    const at = now < opens ? opens : now;
+    return `<p class="xi-note">Out at <b>${esc(time(at))}</b>${sameDate(at, now) ? '' : ` ${esc(/^Tomorrow$/.test(day(at, now)) ? 'tomorrow' : `on ${day(at, now)}`)}`}</p>`;
   }
-  const got = lineups.get(fx.id);
-  if (!got) { fetchLineups(fx); return '<p class="xi-note">Loading line-ups…</p>'; }
+  const week = lineups.get(fx.week);
+  if (!week) { fetchLineups(fx.week); return '<p class="xi-note">Loading line-ups…</p>'; }
+  const got = { home: toXi(week[fx.home]), away: toXi(week[fx.away]) };
   const side = (code, xi) => {
     const t = teamOf(code);
     const rows = xi ? xi.xi.map(p => `<li><span class="slot">${esc(p.slot)}</span><span>${esc(p.name)}${p.id === xi.captain ? ' <abbr title="Captain">(c)</abbr>' : ''}</span></li>`).join('') : '';
     return `<div class="xi" style="--c:${esc(safeColour(t.colour))}"><h3>${esc(t.name)}${xi?.formation ? ` <span>${esc(xi.formation)}</span>` : ''}</h3>`
-      + (xi ? `<ol>${rows}</ol>` : '<p class="xi-note">Not sent yet</p>') + '</div>';
+      + (xi ? `<ol>${rows}</ol>` : '<p class="xi-note">Picked by the engine</p>') + '</div>';
   };
   return `<div class="xis">${side(fx.home, got.home)}${side(fx.away, got.away)}</div>`;
 }
 const sameDate = (a, b) => a.toDateString() === b.toDateString();
 
-async function fetchLineups(fx) {
-  if (lineups.has(fx.id)) return;
-  lineups.set(fx.id, null);
-  const [home, away] = await Promise.all([loadLineup(season, fx.home), loadLineup(season, fx.away)]);
-  lineups.set(fx.id, { home, away });
+// A locked sheet as the list the board shows: slots in pitch order, names from the season's players.
+const SLOT_ORDER = ['GK', 'LB', 'LWB', 'LCB', 'CB', 'RCB', 'RB', 'RWB', 'LDM', 'CDM', 'RDM', 'LM', 'LCM', 'RCM', 'RM', 'LW', 'CAM', 'RW', 'LST', 'ST', 'RST'];
+function toXi(row) {
+  if (!row || !Object.keys(row.lineup || {}).length) return null;
+  const names = new Map(season.players.map(p => [String(p.id), p.name]));
+  const xi = Object.entries(row.lineup).map(([slot, id]) => ({ slot, id: String(id), name: names.get(String(id)) || 'Unknown player' }))
+    .sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot));
+  return { formation: row.formation || '', xi, captain: row.captain ? String(row.captain) : null };
+}
+
+async function fetchLineups(week) {
+  if (lineups.has(week)) return;
+  lineups.set(week, null);
+  try {
+    const { data, error } = await (await db()).from('week_sheets').select('*').eq('week', week);
+    if (error) throw error;
+    lineups.set(week, Object.fromEntries((data || []).map(r => [r.club, r])));
+  } catch { lineups.delete(week); return; }
   drawBoard();
+}
+
+async function loadDeadlines() {
+  try {
+    const { data, error } = await (await db()).from('deadlines').select('*');
+    if (!error) deadlines = data || [];
+  } catch { /* no deadlines: no line-ups section */ }
 }
 
 function drawBoard(now = new Date()) {
@@ -123,7 +149,7 @@ function drawBoard(now = new Date()) {
     action = `<p class="board-sub">Kick-off in <b>${esc(until(k, now))}</b></p>`;
   }
   const stage = fx.stage === 'SF' ? 'Semi-final' : fx.stage === 'GF' ? 'Grand Final' : `Week ${esc(fx.week)}`;
-  const showXi = why === 'live' || why === 'upcoming' || why === 'awaiting';
+  const xiHtml = (why === 'live' || why === 'upcoming' || why === 'awaiting') ? lineupHtml(fx, now) : '';
   el.innerHTML = `
     <div class="board-top"><span class="stage">${stage}</span>${state}</div>
     <div class="fixture">
@@ -132,7 +158,7 @@ function drawBoard(now = new Date()) {
       <div class="side away" style="--c:${esc(safeColour(a.colour))}">${crest(a, 76)}<p class="name">${esc(a.name)}</p>${goalLines(fx, 'away', now)}</div>
     </div>
     <div class="board-act">${action}</div>
-    ${showXi ? `<div class="lineups"><h2>Line-ups</h2>${lineupHtml(fx, now)}</div>` : ''}`;
+    ${xiHtml ? `<div class="lineups"><h2>Line-ups</h2>${xiHtml}</div>` : ''}`;
 }
 
 // ---------- Matches ----------
@@ -260,7 +286,7 @@ function drawAll() {
 
 async function refresh() {
   try {
-    season = await loadSeason();
+    [season] = await Promise.all([loadSeason(), loadDeadlines()]);
     season.fixtures ||= []; season.teams ||= []; season.players ||= [];
     drawAll();
   } catch (e) {

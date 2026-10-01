@@ -48,6 +48,16 @@
 .member-main .hm-foot a.btn { color: var(--white); }
 .hm-foot .btn.ghost { border-color: color-mix(in srgb, var(--club) 55%, transparent); }
 
+/* Team sheets, revealed at the week's deadline (pitches drawn by js/pitch.js) */
+.hm-reveal { margin-top: 16px; }
+.hm-reveal h2 span { color: var(--faint); font-weight: 600; letter-spacing: .04em; }
+.hm-xis { display: grid; gap: 20px; align-items: start; }
+@media (min-width: 640px) { .hm-xis { grid-template-columns: 1fr 1fr; } }
+.hm-xi { margin: 0; display: grid; gap: 10px; min-width: 0; }
+.hm-xi figcaption { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.hm-xi:not(.us) figcaption b { color: var(--muted); }
+.hm-pitch { width: 100%; max-width: 300px; }
+
 /* Club changes with the league office */
 .hm-notice {
   display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 16px; padding: 12px 16px;

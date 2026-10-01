@@ -34,10 +34,21 @@ makes invites and password resets work.
 | `team_sheets` | Each club's current team sheet (formation, tactics, XI, set pieces) | That club's manager and the office | That club's manager and the office |
 | `club_requests` | A manager's request to set up or change their club's name, short name, code or crest, and the office's answer | That club's manager and the office | Only through the functions below |
 | `news` | League news. For now only the crest reveal posted when the office approves a club (the full news system comes in 0.7) | Everyone, guests too | League office (and the approval function) |
+| `deadlines` | The line-up deadline for each week (0.6), and when that week was locked | Everyone, guests too | League office; a locked week can't be moved or deleted |
+| `team_sheet_versions` | Every save of every team sheet, with the time (kept by a trigger on `team_sheets`) | League office | Nobody directly |
+| `week_sheets` | Each club's team sheet as it was at the week's deadline: what Simulate plays with, and the reveal | Everyone, guests too | Nobody directly; only `lock_due_weeks()` |
 
 `clubs.setup_at` is empty until the club's manager has sent "Set up your club" (setup.html). Every manager, the
 office's own club included, is taken there at sign-in while it's empty, and never again once it's sent, until the
 office presses "Set up again" (Editor → Clubs), which empties it and starts the process again.
+
+**Line-up deadlines** (0.6, `0005_lineup_deadlines.sql`; the user's decision, 1 October 2026). The office sets a
+deadline per week (Editor → Deadlines). `lock_due_weeks()` runs every minute (pg_cron job `vleague-lock-weeks`): for
+each deadline that has passed, it copies every club's last save from *before* the deadline into `week_sheets`, so a
+late-running job never lets a later change in. Managers keep editing `team_sheets` at any time; after week N locks,
+changes count for week N+1. Clubs that never saved get no row and the engine picks their team. The s3 Editor's
+Simulate reads the fixture's week from `week_sheets` (with the anon key) and refuses to run before the week is
+locked. The league's time zone is Australia/Melbourne; deadlines are stored as exact instants (timestamptz).
 
 **Functions** (0.4, in `0003_club_setup.sql`). Managers never write `clubs` or `club_requests` directly; these check
 everything and give readable errors:
@@ -64,7 +75,7 @@ The league office is **lukedanielgrogan@gmail.com** (role `office`), and it's th
 FC Turtle (club `TUR`), so it signs in to FC Turtle's Home and reaches the Editor from the footer.
 
 **Checking the rules:** `python supabase/tests/rls_check.py` acts as a guest, a manager, an account with no club
-and the office, and checks what each can read and change (41 checks; nothing is left behind). Run it after any
+and the office, and checks what each can read and change (53 checks; nothing is left behind). Run it after any
 database change. It needs the Management API token in `C:\Users\offic\.vleague\supabase-token.txt`.
 
 ## Adding a manager

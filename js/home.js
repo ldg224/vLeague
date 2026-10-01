@@ -3,16 +3,20 @@
 // league-wide is on League; news is in Inbox (its unread count is on the Inbox tab).
 // League data still comes from the s3 site's season.json (dashboard-data.js) until fixtures move to Supabase (0.8).
 import { enterPlace, badge } from './shell.js';
+import { renderPitch } from './pitch.js';
 import { clubs, esc, crestUrl } from './member.js';
 import { db } from './auth.js';
 import {
-  kickoff, status, shownScore, liveMinute, lineupsOutAt, ladder, finished, byKickoff, matchUrl, logoUrl, sameDay,
+  kickoff, status, shownScore, liveMinute, ladder, finished, byKickoff, matchUrl, logoUrl, sameDay,
 } from './dashboard-data.js';
 
 const ctx = await enterPlace('home');
 let all = [];          // every club row, for crests and names
 let request = null;    // this club's latest setup/change request
 let sbNews = [];       // Supabase news rows (for the unread count)
+let deadlines = [];    // line-up deadline per week (0.6)
+let revealed = [];     // locked team sheets (week_sheets) for the week on the match card
+let sheet = null;      // this club's current team sheet
 let unread = 0;
 
 // ---------------------------------------------------------------- small helpers
@@ -57,18 +61,47 @@ function matchCard(s, code, now) {
     foot = `<a class="btn" href="${esc(matchUrl(fx))}" target="_blank" rel="noopener">Watch live</a>`;
   } else {
     mid = `<span class="hm-when">${day(ko, now)}</span><strong class="hm-ko">${time(ko)}</strong>`;
-    const lock = lineupsOutAt(fx);
+    const d = deadlines.find(x => x.week === fx.week), lock = d && new Date(d.locks_at);
+    const kick = `Kick-off in <b data-until="${+ko}">${until(ko - now)}</b>`;
     if (st === 'awaiting') foot = '<p class="hm-lock">Kicking off</p>';
-    else if (now < lock) {
-      foot = `<p class="hm-lock">Kick-off in <b data-until="${+ko}">${until(ko - now)}</b> · line-up locks in <b data-until="${+lock}">${until(lock - now)}</b></p>`;
-    } else foot = `<p class="hm-lock">Line-ups are out · kick-off in <b data-until="${+ko}">${until(ko - now)}</b></p>
-        <a class="btn ghost" href="${esc(matchUrl(fx))}" target="_blank" rel="noopener">Match centre</a>`;
+    else if (lock && now >= lock) foot = `<p class="hm-lock">${kick} · team sheets locked</p>`;
+    else {
+      const saved = sheet && Object.keys(sheet.lineup || {}).length;
+      foot = `<p class="hm-lock">${kick}${lock ? ` · line-up locks in <b data-until="${+lock}">${until(lock - now)}</b>` : ''}</p>
+        <a class="btn${saved ? ' ghost' : ''}" href="club.html">${saved ? 'Change your XI' : 'Pick your XI'}</a>`;
+    }
   }
   return `<section class="hm-card hm-match">
       <p class="hm-label">${st === 'live' ? 'Now' : 'Next match'} · Week ${esc(fx.week)} · ${home ? 'Home' : 'Away'}</p>
       <div class="hm-teams">${side(fx.home)}<div class="hm-mid">${mid}</div>${side(fx.away)}</div>
       ${foot ? `<div class="hm-foot">${foot}</div>` : ''}
     </section>`;
+}
+
+// ---------------------------------------------------------------- team sheets, revealed at the week's deadline
+// A club's locked sheet, if it picked an XI (an empty one means the engine picks).
+const sheetOf = c => revealed.find(r => r.club === c && Object.keys(r.lineup || {}).length) || null;
+
+function reveal(s, code, now) {
+  const fx = current(s, code, now);
+  const d = fx && deadlines.find(x => x.week === fx.week);
+  if (!d?.locked_at) return '';
+  const side = c => {
+    const row = sheetOf(c);
+    return `<figure class="hm-xi${c === code ? ' us' : ''}" data-club="${esc(c)}"><figcaption>${crest(c, 'hm-mini')}<b>${esc(nameOf(c))}</b></figcaption>
+      ${row ? '<div class="hm-pitch"></div>' : '<p class="hm-sub">No team sheet. The engine picks the team.</p>'}</figure>`;
+  };
+  return `<section class="hm-card hm-reveal"><h2>Team sheets <span>Week ${esc(fx.week)}</span></h2>
+      <div class="hm-xis">${side(fx.home)}${side(fx.away)}</div></section>`;
+}
+
+function drawPitches(s) {
+  document.querySelectorAll('.hm-xi').forEach(fig => {
+    const row = sheetOf(fig.dataset.club), el = fig.querySelector('.hm-pitch');
+    if (!row || !el) return;
+    // Exactly as locked: an empty slot stays empty (the engine fills it on the day).
+    try { renderPitch(el, { formation: row.formation, lineup: row.lineup || {}, captain: row.captain, players: s.players }); } catch { el.remove(); }
+  });
 }
 
 // ---------------------------------------------------------------- club changes with the league office
@@ -134,8 +167,28 @@ function render() {
     main.innerHTML = `${top}${notice()}<p class="quiet">The league data didn’t load. <a href="home.html">Try again</a></p>`;
     return;
   }
-  main.innerHTML = `${top}${notice()}${matchCard(s, code, now)}
+  main.innerHTML = `${top}${notice()}${matchCard(s, code, now)}${reveal(s, code, now)}
     <div class="hm-grid">${season(s, code, now)}${comingUp(s, code, now)}</div>`;
+  drawPitches(s);
+}
+
+// The locked sheets for the week on the match card (public once the week is locked).
+async function loadReveal() {
+  const fx = ctx.season && current(ctx.season, ctx.club.code, new Date());
+  const d = fx && deadlines.find(x => x.week === fx.week);
+  if (!d?.locked_at) { revealed = []; return; }
+  if (revealed.length && revealed[0].week === fx.week) return;
+  const { data } = await (await db()).from('week_sheets').select('*').eq('week', fx.week).in('club', [fx.home, fx.away]);
+  revealed = data || [];
+}
+
+// A deadline that has passed but isn't marked locked yet is re-read (the lock job runs every minute).
+async function refreshDeadlines() {
+  const now = new Date();
+  if (!deadlines.some(d => !d.locked_at && new Date(d.locks_at) <= now)) return;
+  const { data } = await (await db()).from('deadlines').select('*').order('week');
+  if (data) deadlines = data;
+  await loadReveal();
 }
 
 // Countdowns tick every 20 s; the whole page redraws each minute so live scores and states move on.
@@ -153,14 +206,19 @@ if (ctx) {
   } else {
     document.title = `${club.name} | vLeague`;
     const c = await db();
-    const [clubRows, reqRes, newsRes] = await Promise.all([
+    const [clubRows, reqRes, newsRes, dlRes, sheetRes] = await Promise.all([
       clubs().catch(() => []),
       c.from('club_requests').select('status, office_note, created_at').eq('club', club.code).order('created_at', { ascending: false }).limit(1),
       c.from('news').select('*').order('created_at', { ascending: false }).limit(20),
+      c.from('deadlines').select('*').order('week'),
+      c.from('team_sheets').select('lineup, updated_at').eq('club', club.code).maybeSingle(),
     ].map(p => Promise.resolve(p).catch(() => ({}))));
     all = Array.isArray(clubRows) ? clubRows : [];
     request = reqRes?.data?.[0] || null;
     sbNews = newsRes?.data || [];
+    deadlines = dlRes?.data || [];
+    sheet = sheetRes?.data || null;
+    await loadReveal();
     try {
       const { unreadCount } = await import('./inbox-data.js');
       unread = ctx.season ? unreadCount(ctx.season, sbNews, club.code) : 0;
@@ -168,7 +226,8 @@ if (ctx) {
     badge('inbox', unread);
     render();
     setInterval(tick, 20000);
-    setInterval(render, 60000);
+    // Each minute: redraw, and fetch the locked sheets once the week's deadline passes.
+    setInterval(async () => { await refreshDeadlines(); render(); }, 60000);
   }
   main.setAttribute('aria-busy', 'false');
 }
