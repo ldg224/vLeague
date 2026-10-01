@@ -3,6 +3,12 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.4.2 (2026-10-01)
+
+- **Fixed:** on long signed-in pages (like Edit club), the club-colour glow repeated down the page every screen
+  height and the footer sat in the middle of the page. The glow now shows once at the top, and the footer sits at the
+  bottom.
+
 ## 0.4.1 (2026-10-01)
 
 Tidier "Set up your club".

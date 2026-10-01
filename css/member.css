@@ -3,8 +3,9 @@
 
 .member {
   --club: var(--blue-300);
-  min-height: 100%; display: grid; grid-template-rows: auto auto 1fr auto;
-  background: radial-gradient(70vmax 40vmax at 50% 0%, color-mix(in srgb, var(--club) 14%, transparent), transparent 70%), var(--bg);
+  /* Grow with the page (site.css fixes body at one screen), and draw the glow once at the top, not once per screen. */
+  height: auto; min-height: 100%; display: grid; grid-template-rows: auto auto 1fr auto;
+  background: radial-gradient(70vmax 40vmax at 50% 0%, color-mix(in srgb, var(--club) 14%, transparent), transparent 70%) no-repeat, var(--bg);
 }
 .club-band { height: 0; background: var(--club); }
 .club-band.on { height: 4px; }
