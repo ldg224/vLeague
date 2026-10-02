@@ -1,8 +1,8 @@
-// The four places a manager moves between (0.5): Home, My club, Inbox, League, plus Settings (0.7) behind the
-// round crest button in the top bar. Each page calls enterPlace() once: it signs the visitor in (or sends them on),
-// wires the top bar and footer, paints the club accent and band, draws the nav, and loads the club row, the league
-// data and the account's settings together.
-import { enter, chrome, safeColour, esc, crestUrl } from './member.js';
+// The places a manager moves between: Home, My club, Inbox, League (0.5) and Settings (its own tab from 0.7.1;
+// managers only, so an account without a club doesn't get it). Each page calls enterPlace() once: it signs the
+// visitor in (or sends them on), wires the top bar and footer, paints the club accent and band, draws the nav, and
+// loads the club row, the league data and the account's settings together.
+import { enter, chrome, safeColour, esc } from './member.js';
 import { prefs } from './prefs.js';
 import { db } from './auth.js';
 import { loadSeason } from './dashboard-data.js';
@@ -12,12 +12,14 @@ const ICON = {
   club: '<path d="M12 3 5 6v5c0 4.4 3 8.3 7 10 4-1.7 7-5.6 7-10V6z"/>',
   inbox: '<path d="M4 13 6.5 5h11L20 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M4 13h4.5l1.5 2.5h4l1.5-2.5H20"/>',
   league: '<path d="M5 6h14M5 12h14M5 18h14"/><path d="M5 6h.01M5 12h.01M5 18h.01" stroke-width="3"/>',
+  settings: '<circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/>',
 };
 export const PLACES = [
   { id: 'home', label: 'Home', href: 'home.html' },
   { id: 'club', label: 'My club', href: 'club.html' },
   { id: 'inbox', label: 'Inbox', href: 'inbox.html' },
   { id: 'league', label: 'League', href: 'league.html' },
+  { id: 'settings', label: 'Settings', href: 'settings.html' },
 ];
 
 function drawNav(current) {
@@ -44,27 +46,8 @@ export function paintClub(club, accent = 'club') {
   document.getElementById('band')?.classList.add('on');
 }
 
-// The account button: the club crest (or a gear), linking to Settings. Replaces the old Sign out button.
-function drawAccount(club, current) {
-  let el = document.getElementById('account');
-  const old = document.getElementById('signout');
-  if (!el && old) {
-    el = document.createElement('a');
-    el.id = 'account';
-    old.replaceWith(el);
-  }
-  if (!el) return;
-  el.className = 'account-btn';
-  el.href = 'settings.html';
-  el.setAttribute('aria-label', 'Settings');
-  if (current) el.setAttribute('aria-current', 'page');
-  el.innerHTML = club?.crest_path
-    ? `<img src="${esc(crestUrl(club.crest_path))}" alt="">`
-    : '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/></svg>';
-}
-
 // ctx = { me: { user, profile }, club, season, team, prefs, main } or null if the visitor was sent elsewhere.
-// place is 'home' | 'club' | 'inbox' | 'league' | 'settings' (Settings marks no tab as current).
+// place is 'home' | 'club' | 'inbox' | 'league' | 'settings'.
 // club: the Supabase clubs row (null if the account has none). season: the league's season.json (null if it didn't
 // load). team: the season's entry for this club (matched on code; the two stay in step until fixtures move to
 // Supabase in 0.10).
@@ -73,6 +56,7 @@ export async function enterPlace(place) {
   drawNav(place);
   const me = await enter(`${place}.html`);
   if (!me) return null;
+  if (!me.profile?.club) document.querySelector('#places [data-place="settings"]')?.remove();
   const code = me.profile?.club;
   const [club, season, settings] = await Promise.all([
     code ? db().then(c => c.from('clubs').select('*').eq('code', code).maybeSingle()).then(r => r.data || null).catch(() => null) : null,
@@ -80,7 +64,6 @@ export async function enterPlace(place) {
     prefs(),
   ]);
   paintClub(club, settings.accent);
-  drawAccount(club, place === 'settings');
   const team = club && season ? season.teams.find(t => t.code === club.code) || null : null;
   return { me, club, season, team, prefs: settings, main: document.getElementById('main') };
 }

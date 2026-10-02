@@ -10,7 +10,8 @@ export const crestUrl = path => (path ? `${SUPABASE_URL}/storage/v1/object/publi
 
 // Load the signed-in account for 'home.html', 'setup.html' or 'editor.html'. No session -> sign in. The Editor is
 // for the league office only; Home is for anyone with a club (or anyone who isn't office) whose club is set up;
-// setup.html is for anyone with a club (it sends a set-up club on to Home unless it's ?edit). Otherwise { user, profile }.
+// setup.html is for anyone with a club (it sends a set-up club on to Home unless it's ?edit); Settings is for managers
+// (a set-up club). Otherwise { user, profile }.
 export async function enter(page) {
   const user = await currentUser();
   if (!user) { location.replace('index.html?signin'); return null; }
@@ -18,7 +19,7 @@ export async function enter(page) {
   const office = profile?.role === 'office';
   const allowed = page === 'editor.html' ? office
     : page === 'setup.html' ? Boolean(profile?.club)
-    : page === 'settings.html' ? Boolean(profile) && !profile.needs_setup
+    : page === 'settings.html' ? Boolean(profile?.club) && !profile.needs_setup
     : landingPage(profile) === 'home.html';
   if (!allowed) { location.replace(landingPage(profile)); return null; }
   document.body.classList.toggle('is-office', office);

@@ -103,6 +103,9 @@
 .ed-dl.locked { grid-template-columns: 6em minmax(0, 1fr) auto; }
 .ed-dl.locked .state { grid-column: 2 / -1; color: var(--muted); font-size: .85rem; }
 .ed-dl-add { max-width: 520px; }
+.ed-digest { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 0 0 20px; font-weight: 600; cursor: pointer; }
+.ed-digest input { width: 18px; height: 18px; accent-color: var(--brand); }
+.ed-digest .ed-msg { margin: 0; font-weight: 400; }
 @media (max-width: 640px) {
   .ed-dl { grid-template-columns: 1fr auto; }
   .ed-dl small, .ed-dl .ed-msg, .ed-dl.locked .state { grid-column: 1 / -1; }

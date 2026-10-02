@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.7.1 (2026-10-02)
+
+Settings gets its own tab, and it's for managers.
+
+- **Changed:** Settings is a tab next to League (on phones, in the bottom bar) instead of hiding behind the club
+  crest at the top right. The crest button is gone.
+- **Changed:** Settings is for managers only. An account without a club doesn't get the tab or the page.
+- **Moved:** the office's "clubs without a team" email is now a checkbox in Editor → Deadlines.
+
 ## 0.7.0 (2026-10-01)
 
 Settings, and email reminders that only arrive when they're useful.

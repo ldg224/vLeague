@@ -1,17 +1,19 @@
 // The league office's Editor (0.4): club requests to approve or send back, the clubs, manager accounts (invite,
-// link to a club, send a password link) and, from 0.6, each week's line-up deadline. Fixtures, results, Simulate
-// and news move in later (docs/PLAN.md).
+// link to a club, send a password link) and, from 0.6, each week's line-up deadline (with the office's "clubs
+// without a team" email since 0.7.1, as Settings is for managers). Fixtures, results, Simulate and news move in later
+// (docs/PLAN.md).
 // The database checks everything again (supabase/migrations/0003_club_setup.sql); this page only asks.
 import { enter, clubs, chrome, esc, safeColour, crestUrl } from './member.js';
 import { db, sendPasswordReset } from './auth.js';
 import { accentFor } from './club-colour.js';
 import { loadSeason, kickoff } from './dashboard-data.js';
+import { prefs, setPref } from './prefs.js';
 
 chrome();
 const me = await enter('editor.html');
 const main = document.getElementById('main');
 const TABS = { requests: 'Requests', clubs: 'Clubs', managers: 'Managers', deadlines: 'Deadlines' };
-let state = { clubs: [], requests: [], accounts: [], deadlines: null, locked: [], season: null };
+let state = { clubs: [], requests: [], accounts: [], deadlines: null, locked: [], season: null, digest: true };
 
 // The accent a club shows: the one saved with its colours, or worked out the same way the wizard does.
 const accentOf = c => safeColour(c.accent || accentFor(c.colour, c.colour2));
@@ -23,18 +25,19 @@ const crest = (path, code, cls = '') => (path
 
 async function load() {
   const c = await db();
-  const [list, req, acc, dl, ws, season] = await Promise.all([
+  const [list, req, acc, dl, ws, season, mine] = await Promise.all([
     clubs(),
     c.from('club_requests').select('*').order('created_at', { ascending: false }).limit(60),
     c.rpc('office_accounts'),
     c.from('deadlines').select('*').order('week'),
     c.from('week_sheets').select('week, club'),
     loadSeason().catch(() => null),
+    prefs(),
   ]);
   if (req.error || acc.error) throw new Error((req.error || acc.error).message);
   state = {
     clubs: list, requests: req.data || [], accounts: acc.data || [],
-    deadlines: dl.error ? null : dl.data || [], locked: ws.data || [], season,
+    deadlines: dl.error ? null : dl.data || [], locked: ws.data || [], season, digest: mine.email.office_digest,
   };
 }
 
@@ -265,6 +268,7 @@ function deadlinesView() {
   }).join('');
   return `<h1>Deadlines</h1>
     <p class="quiet">Team sheets lock at their week's deadline and are shown to everyone.</p>
+    <label class="ed-digest"><input type="checkbox" data-act="digest"${state.digest ? ' checked' : ''}> Email me about clubs without a team<span class="ed-msg" role="status"></span></label>
     ${list.length ? `<ul class="ed-dls">${rows}</ul>` : '<p class="quiet">No fixtures.</p>'}
     <form class="ed-dl-add" id="dl-add"><h2>Another week</h2><div class="ed-fields">
       <label>Week<input name="week" type="number" min="1" max="99" required></label>
@@ -283,6 +287,12 @@ async function removeDeadline(li) {
   const { error } = await (await db()).from('deadlines').delete().eq('week', Number(li.dataset.week));
   if (error) { li.querySelector('.ed-msg').textContent = error.message; return; }
   await refresh();
+}
+
+async function saveDigest(box) {
+  const msg = box.parentNode.querySelector('.ed-msg');
+  try { await setPref('email.office_digest', box.checked); state.digest = box.checked; msg.textContent = 'Saved'; }
+  catch (e) { box.checked = !box.checked; msg.textContent = e.message; }
 }
 
 // ---------------------------------------------------------------- events
@@ -318,6 +328,7 @@ main.addEventListener('submit', e => {
 });
 main.addEventListener('change', e => {
   if (e.target.dataset.act === 'link') link(e.target.closest('li'), e.target.value);
+  if (e.target.dataset.act === 'digest') saveDigest(e.target);
 });
 addEventListener('hashchange', () => { if (state.clubs.length) render(); });
 

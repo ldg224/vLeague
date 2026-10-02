@@ -1,4 +1,5 @@
-// Settings (0.7): account, email reminders, appearance, matches, accessibility. Every control saves on change.
+// Settings (0.7): a manager's account, email reminders, appearance, matches, accessibility. Every control saves on change.
+// The office's own email choice lives in the Editor (Deadlines).
 // Synced settings (data-pref) go to Supabase through prefs.js and get a "Saved" tick; per-device ones (data-dev)
 // apply at once and stay in this browser.
 import { enterPlace } from './shell.js';
@@ -15,7 +16,6 @@ const row = (label, control, { id = '', tick = true } = {}) => `<div class="set-
 const ctx = await enterPlace('settings');
 if (ctx) {
   const { main, club, me } = ctx;
-  const office = me.profile?.role === 'office';
   const p = await prefs(), dev = device();
   const email = me.user.email || '';
   main.classList.add('settings-main');
@@ -33,7 +33,6 @@ if (ctx) {
     ${club ? row('Club changes sent back', toggle('email.sent_back', 'Club changes sent back', p.email.sent_back)) : ''}
     ${row('Line-ups out', toggle('email.lineups_out', 'Line-ups out', p.email.lineups_out))}
     ${row('Weekly round-up', toggle('email.weekly', 'Weekly round-up', p.email.weekly))}
-    ${office ? row('Clubs without a team', toggle('email.office_digest', 'Clubs without a team', p.email.office_digest)) : ''}
     <div class="set-actions"><button type="button" class="ghost-btn" id="test-email">Send me a test email</button><span class="test-result" id="test-result" aria-live="polite"></span></div>
   </section>
 
