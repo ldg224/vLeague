@@ -20,7 +20,7 @@
 <body class="member setup">
   <div class="club-band on" id="band" aria-hidden="true"></div>
   <header class="member-top">
-    <a class="brand" href="home.html"><img src="assets/brand/crest.svg" alt=""><span>v<b>LEAGUE</b></span><em id="page-label">Set up your club</em></a>
+    <a class="brand" id="brand" href="home.html"><img src="assets/brand/crest.svg" alt=""><span>v<b>LEAGUE</b></span><em id="page-label">Set up your club</em></a>
     <a class="to-home" id="to-home" href="home.html" hidden>Home</a>
     <button class="account" id="signout" type="button">Sign out</button>
   </header>
@@ -32,80 +32,82 @@
       <div class="su-head">
         <p class="su-kicker" id="kicker"></p>
         <h1 id="title">Set up your club</h1>
-        <div class="msg info" id="request-note" hidden></div>
         <ol class="su-steps" id="steps" aria-label="Steps">
-          <li data-go="1"><span>1</span>Name</li>
+          <li data-go="1"><span>1</span>Club</li>
           <li data-go="2"><span>2</span>Colours</li>
-          <li data-go="3"><span>3</span>Crest</li>
-          <li data-go="4"><span>4</span>Details</li>
-          <li data-go="5"><span>✓</span>Review</li>
+          <li data-go="3"><span>3</span>Details</li>
         </ol>
       </div>
 
-      <!-- 1: Name -->
-      <section class="su-step" data-step="1" aria-labelledby="h1-name">
-        <div class="su-step-head">
-          <h2 id="h1-name">Name</h2>
-          <span class="su-tag" data-edit-only>Needs approval</span>
-        </div>
+      <!-- 1: Club. In the edit view this card goes to the league office for approval. -->
+      <section class="su-step" data-step="1" id="step-1" aria-labelledby="h1-club">
+        <div class="su-step-head"><h2 id="h1-club">Club</h2></div>
+        <div class="msg info" id="request-note" hidden></div>
         <div class="su-field">
           <label for="name">Club name</label>
           <input id="name" name="name" maxlength="25" autocomplete="off" required>
           <p class="su-hint"><span></span><span class="count" data-for="name"></span></p>
         </div>
-        <div class="su-field">
-          <label for="short_name">Short name <i>Optional</i></label>
-          <input id="short_name" name="short_name" maxlength="12" autocomplete="off">
-          <p class="su-hint"><span>Used in the table.</span><span class="count" data-for="short_name"></span></p>
+        <div class="su-row">
+          <div class="su-field">
+            <label for="short_name">Short name <i>Optional</i></label>
+            <input id="short_name" name="short_name" maxlength="12" autocomplete="off">
+            <p class="su-hint"><span></span><span class="count" data-for="short_name"></span></p>
+          </div>
+          <div class="su-field su-code">
+            <label for="code">Code</label>
+            <div class="su-code-box">
+              <input id="code" name="code" maxlength="3" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" required readonly>
+              <button type="button" class="su-link" id="code-change">Change</button>
+            </div>
+            <p class="su-hint"><span id="code-state"></span></p>
+          </div>
         </div>
-        <div class="su-field su-code">
-          <label for="code">Three-letter code</label>
-          <input id="code" name="code" maxlength="3" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" required>
-          <p class="su-hint"><span id="code-state">Three letters, like TUR.</span></p>
+        <div class="su-field">
+          <span class="su-label">Crest <i>Optional</i></span>
+          <label class="su-drop" id="drop">
+            <input type="file" id="crest" accept="image/png,image/jpeg,image/webp">
+            <img id="crest-img" alt="" hidden>
+            <span class="su-nocrest su-drop-badge" id="crest-badge"></span>
+            <span class="su-drop-text"><b id="drop-title">Upload a crest</b><small>PNG or JPG</small></span>
+          </label>
+          <div class="msg error" id="crest-error" role="alert" hidden></div>
+        </div>
+        <div class="su-field" id="notes-field">
+          <label for="notes">Note for the league office <i>Optional</i></label>
+          <textarea id="notes" name="notes" maxlength="500" rows="2"></textarea>
+          <p class="su-hint"><span></span><span class="count" data-for="notes"></span></p>
+        </div>
+        <div class="su-card-act" data-edit-only>
+          <button class="btn" type="submit" value="identity"><span class="spin" aria-hidden="true"></span>Send to the office</button>
+          <p class="su-msg" role="status"></p>
         </div>
       </section>
 
       <!-- 2: Colours -->
       <section class="su-step" data-step="2" aria-labelledby="h2-col">
-        <div class="su-step-head">
-          <h2 id="h2-col">Colours</h2>
-          <span class="su-tag ok" data-edit-only>Saves instantly</span>
-        </div>
+        <div class="su-step-head"><h2 id="h2-col">Colours</h2></div>
         <div class="su-colours">
           <div class="su-field">
-            <label for="colour">Main colour</label>
+            <label for="colour">Main</label>
             <div class="su-swatch"><input type="color" id="colour-pick" aria-label="Pick the main colour"><input id="colour" name="colour" maxlength="7" spellcheck="false" autocomplete="off"></div>
           </div>
           <div class="su-field">
-            <label for="colour2">Second colour</label>
+            <label for="colour2">Second</label>
             <div class="su-swatch"><input type="color" id="colour2-pick" aria-label="Pick the second colour"><input id="colour2" name="colour2" maxlength="7" spellcheck="false" autocomplete="off"></div>
           </div>
         </div>
-        <ul class="su-checks" id="checks" aria-live="polite"></ul>
+        <p class="su-check" id="check" aria-live="polite"></p>
         <div class="su-preview" id="accent-preview"></div>
+        <div class="su-card-act" data-edit-only>
+          <button class="btn" type="submit" value="style"><span class="spin" aria-hidden="true"></span>Save</button>
+          <p class="su-msg" role="status"></p>
+        </div>
       </section>
 
-      <!-- 3: Crest -->
-      <section class="su-step" data-step="3" aria-labelledby="h3-crest">
-        <div class="su-step-head">
-          <h2 id="h3-crest">Crest</h2>
-          <span class="su-tag" data-edit-only>Needs approval</span>
-        </div>
-        <label class="su-drop" id="drop">
-          <input type="file" id="crest" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml">
-          <img id="crest-img" alt="" hidden>
-          <span class="su-drop-text"><b id="drop-title">Upload crest</b><small>PNG, JPG or WebP. Square, transparent background.</small></span>
-        </label>
-        <div class="msg error" id="crest-error" role="alert" hidden></div>
-        <div class="su-crest-previews" id="crest-previews"></div>
-      </section>
-
-      <!-- 4: Details -->
-      <section class="su-step" data-step="4" aria-labelledby="h4-det">
-        <div class="su-step-head">
-          <h2 id="h4-det">Details</h2>
-          <span class="su-tag ok" data-edit-only>Saves instantly</span>
-        </div>
+      <!-- 3: Details -->
+      <section class="su-step" data-step="3" aria-labelledby="h3-det">
+        <div class="su-step-head"><h2 id="h3-det">Details</h2></div>
         <div class="su-field">
           <label for="manager_name">Manager name</label>
           <input id="manager_name" name="manager_name" maxlength="40" autocomplete="name">
@@ -121,30 +123,23 @@
           <input id="motto" name="motto" maxlength="80" autocomplete="off">
           <p class="su-hint"><span></span><span class="count" data-for="motto"></span></p>
         </div>
-        <div class="su-field">
-          <label for="notes">Notes for the league office <i>Optional</i></label>
-          <textarea id="notes" name="notes" maxlength="500" rows="3"></textarea>
-          <p class="su-hint"><span>Only the office sees these.</span><span class="count" data-for="notes"></span></p>
+        <div class="su-card-act" data-edit-only>
+          <button class="btn" type="submit" value="style"><span class="spin" aria-hidden="true"></span>Save</button>
+          <p class="su-msg" role="status"></p>
         </div>
-      </section>
-
-      <!-- 5: Review (wizard only) -->
-      <section class="su-step" data-step="5" aria-labelledby="h5-rev">
-        <h2 id="h5-rev">Review</h2>
-        <div id="review"></div>
       </section>
 
       <div class="msg error" id="error" role="alert" hidden></div>
       <div class="su-nav" id="nav">
         <button class="btn ghost" type="button" id="back">Back</button>
-        <button class="btn" type="submit" id="next"><span class="spin" aria-hidden="true"></span><span id="next-label">Continue</span></button>
+        <button class="btn" type="submit" id="next" value="next"><span class="spin" aria-hidden="true"></span><span id="next-label">Continue</span></button>
       </div>
     </form>
 
     <div class="su-done" id="done" hidden>
       <img class="club-crest" id="done-crest" alt="">
       <h1 id="done-title">Sent to the league office</h1>
-      <p class="quiet" id="done-text"></p>
+      <p class="quiet" id="done-text">Your colours are live. Your name and crest go live once the office approves them.</p>
       <a class="btn" href="home.html">Go to Home</a>
     </div>
   </main>

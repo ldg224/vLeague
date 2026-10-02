@@ -7,7 +7,6 @@
 //                                         home.html, or editor.html for an office account with no club
 //   sendPasswordReset(email)           -> emails a link to set-password.html (same result whether or not the account exists)
 //   setPassword(password)              -> sets a new password for the session from an invite or reset link
-//   setGuest(on), isGuest()            -> the "View as guest" choice, remembered in localStorage
 //   db()                               -> the Supabase client, for reading and writing tables (row-level security applies)
 //   ready                              -> false until js/config.js has the project's URL and key
 
@@ -24,17 +23,8 @@ function storage() {
   try { return remember ? window.localStorage : window.sessionStorage; } catch { return undefined; }
 }
 
-// A guest browses without an account or a Supabase session; the choice is remembered so a returning guest skips sign-in.
-const GUEST = 'vleague-guest';
-export function setGuest(on) {
-  try { on ? localStorage.setItem(GUEST, 'yes') : localStorage.removeItem(GUEST); } catch { /* storage blocked */ }
-}
-export function isGuest() {
-  try { return localStorage.getItem(GUEST) === 'yes'; } catch { return false; }
-}
-
 async function sb() {
-  if (!ready) throw new Error('The sign-in service isn’t connected yet. The league office needs to finish the setup (docs/BACKEND.md).');
+  if (!ready) throw new Error('Signing in isn’t working right now. Try again later.');
   if (!client) {
     const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/+esm');
     client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, storage: storage(), storageKey: 'vleague-auth' } });
@@ -61,7 +51,6 @@ export async function signIn(email, password, remember = true) {
   const c = await sb();
   const { data, error } = await c.auth.signInWithPassword({ email: email.trim(), password });
   if (error) throw new Error(explain(error));
-  setGuest(false);
   return data;
 }
 
@@ -74,7 +63,6 @@ export async function currentUser() {
 }
 
 export async function signOut() {
-  setGuest(false);
   if (ready) try { await (await sb()).auth.signOut(); } catch { /* already signed out */ }
 }
 
@@ -116,5 +104,4 @@ export async function sendPasswordReset(email) {
 export async function setPassword(password) {
   const { error } = await (await sb()).auth.updateUser({ password });
   if (error) throw new Error(explain(error));
-  setGuest(false);
 }

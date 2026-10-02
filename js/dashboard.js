@@ -1,7 +1,7 @@
-// The dashboard: one page for everyone who isn't managing a club (guests), and the league at a glance.
+// The dashboard: the league at a glance for guests (managers use League).
 // The matchday board leads with the live match (or the next one), then this week's matches, the table,
 // league news and the leaders. It redraws every 15 s so live scores tick on, and reloads the data every minute.
-import { currentUser, signOut, setGuest, db } from './auth.js';
+import { currentUser, db } from './auth.js';
 import { VERSION } from './version.js';
 import {
   loadSeason, logoUrl, matchUrl, kickoff, status, shownScore, shownGoals, liveMinute,
@@ -121,8 +121,9 @@ function drawBoard(now = new Date()) {
   const f = featured(season, now);
   if (!f) {
     const clubs = season.teams.filter(t => !t.withdrawn);
+    const first = season.fixtures.map(kickoff).filter(k => k && k > now).sort((a, b) => a - b)[0];
     el.innerHTML = `<div class="board-empty">
-      <h2>Season ${esc(season.season || 1)} kicks off soon</h2>
+      <h2>Season ${esc(season.season || 1)}</h2>${first ? `<p class="board-sub">Kick-off ${esc(day(first, now))}, ${esc(time(first))}</p>` : ''}
       <ul class="clubs">${clubs.map(t => `<li>${crest(t, 44)}<span>${esc(t.name)}</span></li>`).join('')}</ul>
     </div>`;
     return;
@@ -142,7 +143,7 @@ function drawBoard(now = new Date()) {
   } else if (why === 'awaiting') {
     state = `<span class="tag">Kicked off</span>`;
     centre = `<span class="ko">${esc(time(k))}</span>`;
-    action = '<p class="board-sub">Result soon</p>';
+    action = '<p class="board-sub">Waiting for the result</p>';
   } else {
     state = `<span class="tag">Next match</span><span class="when">${esc(day(k, now))}</span>`;
     centre = `<span class="ko">${esc(time(k))}</span>`;
@@ -309,9 +310,13 @@ for (const [id, step] of [['#week-prev', -1], ['#week-next', 1]]) {
 
 $('#version').textContent = `v${VERSION}`;
 
-// The dashboard is the guest profile: anyone who arrives signed in (e.g. with Back from the members' pages)
-// is signed out and treated as a guest from then on, so the button always reads "Sign in".
-currentUser().then(async user => { if (user) { await signOut(); setGuest(true); } });
+// Someone signed in (back here from a match page, say) keeps their session: the corner button takes them home.
+currentUser().then(user => {
+  if (!user) return;
+  const a = $('#account');
+  a.href = 'home.html';
+  a.textContent = 'Home';
+});
 
 await refresh();
 setInterval(() => { if (season && !document.hidden) drawClock(); }, 15000);

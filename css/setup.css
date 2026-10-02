@@ -1,4 +1,4 @@
-/* "Set up your club" (setup.html): the four-step wizard and the edit view. Mobile first; the page stays vLeague
+/* "Set up your club" (setup.html): the three-step wizard and the edit view. Mobile first; the page stays vLeague
    navy and the club's accent (--club, set live as colours change) shows in the band, the glow and the previews. */
 
 .su-main { width: min(620px, 100%); align-self: start; padding-top: 28px; padding-bottom: 40px; }
@@ -12,7 +12,7 @@
 .su-head .msg:not([hidden]) { display: block; margin-top: 6px; }
 
 /* Step list: numbered pills; done steps can be clicked back to. */
-.su-steps { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; counter-reset: none; }
+.su-steps { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; counter-reset: none; }
 .su-steps[hidden] { display: none; }
 .su-steps li {
   display: grid; justify-items: center; gap: 6px; padding-top: 10px; border-top: 3px solid var(--line);
@@ -28,8 +28,7 @@
 .su-step-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .su-main .su-step h2 { margin: 0; font: 700 1.25rem var(--font-display); letter-spacing: .03em; text-transform: uppercase; }
 body:not(.su-edit) .su-step-head { display: none; }
-.su-tag { flex: none; padding: 3px 10px; border-radius: 999px; border: 1px solid rgba(100,181,246,.35); color: var(--blue-200); font-size: .74rem; font-weight: 600; }
-.su-tag.ok { border-color: var(--line); color: var(--faint); }
+.su-step > .msg:not([hidden]) { display: block; }
 
 /* Fields */
 .su-field { display: grid; gap: 6px; min-width: 0; }
@@ -46,7 +45,16 @@ body:not(.su-edit) .su-step-head { display: none; }
 .su-hint:has(> span:empty + .count:empty) { display: none; }
 .su-hint { margin: 0; display: flex; justify-content: space-between; gap: 12px; color: var(--faint); font-size: .82rem; }
 .su-hint .count { flex: none; font-variant-numeric: tabular-nums; }
-.su-code input { width: 7.5em; font: 700 1.3rem var(--font-display); letter-spacing: .18em; text-transform: uppercase; }
+.su-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
+.su-label { font-weight: 600; font-size: .9rem; }
+.su-label i { margin-left: 4px; font-style: normal; font-weight: 500; color: var(--faint); font-size: .8rem; }
+.su-code-box { display: flex; align-items: center; gap: 4px; }
+.su-code input { width: 5.2em; font: 700 1.2rem var(--font-display); letter-spacing: .14em; text-transform: uppercase; text-align: center; padding-inline: 8px; }
+.su-code input[readonly] { background: transparent; border-color: var(--line); color: var(--text); cursor: default; }
+.su-code input[readonly]:focus { box-shadow: none; border-color: var(--line); }
+.su-link { padding: 8px; border: 0; background: none; color: var(--brand); font: 600 .85rem var(--font); cursor: pointer; }
+.su-link:hover { color: var(--text); }
+.su-link[hidden] { display: none; }
 #code-state.good { color: var(--blue-100); }
 #code-state.bad { color: var(--text); font-weight: 600; }
 #code-state.bad::before { content: '✕ '; }
@@ -63,13 +71,8 @@ body:not(.su-edit) .su-step-head { display: none; }
 .su-swatch input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 7px; }
 .su-swatch input[type="color"]::-moz-color-swatch { border: 0; border-radius: 7px; }
 .su-swatch input:not([type="color"]) { padding-left: 52px; font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; text-transform: lowercase; }
-.su-checks:empty { display: none; }
-.su-checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: .88rem; }
-.su-checks li { display: grid; grid-template-columns: 18px 1fr; gap: 8px; color: var(--muted); }
-.su-checks li::before { content: '✓'; color: var(--blue-100); font-weight: 700; }
-.su-checks li.warn::before { content: '!'; color: var(--club); text-align: center; }
-.su-checks li.bad::before { content: '✕'; color: var(--text); }
-.su-checks li.bad { color: var(--text); }
+.su-check { margin: 0; color: var(--muted); font-size: .88rem; }
+.su-check:empty { display: none; }
 .su-main code { font: 600 .85em ui-monospace, 'Cascadia Mono', Consolas, monospace; color: var(--text); }
 
 /* The accent preview: a miniature Home. */
@@ -89,7 +92,6 @@ body:not(.su-edit) .su-step-head { display: none; }
 .su-phone-chip { margin-top: 4px; padding: 4px 10px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--club) 50%, transparent); color: var(--club); font-size: .75rem; font-weight: 600; }
 .su-phone-link { color: var(--club); font-size: .82rem; font-weight: 700; }
 .su-nocrest { display: grid; place-items: center; border-radius: 50%; background: var(--surface-raised); color: var(--muted); font: 700 1rem var(--font-display); }
-.su-accent-key { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 8px; color: var(--muted); font-size: .8rem; }
 
 .su-chip { display: inline-block; width: 16px; height: 16px; border-radius: 5px; border: 1px solid rgba(255,255,255,.25); vertical-align: -3px; }
 
@@ -101,52 +103,23 @@ body:not(.su-edit) .su-step-head { display: none; }
 .su-drop:hover, .su-drop.over { border-color: var(--blue-300); background: var(--surface-raised); }
 .su-drop:focus-within { border-color: var(--blue-400); box-shadow: 0 0 0 4px rgba(66,165,245,.16); }
 .su-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-.su-drop img { width: 72px; height: 72px; object-fit: contain; flex: none; }
+.su-drop img { width: 64px; height: 64px; object-fit: contain; flex: none; }
+.su-drop-badge { width: 64px; height: 64px; flex: none; }
+.su-drop-badge[hidden] { display: none; }
 .su-drop-text { display: grid; gap: 4px; }
 .su-drop-text b { color: var(--blue-300); }
 .su-drop-text small { color: var(--faint); font-size: .82rem; }
-.su-crest-previews { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.su-crest-previews figure { margin: 0; display: grid; gap: 6px; min-width: 0; }
-.su-crest-previews figcaption { color: var(--faint); font-size: .78rem; text-align: center; }
-.su-pv {
-  min-height: 96px; display: grid; align-content: center; border-radius: 12px; overflow: hidden; border: 1px solid var(--line);
-  background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--club) 14%, transparent), transparent 70%), var(--bg);
-}
-.su-pv .no-crest { display: grid; place-items: center; border-radius: 50%; background: var(--surface-raised); font: 700 .7rem var(--font-display); color: var(--muted); width: 36px; height: 36px; }
-.su-pv-band { align-content: stretch; grid-template-rows: auto 1fr; }
-.su-pv-band .su-pv-bar { align-self: center; }
-.su-pv-bar { display: flex; align-items: center; gap: 8px; padding: 12px; font: 700 .95rem var(--font-display); text-transform: uppercase; min-width: 0; }
-.su-pv-bar b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.su-pv-26 { width: 26px !important; height: 26px !important; object-fit: contain; flex: none; }
-.su-pv-20 { width: 20px !important; height: 20px !important; object-fit: contain; flex: none; font-size: .5rem !important; }
-.su-pv-card { padding: 14px 8px; }
-.su-pv-card .club-card { gap: 6px; }
-.su-pv-card .club-crest { width: 64px; height: 64px; }
-.su-pv-title { font: 700 1rem/1.05 var(--font-display); text-transform: uppercase; overflow-wrap: anywhere; }
-.su-pv .club-rows li { padding-top: 10px; padding-bottom: 10px; border-bottom: 0; grid-template-columns: 36px minmax(0, 1fr) auto; }
-.su-pv-icon { display: flex; justify-content: center; align-items: center; gap: 8px; font-size: .9rem; }
-.su-pv-icon span { color: var(--muted); font-variant-numeric: tabular-nums; }
-.su-pv-icon b:last-child { color: var(--faint); }
 
-/* Review */
-.su-rev { margin: 0; display: grid; }
-.su-rev-row { display: grid; grid-template-columns: 7.5em minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
-.su-rev-row:last-child { border-bottom: 0; }
-.su-rev dt { color: var(--faint); font-size: .85rem; }
-.su-rev dd { margin: 0; overflow-wrap: anywhere; }
-.su-rev dd .quiet { color: var(--faint); }
-.su-rev button { padding: 4px 2px; border: 0; background: none; color: var(--brand); font: 600 .85rem var(--font); cursor: pointer; }
-.su-rev button:hover { color: var(--text); }
-.su-rev dd .su-chip + .su-chip { margin-left: 4px; }
-.su-rev-crest { width: 44px; height: 44px; object-fit: contain; vertical-align: middle; }
-.su-rev + .su-preview { margin-top: 18px; }
-
-/* Nav: Back + Continue; in the edit view a single Save that sticks to the bottom. */
+/* Nav: Back + Continue in the wizard; in the edit view each card has its own button. */
 .su-nav { display: flex; gap: 12px; }
 .su-nav .btn { flex: 1; }
 .su-nav .btn.ghost { flex: 0 0 auto; padding-inline: 22px; color: var(--text); }
 .su-nav .btn.ghost[hidden] { display: none; }
-.su-edit .su-nav { position: sticky; bottom: 0; padding: 12px 0 calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--bg) 30%); }
+.su-nav[hidden] { display: none; }
+.su-card-act { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding-top: 4px; }
+.su-card-act[hidden] { display: none; }
+.su-card-act .btn { width: auto; padding-inline: 24px; }
+.su-msg { margin: 0; color: var(--muted); font-size: .88rem; }
 
 .su-done { display: grid; justify-items: center; gap: 12px; text-align: center; padding-top: 30px; }
 .su-done .quiet { max-width: 42ch; text-wrap: pretty; }
@@ -157,6 +130,5 @@ body:not(.su-edit) .su-step-head { display: none; }
   .su-step { padding: 16px; }
   .su-steps li { font-size: .68rem; }
   .su-colours { grid-template-columns: 1fr; }
-  .su-rev-row { grid-template-columns: 6em minmax(0, 1fr) auto; }
 }
 @media (prefers-reduced-motion: reduce) { .su-steps li, .su-field input { transition: none; } }

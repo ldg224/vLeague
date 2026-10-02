@@ -24,8 +24,9 @@
 .ts-save span::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; background: var(--faint); }
 .ts-save.is-saved span::before { background: var(--res-w); }
 .ts-save.is-dirty span::before, .ts-save.is-saving span::before { background: #f0a92e; }
-.ts-save.is-new span::before, .ts-save.is-error span::before, .ts-save.is-error-load span::before { background: var(--res-l); }
-.ts-save.is-new, .ts-save.is-error { color: var(--text); }
+.ts-save.is-new span::before { background: #f0a92e; }
+.ts-save.is-error span::before, .ts-save.is-error-load span::before { background: var(--res-l); }
+.ts-save.is-error { color: var(--text); }
 .save-btn { padding: 7px 16px; border-radius: 999px; border: 0; background: var(--blue-600); color: var(--white); font: 700 .85rem var(--font); cursor: pointer; }
 .save-btn:hover { background: var(--blue-700); }
 
@@ -48,7 +49,17 @@
 .ts-pick[hidden] { display: none; }
 .link-btn { padding: 0; border: 0; background: none; color: var(--brand); font: 700 .88rem var(--font); cursor: pointer; }
 
-/* Players: tap one to put them in the chosen slot */
+/* Players: tap one to put them in the chosen slot. On phones, choosing a slot first opens this list as a sheet. */
+.pls-close { display: none; }
+@media (max-width: 899px) {
+  .ts.picking .pls-sect {
+    position: fixed; z-index: 30; left: 0; right: 0; bottom: 0; max-height: 62vh; overflow-y: auto; margin: 0;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom)); border-radius: 18px 18px 0 0; background: var(--bg);
+    box-shadow: 0 -12px 40px rgba(0,0,0,.5);
+  }
+  .ts.picking .pls-sect .sect-head { position: sticky; top: -1px; z-index: 1; background: var(--bg); }
+  .ts.picking .pls-close { display: inline; }
+}
 .pls { list-style: none; margin: 0; padding: 0; }
 .pls li + li { border-top: 1px solid var(--line); }
 .pl { width: 100%; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 6px; border: 0; border-radius: 8px; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
@@ -75,6 +86,9 @@
 .presets button { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font: 600 .84rem var(--font); cursor: pointer; }
 .presets button:hover { color: var(--text); border-color: var(--blue-400); }
 .presets button[aria-pressed="true"] { background: var(--blue-700); border-color: var(--blue-700); color: var(--white); }
+.custom summary { cursor: pointer; color: var(--muted); font-weight: 700; font-size: .88rem; margin: 0 0 10px; }
+.custom summary b { margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--blue-700); color: var(--white); font-size: .74rem; }
+.custom[open] summary { margin-bottom: 12px; }
 .tac + .tac { margin-top: 12px; }
 .tac-head { display: flex; justify-content: space-between; gap: 10px; font-size: .9rem; }
 .tac-head span { color: var(--muted); font-weight: 600; }

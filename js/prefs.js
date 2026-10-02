@@ -1,13 +1,13 @@
 // Settings (0.7). Two kinds:
 // - synced: what follows the account to every device (Supabase user_settings): accent, spoiler-free results and the
-//   matches already revealed, clock, start page, email choices. prefs() loads them once per page (cached).
+//   matches already revealed, Inbox posts read, clock, email choices. prefs() loads them once per page (cached).
 // - device: how the app looks on this screen (localStorage 'vleague-device'): text size, reduced motion. Applied by
 //   a one-line script in each page's <head> before the page paints, and again by setDevice().
 import { db, currentUser } from './auth.js';
 import { status } from './dashboard-data.js';
 
 const DEFAULTS = {
-  accent: 'club', spoilers: false, clock: '12', start: 'home', revealed: [],
+  accent: 'club', spoilers: false, clock: '12', revealed: [], read: [],
   email: { deadline: '24h', sent_back: true, lineups_out: false, weekly: false, office_digest: true },
 };
 const CACHE = 'vleague-prefs';
@@ -18,7 +18,7 @@ const store = {
   get(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* storage blocked */ } },
 };
-const merge = p => ({ ...DEFAULTS, ...p, email: { ...DEFAULTS.email, ...(p?.email || {}) }, revealed: p?.revealed || [] });
+const merge = p => ({ ...DEFAULTS, ...p, email: { ...DEFAULTS.email, ...(p?.email || {}) }, revealed: p?.revealed || [], read: p?.read || [] });
 
 // Synchronous view for formatting and spoilers: the last loaded settings (or this device's cached copy).
 let current = merge(store.get(CACHE));
@@ -87,11 +87,9 @@ export async function sendTestEmail() {
   return data;   // { ok: true, to }
 }
 
-// Where to go after signing in: the start page from Settings, for anyone who'd land on Home.
+// Where to go after signing in. Settings had a start page until 0.8.0; everyone lands on Home again.
 export async function startPage(landing) {
-  if (landing !== 'home.html') return landing;
-  const p = await prefs();
-  return { club: 'club.html', inbox: 'inbox.html', league: 'league.html' }[p.start] || 'home.html';
+  return landing;
 }
 
 // ---------------------------------------------------------------- times (12 or 24-hour clock)
@@ -121,4 +119,16 @@ export async function revealScore(ids) {
   current = { ...current, revealed: next };
   store.set(CACHE, current);
   try { await setPref('revealed', next); } catch { /* shown on this device anyway */ }
+}
+
+// ---------------------------------------------------------------- Inbox posts read (0.8)
+
+// Read on one device = read on all. Kept to the last 300.
+export async function rememberRead(ids) {
+  const fresh = ids.map(String).filter(id => !current.read.includes(id));
+  if (!fresh.length) return;
+  const next = [...current.read, ...fresh].slice(-300);
+  current = { ...current, read: next };
+  store.set(CACHE, current);
+  try { await setPref('read', next); } catch { /* still read on this device */ }
 }

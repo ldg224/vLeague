@@ -1,5 +1,5 @@
 // Inbox (0.5): read-only news for this club, from the league's season posts and the app's own news (crest reveals).
-// A post counts as read once it's opened; "Mark all read" clears the lot. Read state stays on this device (inbox-data.js).
+// A post counts as read once it's opened; "Mark all read" clears the lot. Read state follows the account (inbox-data.js).
 import { enterPlace, badge } from './shell.js';
 import { esc, crestUrl, safeColour } from './member.js';
 import { db } from './auth.js';

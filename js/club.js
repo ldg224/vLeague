@@ -57,6 +57,7 @@ function left(d, now = new Date()) {
   return h ? `${h} h ${m % 60} min left` : `${m} min left`;
 }
 const ok = p => p.then(r => r, () => ({ data: null, error: true }));
+const narrow = () => matchMedia('(max-width: 899px)').matches;   // pitch above the lists (club.css)
 
 // ---------- Page ----------
 
@@ -132,7 +133,8 @@ if (ctx) {
 
 // ---------- Team sheet ----------
 
-// A first sheet comes with a captain and takers already picked from the XI, so one Save is a whole team sheet.
+// A first sheet comes with a captain and takers already picked from the XI, and saves itself straight away, so a
+// manager who only looks still has a team in.
 function suggestPieces(sheet, byId) {
   const WIDE = ['LW', 'RW', 'LM', 'RM', 'LB', 'RB', 'LWB', 'RWB'];
   const xi = Object.entries(sheet.lineup).map(([slot, id]) => ({ slot, p: byId.get(id) })).filter(x => x.p);
@@ -157,7 +159,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   let sheet = normaliseSheet(rowRes.data, squad);
   if (!rowRes.data && !rowRes.error) suggestPieces(sheet, byId);
   let saved = rowRes.data ? JSON.stringify(sheet) : null;   // what the database has; null = never saved
-  let state = rowRes.error ? 'error-load' : rowRes.data ? 'saved' : 'new';
+  let state = rowRes.error ? 'error-load' : rowRes.data ? 'saved' : 'new';   // 'new' saves at once (below)
   let savedAt = rowRes.data?.updated_at ? new Date(rowRes.data.updated_at) : null;
   let sel = null;   // { slot } or { player }: the first tap of a move
   let timer = null, saving = false, again = false, lockedKey = null;
@@ -171,7 +173,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
         <p class="ts-pick" id="pick" hidden></p>
       </div>
       <div class="ts-right">
-        <section class="sect"><div class="sect-head"><h2>Players</h2></div><ul class="pls" id="players"></ul></section>
+        <section class="sect pls-sect"><div class="sect-head"><h2 id="pls-title">Players</h2><button type="button" class="link-btn pls-close" data-cancel>Cancel</button></div><ul class="pls" id="players"></ul></section>
         <section class="sect"><div class="sect-head"><h2>Set pieces</h2></div><div class="pieces" id="pieces"></div></section>
         <section class="sect"><div class="sect-head"><h2>Tactics</h2></div><div id="tactics"></div></section>
       </div>
@@ -189,6 +191,8 @@ async function teamSheet(box, { club, squad, userId, season }) {
     for (const b of box.querySelectorAll('.formations button')) b.setAttribute('aria-checked', b.dataset.f === sheet.formation);
     const pick = $('#pick', box), p = sel?.player && byId.get(sel.player);
     pick.hidden = !sel;
+    box.querySelector('.ts').classList.toggle('picking', Boolean(sel?.slot));
+    $('#pls-title', box).textContent = sel?.slot ? `Pick for ${sel.slot}` : 'Players';
     if (sel) pick.innerHTML = `<span>${sel.slot ? `Pick a player for <b>${esc(sel.slot)}</b>` : `Pick a place for <b>${esc(p?.name || '')}</b>`}</span><button type="button" class="link-btn" data-cancel>Cancel</button>`;
   }
 
@@ -213,18 +217,19 @@ async function teamSheet(box, { club, squad, userId, season }) {
   const word = (t, v) => (v === 0.5 ? 'Balanced' : v === 0 ? `Very ${t.lo.toLowerCase()}` : v === 1 ? `Very ${t.hi.toLowerCase()}` : v < 0.5 ? t.lo : t.hi);
   function drawTactics() {
     const preset = Object.keys(PRESETS).find(n => TACTICS.every(t => PRESETS[n][t.key] === sheet.tactics[t.key]));
+    const open = !preset || $('#tactics details', box)?.open;
     $('#tactics', box).innerHTML = `<div class="presets">${Object.keys(PRESETS).map(n => `<button type="button" data-preset="${esc(n)}" aria-pressed="${n === preset}">${esc(n)}</button>`).join('')}</div>
-      ${TACTICS.map(t => `<div class="tac"><div class="tac-head"><span id="tac-${t.key}">${t.label}</span><b>${word(t, sheet.tactics[t.key])}</b></div>
+      <details class="custom"${open ? ' open' : ''}><summary>Custom${preset ? '' : ' <b>on</b>'}</summary>${TACTICS.map(t => `<div class="tac"><div class="tac-head"><span id="tac-${t.key}">${t.label}</span><b>${word(t, sheet.tactics[t.key])}</b></div>
         <div class="steps" role="radiogroup" aria-labelledby="tac-${t.key}">${STEPS.map(v => `<button type="button" role="radio" data-tac="${t.key}" data-v="${v}" aria-checked="${sheet.tactics[t.key] === v}" aria-label="${esc(word(t, v))}"></button>`).join('')}</div>
-        <div class="tac-ends" aria-hidden="true"><span>${t.lo}</span><span>${t.hi}</span></div></div>`).join('')}`;
+        <div class="tac-ends" aria-hidden="true"><span>${t.lo}</span><span>${t.hi}</span></div></div>`).join('')}</details>`;
   }
 
   function drawSave() {
     const el = $('#save', box), t = savedAt ? tidy(dayTime.format(savedAt)) : '';
     el.className = `ts-save is-${state}`;
     el.innerHTML = {
-      new: '<span>Not saved</span><button type="button" class="save-btn" data-save>Save</button>',
       dirty: '<span>Unsaved changes</span>',
+      new: '<span>Saving…</span>',
       saving: '<span>Saving…</span>',
       saved: `<span>Saved${t ? ` ${esc(t)}` : ''}</span>`,
       error: '<span>Couldn’t save</span><button type="button" class="save-btn" data-save>Try again</button>',
@@ -323,6 +328,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
       if (sel?.slot) { place(sel.slot, id); sel = null; changed(); }
       else sel = sel?.player === id ? null : { player: id };
       redraw(`.pl[data-id="${id}"]`);
+      if (sel?.player && narrow()) $('#pitch', box).scrollIntoView({ behavior: 'smooth', block: 'center' });
     } else if (t.closest('[data-cancel]')) { sel = null; redraw(); }
     else if (pr) { sheet.tactics = { ...PRESETS[pr.dataset.preset] }; changed(); drawTactics(); box.querySelector(`[data-preset="${pr.dataset.preset}"]`)?.focus(); }
     else if (st) { sheet.tactics[st.dataset.tac] = Number(st.dataset.v); changed(); drawTactics(); box.querySelector(`[data-tac="${st.dataset.tac}"][data-v="${st.dataset.v}"]`)?.focus(); }
@@ -337,6 +343,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'dirty') save(); });
 
   drawPitch(); drawPlayers(); drawPieces(); drawTactics(); drawSave(); drawDeadline(); drawLocked();
+  if (state === 'new') save();
 
   // The deadline counts down; once one passes, read the deadlines again until the database has locked that week.
   setInterval(async () => {

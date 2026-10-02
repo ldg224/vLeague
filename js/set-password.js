@@ -1,6 +1,6 @@
 // Choose a password: the page that invite emails and "Forgot password?" emails link to.
 // supabase-js turns the link into a session on load; without one, the link has expired (or was already used).
-import { currentUser, myProfile, landingPage, setPassword } from './auth.js';
+import { currentUser, myProfile, landingPage, setPassword, db } from './auth.js';
 import { startPage } from './prefs.js';
 import { VERSION } from './version.js';
 
@@ -11,7 +11,9 @@ const form = $('#choose'), err = $('#error'), btn = $('#go'), label = btn.queryS
 const password = $('#password'), confirm = $('#confirm');
 
 // Supabase reports a used or expired link in the address (#error_code=otp_expired…) instead of making a session.
-const linkError = new URLSearchParams(location.hash.slice(1) || location.search).get('error');
+const link = new URLSearchParams(location.hash.slice(1) || location.search);
+const linkError = link.get('error');
+const invited = link.get('type') === 'invite';
 
 function showExpired() {
   $('#checking').hidden = true;
@@ -27,11 +29,24 @@ function showError(text, field) {
   if (field) { field.setAttribute('aria-invalid', 'true'); field.focus(); }
 }
 
-currentUser().then(user => {
+// An invite is the first page a new manager sees: welcome them by their club's name.
+async function clubName() {
+  const profile = await myProfile();
+  if (!profile?.club) return '';
+  const { data } = await (await db()).from('clubs').select('name').eq('code', profile.club).maybeSingle();
+  return data?.name || '';
+}
+
+currentUser().then(async user => {
   if (!user || linkError) return showExpired();
   history.replaceState(null, '', location.pathname);
+  const club = invited ? await clubName().catch(() => '') : '';
+  if (invited) {
+    document.title = 'Welcome | vLeague';
+    $('#choose-title').textContent = 'Welcome to vLeague';
+  }
   $('#checking').hidden = true;
-  $('#for').textContent = `For ${user.email}`;
+  $('#for').textContent = club ? `${club} · ${user.email}` : user.email;
   $('#username').value = user.email;
   form.hidden = false;
   password.focus();

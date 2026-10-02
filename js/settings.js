@@ -45,8 +45,6 @@ if (ctx) {
   <section class="sect" aria-labelledby="h-matches"><div class="sect-head"><h2 id="h-matches">Matches</h2></div>
     ${row('Spoiler-free results', toggle('spoilers', 'Spoiler-free results', p.spoilers))}
     ${row('Clock', seg('clock', 'Clock', [['12', '1:30 pm'], ['24', '13:30']], p.clock))}
-    ${row('Start page', `<select class="field" data-pref="start" aria-label="Start page">${[['home', 'Home'], ['club', 'My club'], ['inbox', 'Inbox'], ['league', 'League']]
-      .map(([v, t]) => `<option value="${v}"${p.start === v ? ' selected' : ''}>${t}</option>`).join('')}</select>`)}
   </section>
 
   <section class="sect" aria-labelledby="h-a11y"><div class="sect-head"><h2 id="h-a11y">Accessibility</h2></div>
@@ -100,10 +98,6 @@ if (ctx) {
     const all = [...b.closest('.seg').querySelectorAll('[data-v]')];
     const next = all[(all.indexOf(b) + (e.key === 'ArrowRight' ? 1 : all.length - 1)) % all.length];
     next.focus(); next.click(); e.preventDefault();
-  });
-  main.querySelector('select[data-pref]').addEventListener('change', e => {
-    const s = e.target, before = p.start;
-    savePref(s, 'start', s.value, () => { s.value = before; });
   });
 
   // ----- account -----

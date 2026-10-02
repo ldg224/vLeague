@@ -3,14 +3,37 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
-## 0.7.1 (2026-10-02)
+## 0.8.0 (2026-10-02)
 
-Settings gets its own tab, and it's for managers.
+Clearer and simpler all round, after a look at everything a new manager would trip over.
 
-- **Changed:** Settings is a tab next to League (on phones, in the bottom bar) instead of hiding behind the club
-  crest at the top right. The crest button is gone.
-- **Changed:** Settings is for managers only. An account without a club doesn't get the tab or the page.
-- **Moved:** the office's "clubs without a team" email is now a checkbox in Editor → Deadlines.
+- **Changed:** Settings is its own tab next to League (in the bottom bar on phones), instead of hiding behind the club
+  crest at the top right. Settings is for managers only.
+- **Removed:** the Start page setting. Everyone lands on Home.
+- **Moved:** the office's "clubs without a team" email is a checkbox in Editor → Deadlines.
+- **Fixed:** a new team sheet now saves itself as soon as you open it. Before, it showed a full XI but said "Not
+  saved", so a manager who didn't press Save got the engine's team.
+- **Changed:** on phones, tapping a position on the pitch opens the player list from the bottom of the screen, with
+  that position's players first. Tapping a player first scrolls you to the pitch.
+- **Changed:** tactics show the presets; the five sliders are under Custom.
+- **Changed:** Inbox posts you've read stay read on all your devices.
+- **Changed:** matches open in the same tab from Home, like they do from League.
+- **Fixed:** opening the dashboard while signed in no longer signs you out; the corner button says Home instead.
+- **Changed:** dashboard "Leaders" is "Top players". The empty board shows "Season 1" with the first kick-off.
+- **Changed:** sign-in always shows the form ("View as guest" isn't remembered). `index.html?reset` opens Forgot
+  password.
+- **Changed:** invite links say "Welcome to vLeague" with your club's name. An expired link goes straight to "Get a
+  new link".
+- **Changed:** club setup is 3 steps (Club, Colours, Details) with no Review step, and one preview instead of five.
+  A crest is optional (the code badge stands in). The code stays as it is unless you tap Change. Colours start from
+  a default instead of an error.
+- **Changed:** Edit club has a button per card. Club (name, code, crest): "Send to the office". Colours and Details:
+  "Save". Changing only the note to the office no longer sends a request.
+- **Changed:** Editor: one state per club (No manager, Invited, Setting up, Waiting for approval, Active). Changing an
+  account's club asks first, and a club can't get a second manager. Deadlines has "Set all empty weeks to 1 h before
+  kick-off". Database errors are in plain words. The header link says Home.
+- **Removed:** hint lines, intro paragraphs and developer messages ("docs/BACKEND.md", "isn't switched on yet",
+  "Result soon").
 
 ## 0.7.0 (2026-10-01)
 

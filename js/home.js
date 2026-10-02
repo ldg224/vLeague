@@ -69,7 +69,7 @@ function matchCard(s, code, now) {
     mid = `<span class="hm-live">LIVE ${liveMinute(fx, s, now) ?? ''}′</span>${spoilerHidden(fx, s, now)
       ? `<button class="hm-show" type="button" data-reveal="${esc(fx.id)}">Show score</button>`
       : `<strong class="hm-score">${sc.home}<i>–</i>${sc.away}</strong>`}`;
-    foot = `<a class="btn" href="${esc(matchUrl(fx))}" target="_blank" rel="noopener" data-opens="${esc(fx.id)}">Watch live</a>`;
+    foot = `<a class="btn" href="${esc(matchUrl(fx))}" data-opens="${esc(fx.id)}">Watch live</a>`;
   } else {
     mid = `<span class="hm-when">${day(ko, now)}</span><strong class="hm-ko">${time(ko)}</strong>`;
     const d = deadlines.find(x => x.week === fx.week), lock = d && new Date(d.locks_at);
@@ -141,7 +141,7 @@ function season(all, code, now) {
   if (last) {
     const opp = last.home === code ? last.away : last.home, o = outcome(last, code);
     const score = last.home === code ? `${last.result.home}–${last.result.away}` : `${last.result.away}–${last.result.home}`;
-    lastHtml = `<a class="hm-lastline" href="${esc(matchUrl(last))}" target="_blank" rel="noopener" data-opens="${esc(last.id)}">
+    lastHtml = `<a class="hm-lastline" href="${esc(matchUrl(last))}" data-opens="${esc(last.id)}">
         <span class="hm-k">Last match</span><span class="hm-out ${o}">${o}</span><strong>${score}</strong>
         <span class="hm-vs">${last.home === code ? 'v' : 'at'}</span>${crest(opp, 'hm-mini')}<b>${esc(nameOf(opp))}</b></a>`;
   }
@@ -208,7 +208,11 @@ function onClick(e) {
   const one = e.target.closest('[data-reveal]'), all = e.target.closest('[data-reveal-all]'), open = e.target.closest('[data-opens]');
   if (one) revealScore(one.dataset.reveal).then(render);
   else if (all) revealScore(hiddenIds(ctx.season, new Date())).then(render);
-  else if (open && spoilerHidden(ctx.season.fixtures.find(f => f.id === open.dataset.opens), ctx.season)) revealScore(open.dataset.opens).then(render);
+  else if (open && spoilerHidden(ctx.season.fixtures.find(f => f.id === open.dataset.opens), ctx.season)) {
+    // Opening a match counts as seeing it: save that before leaving the page.
+    e.preventDefault();
+    revealScore(open.dataset.opens).then(() => { location.href = open.href; });
+  }
 }
 
 // Countdowns tick every 20 s; the whole page redraws each minute so live scores and states move on.

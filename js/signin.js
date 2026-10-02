@@ -1,6 +1,6 @@
-// The sign-in page: send an already signed-in visitor to their home (editor.html for the league office, home.html for managers), a returning guest to the dashboard
-// (unless they came via index.html?signin to sign in), otherwise handle the form.
-import { signIn, currentUser, myProfile, landingPage, sendPasswordReset, ready, setGuest, isGuest } from './auth.js';
+// The sign-in page: send an already signed-in visitor to their home (editor.html for the league office, home.html for managers),
+// otherwise handle the form. index.html?reset opens "Forgot password?" straight away (from an expired email link).
+import { signIn, currentUser, myProfile, landingPage, sendPasswordReset, ready } from './auth.js';
 import { startPage } from './prefs.js';
 import { VERSION } from './version.js';
 
@@ -19,20 +19,13 @@ function showError(text, field) {
 
 if (!ready) {
   const setup = $('#setup');
-  setup.textContent = 'Signing in isn’t available yet. You can still view as a guest.';
+  setup.textContent = 'Signing in isn’t working right now. You can still view as a guest.';
   setup.hidden = false;
 }
 
-// Guests need no Supabase, so this works even before the sign-in service is connected.
-$('#guest').addEventListener('click', () => setGuest(true));
-
-const wantsSignIn = new URLSearchParams(location.search).has('signin');
 const goHome = async () => location.replace(await startPage(landingPage(await myProfile())));
 
-currentUser().then(user => {
-  if (user) goHome();
-  else if (isGuest() && !wantsSignIn) location.replace('dashboard.html');
-});
+currentUser().then(user => { if (user) goHome(); });
 
 $('#show').addEventListener('click', e => {
   const on = password.type === 'password';
@@ -95,3 +88,5 @@ reset.addEventListener('submit', async e => {
     resetBtn.disabled = false; resetLabel.textContent = 'Send link';
   }
 });
+
+if (new URLSearchParams(location.search).has('reset')) showReset(true);

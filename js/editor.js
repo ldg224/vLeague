@@ -18,6 +18,15 @@ let state = { clubs: [], requests: [], accounts: [], deadlines: null, locked: []
 // The accent a club shows: the one saved with its colours, or worked out the same way the wizard does.
 const accentOf = c => safeColour(c.accent || accentFor(c.colour, c.colour2));
 
+// Database messages, in plain words. Ours are already readable ('That code is taken.'); Postgres's aren't.
+function explain(error) {
+  const m = String(error?.message || error || '');
+  if (/fetch|network|failed to load/i.test(m)) return 'Couldn’t reach vLeague. Check your connection and try again.';
+  if (/jwt|session/i.test(m)) return 'You’ve been signed out. Sign in again and retry.';
+  if (/duplicate key|unique/i.test(m)) return 'That already exists.';
+  return m && m.length < 160 && !/violates|syntax|relation|column|null value|function|schema|permission/i.test(m) ? m : 'That didn’t work. Try again.';
+}
+
 const when = t => (t ? new Date(t).toLocaleString('en-AU', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '');
 const crest = (path, code, cls = '') => (path
   ? `<img class="${cls}" src="${esc(crestUrl(path))}" alt="">`
@@ -34,7 +43,7 @@ async function load() {
     loadSeason().catch(() => null),
     prefs(),
   ]);
-  if (req.error || acc.error) throw new Error((req.error || acc.error).message);
+  if (req.error || acc.error) throw new Error(explain(req.error || acc.error));
   state = {
     clubs: list, requests: req.data || [], accounts: acc.data || [],
     deadlines: dl.error ? null : dl.data || [], locked: ws.data || [], season, digest: mine.email.office_digest,
@@ -60,7 +69,7 @@ function requestsView() {
   const pending = state.requests.filter(r => r.status === 'pending');
   const done = state.requests.filter(r => r.status !== 'pending').slice(0, 12);
   return `<h1>Requests</h1>
-    ${pending.length ? pending.map(requestCard).join('') : '<p class="quiet">Nothing waiting. New clubs and changes to a name, code or crest show up here.</p>'}
+    ${pending.length ? pending.map(requestCard).join('') : '<p class="quiet">Nothing waiting.</p>'}
     ${done.length ? `<h2>Recently dealt with</h2><ul class="ed-history">${done.map(r => {
       const c = state.clubs.find(x => x.code === r.club) || { code: r.club };
       return `<li><b>${esc(c.name || r.club)}</b> ${r.kind === 'setup' ? 'set-up' : 'change'}
@@ -117,7 +126,7 @@ async function review(card, approve, note) {
   msg.textContent = approve ? 'Approving…' : 'Sending back…';
   const { error } = await (await db()).rpc('review_club_request', { p_id: Number(card.dataset.id), p_approve: approve, p_note: note || null });
   if (error) {
-    msg.textContent = error.message;
+    msg.textContent = explain(error);
     card.querySelectorAll('button').forEach(b => { b.disabled = false; });
     return;
   }
@@ -126,25 +135,30 @@ async function review(card, approve, note) {
 
 // ---------------------------------------------------------------- clubs
 
+// One state per club, in the order a club moves through them.
+function clubState(c, m) {
+  if (c.status === 'withdrawn') return ['Withdrawn', ''];
+  if (!m) return ['No manager', 'warn'];
+  if (!m.last_sign_in_at) return ['Invited', ''];
+  if (!c.setup_at) return ['Setting up', ''];
+  if (state.requests.some(r => r.club === c.code && r.status === 'pending')) return ['Waiting for approval', 'warn'];
+  return ['Active', 'approved'];
+}
+
 function clubsView() {
   // The office's own club counts too, so a manager account wins over the office if both are linked.
   const managers = new Map(state.accounts.filter(a => a.club).sort((a, b) => (a.role === 'manager') - (b.role === 'manager'))
     .map(a => [a.club, a]));
-  const status = { active: 'Active', pending: 'Waiting for a manager', withdrawn: 'Withdrawn' };
   return `<h1>Clubs</h1>
-    <p class="quiet">Every manager sets up their club once. “Set up again” shows them the wizard at their next sign-in and
-      starts the process again.</p>
     <ul class="club-rows ed-clubs">${state.clubs.map(c => {
     const m = managers.get(c.code);
+    const [label, kind] = clubState(c, m);
     return `<li style="--club:${esc(accentOf(c))}" data-code="${esc(c.code)}">
       ${crest(c.crest_path, c.code)}
-      <span class="who"><b>${esc(c.name)}</b><small>${esc(c.code)}${c.manager_name ? `, ${esc(c.manager_name)}` : ''}</small></span>
-      <span class="state status">${esc(status[c.status] || c.status)}</span>
-      <span class="state ${m ? 'ok' : ''}">${m ? esc(m.email) : 'No manager account'}</span>
-      <span class="ed-setup">${c.setup_at
-        ? `<button class="btn ghost small" type="button" data-act="reopen">Set up again</button>`
-        : '<span class="state">Set-up due</span>'}</span>
-      <span class="ed-confirm" hidden>Show ${esc(c.name)} the wizard again?
+      <span class="who"><b>${esc(c.name)}</b><small>${esc(c.code)}${m ? ` · ${esc(m.email)}` : ''}</small></span>
+      <span class="ed-pill ${kind}">${esc(label)}</span>
+      <span class="ed-setup">${c.setup_at ? `<button class="btn ghost small" type="button" data-act="reopen">Set up again</button>` : ''}</span>
+      <span class="ed-confirm" hidden>Show ${esc(c.name)} the setup wizard again?
         <button class="btn small" type="button" data-act="reopen-yes">Yes</button>
         <button class="btn ghost small" type="button" data-act="reopen-no">Cancel</button></span>
       <p class="ed-msg" role="status"></p>
@@ -156,7 +170,7 @@ async function reopen(li) {
   li.querySelectorAll('button').forEach(b => { b.disabled = true; });
   const { error } = await (await db()).rpc('reopen_club_setup', { p_code: li.dataset.code });
   if (error) {
-    li.querySelector('.ed-msg').textContent = error.message;
+    li.querySelector('.ed-msg').textContent = explain(error);
     li.querySelectorAll('button').forEach(b => { b.disabled = false; });
     return;
   }
@@ -173,17 +187,19 @@ function accountState(a) {
 
 function managersView() {
   const taken = new Set(state.accounts.filter(a => a.club && a.role === 'manager').map(a => a.club));
-  const clubOptions = (selected, forInvite) => `<option value="">${forInvite ? 'Pick a club' : 'No club'}</option>` +
-    state.clubs.map(c => `<option value="${esc(c.code)}" ${c.code === selected ? 'selected' : ''}
-      ${forInvite && taken.has(c.code) ? 'disabled' : ''}>${esc(c.name)}${forInvite && taken.has(c.code) ? ' (has a manager)' : ''}</option>`).join('');
+  // A club has one manager: clubs with one are greyed out for invites and for other managers (the office can share).
+  const clubOptions = (selected, block) => `<option value="">${block === 'invite' ? 'Pick a club' : 'No club'}</option>` +
+    state.clubs.map(c => {
+      const off = block && c.code !== selected && taken.has(c.code);
+      return `<option value="${esc(c.code)}" ${c.code === selected ? 'selected' : ''} ${off ? 'disabled' : ''}>${esc(c.name)}${off ? ' (has a manager)' : ''}</option>`;
+    }).join('');
   return `<h1>Managers</h1>
     <form class="ed-invite" id="invite">
       <h2>Invite a manager</h2>
-      <p class="quiet">They get an email from vLeague, choose a password, and set up their club.</p>
       <div class="ed-fields">
         <label>Email<input name="email" type="email" required autocomplete="off"></label>
-        <label>Name<input name="name" maxlength="40" autocomplete="off"></label>
-        <label>Club<select name="club" required>${clubOptions('', true)}</select></label>
+        <label>Name <i>Optional</i><input name="name" maxlength="40" autocomplete="off"></label>
+        <label>Club<select name="club" required>${clubOptions('', 'invite')}</select></label>
       </div>
       <div class="ed-actions"><button class="btn">Send invite</button></div>
       <p class="ed-msg" role="status"></p>
@@ -192,8 +208,11 @@ function managersView() {
       <span class="who"><b>${esc(a.display_name || a.email)}</b><small>${esc(a.email)}${a.role === 'office' ? ' · league office' : ''}</small>
         <small>${esc(accountState(a))}</small></span>
       <label class="sr-only" for="club-${esc(a.id)}">Club</label>
-      <select id="club-${esc(a.id)}" data-act="link">${clubOptions(a.club, false)}</select>
+      <select id="club-${esc(a.id)}" data-act="link" data-was="${esc(a.club || '')}">${clubOptions(a.club, a.role === 'manager')}</select>
       <button class="btn ghost small" data-act="reset" type="button">Send password link</button>
+      <span class="ed-confirm" hidden><span></span>
+        <button class="btn small" type="button" data-act="link-yes">Yes</button>
+        <button class="btn ghost small" type="button" data-act="link-no">Cancel</button></span>
       <p class="ed-msg" role="status"></p>
     </li>`).join('')}</ul>`;
 }
@@ -207,21 +226,33 @@ async function invite(form) {
   let problem = res?.error;
   if (error) problem = (await error.context?.json?.().catch(() => null))?.error || 'The invite didn’t send. Try again.';
   form.querySelector('button').disabled = false;
-  if (problem) { msg.textContent = problem; return; }
+  if (problem) { msg.textContent = explain(problem); return; }
   await refresh();
   const again = document.querySelector('#invite .ed-msg');
   if (again) again.textContent = `Invite sent to ${data.email}.`;
 }
 
-async function link(li, club) {
-  const msg = li.querySelector('.ed-msg');
-  const clash = club && state.accounts.find(a => a.club === club && a.role === 'manager' && a.id !== li.dataset.id);
-  if (clash) msg.textContent = `Note: ${clash.email} is also linked to this club.`;
+// Changing an account's club asks first: one mis-tap would otherwise take a manager off their club.
+function askLink(li, select) {
+  const to = state.clubs.find(c => c.code === select.value);
+  const who = li.querySelector('.who b').textContent;
+  const box = li.querySelector('.ed-confirm');
+  box.querySelector('span').textContent = to ? `Move ${who} to ${to.name}?` : `Take ${who} off their club?`;
+  box.hidden = false;
+  li.querySelector('.ed-msg').textContent = '';
+}
+
+async function link(li, yes) {
+  const select = li.querySelector('select'), msg = li.querySelector('.ed-msg');
+  li.querySelector('.ed-confirm').hidden = true;
+  if (!yes) { select.value = select.dataset.was; return; }
+  const club = select.value;
   const { error } = await (await db()).from('profiles').update({ club: club || null }).eq('id', li.dataset.id);
-  if (error) { msg.textContent = error.message; return; }
+  if (error) { select.value = select.dataset.was; msg.textContent = explain(error); return; }
+  select.dataset.was = club;
   const a = state.accounts.find(x => x.id === li.dataset.id);
   if (a) a.club = club || null;
-  if (!clash) msg.textContent = club ? 'Linked.' : 'Unlinked.';
+  msg.textContent = club ? 'Moved.' : 'Taken off the club.';
 }
 
 // ---------------------------------------------------------------- line-up deadlines (0.6)
@@ -246,7 +277,7 @@ function weeks() {
 }
 
 function deadlinesView() {
-  if (!state.deadlines) return '<h1>Deadlines</h1><p class="quiet">Line-up deadlines aren’t switched on in the database.</p>';
+  if (!state.deadlines) return '<h1>Deadlines</h1><p class="quiet">The deadlines didn’t load. <a href="editor.html#deadlines">Try again</a></p>';
   const list = weeks();
   const byWeek = new Map(state.deadlines.map(d => [d.week, d]));
   const sheets = w => state.locked.filter(s => s.week === w).length;
@@ -264,10 +295,12 @@ function deadlinesView() {
       <input id="dl-${w}" type="datetime-local" value="${value}"${d ? '' : ' class="suggested"'}>
       <span class="ed-actions"><button class="btn small" data-act="dl-save" type="button">${d ? 'Save' : 'Set'}</button>
         ${d ? '<button class="btn ghost small" data-act="dl-remove" type="button">Remove</button>' : ''}</span>
-      <p class="ed-msg" role="status">${d ? `Locks ${esc(full(d.locks_at))}` : 'Not set'}${late ? ' · after the first kick-off' : ''}</p></li>`;
+      ${d ? '' : '<span class="ed-pill warn">Not set</span>'}
+      <p class="ed-msg" role="status">${late ? 'After the first kick-off' : ''}</p></li>`;
   }).join('');
+  const unset = list.filter(([w, first]) => first && !byWeek.has(w)).length;
   return `<h1>Deadlines</h1>
-    <p class="quiet">Team sheets lock at their week's deadline and are shown to everyone.</p>
+    ${unset ? `<div class="ed-bulk"><button class="btn small" data-act="dl-all" type="button">Set ${unset === 1 ? 'the empty week' : `all ${unset} empty weeks`} to 1 h before kick-off</button><p class="ed-msg" role="status"></p></div>` : ''}
     <label class="ed-digest"><input type="checkbox" data-act="digest"${state.digest ? ' checked' : ''}> Email me about clubs without a team<span class="ed-msg" role="status"></span></label>
     ${list.length ? `<ul class="ed-dls">${rows}</ul>` : '<p class="quiet">No fixtures.</p>'}
     <form class="ed-dl-add" id="dl-add"><h2>Another week</h2><div class="ed-fields">
@@ -279,20 +312,31 @@ function deadlinesView() {
 async function saveDeadline(week, value, msg) {
   if (!value) { msg.textContent = 'Pick a date and time.'; return; }
   const { error } = await (await db()).from('deadlines').upsert({ week, locks_at: new Date(value).toISOString() });
-  if (error) { msg.textContent = error.message; return; }
+  if (error) { msg.textContent = explain(error); return; }
+  await refresh();
+}
+
+// Every week with fixtures but no deadline gets one an hour before its first kick-off.
+async function setAllDeadlines(btn) {
+  const msg = btn.parentNode.querySelector('.ed-msg');
+  const set = new Set((state.deadlines || []).map(d => d.week));
+  const rows = weeks().filter(([w, first]) => first && !set.has(w)).map(([week, first]) => ({ week, locks_at: new Date(first - 3600e3).toISOString() }));
+  btn.disabled = true;
+  const { error } = await (await db()).from('deadlines').upsert(rows);
+  if (error) { msg.textContent = explain(error); btn.disabled = false; return; }
   await refresh();
 }
 
 async function removeDeadline(li) {
   const { error } = await (await db()).from('deadlines').delete().eq('week', Number(li.dataset.week));
-  if (error) { li.querySelector('.ed-msg').textContent = error.message; return; }
+  if (error) { li.querySelector('.ed-msg').textContent = explain(error); return; }
   await refresh();
 }
 
 async function saveDigest(box) {
   const msg = box.parentNode.querySelector('.ed-msg');
   try { await setPref('email.office_digest', box.checked); state.digest = box.checked; msg.textContent = 'Saved'; }
-  catch (e) { box.checked = !box.checked; msg.textContent = e.message; }
+  catch (e) { box.checked = !box.checked; msg.textContent = explain(e); }
 }
 
 // ---------------------------------------------------------------- events
@@ -312,12 +356,15 @@ main.addEventListener('click', e => {
     saveDeadline(Number(li.dataset.week), li.querySelector('input').value, li.querySelector('.ed-msg'));
   }
   if (b.dataset.act === 'dl-remove') removeDeadline(b.closest('li'));
+  if (b.dataset.act === 'dl-all') setAllDeadlines(b);
+  if (b.dataset.act === 'link-yes') link(b.closest('li'), true);
+  if (b.dataset.act === 'link-no') link(b.closest('li'), false);
   if (b.dataset.act === 'reset') {
     const li = b.closest('li');
     b.disabled = true;
     sendPasswordReset(li.dataset.email)
       .then(() => { li.querySelector('.ed-msg').textContent = 'Password link sent.'; })
-      .catch(err => { li.querySelector('.ed-msg').textContent = err.message; b.disabled = false; });
+      .catch(err => { li.querySelector('.ed-msg').textContent = explain(err); b.disabled = false; });
   }
 });
 main.addEventListener('submit', e => {
@@ -327,7 +374,7 @@ main.addEventListener('submit', e => {
   if (e.target.classList.contains('ed-return')) review(e.target.closest('.ed-request'), false, e.target.note.value);
 });
 main.addEventListener('change', e => {
-  if (e.target.dataset.act === 'link') link(e.target.closest('li'), e.target.value);
+  if (e.target.dataset.act === 'link') askLink(e.target.closest('li'), e.target);
   if (e.target.dataset.act === 'digest') saveDigest(e.target);
 });
 addEventListener('hashchange', () => { if (state.clubs.length) render(); });
@@ -337,7 +384,7 @@ async function refresh() {
     await load();
     render();
   } catch (e) {
-    main.innerHTML = `<p class="quiet">${esc(e.message)} <a href="editor.html">Try again</a></p>`;
+    main.innerHTML = `<p class="quiet">${esc(explain(e))} <a href="editor.html">Try again</a></p>`;
   }
   main.setAttribute('aria-busy', 'false');
 }
