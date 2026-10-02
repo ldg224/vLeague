@@ -50,7 +50,7 @@ export function paintClub(club, accent = 'club') {
 // place is 'home' | 'club' | 'inbox' | 'league' | 'settings'.
 // club: the Supabase clubs row (null if the account has none). season: the league's season.json (null if it didn't
 // load). team: the season's entry for this club (matched on code; the two stay in step until fixtures move to
-// Supabase in 0.10).
+// Supabase in 0.11).
 export async function enterPlace(place) {
   chrome();
   drawNav(place);

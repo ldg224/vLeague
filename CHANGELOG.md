@@ -34,6 +34,7 @@ Clearer and simpler all round, after a look at everything a new manager would tr
   kick-off". Database errors are in plain words. The header link says Home.
 - **Removed:** hint lines, intro paragraphs and developer messages ("docs/BACKEND.md", "isn't switched on yet",
   "Result soon").
+- **Changed:** the roadmap: light mode is 0.9 now, and everything after moves back one.
 
 ## 0.7.0 (2026-10-01)
 
