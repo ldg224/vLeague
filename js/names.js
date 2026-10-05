@@ -4,7 +4,7 @@
 //  - Nobody is given a club; players start as free agents and are dealt out later (a draft).
 //  - Ratings are offense and defense, 1 to 10, and together at most 19: nobody is a perfect 10 (MAX_TOTAL).
 //    Value is worked out from them (playerValue), the same sum as the `value` column in
-//    supabase/migrations/0009_player_ratings.sql: keep the two in step.
+//    supabase/migrations/0010_cap_100k_prices.sql: keep the two in step.
 
 const words = s => s.split(/\s+/).filter(Boolean);
 
@@ -99,14 +99,14 @@ const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, Math.round(n)));
 export const MAX_TOTAL = 19;
 
 // A position's overall rating (1 to 10): what the player is mainly valued for.
-export const overall = ({ position, offense, defense }) => (position === 'GK' ? 0.1 * offense + 0.9 * defense
+export const overall = ({ position, offense, defense }) => (position === 'GK' ? 0.25 * offense + 0.75 * defense
   : position === 'DEF' ? 0.3 * offense + 0.7 * defense
   : position === 'MID' ? 0.5 * offense + 0.5 * defense
   : 0.7 * offense + 0.3 * defense);
 
-// The price in dollars, $500 to about $11,250. Same as the `value` column in the database.
+// The price in dollars, $700 to about $16,900 (the weekly cap is $100,000). Same as the `value` column in the database.
 export function playerValue(p) {
-  return Math.round((500 + 11500 * ((overall(p) - 1) / 9) ** 2) / 50) * 50;
+  return Math.round((700 + 17300 * ((overall(p) - 1) / 9) ** 2) / 100) * 100;
 }
 
 // Stars are rare: ability above 7.5 is squeezed, so an 8 or 9 is a real standout and a 10 almost never happens.
@@ -118,7 +118,7 @@ export function rate(position, mean = 5.5, spread = 1.3) {
   const jitter = () => gauss() * 0.7;
   let offense, defense;
   switch (position) {
-    case 'GK': offense = clamp(2 + gauss() * 0.9, 1, 4); defense = clamp(squeeze(q + 0.8 + jitter()), 1, 10); break;
+    case 'GK': offense = clamp(squeeze(q - 1.5 + jitter()), 2, 9); defense = clamp(squeeze(q + 0.8 + jitter()), 1, 10); break;
     case 'DEF': offense = clamp(squeeze(q - 1.6 + jitter()), 1, 10); defense = clamp(squeeze(q + 1 + jitter()), 1, 10); break;
     case 'FWD': offense = clamp(squeeze(q + 1 + jitter()), 1, 10); defense = clamp(squeeze(q - 1.6 + jitter()), 1, 10); break;
     default: offense = clamp(squeeze(q + jitter()), 1, 10); defense = clamp(squeeze(q + jitter()), 1, 10);

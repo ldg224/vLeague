@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.11.2 (2026-10-05)
+
+- **Changed:** the weekly cap is $100,000 per team, so prices are scaled to fit. The weakest player is $700, an average
+  midfielder about $4,100, a 9/10 forward $15,400 and a 10/9 forward $16,900. A typical 16-man squad costs about
+  $90,000; stronger ones go over, so the draft means choices (`0010_cap_100k_prices.sql`).
+- **Changed:** goalkeepers have a real offense rating (passing out from the back), typically 2 to 8, and it counts for
+  a quarter of a keeper's price (defense is three quarters).
+
 ## 0.11.1 (2026-10-05)
 
 - **Changed:** nobody is a perfect 10. A player's offense and defense add up to at most 19, so the very best is a
