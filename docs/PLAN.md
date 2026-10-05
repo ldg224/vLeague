@@ -74,8 +74,8 @@ Sign-in page, "View as guest", the guest dashboard, the dashboard as the guest p
 - [x] A review of everything a new manager sees: Settings as a tab, a team sheet that saves itself, a phone-friendly
       player picker, 3-step club setup with an optional crest, plainer Editor states and copy.
 
-### 0.9: Light mode
-- [ ] A Theme setting (Dark / Light / System). Colour tokens replace the hard-coded colours; the pitch and matchday
+### 0.9: Light mode (done in 0.9.0)
+- [x] A Theme setting (Dark / Light / System), per device, Dark by default. Colour tokens replace the hard-coded colours; the pitch and matchday
       board stay dark on purpose. No second per-club accent for light mode (user's decision, 5 October 2026: clubs
       have already registered, so club colours stay as they are).
 

@@ -7,9 +7,9 @@
 .crest { position: relative; display: inline-grid; place-items: center; width: var(--s); height: var(--s); flex: none; }
 .crest img { width: 100%; height: 100%; object-fit: contain; }
 .crest i { display: none; }
-.crest.none i { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--c); color: var(--on, #fff); font: 700 calc(var(--s) * .34)/1 var(--font-display); font-style: normal; box-shadow: inset 0 0 0 2px rgba(255,255,255,.25); }
+.crest.none i { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--c); color: var(--on, #fff); font: 700 calc(var(--s) * .34)/1 var(--font-display); font-style: normal; box-shadow: inset 0 0 0 2px rgba(var(--ink),.25); }
 
-.sect { margin: 0 0 16px; padding: 18px; border: 1px solid var(--line); border-radius: var(--r-md); background: rgba(17,24,39,.72); min-width: 0; }
+.sect { margin: 0 0 16px; padding: 18px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); min-width: 0; }
 .sect-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 8px; }
 .sect-head h2 { margin: 0; font: 700 .82rem var(--font); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 @media (max-width: 640px) { .sect { padding: 16px 14px; } }
@@ -24,7 +24,7 @@
 .rating { display: inline-block; min-width: 34px; padding: 2px 5px; border-radius: 5px; font-weight: 800; font-size: .82rem; text-align: center; color: #fff; font-variant-numeric: tabular-nums; }
 .r-hi { background: var(--res-w); } .r-mid { background: #c98a14; } .r-lo { background: var(--res-l); }
 
-.live { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; background: var(--white); color: var(--navy); font-family: var(--font-display); font-weight: 700; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
-.live .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--navy); animation: pulse 1.6s ease-in-out infinite; }
+.live { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; background: var(--live-bg); color: var(--live-fg); font-family: var(--font-display); font-weight: 700; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
+.live .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--live-fg); animation: pulse 1.6s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: .25; } }
 @media (prefers-reduced-motion: reduce) { .live .dot { animation: none; } }

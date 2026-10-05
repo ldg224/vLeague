@@ -15,8 +15,8 @@
 .member .brand img { width: 26px; height: 33px; }
 .member .brand b { font-weight: 700; }
 .member .brand em { font-style: normal; font-family: var(--font); font-weight: 600; font-size: .85rem; color: var(--muted); margin-left: 6px; padding-left: 10px; border-left: 1px solid var(--line); }
-.member .account { padding: 8px 16px; border-radius: 999px; border: 1px solid rgba(255,255,255,.28); background: transparent; color: var(--text); font: 700 .9rem var(--font); cursor: pointer; }
-.member .account:hover { background: rgba(255,255,255,.08); }
+.member .account { padding: 8px 16px; border-radius: 999px; border: 1px solid rgba(var(--ink),.28); background: transparent; color: var(--text); font: 700 .9rem var(--font); cursor: pointer; }
+.member .account:hover { background: rgba(var(--ink),.08); }
 
 .member-main { width: min(560px, 100%); margin: 0 auto; padding: 48px 16px; align-self: center; }
 .member-main.wide { width: min(880px, 100%); align-self: start; }
@@ -32,9 +32,9 @@
 .club-motto { margin: 0; color: var(--muted); font-style: italic; text-wrap: balance; }
 .member-main .edit-club { margin-top: 6px; padding: 7px 16px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--club) 45%, transparent); color: var(--text); font-weight: 600; font-size: .88rem; text-decoration: none; }
 .member-main .edit-club:hover { background: color-mix(in srgb, var(--club) 12%, transparent); }
-.club-notice { display: grid; gap: 4px; margin: 0 0 28px; padding: 14px 16px; border-radius: var(--r-md); border: 1px solid rgba(100,181,246,.3); background: rgba(30,136,229,.12); color: var(--blue-50); font-size: .92rem; }
+.club-notice { display: grid; gap: 4px; margin: 0 0 28px; padding: 14px 16px; border-radius: var(--r-md); border: 1px solid var(--tint-border); background: var(--tint-bg); color: var(--tint-text); font-size: .92rem; }
 .club-notice b { color: var(--text); }
-.club-notice.back { border-color: rgba(255,255,255,.35); background: rgba(255,255,255,.06); color: var(--text); }
+.club-notice.back { border-color: rgba(var(--ink),.35); background: rgba(var(--ink),.06); color: var(--text); }
 .club-notice .btn { justify-self: start; width: auto; margin-top: 8px; padding: 10px 18px; text-decoration: none; }
 .member-main .club-notice a.btn { color: var(--white); }
 
@@ -47,7 +47,7 @@
 .club-rows .who b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .club-rows small { color: var(--faint); font-size: .8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .club-rows .state { font-size: .82rem; color: var(--muted); white-space: nowrap; }
-.club-rows .state.ok { color: var(--blue-100); }
+.club-rows .state.ok { color: var(--tint-text); }
 
 .member-foot { padding: 16px; display: flex; justify-content: center; gap: 18px; font-size: .75rem; }
 /* The league office's way into the Editor: quiet, and only for office accounts. */
@@ -64,10 +64,10 @@
   position: relative; display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px;
   color: var(--muted); font-weight: 600; font-size: .92rem; text-decoration: none; transition: color .15s, background .15s;
 }
-.places a:hover { color: var(--text); background: rgba(255,255,255,.05); }
+.places a:hover { color: var(--text); background: rgba(var(--ink),.05); }
 .places a[aria-current="page"] { color: var(--text); background: color-mix(in srgb, var(--club) 16%, transparent); }
 .places svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.places a[aria-current="page"] svg { stroke: var(--club); }
+.places a[aria-current="page"] svg { stroke: color-mix(in srgb, var(--club) var(--club-ink), var(--navy)); }
 .places .dot {
   min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--club); color: var(--bg);
   font: 700 .7rem/18px var(--font); text-align: center;
@@ -81,7 +81,7 @@
   .places {
     position: fixed; z-index: 20; left: 0; right: 0; bottom: 0; justify-content: space-around; gap: 0;
     padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line);
-    background: rgba(10,15,25,.94); backdrop-filter: blur(10px);
+    background: var(--bar-strong); backdrop-filter: blur(10px);
   }
   .places a { flex: 1; flex-direction: column; gap: 2px; padding: 6px 4px; border-radius: 12px; font-size: .7rem; }
   .places a[aria-current="page"] { background: none; }

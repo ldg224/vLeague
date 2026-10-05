@@ -11,7 +11,7 @@
 .hm-grid { display: grid; gap: 16px; margin-top: 16px; }
 @media (min-width: 760px) { .hm-grid:has(> :nth-child(2)) { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: start; } }
 
-.hm-card { padding: 18px; border: 1px solid var(--line); border-radius: var(--r-md); background: rgba(17,24,39,.72); min-width: 0; }
+.hm-card { padding: 18px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); min-width: 0; }
 .hm-card h2 {
   display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 12px;
   font: 700 .82rem var(--font); letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
@@ -23,10 +23,10 @@
 /* The match card */
 .hm-match {
   padding: 22px 18px; text-align: center;
-  background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--club) 20%, transparent), transparent 70%), rgba(17,24,39,.85);
+  background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--club) 20%, transparent), transparent 70%), var(--card-strong);
   border-color: color-mix(in srgb, var(--club) 30%, var(--line));
 }
-.hm-label { margin: 0 0 18px; color: var(--club); font: 600 .78rem var(--font); letter-spacing: .1em; text-transform: uppercase; }
+.hm-label { margin: 0 0 18px; color: color-mix(in srgb, var(--club) var(--club-ink), var(--navy)); font: 600 .78rem var(--font); letter-spacing: .1em; text-transform: uppercase; }
 .hm-none { margin: 6px 0; font: 700 1.5rem var(--font-display); text-transform: uppercase; color: var(--muted); }
 .hm-teams { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; }
 .hm-side { display: grid; justify-items: center; gap: 8px; min-width: 0; }
@@ -39,13 +39,13 @@
 .hm-ko { font: 700 1.9rem/1 var(--font-display); }
 .hm-score { font: 700 2.6rem/1 var(--font-display); font-variant-numeric: tabular-nums; }
 .hm-score i { font-style: normal; margin: 0 6px; color: var(--faint); }
-.hm-live { padding: 2px 8px; border-radius: 6px; background: var(--white); color: var(--bg); font: 700 .72rem var(--font); letter-spacing: .06em; }
+.hm-live { padding: 2px 8px; border-radius: 6px; background: var(--live-bg); color: var(--live-fg); font: 700 .72rem var(--font); letter-spacing: .06em; }
 .hm-live.sm { padding: 1px 5px; font-size: .62rem; vertical-align: 1px; }
 .hm-show, .hm-hidden button {
-  padding: 6px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,.3); background: transparent; color: var(--text);
+  padding: 6px 14px; border-radius: 999px; border: 1px solid rgba(var(--ink),.3); background: transparent; color: var(--text);
   font: 700 .85rem var(--font); cursor: pointer;
 }
-.hm-show:hover, .hm-hidden button:hover { border-color: var(--white); }
+.hm-show:hover, .hm-hidden button:hover { border-color: var(--text-strong); }
 .hm-hidden { display: flex; align-items: center; gap: 10px; margin: 12px 0 0; color: var(--faint); font-size: .85rem; }
 .hm-hidden button { padding: 4px 12px; font-size: .8rem; }
 .hm-foot { display: grid; justify-items: center; gap: 12px; margin-top: 20px; }
@@ -72,8 +72,8 @@
 }
 .hm-notice b { color: var(--text); }
 .hm-notice.back { box-shadow: inset 3px 0 0 var(--res-l); }
-.hm-notice a { flex: none; padding: 6px 14px; border-radius: 999px; background: var(--white); font-weight: 700; font-size: .85rem; text-decoration: none; }
-.member-main .hm-notice a { color: var(--bg); }
+.hm-notice a { flex: none; padding: 6px 14px; border-radius: 999px; background: var(--text-strong); font-weight: 700; font-size: .85rem; text-decoration: none; }
+.member-main .hm-notice a { color: var(--surface); }
 
 /* W/D/L badges (shared result colours from site.css) */
 .hm-out { flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; font: 800 .75rem var(--font); color: #fff; text-decoration: none; }
@@ -85,7 +85,7 @@
 .hm-stat strong { font: 700 1.35rem/1.1 var(--font-display); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .hm-stat span { color: var(--faint); font-size: .75rem; font-weight: 600; }
 .hm-stat.big { background: color-mix(in srgb, var(--club) 16%, var(--surface-raised)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--club) 35%, transparent); }
-.hm-stat.big strong { color: var(--club); }
+.hm-stat.big strong { color: color-mix(in srgb, var(--club) var(--club-ink), var(--navy)); }
 .hm-form { display: flex; align-items: center; gap: 5px; margin: 14px 0 0; }
 .hm-form .hm-k { margin-right: 6px; }
 

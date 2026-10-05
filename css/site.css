@@ -1,7 +1,7 @@
 /* vLeague: brand tokens, shared buttons and messages, and the sign-in pages (index, set-password).
    Colour: the Material Blue ramp, white as the accent, dark navy-black neutrals (see docs/BRAND.md in the s3 repo).
    Type: Oswald for display, Figtree for text. */
-:root {
+:root, .board, .pt {
   --blue-50: #e3f2fd; --blue-100: #bbdefb; --blue-200: #90caf9; --blue-300: #64b5f6; --blue-400: #42a5f5;
   --blue-500: #2196f3; --blue-600: #1e88e5; --blue-700: #1976d2; --blue-800: #1565c0; --blue-900: #0d47a1;
   --navy: #061a38;
@@ -10,23 +10,78 @@
   --bg: #0a0f19;
   --surface: #111827;
   --surface-raised: #182133;
-  --line: rgba(160, 190, 230, 0.12);
+  --surface-hover: var(--surface-hover);
+  --line: rgba(var(--edge),0.12);
   --text: var(--white);
+  --text-strong: var(--white);
+  --text-soft: var(--text-soft);
   --muted: #b0bac9;
   --faint: #808b9c;
   --brand: var(--blue-300);
   --brand-grad: linear-gradient(135deg, var(--blue-400) 0%, var(--blue-800) 100%);
   --focus: var(--blue-200);
   --error: #ffffff;
+  --accent-text: var(--blue-300);   /* blue text on the page background */
+  --tint-text: var(--blue-100);     /* text on a blue-tinted panel */
+  --tint-bg: rgba(30, 136, 229, 0.12);
+  --tint-border: rgba(100, 181, 246, 0.3);
+  --ring: rgba(66, 165, 245, 0.16);  /* focus glow */
+  --amber: var(--amber); --amber-text: var(--amber-text); --err-text: var(--err-text);
+  --live-bg: #ffffff; --live-fg: var(--navy);   /* the LIVE badge */
+  /* Tints that sit on the page: a colour at some opacity, so one name works on dark and light. */
+  --ink: 255, 255, 255;        /* hovers and outlines */
+  --edge: 160, 190, 230;       /* input and card borders */
+  --card: rgba(17, 24, 39, 0.72); --card-strong: rgba(17, 24, 39, 0.85);
+  --bar: rgba(10, 15, 25, 0.86); --bar-strong: rgba(10, 15, 25, 0.94);
+  --autofill: var(--autofill);
+  --pitch-line: 144, 202, 249;
+  --shadow: 0, 0, 0;
+  --club-ink: 100%;   /* how much of the club colour club-coloured text keeps; light mode darkens pale ones */
   /* Results (W/D/L form chips and result badges): status colours, deliberately outside the blue ramp. */
   --res-w: #22a55b; --res-d: #7c8594; --res-l: #e5484d;
-
+  color-scheme: dark;
+}
+:root {
   --font: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-display: 'Oswald', 'Arial Narrow', 'Roboto Condensed', sans-serif;
   --r-md: 14px;
   --r-sm: 10px;
-  color-scheme: dark;
 }
+/* Light theme (0.9): the same names, light values. js/prefs.js sets data-theme on <html> before the page paints.
+   The matchday board (dashboard) and the pitch stay dark on purpose: they list their own tokens above. */
+:root[data-theme="light"] {
+  --bg: #f4f7fb;
+  --surface: #ffffff;
+  --surface-raised: #eaf0f8;
+  --surface-hover: #dfe8f5;
+  --line: rgba(20, 50, 90, 0.14);
+  --text: #0b1b33;
+  --text-strong: #061a38;
+  --text-soft: #26354d;
+  --muted: #46566e;
+  --faint: #5d6c83;
+  --brand: var(--blue-800);
+  --focus: var(--blue-700);
+  --error: #0b1b33;
+  --accent-text: var(--blue-700);
+  --tint-text: var(--blue-900);
+  --tint-bg: rgba(30, 136, 229, 0.1);
+  --tint-border: rgba(25, 118, 210, 0.3);
+  --ring: rgba(25, 118, 210, 0.2);
+  --amber: #b36b00; --amber-text: #8a5200; --err-text: #b3261e;
+  --live-bg: var(--navy); --live-fg: #ffffff;
+  --ink: 10, 30, 60;
+  --edge: 20, 50, 90;
+  --card: rgba(255, 255, 255, 0.9); --card-strong: rgba(255, 255, 255, 0.95);
+  --bar: rgba(244, 247, 251, 0.9); --bar-strong: rgba(244, 247, 251, 0.96);
+  --autofill: #ffffff;
+  --pitch-line: 25, 118, 210;
+  --shadow: 30, 50, 90;
+  --club-ink: 52%;
+  --res-w: #1b8a4b; --res-d: #6b7585; --res-l: #d03a3f;
+  color-scheme: light;
+}
+.board, .pt { color: var(--text); }
 
 *, *::before, *::after { box-sizing: border-box; }
 html, body { height: 100%; }
@@ -44,7 +99,7 @@ a { color: var(--brand); }
   background: radial-gradient(60vmax 45vmax at 50% 38%, rgba(30,136,229,.16), transparent 70%), var(--bg);
 }
 .pitch { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.pitch line, .pitch .ring { fill: none; stroke: rgba(144,202,249,.13); stroke-width: 1.4; }
+.pitch line, .pitch .ring { fill: none; stroke: rgba(var(--pitch-line),.13); stroke-width: 1.4; }
 .pitch .ring { stroke-dasharray: 1; stroke-dashoffset: 1; transform: rotate(-90deg); transform-origin: 500px 500px; animation: draw 1.6s cubic-bezier(.6,0,.2,1) .15s forwards; }
 .pitch line { stroke-dasharray: 1; stroke-dashoffset: 1; animation: line 1.4s cubic-bezier(.6,0,.2,1) forwards; }
 @keyframes draw { to { stroke-dashoffset: 0; } }
@@ -58,8 +113,8 @@ a { color: var(--brand); }
 .login form { display: grid; gap: 12px; }
 .float { position: relative; }
 .float input {
-  width: 100%; height: 56px; padding: 22px 16px 6px; border-radius: 12px; border: 1px solid rgba(160,190,230,.16);
-  background: rgba(17,24,39,.72); backdrop-filter: blur(6px); color: var(--text); font: 500 1rem var(--font);
+  width: 100%; height: 56px; padding: 22px 16px 6px; border-radius: 12px; border: 1px solid rgba(var(--edge),.16);
+  background: var(--card); backdrop-filter: blur(6px); color: var(--text); font: 500 1rem var(--font);
   transition: border-color .15s, box-shadow .15s, background .15s;
 }
 .float label {
@@ -67,10 +122,10 @@ a { color: var(--brand); }
   transform-origin: left top; transition: transform .15s, color .15s;
 }
 .float input:focus + label, .float input:not(:placeholder-shown) + label { transform: translateY(-10px) scale(.76); color: var(--muted); }
-.float input:focus + label { color: var(--blue-300); }
-.float input:hover { border-color: rgba(160,190,230,.3); }
-.float input:focus { outline: none; border-color: var(--blue-400); background: var(--surface); box-shadow: 0 0 0 4px rgba(66,165,245,.16); }
-.float input[aria-invalid="true"] { border-color: rgba(255,255,255,.6); }
+.float input:focus + label { color: var(--accent-text); }
+.float input:hover { border-color: rgba(var(--edge),.3); }
+.float input:focus { outline: none; border-color: var(--blue-400); background: var(--surface); box-shadow: 0 0 0 4px var(--ring); }
+.float input[aria-invalid="true"] { border-color: rgba(var(--ink),.6); }
 /* Browser autofill: the value isn't "shown" to CSS until the page is touched, so lift the label for autofilled
    fields too, and paint over Chrome's light autofill background. Separate rules: an unknown pseudo-class would
    void a combined selector. */
@@ -78,13 +133,13 @@ a { color: var(--brand); }
 .float input:autofill + label { transform: translateY(-10px) scale(.76); color: var(--muted); }
 .float input:-webkit-autofill {
   -webkit-text-fill-color: var(--text); caret-color: var(--text);
-  -webkit-box-shadow: inset 0 0 0 100px #131b2b; box-shadow: inset 0 0 0 100px #131b2b;
+  -webkit-box-shadow: inset 0 0 0 100px var(--autofill); box-shadow: inset 0 0 0 100px var(--autofill);
 }
-.float input:-webkit-autofill:focus { -webkit-box-shadow: inset 0 0 0 100px var(--surface), 0 0 0 4px rgba(66,165,245,.16); box-shadow: inset 0 0 0 100px var(--surface), 0 0 0 4px rgba(66,165,245,.16); }
+.float input:-webkit-autofill:focus { -webkit-box-shadow: inset 0 0 0 100px var(--surface), 0 0 0 4px var(--ring); box-shadow: inset 0 0 0 100px var(--surface), 0 0 0 4px var(--ring); }
 .pw input { padding-right: 72px; }
 .pw button {
   position: absolute; right: 8px; top: 50%; transform: translateY(-50%); padding: 7px 10px; border: 0; border-radius: 8px;
-  background: transparent; color: var(--blue-300); font: 600 .82rem var(--font); cursor: pointer;
+  background: transparent; color: var(--accent-text); font: 600 .82rem var(--font); cursor: pointer;
 }
 .pw button:hover { background: rgba(100,181,246,.1); }
 .check { display: inline-flex; align-items: center; gap: 9px; margin: 2px 0 4px; font-size: .9rem; color: var(--muted); cursor: pointer; justify-self: start; }
@@ -94,7 +149,7 @@ a { color: var(--brand); }
 .login-row { display: flex; justify-content: space-between; align-items: center; gap: 8px 12px; flex-wrap: wrap; margin: 2px 0 4px; }
 .login-row .check { margin: 0; }
 .quiet {
-  padding: 4px 2px; border: 0; background: none; color: var(--blue-300); font: 500 .9rem var(--font); cursor: pointer;
+  padding: 4px 2px; border: 0; background: none; color: var(--accent-text); font: 500 .9rem var(--font); cursor: pointer;
   text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px; transition: text-decoration-color .15s;
 }
 .quiet:hover { text-decoration-color: currentColor; }
@@ -105,8 +160,8 @@ a { color: var(--brand); }
 .login-state { display: grid; gap: 14px; }
 .login-state[hidden] { display: none; }
 .login-state .btn { text-decoration: none; }
-.btn.ghost.guest-btn { width: 100%; color: var(--text); text-decoration: none; font-weight: 600; border-color: rgba(255,255,255,.18); }
-.btn.ghost.guest-btn:hover { border-color: rgba(255,255,255,.4); }
+.btn.ghost.guest-btn { width: 100%; color: var(--text); text-decoration: none; font-weight: 600; border-color: rgba(var(--ink),.18); }
+.btn.ghost.guest-btn:hover { border-color: rgba(var(--ink),.4); }
 .login-foot { position: relative; padding: 16px; text-align: center; font-size: .75rem; }
 .login-foot a { color: var(--faint); text-decoration: none; }
 .login-foot a:hover { color: var(--muted); }
@@ -127,14 +182,14 @@ a { color: var(--brand); }
 .btn[disabled] { opacity: .65; cursor: progress; }
 .btn .spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; animation: spin .8s linear infinite; display: none; }
 .btn[disabled] .spin { display: inline-block; }
-.btn.ghost { width: auto; background: transparent; border: 1px solid rgba(255,255,255,.28); box-shadow: none; }
-.btn.ghost:hover { background: rgba(255,255,255,.06); filter: none; }
+.btn.ghost { width: auto; background: transparent; border: 1px solid rgba(var(--ink),.28); box-shadow: none; }
+.btn.ghost:hover { background: rgba(var(--ink),.06); filter: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .msg { margin: 0; padding: 11px 14px; border-radius: var(--r-sm); font-size: .9rem; display: flex; gap: 10px; align-items: flex-start; }
 .msg[hidden] { display: none; }
-.msg.error { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.35); color: var(--error); }
-.msg.info { background: rgba(30,136,229,.12); border: 1px solid rgba(100,181,246,.3); color: var(--blue-50); }
+.msg.error { background: rgba(var(--ink),.06); border: 1px solid rgba(var(--ink),.35); color: var(--error); }
+.msg.info { background: var(--tint-bg); border: 1px solid var(--tint-border); color: var(--tint-text); }
 
 /* Settings → Reduce motion (0.7): the same as the system setting, for this device. */
 html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after {

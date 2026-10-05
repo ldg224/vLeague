@@ -1,7 +1,7 @@
 // Settings (0.7). Two kinds:
 // - synced: what follows the account to every device (Supabase user_settings): accent, spoiler-free results and the
 //   matches already revealed, Inbox posts read, clock, email choices. prefs() loads them once per page (cached).
-// - device: how the app looks on this screen (localStorage 'vleague-device'): text size, reduced motion. Applied by
+// - device: how the app looks on this screen (localStorage 'vleague-device'): theme, text size, reduced motion. Applied by
 //   a one-line script in each page's <head> before the page paints, and again by setDevice().
 import { db, currentUser } from './auth.js';
 import { status } from './dashboard-data.js';
@@ -12,7 +12,7 @@ const DEFAULTS = {
 };
 const CACHE = 'vleague-prefs';
 const DEVICE = 'vleague-device';
-const DEVICE_DEFAULTS = { text: '100', motion: 'system' };
+const DEVICE_DEFAULTS = { text: '100', motion: 'system', theme: 'dark' };
 
 const store = {
   get(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } },
@@ -59,7 +59,19 @@ export async function setPref(path, value) {
 // ---------------------------------------------------------------- this device
 
 export const device = () => ({ ...DEVICE_DEFAULTS, ...(store.get(DEVICE) || {}) });
+// 'dark' | 'light' | 'system' -> what the page shows now. 'system' follows the device and changes with it.
+const lightQuery = matchMedia('(prefers-color-scheme: light)');
+export const resolveTheme = t => (t === 'light' || (t === 'system' && lightQuery.matches) ? 'light' : 'dark');
+const THEME_BAR = { dark: '#0a0f19', light: '#f4f7fb' };
+function applyTheme(d) {
+  const theme = resolveTheme(d.theme);
+  document.documentElement.dataset.theme = theme;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_BAR[theme]);
+}
+lightQuery.addEventListener?.('change', () => applyTheme(device()));
+
 export function applyDevice(d = device()) {
+  applyTheme(d);
   const root = document.documentElement;
   root.style.fontSize = d.text === '100' ? '' : `${Number(d.text) || 100}%`;
   root.classList.toggle('reduce-motion', d.motion === 'reduce');

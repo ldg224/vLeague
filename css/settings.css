@@ -14,7 +14,7 @@
 .tick:empty { display: none; }
 .tick.ok { color: var(--res-w); }
 .tick.ok::before { content: '✓ '; }
-.tick.err { color: #ff8a80; flex-basis: 100%; text-align: right; }
+.tick.err { color: var(--err-text); flex-basis: 100%; text-align: right; }
 .tick.busy::after { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--faint); border-top-color: transparent; animation: spin .7s linear infinite; }
 .tick.busy:empty { display: inline-block; }
 @keyframes spin { to { transform: rotate(1turn); } }
@@ -33,7 +33,7 @@
 
 /* Text fields */
 .field { width: min(280px, 100%); padding: 9px 12px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 500 .92rem var(--font); }
-.field:focus { outline: none; border-color: var(--blue-400); box-shadow: 0 0 0 3px rgba(66,165,245,.16); }
+.field:focus { outline: none; border-color: var(--blue-400); box-shadow: 0 0 0 3px var(--ring); }
 select.field { width: auto; min-width: 140px; }
 .inline { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; min-width: 0; }
 .inline .field { flex: 1 1 180px; }
@@ -42,12 +42,12 @@ select.field { width: auto; min-width: 140px; }
 .small-btn[hidden] { display: none; }
 
 .set-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding-top: 14px; border-top: 1px solid var(--line); }
-.ghost-btn { padding: 8px 16px; border-radius: 999px; border: 1px solid rgba(255,255,255,.28); background: transparent; color: var(--text); font: 600 .88rem var(--font); cursor: pointer; }
-.ghost-btn:hover { background: rgba(255,255,255,.06); }
+.ghost-btn { padding: 8px 16px; border-radius: 999px; border: 1px solid rgba(var(--ink),.28); background: transparent; color: var(--text); font: 600 .88rem var(--font); cursor: pointer; }
+.ghost-btn:hover { background: rgba(var(--ink),.06); }
 .ghost-btn:disabled { opacity: .5; cursor: default; }
 .test-result { font-size: .85rem; color: var(--muted); }
 .test-result.ok { color: var(--res-w); }
-.test-result.err { color: #ff8a80; }
+.test-result.err { color: var(--err-text); }
 
 .sample { margin: 4px 0 2px; padding: 10px 12px; border-radius: var(--r-sm); background: var(--surface); color: var(--muted); font-size: 1rem; }
 

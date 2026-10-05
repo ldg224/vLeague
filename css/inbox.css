@@ -6,21 +6,21 @@
 .mark-all { padding: 7px 14px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--club) 45%, transparent); background: transparent; color: var(--text); font: 600 .85rem var(--font); cursor: pointer; white-space: nowrap; }
 .mark-all:hover { background: color-mix(in srgb, var(--club) 12%, transparent); }
 
-.ib-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: var(--r-md); background: rgba(17,24,39,.72); overflow: hidden; }
+.ib-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); overflow: hidden; }
 .ib-list > li + li { border-top: 1px solid var(--line); }
 .ib-post summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 10px minmax(0, 1fr); column-gap: 12px; row-gap: 2px; padding: 14px 16px; position: relative; }
 .ib-post summary::-webkit-details-marker { display: none; }
-.ib-post summary:hover { background: rgba(255,255,255,.03); }
+.ib-post summary:hover { background: rgba(var(--ink),.03); }
 .ib-post .dot { grid-row: 1; align-self: center; width: 8px; height: 8px; border-radius: 50%; }
 .ib-post.new .dot { background: var(--club); }
 .ib-title { grid-column: 2; color: var(--muted); font-weight: 600; line-height: 1.3; }
 .ib-post.new .ib-title { color: var(--text); font-weight: 700; }
 .ib-meta { grid-column: 2; font-size: .8rem; color: var(--faint); }
-.ib-post .pin { margin-right: 8px; padding: 1px 7px; border-radius: 999px; background: rgba(66,165,245,.16); color: var(--blue-100); font-weight: 600; font-size: .72rem; }
-.ib-post[open] summary { background: rgba(255,255,255,.03); }
+.ib-post .pin { margin-right: 8px; padding: 1px 7px; border-radius: 999px; background: var(--ring); color: var(--tint-text); font-weight: 600; font-size: .72rem; }
+.ib-post[open] summary { background: rgba(var(--ink),.03); }
 .ib-post[open] .ib-title { color: var(--text); }
 
-.ib-body { padding: 4px 16px 16px 38px; font-size: .94rem; color: #dde5f0; overflow-wrap: anywhere; }
+.ib-body { padding: 4px 16px 16px 38px; font-size: .94rem; color: var(--text-soft); overflow-wrap: anywhere; }
 .ib-body p { margin: 0 0 10px; }
 .ib-body h3 { margin: 12px 0 6px; font-size: 1rem; }
 .ib-body ul { margin: 0 0 10px; padding-left: 18px; }

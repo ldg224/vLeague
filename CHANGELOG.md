@@ -3,6 +3,18 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.9.0 (2026-10-05)
+
+Light mode.
+
+- **Added:** Settings → Appearance → Theme: Dark, Light or System. It's per device, so your phone and laptop can
+  differ. System follows the device and switches with it. Dark stays the default, so nothing changes until you pick.
+- **Changed:** colours are named once and shared by every page (`css/site.css`), instead of being typed into each
+  stylesheet. The dark look is unchanged.
+- **Kept dark on purpose:** the matchday board on the guest dashboard and the pitch (team sheets), in both themes.
+- **Changed:** club-coloured text (like "Next match" and your position on Home) is darkened on light backgrounds so
+  pale club colours, such as cyan, stay readable. Club colours themselves are untouched.
+
 ## 0.8.6 (2026-10-05)
 
 - **Fixed:** the league table lists exactly the clubs in Editor → Clubs. Old placeholder teams (Reserved Team 1 and 2)

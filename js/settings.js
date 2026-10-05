@@ -38,6 +38,7 @@ if (ctx) {
 
   <section class="sect" aria-labelledby="h-look"><div class="sect-head"><h2 id="h-look">Appearance</h2></div>
     ${club ? row('Accent', seg('accent', 'Accent', [['club', 'Club colour'], ['blue', 'vLeague blue']], p.accent)) : ''}
+    ${row('Theme', seg('theme', 'Theme', [['dark', 'Dark'], ['light', 'Light'], ['system', 'System']], dev.theme, 'dev'), { tick: false })}
     ${row('Text size', seg('text', 'Text size', [['100', 'Default'], ['112', 'Large'], ['125', 'Larger'], ['140', 'Largest']], dev.text, 'dev'), { tick: false })}
     <p class="sample" aria-hidden="true">Week 3 · ${esc(club?.short_name || club?.name || 'FC Turtle')} 2–1 Lads United</p>
   </section>

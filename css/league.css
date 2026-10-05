@@ -21,7 +21,7 @@
 .ladder .cl { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .ladder .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ladder th.club { max-width: 0; width: 100%; }
-.ladder .pts { font-weight: 800; color: var(--white); }
+.ladder .pts { font-weight: 800; color: var(--text-strong); }
 .ladder .form { text-align: right; padding-right: 6px; }
 .ladder tr.me { box-shadow: inset 3px 0 0 var(--club); background: color-mix(in srgb, var(--club) 14%, transparent); }
 .ladder tr.me .pos { color: var(--text); }
@@ -45,17 +45,17 @@ a.fx:hover { background: var(--surface); }
 .fxs .fx.me + .fx, .fxs .fx + .fx.me { box-shadow: inset 3px 0 0 var(--club); }
 .fxs .fx.me + .fx:not(.me) { box-shadow: none; }
 .fx .when { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .85rem; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
-.fx .t { color: var(--blue-300); }
+.fx .t { color: var(--accent-text); }
 .fx .team { display: flex; align-items: center; gap: 9px; min-width: 0; font-weight: 600; }
 .fx .nm { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fx .team.h { justify-content: flex-end; text-align: right; }
-.fx .team.won { color: var(--white); font-weight: 800; }
+.fx .team.won { color: var(--text-strong); font-weight: 800; }
 .fx.is-ft .team:not(.won) { color: var(--muted); }
 .res { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; text-align: center; }
 .res b { background: var(--surface-raised); padding: 2px 0; font-variant-numeric: tabular-nums; }
 .res b:first-child { border-radius: 6px 0 0 6px; }
 .res b:last-child { border-radius: 0 6px 6px 0; }
-.res.is-live b { background: var(--white); color: var(--navy); }
+.res.is-live b { background: var(--live-bg); color: var(--live-fg); }
 .res.none { display: block; }
 .res .v { display: block; line-height: 1; color: var(--faint); font-family: var(--font); font-weight: 600; font-size: .85rem; }
 
@@ -64,7 +64,7 @@ a.fx:hover { background: var(--surface); }
 .fx-open { position: absolute; inset: 0; border-radius: inherit; }
 .fx-open:hover { background: var(--surface); }
 .fx.hid > :not(.fx-open) { position: relative; pointer-events: none; }
-.fx.hid .show-score { pointer-events: auto; z-index: 1; padding: 4px 0; border: 1px dashed rgba(160,190,230,.35); border-radius: 6px; background: var(--surface); color: var(--muted); font: 700 .72rem var(--font); line-height: 1.2; cursor: pointer; }
+.fx.hid .show-score { pointer-events: auto; z-index: 1; padding: 4px 0; border: 1px dashed rgba(var(--edge),.35); border-radius: 6px; background: var(--surface); color: var(--muted); font: 700 .72rem var(--font); line-height: 1.2; cursor: pointer; }
 .fx.hid .show-score:hover { color: var(--text); border-color: var(--blue-400); }
 .spoil { margin: 10px 0 0; font-size: .85rem; color: var(--faint); }
 .link-btn { padding: 0; border: 0; background: none; color: var(--brand); font: 700 .85rem var(--font); cursor: pointer; }
@@ -78,7 +78,7 @@ a.fx:hover { background: var(--surface); }
 .lead li::before { counter-increment: lead; content: counter(lead); width: 14px; color: var(--faint); font-size: .8rem; font-variant-numeric: tabular-nums; }
 .lead li.me { box-shadow: inset 3px 0 0 var(--club); }
 .lead .who { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lead b { font-family: var(--font-display); font-size: 1.05rem; color: var(--white); font-variant-numeric: tabular-nums; }
+.lead b { font-family: var(--font-display); font-size: 1.05rem; color: var(--text-strong); font-variant-numeric: tabular-nums; }
 
 @media (max-width: 640px) {
   .ladder .wide { display: none; }

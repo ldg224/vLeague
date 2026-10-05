@@ -13,7 +13,7 @@
 .member-main .btn { width: auto; padding: 10px 18px; font-size: .95rem; }
 .member-main .btn.small { padding: 7px 12px; font-size: .82rem; }
 .ed-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-.ed-msg { margin: 8px 0 0; color: var(--blue-100); font-size: .88rem; min-height: 0; }
+.ed-msg { margin: 8px 0 0; color: var(--tint-text); font-size: .88rem; min-height: 0; }
 .ed-msg:empty { display: none; }
 
 /* ---------- a request ---------- */
@@ -40,8 +40,8 @@
 .ed-crests { display: flex; align-items: center; gap: 10px; color: var(--faint); }
 .ed-swatches { display: flex; flex-wrap: wrap; gap: 14px; color: var(--muted); }
 .ed-swatches span { display: inline-flex; align-items: center; gap: 6px; }
-.ed-swatches i { width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(255,255,255,.25); }
-.ed-request blockquote { margin: 0; padding: 10px 14px; border-left: 3px solid var(--line); color: var(--muted); background: rgba(255,255,255,.03); border-radius: 0 var(--r-sm) var(--r-sm) 0; white-space: pre-wrap; }
+.ed-swatches i { width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(var(--ink),.25); }
+.ed-request blockquote { margin: 0; padding: 10px 14px; border-left: 3px solid var(--line); color: var(--muted); background: rgba(var(--ink),.03); border-radius: 0 var(--r-sm) var(--r-sm) 0; white-space: pre-wrap; }
 
 .ed-preview { border-radius: var(--r-sm); overflow: hidden; background: var(--bg); border: 1px solid var(--line); }
 .ed-preview .band { height: 4px; background: var(--club); }
@@ -53,7 +53,7 @@
 .ed-return[hidden] { display: none; }
 .ed-return label, .ed-fields label, #add-clubs label { display: grid; gap: 6px; font-size: .85rem; font-weight: 600; color: var(--muted); }
 .ed-return textarea, #add-clubs textarea, .ed-fields input, .ed-fields select, .ed-accounts select {
-  width: 100%; padding: 10px 12px; border-radius: var(--r-sm); border: 1px solid rgba(160,190,230,.16);
+  width: 100%; padding: 10px 12px; border-radius: var(--r-sm); border: 1px solid rgba(var(--edge),.16);
   background: var(--bg); color: var(--text); font: 500 .95rem var(--font);
 }
 .ed-return textarea, #add-clubs textarea { resize: vertical; }
@@ -64,7 +64,7 @@
 .ed-history small { flex-basis: 100%; color: var(--faint); }
 .ed-pill { font-size: .75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--surface-raised); color: var(--muted); }
 .ed-pill.approved { color: var(--res-w, #4caf50); }
-.ed-pill.warn { color: #ffb74d; }
+.ed-pill.warn { color: var(--amber-text); }
 
 /* ---------- clubs ---------- */
 .member-main .ed-clubs { margin-top: 16px; }
@@ -102,7 +102,7 @@
 .ed-dls { list-style: none; margin: 0 0 28px; padding: 0; }
 .ed-dl { display: grid; grid-template-columns: 6em minmax(0, 1fr) auto auto auto; align-items: center; gap: 6px 14px; padding: 12px 4px; border-bottom: 1px solid var(--line); }
 .ed-dl small { color: var(--faint); font-size: .82rem; }
-.ed-dl input { min-height: 40px; padding: 6px 10px; border-radius: 10px; border: 1px solid rgba(160,190,230,.16); background: var(--surface); color: var(--text); font: 500 .92rem var(--font); color-scheme: dark; }
+.ed-dl input { min-height: 40px; padding: 6px 10px; border-radius: 10px; border: 1px solid rgba(var(--edge),.16); background: var(--surface); color: var(--text); font: 500 .92rem var(--font); }
 .ed-dl input.suggested { color: var(--muted); border-style: dashed; }
 .ed-dl .ed-msg { grid-column: 2 / -1; margin: 0; color: var(--muted); font-size: .82rem; }
 .ed-dl.locked { grid-template-columns: 6em minmax(0, 1fr) auto; }

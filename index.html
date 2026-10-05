@@ -6,7 +6,7 @@
   <title>Sign in | vLeague</title>
   <meta name="description" content="vLeague, virtual football. Sign in to manage your club, or view as a guest to watch matches, results and league news.">
   <meta name="theme-color" content="#0a0f19">
-  <script>try{var d=JSON.parse(localStorage.getItem('vleague-device')||'{}');if(d.text&&d.text!=='100')document.documentElement.style.fontSize=d.text+'%';if(d.motion==='reduce')document.documentElement.classList.add('reduce-motion')}catch(e){}</script>
+  <script>try{var d=JSON.parse(localStorage.getItem('vleague-device')||'{}');var th=d.theme||'dark';document.documentElement.dataset.theme=th==='light'||(th==='system'&&matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';if(d.text&&d.text!=='100')document.documentElement.style.fontSize=d.text+'%';if(d.motion==='reduce')document.documentElement.classList.add('reduce-motion')}catch(e){}</script>
   <link rel="icon" type="image/png" href="assets/brand/favicon.png">
   <link rel="apple-touch-icon" href="assets/brand/app-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
