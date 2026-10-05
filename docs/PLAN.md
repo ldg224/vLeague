@@ -159,25 +159,25 @@ game settings. The idea: **Season, then Rounds, then Match windows, then Matches
       and scheduled from the Editor (off by default).
 - [ ] season.json retired as the source of truth; match files published to this site's Pages.
 
-### 0.14: Inbox and press
+### 0.15: Inbox and press
 - [ ] One inbox: news for this club, press conferences, deadlines; only things that need action or matter.
 - [ ] News audiences: one club, several, all clubs, guests only, everyone.
 - [ ] Press conference opening 24 hours before kick-off; answers quoted in the match preview; the press effect kept.
 - [ ] Reactions on results, news and press answers.
 
-### 0.15: Match centre
+### 0.16: Match centre
 - [ ] The 3D broadcast view, live and after full time.
 - [ ] Momentum graph and shot map from the engine; ratings on coloured chips; match report; Man of the Match.
 - [ ] Team and Player of the Week after each round.
 
-### 0.16: Installable app and notifications
+### 0.17: Installable app and notifications
 - [ ] Add to home screen; opt-in push (asked only on a tap): line-ups out, kick-off, goals for your club, full time,
       "your line-up locks in 1 hour and isn't set", news for your club. (iPhone: works once installed, iOS 16.4+.)
 
-### 0.17: Predictor
+### 0.18: Predictor
 - [ ] Managers predict every fixture, with a leaderboard; guests predict on their own device with a personal streak.
 
-### 0.18: Club pages
+### 0.19: Club pages
 - [ ] A page per club (with its accents): squad, results, derbies, head-to-head.
 
 ### 1.0: vLeague runs on its own
