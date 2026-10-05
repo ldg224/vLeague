@@ -51,12 +51,13 @@
 
 .ed-return { display: grid; gap: 10px; }
 .ed-return[hidden] { display: none; }
-.ed-return label, .ed-fields label { display: grid; gap: 6px; font-size: .85rem; font-weight: 600; color: var(--muted); }
-.ed-return textarea, .ed-fields input, .ed-fields select, .ed-accounts select {
+.ed-return label, .ed-fields label, #add-clubs label { display: grid; gap: 6px; font-size: .85rem; font-weight: 600; color: var(--muted); }
+.ed-return textarea, #add-clubs textarea, .ed-fields input, .ed-fields select, .ed-accounts select {
   width: 100%; padding: 10px 12px; border-radius: var(--r-sm); border: 1px solid rgba(160,190,230,.16);
   background: var(--bg); color: var(--text); font: 500 .95rem var(--font);
 }
-.ed-return textarea { resize: vertical; }
+.ed-return textarea, #add-clubs textarea { resize: vertical; }
+#add-clubs .ed-hint { margin: 0; color: var(--muted); font-size: .85rem; }
 
 .ed-history { list-style: none; margin: 0; padding: 0; }
 .ed-history li { padding: 10px 0; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
