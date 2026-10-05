@@ -202,3 +202,6 @@ html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after 
   font-variant-numeric: tabular-nums; color: var(--text); background: hsl(var(--rt-h, 48) 70% 48% / .28); box-shadow: inset 0 0 0 1px hsl(var(--rt-h, 48) 70% 48% / .45); }
 .rt-1 { --rt-h: 0; } .rt-2 { --rt-h: 8; } .rt-3 { --rt-h: 20; } .rt-4 { --rt-h: 32; } .rt-5 { --rt-h: 46; }
 .rt-6 { --rt-h: 68; } .rt-7 { --rt-h: 92; } .rt-8 { --rt-h: 118; } .rt-9 { --rt-h: 142; } .rt-10 { --rt-h: 168; }
+
+/* Reserve room for the scrollbar so the page doesn't shift sideways when a page becomes long enough to scroll (0.12.1). */
+html { scrollbar-gutter: stable; }

@@ -3,6 +3,11 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.12.1 (2026-10-05)
+
+- **Fixed:** the screen no longer jumps sideways when you open Editor → Players. Every Editor tab is now the same width, and
+  pages keep room for the scrollbar, so nothing shifts when a list gets long enough to scroll.
+
 ## 0.12.0 (2026-10-05)
 
 vLeague's fixtures and results are its own. The app no longer reads the s3 test site.

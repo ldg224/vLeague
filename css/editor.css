@@ -152,8 +152,11 @@
 .pl-table td .rt { font-size: .92rem; }
 .pl-id { color: var(--muted); font-variant-numeric: tabular-nums; font-size: .82rem; white-space: nowrap; }
 .pl-edit .pl-num { width: 4.2em; min-width: 0; text-align: center; }
-/* The Players table has nine columns, so that page gets more width (0.11.4). */
-.member-main:has(#pl-root) { width: min(1080px, 100%); }
+/* The Editor is one width on every tab (0.12.1), so the tabs and headings never jump sideways when you switch. Ordinary
+   tab content keeps its comfortable reading width; the Players and Fixtures lists use the full width. */
+.member-main:has(.ed-tabs) { width: min(1080px, 100%); }
+.member-main:has(.ed-tabs) #view > * { max-width: 560px; }
+.member-main:has(.ed-tabs) #view > #pl-root, .member-main:has(.ed-tabs) #view > #fx-root { max-width: none; }
 
 /* ---------- fixtures (0.12) ---------- */
 .fx-week h2 { margin-top: 28px; }
