@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.11.5 (2026-10-05)
+
+- **Fixed:** "Add players" failed for anyone whose browser still had the previous Editor page cached (it didn't send the
+  new singlet number, which the database then refused). The database now gives a usual number for the position when none
+  is sent (`0012_default_player_number.sql`), so a cached page can't break it.
+- **Changed:** when adding players fails, the message now includes the real reason in brackets, not just "That didn't work".
+
 ## 0.11.4 (2026-10-05)
 
 - **Changed:** generated names are now mostly Australian (about 85%), with a sprinkling of Irish, Italian, Greek, Pacific

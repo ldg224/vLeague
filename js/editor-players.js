@@ -138,7 +138,8 @@ export async function mountPlayers(ctx) {
     const c = await ctx.db();
     for (let i = 0; i < rows.length; i += 100) {
       const { error } = await c.from('players').insert(rows.slice(i, i + 100).map(({ name, position, number, offense, defense }) => ({ name, position, number, offense, defense })));
-      if (error) throw new Error(/players_name_unique|duplicate/i.test(error.message) ? 'One of those names is already a player. Try again.' : explain(error));
+      if (error) throw new Error(/players_name_unique/i.test(error.message) ? 'One of those names is already a player. Try again.'
+        : `${explain(error)} (${String(error.message || error).slice(0, 140)})`);   // the real reason too, so a failure can be reported
     }
     await fetchAll();
     say(msgEl, '');
