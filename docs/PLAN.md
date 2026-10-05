@@ -79,31 +79,50 @@ Sign-in page, "View as guest", the guest dashboard, the dashboard as the guest p
       board stay dark on purpose. No second per-club accent for light mode (user's decision, 5 October 2026: clubs
       have already registered, so club colours stay as they are).
 
-### 0.10: Inbox and press
+### 0.10: Teams and players on Supabase
+Agreed 5 October 2026: the league's teams come first, so everything else can use them. Clubs are already in Supabase
+(0.8.1 to 0.8.6); this adds the squads.
+- [ ] A `players` table: id, name, position, offense and defense (1 to 10), club (empty = free agent). Everyone can
+      read it; only the league office changes it. The 80 players on the old site are imported with their ids, because
+      saved match files point at those ids. New players get the next id.
+- [ ] Editor → Players: add one or several at once (one per line), edit, move between clubs, free agents, remove.
+- [ ] The app reads squads from Supabase (My club, the dashboard's top players, line-up picker), so a new club's
+      squad shows up without touching the old site.
+- [ ] Free-plan care: a few small reads per page, cached for a few minutes in the browser (not one per minute per
+      open page), only the columns a page needs. The whole league's teams and players are about 25 KB, so the 500 MB
+      database and 5 GB monthly transfer are nowhere near.
+- [ ] The Season 1 editor's Simulate reads clubs and players from Supabase too (it already reads line-ups from there),
+      so there's one list of teams, not two.
+
+### 0.11: Fixtures and results on Supabase
+- [ ] Fixtures (week, date, kick-off, teams), results as summaries, and the week-by-week schedule generator, in the
+      Editor. Results hidden until kick-off, enforced by the database. Standings are worked out from these.
+- [ ] Match files (about 2 MB each) stay on GitHub Pages; Supabase keeps only the summaries.
+
+### 0.12: Simulate, news and the old site retires
+- [ ] Simulate, news composer, approvals and history in the app. Optional league events such as deadline day, set up
+      and scheduled from the Editor (off by default).
+- [ ] season.json retired as the source of truth; match files published to this site's Pages.
+
+### 0.13: Inbox and press
 - [ ] One inbox: news for this club, press conferences, deadlines; only things that need action or matter.
 - [ ] News audiences: one club, several, all clubs, guests only, everyone.
 - [ ] Press conference opening 24 hours before kick-off; answers quoted in the match preview; the press effect kept.
 - [ ] Reactions on results, news and press answers.
 
-### 0.11: The Editor moves in
-- [ ] Fixtures, results, Simulate, news composer, approvals and history in the app, on Supabase.
-- [ ] Results hidden until kick-off, enforced by the database.
-- [ ] season.json retired as the source of truth; match files published to this site's Pages.
-- [ ] Optional league events such as deadline day, set up and scheduled from the Editor (off by default).
-
-### 0.12: Match centre
+### 0.14: Match centre
 - [ ] The 3D broadcast view, live and after full time.
 - [ ] Momentum graph and shot map from the engine; ratings on coloured chips; match report; Man of the Match.
 - [ ] Team and Player of the Week after each round.
 
-### 0.13: Installable app and notifications
+### 0.15: Installable app and notifications
 - [ ] Add to home screen; opt-in push (asked only on a tap): line-ups out, kick-off, goals for your club, full time,
       "your line-up locks in 1 hour and isn't set", news for your club. (iPhone: works once installed, iOS 16.4+.)
 
-### 0.14: Predictor
+### 0.16: Predictor
 - [ ] Managers predict every fixture, with a leaderboard; guests predict on their own device with a personal streak.
 
-### 0.15: Club pages
+### 0.17: Club pages
 - [ ] A page per club (with its accents): squad, results, derbies, head-to-head.
 
 ### 1.0: vLeague runs on its own
