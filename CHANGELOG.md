@@ -3,6 +3,10 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.8.4 (2026-10-05)
+
+- **Fixed:** the footer showed v0.8.0 after 0.8.2 and 0.8.3; it shows the real version again.
+
 ## 0.8.3 (2026-10-05)
 
 - **Added:** Editor → Clubs has an "Add clubs" box: one club per line (`Name`, `CODE, Name` or `CODE, Name, Manager`).
