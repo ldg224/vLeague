@@ -210,3 +210,7 @@ a.fx:hover + .fx { box-shadow: none; }
 @media (prefers-reduced-motion: reduce) {
   .live .dot { animation: none; }
 }
+
+/* Looks (0.13): a round can carry its own scoreboard design. Classic is the plain board; other looks add their accent. */
+.board[data-look]:not([data-look="classic"]) { box-shadow: inset 0 3px 0 var(--look, transparent); }
+.board[data-look]:not([data-look="classic"]) .stage { color: var(--look, inherit); letter-spacing: .12em; }

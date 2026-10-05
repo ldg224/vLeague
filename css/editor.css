@@ -165,3 +165,10 @@
 .fx-teams small { color: var(--muted); }
 .fx-row input[type="datetime-local"] { padding: 6px 8px; }
 .fx-team { color: color-mix(in srgb, var(--club) var(--club-ink, 100%), var(--navy, #0a1020)); }
+.fx-win { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; margin: 0 0 8px; }
+.fx-win label { display: grid; gap: 4px; font-size: .85rem; color: var(--muted); }
+.fx-win input[type="number"] { width: 5.5em; }
+.fx-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-top: 28px; }
+.fx-head h2 { margin: 0; }
+.fx-rname { flex: 1 1 180px; min-width: 0; padding: 6px 8px; }
+.fx-lock { margin: 4px 0 6px; color: var(--muted); font-size: .88rem; }

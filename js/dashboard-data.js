@@ -38,20 +38,25 @@ export async function loadSeason() {
     return res.json();
   }
   const c = await db();
-  const [cl, fx, rs, players] = await Promise.all([
+  const [cl, fx, rs, players, rd, lk, wn] = await Promise.all([
     c.from('clubs').select('code, name, short_name, colour, crest_path, manager_name, status').order('name'),
-    c.from('fixtures').select('id, week, home, away, starts_at, stage, postponed').order('week').order('starts_at').range(0, 1999),
+    c.from('fixtures').select('id, week, home, away, starts_at, stage, postponed, window_id').order('week').order('starts_at').range(0, 1999),
     c.from('results').select('fixture, summary, file').range(0, 1999),
     loadPlayers().catch(() => []),
+    c.from('rounds').select('week, name, look'), c.from('looks').select('key, name, settings'), c.from('match_windows').select('id, look').range(0, 1999),
   ]);
   if (cl.error || fx.error) throw new Error('The league data didn’t load.');
   crests = Object.fromEntries(cl.data.filter(x => x.crest_path).map(x => [x.code, x.crest_path]));
   const result = new Map((rs.data || []).map(r => [r.fixture, { ...r.summary, ...(r.file ? { file: r.file } : {}) }]));
+  const rounds = new Map((rd.data || []).map(r => [r.week, r])), windowLook = new Map((wn.data || []).map(w => [w.id, w.look]));
+  const looks = Object.fromEntries((lk.data || []).map(l => [l.key, l]));
+  const lookOf = f => windowLook.get(f.window_id) || rounds.get(f.week)?.look || 'classic';
   return {
+    looks,
     season: 1, league: 'vLeague', live_minutes: 45, points: { win: 3, draw: 1, loss: 0 }, news: [], players,
     teams: cl.data.map(x => ({ code: x.code, name: x.name, short_name: x.short_name, colour: x.colour || '#475569', manager: x.manager_name || '',
       ...(x.status === 'withdrawn' || x.status === 'pending' ? { withdrawn: true } : {}) })),
-    fixtures: fx.data.map(f => ({ id: f.id, week: f.week, home: f.home, away: f.away, ...(f.starts_at ? melbParts(f.starts_at) : {}),
+    fixtures: fx.data.map(f => ({ id: f.id, week: f.week, look: lookOf(f), ...(rounds.get(f.week)?.name ? { round: rounds.get(f.week).name } : {}), home: f.home, away: f.away, ...(f.starts_at ? melbParts(f.starts_at) : {}),
       ...(f.stage ? { stage: f.stage } : {}), ...(f.postponed ? { postponed: true } : {}), ...(result.has(f.id) ? { result: result.get(f.id) } : {}) })),
   };
 }

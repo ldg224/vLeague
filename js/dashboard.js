@@ -149,7 +149,12 @@ function drawBoard(now = new Date()) {
     centre = `<span class="ko">${esc(time(k))}</span>`;
     action = `<p class="board-sub">Kick-off in <b>${esc(until(k, now))}</b></p>`;
   }
-  const stage = fx.stage === 'SF' ? 'Semi-final' : fx.stage === 'GF' ? 'Grand Final' : `Week ${esc(fx.week)}`;
+  // The round's look (0.13): its banner and accent. Unknown looks fall back to Classic.
+  const look = season.looks?.[fx.look]?.settings || {}, board = $('#board');
+  board.dataset.look = season.looks?.[fx.look] ? fx.look : 'classic';
+  board.style.setProperty('--look', look.accent && /^#[0-9a-f]{6}$/i.test(look.accent) ? look.accent : '');
+  const stage = look.banner ? `${look.ornament ? `${esc(look.ornament)} ` : ''}${esc(look.banner)}`
+    : fx.stage === 'SF' ? 'Semi-final' : fx.stage === 'GF' ? 'Grand Final' : esc(fx.round || `Week ${fx.week}`);
   const xiHtml = (why === 'live' || why === 'upcoming' || why === 'awaiting') ? lineupHtml(fx, now) : '';
   el.innerHTML = `
     <div class="board-top"><span class="stage">${stage}</span>${state}</div>

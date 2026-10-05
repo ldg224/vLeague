@@ -3,6 +3,22 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.13.0 (2026-10-05)
+
+The season planner.
+
+- **Added:** Editor → Fixtures → Plan a season. Pick a pattern (Saturday night, Saturday and Sunday, Friday night + Saturday,
+  Midweek, or your own) made of **blocks**: each block has a weekday, a first game, how many games and the gap between them.
+  A week can have several blocks, so it can be split across different settings. Games are spread over the blocks in order.
+- **Added:** rounds. Each week can be named ("Christmas Round"), given a scoreboard **look** (Classic, Finals, Grand Final,
+  Christmas, Derby), and a line-up lock rule.
+- **Added:** line-up deadlines are worked out. Each week locks a chosen time (1 hour to 2 days) before its first
+  kick-off, and the lock moves by itself when you move a kick-off. The Editor shows the exact lock time on every week.
+- **Added:** the dashboard's matchday board uses the round's look: its banner and accent colour.
+- **Database:** `looks`, `rounds` and `match_windows` tables, and the week deadline is kept up to date by the database
+  (`0014_season_planner.sql`). Looks are stored as data, so new ones are added without a release.
+- Finals brackets are not in yet, by choice. A custom look editor comes later.
+
 ## 0.12.2 (2026-10-05)
 
 - **Changed:** in Editor → Fixtures each team's name is in its club colour (lifted so dark colours stay readable, and
