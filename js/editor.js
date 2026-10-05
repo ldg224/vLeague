@@ -1,4 +1,4 @@
-// The league office's Editor (0.4): club requests to approve or send back, the clubs (add them in bulk), manager accounts (invite,
+// The league office's Editor (0.4): club requests to approve or send back, the clubs, manager accounts (invite,
 // link to a club, send a password link) and, from 0.6, each week's line-up deadline (with the office's "clubs
 // without a team" email since 0.7.1, as Settings is for managers). Fixtures, results, Simulate and news move in later
 // (docs/PLAN.md).
@@ -150,14 +150,6 @@ function clubsView() {
   const managers = new Map(state.accounts.filter(a => a.club).sort((a, b) => (a.role === 'manager') - (b.role === 'manager'))
     .map(a => [a.club, a]));
   return `<h1>Clubs</h1>
-    <form class="ed-invite" id="add-clubs">
-      <h2>Add clubs</h2>
-      <label>One club per line <i>Name, or CODE, Name, or CODE, Name, Manager</i>
-        <textarea name="lines" rows="5" required placeholder="Northside FC&#10;WST, Westgate United&#10;HRB, Harbour Town, Sam"></textarea></label>
-      <p class="ed-hint">Codes (2 to 4 letters or numbers) and colours are picked for you if left out. Each club then gets a manager from the Managers tab and sets itself up.</p>
-      <div class="ed-actions"><button class="btn">Add clubs</button></div>
-      <p class="ed-msg" role="status"></p>
-    </form>
     <ul class="club-rows ed-clubs">${state.clubs.map(c => {
     const m = managers.get(c.code);
     const [label, kind] = clubState(c, m);
@@ -172,43 +164,6 @@ function clubsView() {
       <p class="ed-msg" role="status"></p>
     </li>`;
   }).join('')}</ul>`;
-}
-
-// A code from a name: initials of long names, else the first letters, else a number on the end.
-function suggestCode(name, taken) {
-  const words = name.toUpperCase().replace(/[^A-Z0-9 ]/g, '').split(/\s+/).filter(Boolean);
-  const letters = words.join('');
-  const tries = [words.length >= 3 ? words.map(w => w[0]).join('').slice(0, 4) : '', letters.slice(0, 3), letters.slice(0, 4)].filter(c => c.length >= 2);
-  for (const c of tries) if (!taken.has(c)) return c;
-  const base = (tries[1] || 'CL').slice(0, 2);
-  for (let n = 1; n < 100; n++) if (!taken.has(base + n)) return base + n;
-  return '';
-}
-const CLUB_COLOURS = ['#1e88e5', '#e53935', '#43a047', '#fb8c00', '#8e24aa', '#00acc1', '#fdd835', '#6d4c41', '#d81b60', '#546e7a'];
-
-async function addClubs(form) {
-  const msg = form.querySelector('.ed-msg'), btn = form.querySelector('button');
-  const taken = new Set(state.clubs.map(c => c.code)), rows = [], problems = [];
-  for (const line of form.lines.value.split('
-').map(l => l.trim()).filter(Boolean)) {
-    const parts = line.split(/[,	]/).map(x => x.trim());
-    let code, name, manager = '';
-    if (parts.length >= 2 && /^[A-Za-z0-9]{2,4}$/.test(parts[0])) [code, name, manager = ''] = parts; else [name, manager = ''] = parts;
-    code = (code || suggestCode(name, taken)).toUpperCase();
-    if (!name || name.length < 2 || name.length > 40) problems.push(`“${line}” needs a name of 2 to 40 characters.`);
-    else if (!/^[A-Z0-9]{2,4}$/.test(code)) problems.push(`“${line}” has no usable code.`);
-    else if (taken.has(code)) problems.push(`The code ${code} is already used (“${line}”).`);
-    else { taken.add(code); rows.push({ code, name, manager_name: manager || null, colour: CLUB_COLOURS[(state.clubs.length + rows.length) % CLUB_COLOURS.length], status: 'active' }); }
-  }
-  // All or nothing: fix the list, then add it.
-  if (problems.length || !rows.length) { msg.textContent = problems[0] || 'Add at least one club.'; return; }
-  btn.disabled = true; msg.textContent = 'Adding…';
-  const { error } = await (await db()).from('clubs').insert(rows);
-  btn.disabled = false;
-  if (error) { msg.textContent = explain(error); return; }
-  await refresh();
-  const again = document.querySelector('#add-clubs .ed-msg');
-  if (again) again.textContent = `Added ${rows.length} club${rows.length > 1 ? 's' : ''}: ${rows.map(r => r.code).join(', ')}.`;
 }
 
 async function reopen(li) {
@@ -415,7 +370,6 @@ main.addEventListener('click', e => {
 main.addEventListener('submit', e => {
   e.preventDefault();
   if (e.target.id === 'invite') return invite(e.target);
-  if (e.target.id === 'add-clubs') return addClubs(e.target);
   if (e.target.id === 'dl-add') return saveDeadline(Number(e.target.week.value), e.target.at.value, e.target.querySelector('.ed-msg'));
   if (e.target.classList.contains('ed-return')) review(e.target.closest('.ed-request'), false, e.target.note.value);
 });
