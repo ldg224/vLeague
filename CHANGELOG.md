@@ -3,6 +3,12 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.8.3 (2026-10-05)
+
+- **Added:** Editor → Clubs has an "Add clubs" box: one club per line (`Name`, `CODE, Name` or `CODE, Name, Manager`).
+  Codes and colours are picked for you if left out, and the whole list is checked before any club is added.
+  (Second go: 0.8.1 had a typo that stopped the Editor loading, so it was reverted in 0.8.2.)
+
 ## 0.8.2 (2026-10-05)
 
 - **Fixed:** reverted 0.8.1 (bulk "Add clubs" in the Editor), which didn't work. The Editor is back as it was in 0.8.0.
