@@ -107,7 +107,9 @@ export async function mountFixtures(ctx) {
 
   function draw() {
     const weeks = [...new Set(fixtures.map(f => f.week))].sort((a, b) => a - b);
-    root.innerHTML = `<p class="pl-sum"><b>${fixtures.length}</b> fixture${fixtures.length === 1 ? '' : 's'} over ${weeks.length} week${weeks.length === 1 ? '' : 's'}.</p>
+    root.innerHTML = `<p class="pl-sum"><b>${fixtures.length}</b> fixture${fixtures.length === 1 ? '' : 's'} over ${weeks.length} week${weeks.length === 1 ? '' : 's'}.
+        ${weeks.length ? `<button class="btn ghost small" type="button" data-act="clear-all">Clear everything</button>
+        <span class="ed-confirm" hidden>Delete all ${fixtures.length} fixtures, their results and every round? <button class="btn small" type="button" data-act="clear-all-yes">Yes, clear all</button> <button class="btn ghost small" type="button" data-act="clear-no">Keep</button></span>` : ''}</p>
       <form class="ed-invite" id="fx-gen"><h2>Plan a season</h2>
         <p class="ed-hint">Pick a pattern for each week. Games are spread over the blocks below in order; a week can have several blocks, each with its own start and gap (0 games = all the rest). Times are Melbourne time.</p>
         <label>Pattern <select name="pattern">${opts([...Object.entries(PATTERNS).map(([k, v]) => [k, v[0]]), ['custom', 'My own']], pattern)}</select></label>
@@ -131,6 +133,8 @@ export async function mountFixtures(ctx) {
         <h2>Week ${w}</h2><input class="fx-rname" value="${esc(r.name || '')}" placeholder="Name this round (optional)" maxlength="40" aria-label="Round name">
         <select data-r="look" aria-label="Scoreboard look">${lookOpts(r.look)}</select>
         <select data-r="lock_minutes_before" aria-label="Lock line-ups before the first game">${opts(LOCKS, r.lock_minutes_before)}</select></div>
+        <button class="btn ghost small" type="button" data-act="clear-week">Clear week</button>
+        <span class="ed-confirm" hidden>Delete all ${fixtures.filter(f => f.week === w).length} fixtures in week ${w} and their results? <button class="btn small" type="button" data-act="clear-week-yes">Yes, clear</button> <button class="btn ghost small" type="button" data-act="clear-no">Keep</button></span>
         <p class="fx-lock">${esc(lockText(w))}</p>
         ${fixtures.filter(f => f.week === w).map(f => `<div class="fx-row" data-id="${esc(f.id)}">
         <span class="fx-teams"><b class="fx-team" style="--club:${esc(colour(f.home))}">${esc(name(f.home))}</b> v <b class="fx-team" style="--club:${esc(colour(f.away))}">${esc(name(f.away))}</b>${f.stage ? ` <small>${esc(f.stage)}</small>` : ''}${f.postponed ? ' <small>postponed</small>' : ''}</span>
@@ -190,6 +194,18 @@ export async function mountFixtures(ctx) {
     const act = b.dataset.act;
     if (act === 'win-add') { rows.push({ day: 6, time: '19:00', games: 0, gap: 90 }); pattern = 'custom'; return draw(); }
     if (act === 'win-del') { rows.splice(Number(b.closest('.fx-win').dataset.i), 1); pattern = 'custom'; return draw(); }
+    if (act.startsWith('clear-')) {
+      const box = b.closest('.fx-week, .pl-sum');
+      if (act === 'clear-all' || act === 'clear-week') { b.hidden = true; box.querySelector('.ed-confirm').hidden = false; return; }
+      if (act === 'clear-no') { box.querySelector('[data-act="clear-all"], [data-act="clear-week"]').hidden = false; box.querySelector('.ed-confirm').hidden = true; return; }
+      const week = act === 'clear-week-yes' ? Number(box.dataset.week) : null, c = await ctx.db();
+      b.disabled = true;
+      let q = c.from('fixtures').delete(); q = week ? q.eq('week', week) : q.gte('week', 0);
+      let r = await q;
+      if (!r.error) { q = c.from('rounds').delete(); r = await (week ? q.eq('week', week) : q.gte('week', 0)); }   // rounds take their match blocks with them
+      if (r.error) { b.disabled = false; return say(document.getElementById('fx-msg'), explain(r.error)); }
+      await load(); return draw();
+    }
     const row = b.closest('.fx-row'), f = fixtures.find(x => x.id === row.dataset.id);
     if (act === 'del' || act === 'del-no') { row.querySelector('[data-act="del"]').hidden = act === 'del'; row.querySelector('.ed-confirm').hidden = act === 'del-no'; return; }
     const c = await ctx.db();

@@ -3,6 +3,11 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.13.1 (2026-10-06)
+
+- **Added:** Editor → Fixtures can clear a whole week (**Clear week**) or every fixture (**Clear everything**), each with a
+  confirmation. Their results and rounds go with them.
+
 ## 0.13.0 (2026-10-05)
 
 The season planner.
