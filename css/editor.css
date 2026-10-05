@@ -150,3 +150,7 @@
 .pl-edit select[data-f="club"] { min-width: 7.5em; max-width: 11em; }
 .pl-edit select.rt { min-width: 4.4em; text-align: center; font-weight: 700; }
 .pl-table td .rt { font-size: .92rem; }
+.pl-id { color: var(--muted); font-variant-numeric: tabular-nums; font-size: .82rem; white-space: nowrap; }
+.pl-edit .pl-num { width: 4.2em; min-width: 0; text-align: center; }
+/* The Players table has nine columns, so that page gets more width (0.11.4). */
+.member-main:has(#pl-root) { width: min(1080px, 100%); }

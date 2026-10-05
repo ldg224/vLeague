@@ -3,6 +3,19 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.11.4 (2026-10-05)
+
+- **Changed:** generated names are now mostly Australian (about 85%), with a sprinkling of Irish, Italian, Greek, Pacific
+  and other backgrounds, instead of an even mix of 18 cultures. Editor → Players → Generate → Options → Names switches to
+  "Mixed cultures" if you want the old spread. Still no repeated first or last name, and never the same word twice
+  (no "Ryan Ryan").
+- **Added:** every player has a **singlet number** (1 to 99), given by position (keepers 1, 12, 13..., strikers 7, 9, 11...).
+  Free agents can share a number. At a club each number is used once: if a player joins a club that already has his
+  number, he gets the next free one automatically, and typing a clashing number by hand is refused (`0011_player_numbers.sql`).
+- **Added:** the player's database **ID** (like 0042, never reused) is shown in Editor → Players, and you can search by name,
+  ID or number. The line-up picker shows the number too.
+- **Changed:** the Players page is wider so the nine columns fit.
+
 ## 0.11.3 (2026-10-05)
 
 - **Reset:** the locked test Week 1 (its deadline and the one saved line-up) was removed at the league office's request,

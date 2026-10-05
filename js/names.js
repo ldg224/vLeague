@@ -10,9 +10,9 @@ const words = s => s.split(/\s+/).filter(Boolean);
 
 // Each culture: first names and last names. Spaced-out lists, so adding a name is one word.
 export const CULTURES = {
-  'Anglo': [
-    'Oliver Jack William Henry Thomas Lachlan Mitchell Harrison Callum Declan Flynn Hayden Cooper Riley Angus Jordan Tyson Beau Dylan Spencer Caleb Brodie Wade Heath Nathan Josh',
-    'Walker Hughes Fletcher Hartley Barnes Whitaker Pearce Holloway Cartwright Ellison Thornton Marsh Gibbs Redfern Atkins Bradshaw Dawson Kendall Mercer Sutton Ashworth Pritchard Langley Harker Wilcox Denton'],
+  'Australian': [
+    'Jack Oliver William Noah Thomas James Lucas Ethan Mason Liam Henry Hunter Cooper Lachlan Jackson Riley Archie Harry Max Charlie Ryan Joshua Nathan Dylan Zac Callum Mitchell Blake Brodie Jarrod Luke Matthew Daniel Benjamin Samuel Joseph Lewis Isaac Alexander Leo Oscar George Harrison Hudson Flynn Angus Xavier Jordan Connor Tyler Lincoln Kyle Aaron Adam Andrew Anthony Ashton Austin Bailey Beau Bradley Brandon Brayden Brendan Brett Bryce Cameron Campbell Carter Chase Christian Cody Colby Cole Corey Cory Craig Curtis Damian Darcy Darren David Dean Declan Dominic Dustin Eli Elijah Evan Finn Fletcher Gabriel Gavin Grant Gregory Hayden Heath Hugo Jacob Jake Jarvis Jason Jayden Jeremy Jesse Joel Jonathan Jordy Josh Justin Kane Keegan Keith Kieran Kristian Lachie Lance Logan Mark Marcus Mathew Michael Miles Nicholas Nick Nolan Owen Patrick Paul Peter Phillip Preston Quinn Reece Reuben Rhys Richard Robert Rohan Ronan Ross Russell Sam Scott Sean Seth Shane Simon Spencer Stephen Steven Taylor Timothy Toby Todd Travis Trent Trevor Troy Tristan Tyson Vincent Wade Warren Wayne Zachary Zane',
+    'Smith Jones Williams Brown Wilson Taylor Anderson Thompson White Martin Walker Harris Lee Ryan Robinson Kelly King Campbell Clarke Johnson Hall Wood Young Mitchell Watson Morgan Davies Cooper Bennett Murray Reid Stewart Hughes Fletcher Hartley Barnes Whitaker Pearce Holloway Cartwright Ellison Thornton Marsh Gibbs Redfern Atkins Bradshaw Dawson Kendall Mercer Sutton Ashworth Pritchard Langley Harker Wilcox Denton Allen Baker Bell Bishop Black Booth Bowen Boyd Bradley Brooks Bryant Burke Burns Butler Carr Carter Chapman Clark Cole Collins Cook Cox Crawford Cunningham Curtis Davidson Day Dixon Doyle Duncan Edwards Elliott Ellis Evans Ferguson Fisher Foster Fox Francis Fraser Freeman Gardner George Gordon Graham Grant Gray Green Griffiths Hamilton Hansen Harper Harrison Hart Hawkins Hayes Henderson Henry Hill Holmes Howard Hunt Hunter Jackson James Jenkins Jordan Kennedy Knight Lawrence Lawson Lewis Lloyd Marshall Mason Matthews Miller Moore Morris Morrison Murphy Nash Nelson Newman Nicholson Norris Owen Palmer Parker Patterson Payne Perry Phillips Porter Powell Price Quinn Reynolds Rice Richards Richardson Riley Roberts Rogers Rose Ross Russell Saunders Scott Shaw Simpson Sinclair Spencer Stevens Stone Sullivan Tucker Turner Wallace Ward Warren Webb Wells West Wheeler Whitehead Wright'],
   'Irish': [
     'Cian Oisin Fionn Eoghan Darragh Niall Ronan Colm Cathal Donal Padraig Seamus Tadhg Conor Rory Aidan Eamon Dermot Liam Declan Kieran Brendan Diarmuid Lorcan Ruairi Senan',
     'Murphy Kelly Brennan Gallagher Doyle Quinn Byrne Fitzgerald Callaghan Dunne Kavanagh Maguire Nolan Costello Lynch Daly Hennessy Rafferty Gilligan Moran Tierney Boyle Concannon Crowley Devlin Sheehan'],
@@ -84,6 +84,20 @@ const NAME_POOLS = Object.fromEntries(Object.entries(CULTURES).map(([k, [f, l]])
 // Dutch: the prefixed surnames above come out as "De Vries" etc. First names never use prefixes.
 NAME_POOLS.Dutch.first = words(CULTURES.Dutch[0]);
 
+// How often each culture is picked. "Mostly Australian" is the default: the league's players sound like an Australian
+// competition, with a sprinkling of the backgrounds that make up one. "Mixed" is all 18 equally.
+export const NAME_MIXES = {
+  local: { Australian: 85, Irish: 4, Italian: 3, Greek: 1.5, Slavic: 1.5, Pacific: 1.5, Dutch: 1, German: 1, Indian: 0.5,
+    Chinese: 0.5, Arabic: 0.25, Turkish: 0.25, Spanish: 0.25, Brazilian: 0.25, French: 0.25, Nordic: 0.25, Japanese: 0.1, African: 0.1 },
+  mixed: Object.fromEntries(Object.keys(CULTURES).map(k => [k, 1])),
+};
+function pickCulture(mix) {
+  const w = NAME_MIXES[mix] || NAME_MIXES.local, entries = Object.entries(w);
+  let r = Math.random() * entries.reduce((a, [, x]) => a + x, 0);
+  for (const [k, x] of entries) if ((r -= x) <= 0) return k;
+  return entries[0][0];
+}
+
 export const POSITIONS = ['GK', 'DEF', 'MID', 'FWD'];
 // A 16-man squad: 2 GK, 5 DEF, 5 MID, 4 FWD.
 const SHARE = { GK: 2 / 16, DEF: 5 / 16, MID: 5 / 16, FWD: 4 / 16 };
@@ -136,6 +150,17 @@ export function positionCounts(count) {
   return Object.fromEntries(POSITIONS.map((p, i) => [p, out[i]]));
 }
 
+// Singlet numbers, 1 to 99. Positions get their usual numbers first (keepers 1, strikers 9...), then the rest. Free
+// agents can share a number; at a club numbers are unique (the database moves a clash to the next free number).
+const TYPICAL = { GK: [1, 12, 13, 21, 30], DEF: [2, 3, 4, 5, 15, 16, 22, 23], MID: [6, 8, 10, 14, 17, 18, 20], FWD: [7, 9, 11, 19, 24, 27] };
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+export function numbersFor(position, count) {
+  const typical = TYPICAL[position];
+  const rest = Array.from({ length: 98 }, (_, i) => i + 2).filter(n => !typical.includes(n));
+  const order = [...shuffle([...typical]), ...shuffle(rest.filter(n => n <= 45)), ...shuffle(rest.filter(n => n > 45))];
+  return Array.from({ length: count }, (_, i) => order[i % order.length]);
+}
+
 // A used-names tracker. Seed it with the league's current players so new ones never repeat a first or last name.
 export function namer(existing = []) {
   const firsts = new Set(), lasts = new Set();
@@ -147,13 +172,12 @@ export function namer(existing = []) {
   };
   existing.forEach(note);
   return {
-    // One unused full name, or null if every combination is taken. `culture` forces one culture (otherwise random).
-    next(culture) {
-      const names = culture ? [culture] : Object.keys(NAME_POOLS);
-      for (let tries = 0; tries < 400; tries++) {
-        const p = NAME_POOLS[culture || pick(names)];
+    // One unused full name, or null if every combination is taken. `mix` is 'local' (mostly Australian) or 'mixed'.
+    next(mix) {
+      for (let tries = 0; tries < 600; tries++) {
+        const p = NAME_POOLS[pickCulture(mix)];
         const f = pick(p.first), l = pick(p.last);
-        if (firsts.has(key(f)) || lasts.has(key(l))) continue;
+        if (key(f) === key(l) || firsts.has(key(f)) || lasts.has(key(l))) continue;
         const full = `${f} ${l}`;
         note(full);
         return full;
@@ -170,14 +194,15 @@ export function namer(existing = []) {
 
 // `count` new players, all free agents (club null). `existing` = names already in the league.
 // Quality: mean rating (4.5 weak, 5.5 typical, 6.5 strong). Mix: spread (1 even, 1.6 varied).
-export function generate(count, existing = [], { mean = 5.5, spread = 1.3 } = {}) {
+export function generate(count, existing = [], { mean = 5.5, spread = 1.3, names = 'local' } = {}) {
   const n = namer(existing), out = [];
   const counts = positionCounts(count);
   for (const position of POSITIONS) {
+    const numbers = numbersFor(position, counts[position]);
     for (let i = 0; i < counts[position]; i++) {
-      const name = n.next();
+      const name = n.next(names);
       if (!name) throw new Error('Ran out of unused names. Add fewer players, or remove some first.');
-      out.push({ name, position, ...rate(position, mean, spread), club: null });
+      out.push({ name, position, number: numbers[i], ...rate(position, mean, spread), club: null });
     }
   }
   return out;
@@ -186,7 +211,7 @@ export function generate(count, existing = [], { mean = 5.5, spread = 1.3 } = {}
 // A replacement for one previewed player: a new name and new ratings, same position.
 export function reroll(player, taken, opts = {}) {
   const n = namer(taken);
-  const name = n.next();
+  const name = n.next(opts.names);
   if (!name) throw new Error('Ran out of unused names.');
   return { ...player, name, ...rate(player.position, opts.mean, opts.spread) };
 }
