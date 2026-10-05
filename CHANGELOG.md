@@ -3,6 +3,21 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.12.0 (2026-10-05)
+
+vLeague's fixtures and results are its own. The app no longer reads the s3 test site.
+
+- **Added:** Editor → Fixtures. Generate a whole season in one press (everyone plays everyone once, or home and away;
+  an odd number of clubs rests one each week), add a single match, change a kick-off time (Melbourne time), postpone
+  or restore a match, remove one.
+- **Changed:** the dashboard, Home, League, club pages and the table read clubs, players, fixtures and results from
+  Supabase (`0013_fixtures_results.sql`). Club logos come from the crests uploaded in club set-up.
+- **Private until kick-off:** a result can't be read before its match kicks off. The database enforces it, so even
+  calling the API directly shows nothing early. Only the league office sees results early.
+- **Reset:** the 4 s3 test results are no longer shown. vLeague starts with no matches until you generate a season.
+- **Not yet:** results come with Simulate in 0.13, and so do match pages (the Match link is empty until then). The
+  reminder emails still read s3 for kick-off times, so they stay quiet until that is switched over (next patch).
+
 ## 0.11.5 (2026-10-05)
 
 - **Fixed:** "Add players" failed for anyone whose browser still had the previous Editor page cached (it didn't send the

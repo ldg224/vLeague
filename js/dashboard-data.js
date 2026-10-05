@@ -1,10 +1,11 @@
 // League data for the guest dashboard.
-// Until the league moves to Supabase (docs/PLAN.md, step 2) this reads the s3 site's public files:
-// data/season.json and assets/teams/<code>.png. Line-ups come from Supabase (week_sheets, 0.6).
+// Since 0.12 the league's clubs, players, fixtures and results all come from Supabase (loadSeason builds the same shape
+// the pages always used). The s3 site is only read by a local ?src= test copy. Line-ups: week_sheets (0.6).
 // The rules below (kick-off, status, ladder, player totals) are ports of hcl-s3/js/data.js; keep them in step.
 
 import { db, ready } from './auth.js';
 import { loadPlayers } from './players-data.js';
+import { SUPABASE_URL } from './config.js';
 
 const LIVE_SITE = 'https://ldg224.github.io/s3/';
 
@@ -15,43 +16,44 @@ function sourceBase() {
   return src ? new URL(src, location.href).href.replace(/\/?$/, '/') : LIVE_SITE;
 }
 export const SOURCE = sourceBase();
-export const logoUrl = code => `${SOURCE}assets/teams/${String(code).toLowerCase()}.png`;
-export const matchUrl = fx => `${LIVE_SITE}match.html?id=${encodeURIComponent(fx.id)}`;
+const FROM_FILE = SOURCE !== LIVE_SITE;   // a local ?src= test copy only; the live league never reads the s3 site any more (0.12)
+const NO_LOGO = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+let crests = {};
+export const logoUrl = code => (FROM_FILE ? `${SOURCE}assets/teams/${String(code).toLowerCase()}.png`
+  : crests[code] ? `${SUPABASE_URL}/storage/v1/object/public/crests/${crests[code]}` : NO_LOGO);
+// Full match pages arrive in 0.13; until then a match has no page to open.
+export const matchUrl = fx => (FROM_FILE ? `${LIVE_SITE}match.html?id=${encodeURIComponent(fx.id)}` : '');
+
+// Melbourne wall-clock date and time from an instant (kickoff() reads them back as the viewer's local time, as before).
+const melb = new Intl.DateTimeFormat('en-CA', { timeZone: 'Australia/Melbourne', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+function melbParts(iso) {
+  const p = Object.fromEntries(melb.formatToParts(new Date(iso)).map(x => [x.type, x.value]));
+  return { date: `${p.year}-${p.month}-${p.day}`, time: `${p.hour}:${p.minute}` };
+}
 
 export async function loadSeason() {
-  const res = await fetch(`${SOURCE}data/season.json?t=${Date.now()}`, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`The league data didn't load (error ${res.status}).`);
-  const season = await res.json();
-  await addNewClubs(season);
-  await addPlayers(season);
-  return season;
-}
-
-// The clubs in Supabase (the Editor's Clubs tab) are the league's clubs; season.json only supplies fixtures and results
-// until the league moves over (0.11). Teams there that aren't clubs here (old placeholders) or are withdrawn are marked
-// withdrawn, so the table and club lists leave them out, and clubs only here are added with no matches yet.
-async function addNewClubs(season) {
-  if (!ready || SOURCE !== LIVE_SITE) return;
-  try {
-    const { data, error } = await (await db()).from('clubs').select('code, name, colour, status');
-    if (error || !data?.length) return;
-    season.teams ||= [];
-    const clubs = new Map(data.map(c => [c.code, c]));
-    for (const t of season.teams) {
-      const c = clubs.get(t.code);
-      if (!c || c.status === 'withdrawn') t.withdrawn = true;
-    }
-    const known = new Set(season.teams.map(t => t.code));
-    for (const c of data) {
-      if (!known.has(c.code)) season.teams.push({ code: c.code, name: c.name, colour: c.colour || '#475569', manager: '', ...(c.status === 'withdrawn' ? { withdrawn: true } : {}) });
-    }
-  } catch { /* the table still shows the clubs it already had */ }
-}
-
-// The players are vLeague's own (Supabase, 0.11), not the s3 test site's. Only a local ?src= test copy keeps its own.
-async function addPlayers(season) {
-  if (!ready || SOURCE !== LIVE_SITE) return;
-  try { season.players = await loadPlayers(); } catch { season.players = []; }
+  if (FROM_FILE) {
+    const res = await fetch(`${SOURCE}data/season.json?t=${Date.now()}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`The league data didn't load (error ${res.status}).`);
+    return res.json();
+  }
+  const c = await db();
+  const [cl, fx, rs, players] = await Promise.all([
+    c.from('clubs').select('code, name, short_name, colour, crest_path, manager_name, status').order('name'),
+    c.from('fixtures').select('id, week, home, away, starts_at, stage, postponed').order('week').order('starts_at').range(0, 1999),
+    c.from('results').select('fixture, summary, file').range(0, 1999),
+    loadPlayers().catch(() => []),
+  ]);
+  if (cl.error || fx.error) throw new Error('The league data didn’t load.');
+  crests = Object.fromEntries(cl.data.filter(x => x.crest_path).map(x => [x.code, x.crest_path]));
+  const result = new Map((rs.data || []).map(r => [r.fixture, { ...r.summary, ...(r.file ? { file: r.file } : {}) }]));
+  return {
+    season: 1, league: 'vLeague', live_minutes: 45, points: { win: 3, draw: 1, loss: 0 }, news: [], players,
+    teams: cl.data.map(x => ({ code: x.code, name: x.name, short_name: x.short_name, colour: x.colour || '#475569', manager: x.manager_name || '',
+      ...(x.status === 'withdrawn' || x.status === 'pending' ? { withdrawn: true } : {}) })),
+    fixtures: fx.data.map(f => ({ id: f.id, week: f.week, home: f.home, away: f.away, ...(f.starts_at ? melbParts(f.starts_at) : {}),
+      ...(f.stage ? { stage: f.stage } : {}), ...(f.postponed ? { postponed: true } : {}), ...(result.has(f.id) ? { result: result.get(f.id) } : {}) })),
+  };
 }
 
 // ---------- Time and status ----------

@@ -154,3 +154,10 @@
 .pl-edit .pl-num { width: 4.2em; min-width: 0; text-align: center; }
 /* The Players table has nine columns, so that page gets more width (0.11.4). */
 .member-main:has(#pl-root) { width: min(1080px, 100%); }
+
+/* ---------- fixtures (0.12) ---------- */
+.fx-week h2 { margin-top: 28px; }
+.fx-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.fx-teams { flex: 1 1 220px; }
+.fx-teams small { color: var(--muted); }
+.fx-row input[type="datetime-local"] { padding: 6px 8px; }
