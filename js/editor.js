@@ -65,7 +65,7 @@ function render() {
     `<a href="#${k}" ${k === t ? 'aria-current="page"' : ''}>${label}${k === 'requests' && pending ? ` <span class="ed-count">${pending}</span>` : ''}</a>`).join('')}</nav>
     <section id="view">${{ requests: requestsView, clubs: clubsView, players: playersView, fixtures: fixturesView, managers: managersView, phones: phonesView, deadlines: deadlinesView }[t]()}</section>`;
   if (t === 'players') mountPlayers({ db, esc, explain, clubs: state.clubs });
-  if (t === 'fixtures') mountFixtures({ db, esc, explain, clubs: state.clubs });
+  if (t === 'fixtures') mountFixtures({ db, esc, explain, clubs: state.clubs, accent: accentOf });
 }
 
 // ---------------------------------------------------------------- requests

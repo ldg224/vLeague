@@ -48,6 +48,7 @@ export async function mountFixtures(ctx) {
   let fixtures = [];
   const clubs = () => ctx.clubs.filter(c => c.status === 'active');
   const name = code => ctx.clubs.find(c => c.code === code)?.name || code;
+  const colour = code => { const c = ctx.clubs.find(x => x.code === code); return c && ctx.accent ? ctx.accent(c) : '#64b5f6'; };   // the club's colour, lifted so it reads
   const say = (el, t) => { if (el) el.textContent = t; };
 
   async function load() {
@@ -74,7 +75,7 @@ export async function mountFixtures(ctx) {
         <label>Date <input type="date" name="date"></label><label>Kick-off <input type="time" name="time" value="19:00"></label>
         <div class="ed-actions"><button class="btn">Add match</button></div><p class="ed-msg" role="status"></p></form></details>
       ${weeks.map(w => `<section class="fx-week"><h2>Week ${w}</h2>${fixtures.filter(f => f.week === w).map(f => `<div class="fx-row" data-id="${esc(f.id)}">
-        <span class="fx-teams"><b>${esc(name(f.home))}</b> v <b>${esc(name(f.away))}</b>${f.stage ? ` <small>${esc(f.stage)}</small>` : ''}${f.postponed ? ' <small>postponed</small>' : ''}</span>
+        <span class="fx-teams"><b class="fx-team" style="--club:${esc(colour(f.home))}">${esc(name(f.home))}</b> v <b class="fx-team" style="--club:${esc(colour(f.away))}">${esc(name(f.away))}</b>${f.stage ? ` <small>${esc(f.stage)}</small>` : ''}${f.postponed ? ' <small>postponed</small>' : ''}</span>
         <input type="datetime-local" value="${toLocalInput(f.starts_at)}" aria-label="Kick-off (Melbourne time)">
         <button class="btn ghost small" type="button" data-act="postpone">${f.postponed ? 'Restore' : 'Postpone'}</button>
         <button class="btn ghost small" type="button" data-act="del">Remove</button>

@@ -129,7 +129,32 @@ reads s3 any more (the dashboard, Home, League, Editor, the club page and the re
 - [ ] Match files (about 2 MB each) stay out of the database; 0.13 publishes them on this site's Pages.
 - Checks: security checks for who can read a hidden result; the table, top players and form leave hidden results out.
 
-### 0.13: Simulate, news and the old site retires
+### 0.13: Season planner (proposed 5 October 2026, awaiting the user's go-ahead on the order)
+The user wants lots of control over games and fixtures that is still simple and nice to use: lengths between games,
+scoreboard looks (Christmas, finals...), line-up deadlines worked out from kick-offs, and weeks split across several
+game settings. The idea: **Season, then Rounds, then Match windows, then Matches.**
+- **Round** = a week or a special round ("Round 4", "Christmas Round", "Semi-finals"). Has a name, a kind (regular, finals,
+  special) and a **look**.
+- **Match window** = a block of games with its own settings, e.g. "Saturday night: 3 games, 90 minutes apart" and "Sunday
+  arvo: 2 games". A round can have several, which is how a week is split across different settings.
+  Settings: first kick-off, gap between games, and a **lock rule** ("line-ups lock 3 hours before the window's first game").
+- **Look (scoreboard theme)** = a named preset stored as data (colours, ornament, banner text, label style): Classic,
+  Finals, Grand Final, Christmas, Derby... Chosen per round, window or match; unknown looks fall back to Classic, so a
+  new look is a new row, not a new release. Editor shows a live preview. The scoreboards in the app read it.
+- **Deadlines become calculated**: a window's lock time = first kick-off minus the lock rule. Shift a kick-off and the
+  lock moves with it. A manual override stays possible. The existing weekly lock job reads windows instead of a
+  hand-typed deadline (the `deadlines` table stays as the record of what locked).
+- **Rhythms** (saved patterns) make it quick: pick "Saturday night triple-header", set the first date, preview the
+  calendar, Create. Everything beyond date, time, gap and games per day sits under "More options".
+- **Fixtures tab** groups by round then window; team names in each club's colour (done in 0.12.2); "move this round by N
+  days"; click anything to edit.
+- Data (sketch): `rounds` (number, name, kind, look), `match_windows` (round, label, starts_at, gap_minutes,
+  lock_minutes_before, look), `fixtures` gain `window_id` and `slot` (kick-off = window start + slot x gap, still editable),
+  `looks` (key, name, settings jsonb).
+- Questions: build the planner before Simulate (this order) or after? Lock rule per window (proposed) or per match?
+  Do finals need a bracket view?
+
+### 0.14: Simulate, news and the old site retires
 - [ ] Simulate, news composer, approvals and history in the app. Optional league events such as deadline day, set up
       and scheduled from the Editor (off by default).
 - [ ] season.json retired as the source of truth; match files published to this site's Pages.

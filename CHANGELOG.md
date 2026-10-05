@@ -3,6 +3,11 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.12.2 (2026-10-05)
+
+- **Changed:** in Editor → Fixtures each team's name is in its club colour (lifted so dark colours stay readable, and
+  darkened on the light theme).
+
 ## 0.12.1 (2026-10-05)
 
 - **Fixed:** the screen no longer jumps sideways when you open Editor → Players. Every Editor tab is now the same width, and

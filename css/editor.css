@@ -164,3 +164,4 @@
 .fx-teams { flex: 1 1 220px; }
 .fx-teams small { color: var(--muted); }
 .fx-row input[type="datetime-local"] { padding: 6px 8px; }
+.fx-team { color: color-mix(in srgb, var(--club) var(--club-ink, 100%), var(--navy, #0a1020)); }
