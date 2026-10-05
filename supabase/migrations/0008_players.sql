@@ -43,7 +43,7 @@ grant usage on sequence public.player_id_seq to authenticated;
 
 -- Reset for the new player pool (the user's decision, 5 October 2026): the old s3 players are gone, so every club's
 -- saved team sheet (which points at their ids) and its save history are cleared. The locked test week 1 is left as it was
--- (a locked week can't be deleted; that is the office's call).
+-- (a locked week can't be deleted; the office cleared it afterwards by hand, see CHANGELOG 0.11.3).
 update public.team_sheets set formation = null, tactics = '{}', lineup = '{}', bench = '[]',
   captain = null, penalties = null, freekicks = null, corners = null;
 delete from public.team_sheet_versions;

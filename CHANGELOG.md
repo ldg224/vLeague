@@ -3,6 +3,11 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.11.3 (2026-10-05)
+
+- **Reset:** the locked test Week 1 (its deadline and the one saved line-up) was removed at the league office's request,
+  so no old player names are left anywhere. No code changed. Line-up deadlines start again from Week 1 in the Editor.
+
 ## 0.11.2 (2026-10-05)
 
 - **Changed:** the weekly cap is $100,000 per team, so prices are scaled to fit. The weakest player is $700, an average
