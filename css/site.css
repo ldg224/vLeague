@@ -195,3 +195,10 @@ a { color: var(--brand); }
 html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after {
   animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important;
 }
+
+/* Rating colours (0.11.1): conditional formatting on offense/defense 1 to 10, from red (weak) to green (outstanding).
+   A tinted background with normal text, so it reads on both the dark and the light theme. */
+.rt { display: inline-block; min-width: 1.9em; padding: 1px 6px; border-radius: 6px; text-align: center; font-weight: 700;
+  font-variant-numeric: tabular-nums; color: var(--text); background: hsl(var(--rt-h, 48) 70% 48% / .28); box-shadow: inset 0 0 0 1px hsl(var(--rt-h, 48) 70% 48% / .45); }
+.rt-1 { --rt-h: 0; } .rt-2 { --rt-h: 8; } .rt-3 { --rt-h: 20; } .rt-4 { --rt-h: 32; } .rt-5 { --rt-h: 46; }
+.rt-6 { --rt-h: 68; } .rt-7 { --rt-h: 92; } .rt-8 { --rt-h: 118; } .rt-9 { --rt-h: 142; } .rt-10 { --rt-h: 168; }

@@ -203,7 +203,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
       const id = String(p.id), slot = slotOf(id), off = slot && p.position !== wantOf(slot), on = sel?.player === id;
       return `<li><button type="button" class="pl${slot ? ' in' : ''}${on ? ' sel' : ''}${want && p.position === want ? ' fits' : ''}" data-id="${esc(id)}" aria-pressed="${on}">
         <span class="pl-pos">${esc(p.position)}</span>
-        <span class="pl-name">${esc(p.name)}<small>Att ${esc(p.offense)} · Def ${esc(p.defense)}</small></span>
+        <span class="pl-name">${esc(p.name)}<small>Att <span class="rt rt-${Number(p.offense) || 5}">${esc(p.offense)}</span> · Def <span class="rt rt-${Number(p.defense) || 5}">${esc(p.defense)}</span></small></span>
         <span class="pl-slot${off ? ' off' : ''}"${off ? ` title="Out of position"` : ''}>${slot ? esc(slot) : 'Bench'}</span></button></li>`;
     }).join('');
   }

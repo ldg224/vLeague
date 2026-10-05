@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.11.1 (2026-10-05)
+
+- **Changed:** nobody is a perfect 10. A player's offense and defense add up to at most 19, so the very best is a
+  10/9 or 9/10. The generator makes stars rare (about 1 in 80 has a 9, none a 10) and the database refuses anything higher.
+- **Changed:** prices are steeper at the top: $500 for the weakest, about $2,750 for an average midfielder, $10,300 for
+  a 9/10 forward and $11,250 for a 10/9. A typical 16-man squad costs about $55k to $60k. Still worked out from the
+  ratings, never typed in (`0009_player_ratings.sql`).
+- **Added:** ratings are colour coded, red for weak through amber and yellow to green for outstanding, in Editor →
+  Players (the table and the preview) and in the line-up picker.
+
 ## 0.11.0 (2026-10-05)
 
 vLeague has its own players. It no longer reads them from the s3 test site.

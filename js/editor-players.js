@@ -1,12 +1,13 @@
 // Editor → Players (0.11). The league's players: generate a pool in one press, paste a list, edit in place.
 // Generated players are free agents (no club); the office deals them to clubs later (a draft).
 // The database checks everything again (supabase/migrations/0008_players.sql); this page only asks.
-import { generate, reroll, namer, rate, playerValue, POSITIONS } from './names.js';
+import { generate, reroll, namer, rate, playerValue, POSITIONS, MAX_TOTAL } from './names.js';
 import { forgetPlayers } from './players-data.js';
 
 const POS_NAME = { GK: 'Goalkeeper', DEF: 'Defender', MID: 'Midfielder', FWD: 'Forward' };
 const QUALITY = { weak: ['Weaker', 4.5], typical: ['Typical', 5.5], strong: ['Stronger', 6.5] };
 const MIX = { even: ['Even', 1.0], varied: ['Varied', 1.6] };
+const chip = n => `<span class="rt rt-${n}">${n}</span>`;
 const money = n => `$${Number(n).toLocaleString('en-AU')}`;
 
 export function playersView() {
@@ -49,7 +50,7 @@ export async function mountPlayers(ctx) {
     return `<form class="ed-invite pl-gen" id="pl-gen">
       <h2>Generate players</h2>
       <p class="ed-hint">Makes new players with names from 18 cultures (no first or last name is repeated anywhere in the league) and
-        offense and defense ratings that suit their position. They all start as free agents, so there are no teams yet.</p>
+        offense and defense ratings that suit their position (nobody is a perfect 10/10). They all start as free agents, so there are no teams yet.</p>
       <label>How many <i>${clubsN} club${clubsN === 1 ? '' : 's'} × 16 plus 24 spare = ${clubsN * 16 + 24}</i>
         <input type="number" name="count" min="1" max="400" value="${def}" required></label>
       <details><summary>Options</summary>
@@ -64,7 +65,7 @@ export async function mountPlayers(ctx) {
   function previewPanel() {
     if (!preview) return '';
     const rows = preview.list.map((p, i) => `<tr data-i="${i}">
-      <td>${esc(p.name)}</td><td>${esc(p.position)}</td><td>${p.offense}</td><td>${p.defense}</td><td>${money(playerValue(p))}</td>
+      <td>${esc(p.name)}</td><td>${esc(p.position)}</td><td>${chip(p.offense)}</td><td>${chip(p.defense)}</td><td>${money(playerValue(p))}</td>
       <td class="pl-row-act"><button class="btn ghost small" type="button" data-act="reroll" aria-label="New name and ratings for ${esc(p.name)}">↻</button>
       <button class="btn ghost small" type="button" data-act="drop" aria-label="Leave out ${esc(p.name)}">✕</button></td></tr>`).join('');
     return `<section class="pl-preview" aria-label="Preview">
@@ -93,9 +94,9 @@ export async function mountPlayers(ctx) {
       && (!filter.pos || p.position === filter.pos) && (!q || p.name.toLowerCase().includes(q)));
     const rows = shown.map(p => `<tr data-id="${esc(p.id)}">
       <td><input class="pl-name" value="${esc(p.name)}" maxlength="40" aria-label="Name"></td>
-      <td><select data-f="position" aria-label="Position">${posOpts(p.position)}</select></td>
-      <td><select data-f="offense" aria-label="Offense">${ratingOpts(p.offense)}</select></td>
-      <td><select data-f="defense" aria-label="Defense">${ratingOpts(p.defense)}</select></td>
+      <td><select data-f="position" aria-label="Position">${opts(POSITIONS.map(x => [x, x]), p.position)}</select></td>
+      <td><select data-f="offense" class="rt rt-${p.offense}" aria-label="Offense">${ratingOpts(p.offense)}</select></td>
+      <td><select data-f="defense" class="rt rt-${p.defense}" aria-label="Defense">${ratingOpts(p.defense)}</select></td>
       <td class="pl-value">${money(p.value)}</td>
       <td><select data-f="club" aria-label="Club">${clubOpts(p.club)}</select></td>
       <td class="pl-row-act"><button class="btn ghost small" type="button" data-act="remove">Remove</button>
@@ -176,6 +177,7 @@ export async function mountPlayers(ctx) {
         else if (!name) name = part;
       }
       if (nums.some(x => x < 1 || x > 10)) throw new Error(`“${line}”: ratings are 1 to 10.`);
+      if (nums.length >= 2 && nums[0] + nums[1] > MAX_TOTAL) throw new Error(`“${line}”: offense and defense can add up to ${MAX_TOTAL} at most (nobody is a 10/10).`);
       if (!position) position = POSITIONS[Math.floor(Math.random() * POSITIONS.length)];
       if (name) { const f = name.split(/\s+/); if (f.length < 2) throw new Error(`“${line}” needs a first and last name.`); }
       else { name = n.next(); if (!name) throw new Error('Ran out of unused names.'); }
@@ -233,7 +235,11 @@ export async function mountPlayers(ctx) {
     const field = el.dataset.f || (el.classList.contains('pl-name') ? 'name' : '');
     if (!p || !field) return;
     let v = el.value;
-    if (field === 'offense' || field === 'defense') v = Number(v);
+    if (field === 'offense' || field === 'defense') {
+      v = Number(v);
+      const other = field === 'offense' ? p.defense : p.offense;
+      if (v + other > MAX_TOTAL) { say(document.getElementById('pl-msg'), `Offense and defense can add up to ${MAX_TOTAL} at most: nobody is a 10/10.`); el.value = p[field]; return; }
+    }
     if (field === 'club') v = v || null;
     if (field === 'name') v = v.trim().replace(/\s+/g, ' ');
     const msg = document.getElementById('pl-msg');
@@ -241,9 +247,11 @@ export async function mountPlayers(ctx) {
     if (error) {
       say(msg, /players_name_unique|duplicate/i.test(error.message) ? 'Another player already has that name.' : explain(error));
       el.value = field === 'club' ? p.club || '' : p[field];
+      if (field === 'offense' || field === 'defense') el.className = `rt rt-${p[field]}`;
       return;
     }
     Object.assign(p, data); forgetPlayers(); say(msg, '');
+    for (const f of ['offense', 'defense']) { const sel = row.querySelector(`[data-f="${f}"]`); sel.className = `rt rt-${p[f]}`; }
     row.querySelector('.pl-value').textContent = money(p.value);
     root.querySelector('.pl-sum').outerHTML = summary();
   });

@@ -2,8 +2,9 @@
 // Loaded only by editor.js. Rules:
 //  - No two players share a first name or a last name, in one batch or against players already in the league.
 //  - Nobody is given a club; players start as free agents and are dealt out later (a draft).
-//  - Ratings are offense and defense, 1 to 10. Value is worked out from them (playerValue), the same sum as
-//    the `value` column in supabase/migrations/0008_players.sql: keep the two in step.
+//  - Ratings are offense and defense, 1 to 10, and together at most 19: nobody is a perfect 10 (MAX_TOTAL).
+//    Value is worked out from them (playerValue), the same sum as the `value` column in
+//    supabase/migrations/0009_player_ratings.sql: keep the two in step.
 
 const words = s => s.split(/\s+/).filter(Boolean);
 
@@ -95,25 +96,35 @@ function gauss() {
 }
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, Math.round(n)));
 
-// The price in dollars. Same as the `value` column in the database.
-export function playerValue({ position, offense, defense }) {
-  const overall = position === 'GK' ? defense
-    : position === 'DEF' ? 0.3 * offense + 0.7 * defense
-    : position === 'MID' ? 0.5 * offense + 0.5 * defense
-    : 0.7 * offense + 0.3 * defense;
-  return Math.round((500 + 7500 * ((overall - 1) / 9) ** 1.8) / 50) * 50;
+export const MAX_TOTAL = 19;
+
+// A position's overall rating (1 to 10): what the player is mainly valued for.
+export const overall = ({ position, offense, defense }) => (position === 'GK' ? 0.1 * offense + 0.9 * defense
+  : position === 'DEF' ? 0.3 * offense + 0.7 * defense
+  : position === 'MID' ? 0.5 * offense + 0.5 * defense
+  : 0.7 * offense + 0.3 * defense);
+
+// The price in dollars, $500 to about $11,250. Same as the `value` column in the database.
+export function playerValue(p) {
+  return Math.round((500 + 11500 * ((overall(p) - 1) / 9) ** 2) / 50) * 50;
 }
+
+// Stars are rare: ability above 7.5 is squeezed, so an 8 or 9 is a real standout and a 10 almost never happens.
+const squeeze = x => (x > 7.5 ? 7.5 + (x - 7.5) * 0.55 : x);
 
 // Offense and defense for a position. `mean` is the typical player; `spread` how far players vary.
 export function rate(position, mean = 5.5, spread = 1.3) {
-  const q = mean + gauss() * spread;   // overall ability, so stars are good at both ends of their job
+  const q = squeeze(mean + gauss() * spread);   // overall ability, so stars are good at both ends of their job
   const jitter = () => gauss() * 0.7;
+  let offense, defense;
   switch (position) {
-    case 'GK': return { offense: clamp(2 + gauss() * 0.9, 1, 4), defense: clamp(q + 0.8 + jitter(), 1, 10) };
-    case 'DEF': return { offense: clamp(q - 1.6 + jitter(), 1, 10), defense: clamp(q + 1 + jitter(), 1, 10) };
-    case 'FWD': return { offense: clamp(q + 1 + jitter(), 1, 10), defense: clamp(q - 1.6 + jitter(), 1, 10) };
-    default: return { offense: clamp(q + jitter(), 1, 10), defense: clamp(q + jitter(), 1, 10) };
+    case 'GK': offense = clamp(2 + gauss() * 0.9, 1, 4); defense = clamp(squeeze(q + 0.8 + jitter()), 1, 10); break;
+    case 'DEF': offense = clamp(squeeze(q - 1.6 + jitter()), 1, 10); defense = clamp(squeeze(q + 1 + jitter()), 1, 10); break;
+    case 'FWD': offense = clamp(squeeze(q + 1 + jitter()), 1, 10); defense = clamp(squeeze(q - 1.6 + jitter()), 1, 10); break;
+    default: offense = clamp(squeeze(q + jitter()), 1, 10); defense = clamp(squeeze(q + jitter()), 1, 10);
   }
+  while (offense + defense > MAX_TOTAL) { if (offense > defense) offense--; else defense--; }
+  return { offense, defense };
 }
 
 // How many of each position in a pool of `count` (the 16-man squad shape, largest remainder).
