@@ -113,10 +113,21 @@ vLeague starts clean: no fixtures or results are carried over from s3 (decided 5
 - Free-plan care: a few small reads per page; 500 MB database and 5 GB monthly transfer are nowhere near. A weekly
   backup export and keep-alive are optional extras.
 
-### 0.12: Fixtures and results on Supabase
-- [ ] Fixtures (week, date, kick-off, teams), results as summaries, and the week-by-week schedule generator, in the
-      Editor. Results hidden until kick-off, enforced by the database. Standings are worked out from these.
-- [ ] Match files (about 2 MB each) stay on GitHub Pages; Supabase keeps only the summaries.
+### 0.12: Fixtures and results on Supabase (design agreed 5 October 2026; not started)
+vLeague starts clean: no fixtures or results are copied from the s3 test site. After this release nothing in the app
+reads s3 any more (the dashboard, Home, League, Editor, the club page and the reminder emails all read Supabase).
+- [ ] `fixtures` table: id (text like `w1-tur-sks`), week, home and away (club codes), kick-off as one `timestamptz`
+      (entered in Melbourne time), stage (null, SF, GF), postponed flag. Everyone reads; only the office writes.
+- [ ] `results` table, one row per fixture: score, goals, cards, team stats, player ratings and Man of the Match (the
+      compact summary the s3 engine already makes), plus `file` (the match file's name). **Hidden until kick-off, enforced
+      by the database** (row-level security compares kick-off to `now()`), so a result can't be read early even by
+      someone calling the API directly. The office reads it any time.
+- [ ] Editor → Fixtures: add one, add a whole week, "Generate a season" (round robin, home and away balanced, byes for an
+      odd number of clubs), set dates and times, postpone, restore, remove a result. Standings are worked out from these.
+- [ ] Replace the app's `loadSeason()` (dashboard-data.js) with reads from Supabase; keep the same shape so pages need
+      few changes. Logos come from the `crests` bucket. `send-reminders` reads fixtures from Supabase.
+- [ ] Match files (about 2 MB each) stay out of the database; 0.13 publishes them on this site's Pages.
+- Checks: security checks for who can read a hidden result; the table, top players and form leave hidden results out.
 
 ### 0.13: Simulate, news and the old site retires
 - [ ] Simulate, news composer, approvals and history in the app. Optional league events such as deadline day, set up
