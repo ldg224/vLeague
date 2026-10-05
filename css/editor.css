@@ -118,3 +118,9 @@
   .ed-dl { grid-template-columns: 1fr auto; }
   .ed-dl small, .ed-dl .ed-msg, .ed-dl.locked .state { grid-column: 1 / -1; }
 }
+
+/* Phones tab (0.10) */
+.ed-phones .ph { justify-self: end; font-weight: 600; white-space: nowrap; }
+.ed-phones .ph a { color: var(--brand); text-decoration: none; }
+.ed-phones .ph a:hover { text-decoration: underline; }
+.ed-hint { margin: 0 0 14px; color: var(--muted); font-size: .9rem; }

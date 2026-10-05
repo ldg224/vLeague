@@ -15,7 +15,7 @@ const forClub = (post, code) => {
 export function inboxItems(season, sbNews, code) {
   const s3 = (season?.news || []).filter(p => (p.status === 'live' || p.status === 'closed') && forClub(p, code))
     .map(p => ({ id: `s3-${p.id}`, src: 's3', post: p, at: parseStamp(p.sent), pinned: Boolean(p.pinned) }));
-  const sb = (sbNews || []).map(r => ({ id: `sb-${r.id}`, src: 'sb', row: r, at: r.created_at ? new Date(r.created_at) : null, pinned: false }));
+  const sb = (sbNews || []).map(r => ({ id: `sb-${r.id}`, src: 'sb', row: r, at: r.created_at ? new Date(r.created_at) : null, pinned: Boolean(r.data?.pinned) }));
   const t = i => i.at?.getTime() || 0;
   return [...s3, ...sb].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || t(b) - t(a));
 }

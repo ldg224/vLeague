@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.10.0 (2026-10-05)
+
+- **Added:** every club's manager gets a pinned post in their Inbox, "Add your phone number", with a small form.
+  They can change the number there any time.
+- **Added:** Editor → Phones: who has added a number and who hasn't, with Copy all and Download CSV.
+- **Private:** a number can only be read by that club's manager and the league office, and only saved through the
+  app's check (8 to 15 digits). Guests and other clubs can't see or change it (`0007_manager_phones.sql`).
+
 ## 0.9.0 (2026-10-05)
 
 Light mode.

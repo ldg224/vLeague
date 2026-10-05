@@ -12,8 +12,8 @@ import { prefs, setPref } from './prefs.js';
 chrome();
 const me = await enter('editor.html');
 const main = document.getElementById('main');
-const TABS = { requests: 'Requests', clubs: 'Clubs', managers: 'Managers', deadlines: 'Deadlines' };
-let state = { clubs: [], requests: [], accounts: [], deadlines: null, locked: [], season: null, digest: true };
+const TABS = { requests: 'Requests', clubs: 'Clubs', managers: 'Managers', phones: 'Phones', deadlines: 'Deadlines' };
+let state = { clubs: [], requests: [], accounts: [], phones: null, deadlines: null, locked: [], season: null, digest: true };
 
 // The accent a club shows: the one saved with its colours, or worked out the same way the wizard does.
 const accentOf = c => safeColour(c.accent || accentFor(c.colour, c.colour2));
@@ -34,7 +34,7 @@ const crest = (path, code, cls = '') => (path
 
 async function load() {
   const c = await db();
-  const [list, req, acc, dl, ws, season, mine] = await Promise.all([
+  const [list, req, acc, dl, ws, season, mine, ph] = await Promise.all([
     clubs(),
     c.from('club_requests').select('*').order('created_at', { ascending: false }).limit(60),
     c.rpc('office_accounts'),
@@ -42,10 +42,11 @@ async function load() {
     c.from('week_sheets').select('week, club'),
     loadSeason().catch(() => null),
     prefs(),
+    c.from('manager_phones').select('club, phone, updated_at'),
   ]);
   if (req.error || acc.error) throw new Error(explain(req.error || acc.error));
   state = {
-    clubs: list, requests: req.data || [], accounts: acc.data || [],
+    clubs: list, requests: req.data || [], accounts: acc.data || [], phones: ph.error ? null : ph.data || [],
     deadlines: dl.error ? null : dl.data || [], locked: ws.data || [], season, digest: mine.email.office_digest,
   };
 }
@@ -60,7 +61,7 @@ function render() {
   const pending = state.requests.filter(r => r.status === 'pending').length;
   main.innerHTML = `<nav class="ed-tabs" aria-label="Editor">${Object.entries(TABS).map(([k, label]) =>
     `<a href="#${k}" ${k === t ? 'aria-current="page"' : ''}>${label}${k === 'requests' && pending ? ` <span class="ed-count">${pending}</span>` : ''}</a>`).join('')}</nav>
-    <section id="view">${{ requests: requestsView, clubs: clubsView, managers: managersView, deadlines: deadlinesView }[t]()}</section>`;
+    <section id="view">${{ requests: requestsView, clubs: clubsView, managers: managersView, phones: phonesView, deadlines: deadlinesView }[t]()}</section>`;
 }
 
 // ---------------------------------------------------------------- requests
@@ -219,6 +220,49 @@ async function reopen(li) {
     return;
   }
   await refresh();
+}
+
+// ---------------------------------------------------------------- phones
+
+// One row per club still in the league: who to call and the number they added in their Inbox (private to the office).
+function phoneRows() {
+  const have = new Map((state.phones || []).map(p => [p.club, p.phone]));
+  const email = new Map(state.accounts.filter(a => a.club && a.role === 'manager').map(a => [a.club, a.email]));
+  return state.clubs.filter(c => c.status !== 'withdrawn')
+    .map(c => ({ club: c, name: c.name, code: c.code, manager: c.manager_name || '', email: email.get(c.code) || '', phone: have.get(c.code) || '' }));
+}
+
+function phonesView() {
+  if (!state.phones) return '<h1>Phones</h1><p class="quiet">The phone numbers didn’t load. Reload the page to try again.</p>';
+  const rows = phoneRows(), got = rows.filter(r => r.phone).length;
+  return `<h1>Phones</h1>
+    <p class="ed-hint">Every club’s manager is asked in their Inbox. <b>${got} of ${rows.length}</b> have added a number. Only you and that club can see it.</p>
+    <div class="ed-actions"><button class="btn small" type="button" data-act="phones-copy"${got ? '' : ' disabled'}>Copy all</button>
+      <button class="btn ghost small" type="button" data-act="phones-csv"${got ? '' : ' disabled'}>Download CSV</button></div>
+    <p class="ed-msg" role="status"></p>
+    <ul class="club-rows ed-clubs ed-phones">${rows.map(r => `<li style="--club:${esc(accentOf(r.club))}">
+      ${crest(r.club.crest_path, r.code)}
+      <span class="who"><b>${esc(r.name)}</b><small>${esc(r.manager || 'No manager name')}${r.email ? ` · ${esc(r.email)}` : ''}</small></span>
+      <span class="ph">${r.phone ? `<a href="tel:${esc(r.phone.replace(/[^+\d]/g, ''))}">${esc(r.phone)}</a>` : '<span class="ed-pill warn">Not added</span>'}</span>
+    </li>`).join('')}</ul>`;
+}
+
+async function phonesExport(kind, btn) {
+  const rows = phoneRows().filter(r => r.phone), msg = btn.closest('section').querySelector('.ed-msg');
+  if (kind === 'copy') {
+    const text = rows.map(r => `${r.name}${r.manager ? ` (${r.manager})` : ''}: ${r.phone}`).join('\n');
+    try { await navigator.clipboard.writeText(text); msg.textContent = `Copied ${rows.length} number${rows.length === 1 ? '' : 's'}.`; }
+    catch { msg.textContent = 'Couldn’t copy here. Use Download CSV instead.'; }
+    return;
+  }
+  const cell = v => `"${String(v).replace(/"/g, '""')}"`;
+  const csv = ['Club,Code,Manager,Email,Phone', ...rows.map(r => [r.name, r.code, r.manager, r.email, r.phone].map(cell).join(','))].join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = 'vleague-manager-phones.csv';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  msg.textContent = `Downloaded ${rows.length} number${rows.length === 1 ? '' : 's'}.`;
 }
 
 // ---------------------------------------------------------------- managers
@@ -399,6 +443,8 @@ main.addEventListener('click', e => {
     const li = b.closest('li');
     saveDeadline(Number(li.dataset.week), li.querySelector('input').value, li.querySelector('.ed-msg'));
   }
+  if (b.dataset.act === 'phones-copy') phonesExport('copy', b);
+  if (b.dataset.act === 'phones-csv') phonesExport('csv', b);
   if (b.dataset.act === 'dl-remove') removeDeadline(b.closest('li'));
   if (b.dataset.act === 'dl-all') setAllDeadlines(b);
   if (b.dataset.act === 'link-yes') link(b.closest('li'), true);

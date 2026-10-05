@@ -18,6 +18,14 @@ if (ctx) {
   const items = inboxItems(season, sbNews, code);
   let read = readIds(code);
 
+  // The manager's phone number (0.10): private to this club and the office, saved through save_my_phone().
+  let phone = code ? await db().then(c => c.from('manager_phones').select('phone').eq('club', code).maybeSingle())
+    .then(r => r.data?.phone || '').catch(() => '') : '';
+  const phoneForm = () => `<form class="ph-form" novalidate>
+      <label>Your phone number<input name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="0412 345 678" value="${esc(phone)}"></label>
+      <button class="mark-all" type="submit">${phone ? 'Change' : 'Save'}</button>
+      <p class="ph-msg" role="status">${phone ? 'Saved. The league office can see it.' : ''}</p></form>`;
+
   // A post's deadline in words ({due}); due is local { date, time }, no time = end of that day.
   function dueText(post) {
     const k = post.due?.date ? kickoff({ date: post.due.date, time: post.due.time || '23:59' }) : null;
@@ -46,7 +54,7 @@ if (ctx) {
           body: `<div class="reveal" style="--rc:${esc(safeColour(d.accent || d.colour))}">${src ? `<img src="${esc(src)}" alt="">` : ''}
             <b>${esc(d.name || '')}</b>${d.motto ? `<i>${esc(d.motto)}</i>` : ''}</div>${markdown(r.body, vars)}` };
       }
-      return { title: r.title, from: 'vLeague', body: markdown(r.body, vars) };
+      return { title: r.title, from: 'vLeague', body: markdown(r.body, vars) + (d.form === 'phone' ? phoneForm() : '') };
     }
     const embed = (i.post.blocks || []).find(b => b.type === 'embed') || {};
     return { title: embed.title || embed.author?.name || 'League update',
@@ -80,8 +88,23 @@ if (ctx) {
     badge('inbox', left);
     if (!left) main.querySelector('.mark-all')?.remove();
   }, true);
+  main.addEventListener('submit', async e => {
+    const form = e.target.closest('.ph-form');
+    if (!form) return;
+    e.preventDefault();
+    const msg = form.querySelector('.ph-msg'), btn = form.querySelector('button'), value = form.phone.value.trim();
+    const digits = value.replace(/\D/g, '').length;
+    if (!/^\+?[0-9 ()-]{8,20}$/.test(value) || digits < 8 || digits > 15) { msg.textContent = 'Enter a phone number with 8 to 15 digits, like 0412 345 678.'; form.phone.focus(); return; }
+    btn.disabled = true; msg.textContent = 'Saving…';
+    const { error } = await (await db()).rpc('save_my_phone', { p_phone: value });
+    btn.disabled = false;
+    if (error) { msg.textContent = /digits|Sign in|linked/.test(error.message) ? error.message : 'That didn’t save. Check your connection and try again.'; return; }
+    phone = value;
+    btn.textContent = 'Change';
+    msg.textContent = 'Saved. The league office can see it.';
+  });
   main.addEventListener('click', e => {
-    if (!e.target.closest('.mark-all')) return;
+    if (!e.target.closest('.mark-all') || e.target.closest('.ph-form')) return;
     read = markRead(code, items.map(i => i.id));
     draw();
     main.querySelector('.page-title')?.focus();
