@@ -39,6 +39,7 @@ makes invites and password resets work.
 | `week_sheets` | Each club's team sheet as it was at the week's deadline: what Simulate plays with, and the reveal | Everyone, guests too | Nobody directly; only `lock_due_weeks()` |
 | `user_settings` | Settings that follow an account (0.7): accent, spoiler-free results and revealed matches, clock, start page, email choices (`prefs` jsonb) | Yourself | Yourself |
 | `manager_phones` | Each manager's phone number (0.10), saved by the Inbox form through `save_my_phone()` | That club's manager and the office | Only through the function; the office can delete |
+| `players` | The league's players (0.11): name, position, offense and defense (1 to 10), club (empty = free agent), and `value`, the price worked out from the ratings | Everyone, guests too | League office |
 | `email_log` | Every reminder email sent (account, kind, key), so none is sent twice | League office | Nobody directly; only `send-reminders` |
 
 `clubs.setup_at` is empty until the club's manager has sent "Set up your club" (setup.html). Every manager, the

@@ -83,20 +83,35 @@ Sign-in page, "View as guest", the guest dashboard, the dashboard as the guest p
 - [x] A pinned Inbox post asks every manager for a phone number; stored privately (that club and the office only).
 - [x] Editor → Phones: who has added one, Copy all, Download CSV.
 
-### 0.11: Teams and players on Supabase
-Agreed 5 October 2026: the league's teams come first, so everything else can use them. Clubs are already in Supabase
-(0.8.1 to 0.8.6); this adds the squads.
-- [ ] A `players` table: id, name, position, offense and defense (1 to 10), club (empty = free agent). Everyone can
-      read it; only the league office changes it. The 80 players on the old site are imported with their ids, because
-      saved match files point at those ids. New players get the next id.
-- [ ] Editor → Players: add one or several at once (one per line), edit, move between clubs, free agents, remove.
-- [ ] The app reads squads from Supabase (My club, the dashboard's top players, line-up picker), so a new club's
-      squad shows up without touching the old site.
-- [ ] Free-plan care: a few small reads per page, cached for a few minutes in the browser (not one per minute per
-      open page), only the columns a page needs. The whole league's teams and players are about 25 KB, so the 500 MB
-      database and 5 GB monthly transfer are nowhere near.
-- [ ] The Season 1 editor's Simulate reads clubs and players from Supabase too (it already reads line-ups from there),
-      so there's one list of teams, not two.
+### 0.11: Teams and players on Supabase (players done in 0.11.0)
+Agreed 5 October 2026: vLeague stops relying on the s3 site (s3 stays a standalone test site, neither affects the
+other). Players come first so everything else can use them. Clubs are already in Supabase (0.8.1 to 0.8.6).
+vLeague starts clean: no fixtures or results are carried over from s3 (decided 5 October 2026).
+- [ ] `players` table (`0008_players.sql`): id (4-digit text, so the 80 old ids keep working; new ones from a
+      sequence), name, position (GK/DEF/MID/FWD), offense and defense (1 to 10), club (empty = free agent).
+      Everyone can read; only the league office writes (`is_office()`). The 80 s3 players are copied in once as a
+      starting pool, with their ids, as free agents unless their club exists here.
+- [ ] **Editor → Players**, built for speed:
+      1. *Generate*: pick how many (default "fill every club to 16, plus 20 free agents"), press Generate, see a
+         preview table, re-roll any single row, Accept. Nothing is saved until Accept.
+      2. *Table*: every player, filter by club / position / free agents, edit a cell in place, move a player to a
+         club (or free agent), delete. Changes save as you go with an Undo toast.
+      3. *Paste a list*: one player per line (`Name, FWD, 8, 3`); anything missing is filled in.
+- [ ] **Name generator** (`js/names.js`, loaded only in the Editor): about 18 cultures with first and last names,
+      the culture picked per player at random (weighted, editable); never repeats a first name or a last name
+      across the whole pool, checked against existing players too, so no two players look alike.
+- [ ] **Rating generator**: a position-shaped spread, not flat random: GKs are defence-heavy, DEF lean defence,
+      FWD lean offence, MID balanced; most players 4 to 7 with a few stars and a few weak links. A "Squad
+      strength" slider (low / even / mixed) so generated clubs are about equal by default. At least 2 GKs per
+      club and at least 24 in the pool.
+- [ ] Squads are 16 (XI + 5 bench: 2 GK, 5 DEF, 5 MID, 4 FWD) as the target the generator fills; the app never
+      blocks a club with fewer (a squad needs only 11 including a GK to be simulated).
+- [ ] The app reads squads from Supabase (My club, the dashboard's top players, line-up picker); the shared loader
+      is cached in the browser for a few minutes and fetches only the columns a page needs (about 25 KB total).
+- [ ] The weekly budget and prices (`500 + 7500 * ((rating-1)/8)^1.8`) are NOT in 0.11; they come with squads in
+      0.12 once the real cap is confirmed. Prices will be worked out from ratings, never stored.
+- Free-plan care: a few small reads per page; 500 MB database and 5 GB monthly transfer are nowhere near. A weekly
+  backup export and keep-alive are optional extras.
 
 ### 0.12: Fixtures and results on Supabase
 - [ ] Fixtures (week, date, kick-off, teams), results as summaries, and the week-by-week schedule generator, in the

@@ -124,3 +124,24 @@
 .ed-phones .ph a { color: var(--brand); text-decoration: none; }
 .ed-phones .ph a:hover { text-decoration: underline; }
 .ed-hint { margin: 0 0 14px; color: var(--muted); font-size: .9rem; }
+
+/* ---------- players (0.11) ---------- */
+.pl-sum { margin: 0 0 18px; }
+.pl-sum span { display: block; color: var(--muted); font-size: .88rem; }
+.pl-gen details { margin: 0 0 12px; }
+.pl-gen summary, .pl-paste summary { cursor: pointer; color: var(--tint-text); font-weight: 600; }
+.pl-gen details label { margin-top: 10px; }
+.pl-paste { margin: 18px 0; }
+.pl-scroll { overflow-x: auto; margin: 0 0 14px; }
+.pl-table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+.pl-table th { text-align: left; color: var(--muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.pl-table td { padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.pl-edit input, .pl-edit select { width: 100%; min-width: 0; padding: 6px 8px; font-size: .9rem; }
+.pl-edit .pl-name { min-width: 150px; }
+.pl-value { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pl-row-act { white-space: nowrap; text-align: right; }
+.pl-preview { margin: 0 0 24px; padding: 18px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }
+.pl-preview h2 { margin-top: 0; }
+.pl-filters { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; }
+.pl-filters input, .pl-filters select { padding: 8px 10px; }
+.pl-danger { margin-top: 18px; }

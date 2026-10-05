@@ -3,6 +3,23 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.11.0 (2026-10-05)
+
+vLeague has its own players. It no longer reads them from the s3 test site.
+
+- **Added:** Editor → Players. **Generate** makes a pool in one press (a preview first: re-roll or leave out anyone,
+  then add). Names come from 18 cultures, and no first or last name is repeated anywhere in the league. Ratings
+  (offense and defense, 1 to 10) suit the position. Generated players are **free agents**: no club, ready for a draft.
+- **Added:** every player has a **value** ($500 to $8,000) worked out from their ratings and position. It can't be
+  typed in, so it always matches.
+- **Added:** paste a list (`Name, FWD, 8, 3`, anything left out is filled in), edit a name, position, rating or club
+  right in the table, filter by club, position or free agents, remove one player or all.
+- **Changed:** My club, the line-up picker, the dashboard board and Home read players from vLeague. The 80 test
+  players from s3 are gone, so clubs have no squads until the draft.
+- **Reset:** every club's saved team sheet (it pointed at the old players) was cleared. The locked test Week 1 is left
+  as it was; its line-up names won't show.
+- **Database:** `players` table, readable by everyone and changed only by the league office (`0008_players.sql`).
+
 ## 0.10.0 (2026-10-05)
 
 - **Added:** every club's manager gets a pinned post in their Inbox, "Add your phone number", with a small form.

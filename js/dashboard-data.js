@@ -4,6 +4,7 @@
 // The rules below (kick-off, status, ladder, player totals) are ports of hcl-s3/js/data.js; keep them in step.
 
 import { db, ready } from './auth.js';
+import { loadPlayers } from './players-data.js';
 
 const LIVE_SITE = 'https://ldg224.github.io/s3/';
 
@@ -22,6 +23,7 @@ export async function loadSeason() {
   if (!res.ok) throw new Error(`The league data didn't load (error ${res.status}).`);
   const season = await res.json();
   await addNewClubs(season);
+  await addPlayers(season);
   return season;
 }
 
@@ -44,6 +46,12 @@ async function addNewClubs(season) {
       if (!known.has(c.code)) season.teams.push({ code: c.code, name: c.name, colour: c.colour || '#475569', manager: '', ...(c.status === 'withdrawn' ? { withdrawn: true } : {}) });
     }
   } catch { /* the table still shows the clubs it already had */ }
+}
+
+// The players are vLeague's own (Supabase, 0.11), not the s3 test site's. Only a local ?src= test copy keeps its own.
+async function addPlayers(season) {
+  if (!ready || SOURCE !== LIVE_SITE) return;
+  try { season.players = await loadPlayers(); } catch { season.players = []; }
 }
 
 // ---------- Time and status ----------

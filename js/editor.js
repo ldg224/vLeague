@@ -8,11 +8,12 @@ import { db, sendPasswordReset } from './auth.js';
 import { accentFor } from './club-colour.js';
 import { loadSeason, kickoff } from './dashboard-data.js';
 import { prefs, setPref } from './prefs.js';
+import { playersView, mountPlayers } from './editor-players.js';
 
 chrome();
 const me = await enter('editor.html');
 const main = document.getElementById('main');
-const TABS = { requests: 'Requests', clubs: 'Clubs', managers: 'Managers', phones: 'Phones', deadlines: 'Deadlines' };
+const TABS = { requests: 'Requests', clubs: 'Clubs', players: 'Players', managers: 'Managers', phones: 'Phones', deadlines: 'Deadlines' };
 let state = { clubs: [], requests: [], accounts: [], phones: null, deadlines: null, locked: [], season: null, digest: true };
 
 // The accent a club shows: the one saved with its colours, or worked out the same way the wizard does.
@@ -61,7 +62,8 @@ function render() {
   const pending = state.requests.filter(r => r.status === 'pending').length;
   main.innerHTML = `<nav class="ed-tabs" aria-label="Editor">${Object.entries(TABS).map(([k, label]) =>
     `<a href="#${k}" ${k === t ? 'aria-current="page"' : ''}>${label}${k === 'requests' && pending ? ` <span class="ed-count">${pending}</span>` : ''}</a>`).join('')}</nav>
-    <section id="view">${{ requests: requestsView, clubs: clubsView, managers: managersView, phones: phonesView, deadlines: deadlinesView }[t]()}</section>`;
+    <section id="view">${{ requests: requestsView, clubs: clubsView, players: playersView, managers: managersView, phones: phonesView, deadlines: deadlinesView }[t]()}</section>`;
+  if (t === 'players') mountPlayers({ db, esc, explain, clubs: state.clubs });
 }
 
 // ---------------------------------------------------------------- requests

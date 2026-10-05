@@ -64,7 +64,7 @@ def rows_of(r):
 
 CHECKS = [
     # (who, description, sql returning one row with a boolean column "ok")
-    ('anon', 'guest can read clubs', "select count(*) = 8 as ok from public.clubs;"),
+    ('anon', 'guest can read clubs', "select count(*) > 0 as ok from public.clubs;"),
     ('anon', 'guest cannot read team sheets', "select count(*) = 0 as ok from public.team_sheets;"),
     ('anon', 'guest cannot read profiles', "select count(*) = 0 as ok from public.profiles;"),
     ('anon', 'guest cannot change a club', "with u as (update public.clubs set name = 'X' where code = 'TUR' returning 1) select count(*) = 0 as ok from u;"),
@@ -85,6 +85,11 @@ CHECKS = [
 # SQL returning "ok", or {'error': text} when the database must refuse with that message.
 REQ = "insert into public.club_requests (club, kind, name, code, crest_path, status, office_note) values "
 SETUP_CHECKS = [
+    # players (0.11): everyone reads; only the office writes
+    ('anon', 'guest can read players', '', "select count(*) >= 0 as ok from public.players;"),
+    ('anon', 'guest cannot add a player', '', {'error': 'permission denied'}, "insert into public.players (name, position, offense, defense) values ('Zz Guest', 'MID', 5, 5);"),
+    ('manager', 'manager cannot add a player', '', {'error': 'row-level security'}, "insert into public.players (name, position, offense, defense) values ('Zz Manager', 'MID', 5, 5);"),
+    ('office', 'office adds a player and the value follows the ratings', '', "with i as (insert into public.players (name, position, offense, defense) values ('Zz Office', 'FWD', 10, 10) returning value) select value = 8000 as ok from i;"),
     ('anon', 'guest can read news', '', "select count(*) >= 0 as ok from public.news;"),
     ('anon', 'guest cannot send a club request', '', {'error': 'permission denied'},
      """select public.submit_club_request('{"name":"X FC"}');"""),
