@@ -3,6 +3,11 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.8.5 (2026-10-05)
+
+- **Fixed:** clubs added in Editor → Clubs now show in the league table (and the other places that list clubs). They
+  start on 0 points; they get matches once fixtures include them.
+
 ## 0.8.4 (2026-10-05)
 
 - **Fixed:** the footer showed v0.8.0 after 0.8.2 and 0.8.3; it shows the real version again.

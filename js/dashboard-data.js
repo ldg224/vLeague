@@ -3,6 +3,8 @@
 // data/season.json and assets/teams/<code>.png. Line-ups come from Supabase (week_sheets, 0.6).
 // The rules below (kick-off, status, ladder, player totals) are ports of hcl-s3/js/data.js; keep them in step.
 
+import { db, ready } from './auth.js';
+
 const LIVE_SITE = 'https://ldg224.github.io/s3/';
 
 // Local testing only: ?src=<base url> reads another copy of the data (e.g. a demo season).
@@ -18,7 +20,23 @@ export const matchUrl = fx => `${LIVE_SITE}match.html?id=${encodeURIComponent(fx
 export async function loadSeason() {
   const res = await fetch(`${SOURCE}data/season.json?t=${Date.now()}`, { cache: 'no-store' });
   if (!res.ok) throw new Error(`The league data didn't load (error ${res.status}).`);
-  return res.json();
+  const season = await res.json();
+  await addNewClubs(season);
+  return season;
+}
+
+// Clubs the office adds in the Editor (0.8.1) live in Supabase; season.json only knows the old ones until the league
+// moves over (0.11). Add them to the teams list so they show in the table, with no matches until fixtures exist.
+async function addNewClubs(season) {
+  if (!ready || SOURCE !== LIVE_SITE) return;
+  try {
+    const { data } = await (await db()).from('clubs').select('code, name, colour, status');
+    season.teams ||= [];
+    const known = new Set(season.teams.map(t => t.code));
+    for (const c of data || []) {
+      if (!known.has(c.code) && c.status !== 'withdrawn') season.teams.push({ code: c.code, name: c.name, colour: c.colour || '#475569', manager: '' });
+    }
+  } catch { /* the table still shows the clubs it already had */ }
 }
 
 // ---------- Time and status ----------
