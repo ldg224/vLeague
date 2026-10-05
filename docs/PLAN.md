@@ -75,8 +75,9 @@ Sign-in page, "View as guest", the guest dashboard, the dashboard as the guest p
       player picker, 3-step club setup with an optional crest, plainer Editor states and copy.
 
 ### 0.9: Light mode
-- [ ] A Theme setting (Dark / Light / System). Colour tokens replace the hard-coded colours, a second accent per club
-      that reads on white, the pitch and matchday board stay dark on purpose.
+- [ ] A Theme setting (Dark / Light / System). Colour tokens replace the hard-coded colours; the pitch and matchday
+      board stay dark on purpose. No second per-club accent for light mode (user's decision, 5 October 2026: clubs
+      have already registered, so club colours stay as they are).
 
 ### 0.10: Inbox and press
 - [ ] One inbox: news for this club, press conferences, deadlines; only things that need action or matter.
