@@ -25,16 +25,23 @@ export async function loadSeason() {
   return season;
 }
 
-// Clubs the office adds in the Editor (0.8.1) live in Supabase; season.json only knows the old ones until the league
-// moves over (0.11). Add them to the teams list so they show in the table, with no matches until fixtures exist.
+// The clubs in Supabase (the Editor's Clubs tab) are the league's clubs; season.json only supplies fixtures and results
+// until the league moves over (0.11). Teams there that aren't clubs here (old placeholders) or are withdrawn are marked
+// withdrawn, so the table and club lists leave them out, and clubs only here are added with no matches yet.
 async function addNewClubs(season) {
   if (!ready || SOURCE !== LIVE_SITE) return;
   try {
-    const { data } = await (await db()).from('clubs').select('code, name, colour, status');
+    const { data, error } = await (await db()).from('clubs').select('code, name, colour, status');
+    if (error || !data?.length) return;
     season.teams ||= [];
+    const clubs = new Map(data.map(c => [c.code, c]));
+    for (const t of season.teams) {
+      const c = clubs.get(t.code);
+      if (!c || c.status === 'withdrawn') t.withdrawn = true;
+    }
     const known = new Set(season.teams.map(t => t.code));
-    for (const c of data || []) {
-      if (!known.has(c.code) && c.status !== 'withdrawn') season.teams.push({ code: c.code, name: c.name, colour: c.colour || '#475569', manager: '' });
+    for (const c of data) {
+      if (!known.has(c.code)) season.teams.push({ code: c.code, name: c.name, colour: c.colour || '#475569', manager: '', ...(c.status === 'withdrawn' ? { withdrawn: true } : {}) });
     }
   } catch { /* the table still shows the clubs it already had */ }
 }

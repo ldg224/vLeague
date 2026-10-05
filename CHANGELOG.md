@@ -3,6 +3,11 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.8.6 (2026-10-05)
+
+- **Fixed:** the league table lists exactly the clubs in Editor → Clubs. Old placeholder teams (Reserved Team 1 and 2)
+  and withdrawn clubs no longer show.
+
 ## 0.8.5 (2026-10-05)
 
 - **Fixed:** clubs added in Editor → Clubs now show in the league table (and the other places that list clubs). They
