@@ -3,6 +3,18 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.24.0 (2026-10-07)
+
+Draft: smarter auto-pick and a sortable board. Needs `0027_draft_pick_how.sql` (run).
+
+- **Added, auto-pick:** two questions now. **What** to pick: from my queue (the first player still free who fits the roster
+  rules), or a **random** player who fits. **When**: the moment it's my turn, after a few minutes, if I miss my turn, or never.
+  Managers set it on the Auto-pick tab; the office can see and change it per club in the Editor.
+- **Changed, the board:** the Available players are now a full table: position, name, number, offensive rating, defensive rating,
+  overall rating and value. Tap a heading to sort by it, tap again to flip it. Add more levels with Shift-tap or "Then by…" (for
+  example Position, then Defensive rating high to low, to find a strong defender). The chips above the table show the order and
+  flip or remove each level.
+
 ## 0.23.0 (2026-10-07)
 
 More draft tools (Editor → Draft). Needs `0026_draft_tools.sql` (run).

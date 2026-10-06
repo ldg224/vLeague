@@ -20,9 +20,9 @@ export async function loadDraft(id, club) {
     one(c.from('draft_order').select('pick_no, club').eq('draft', id).order('pick_no')),
     one(c.from('draft_picks').select('pick_no, club, player, made_at, how').eq('draft', id).order('pick_no')),
     club ? one(c.from('draft_queue').select('rank, player').eq('draft', id).eq('club', club).order('rank')) : [],
-    club ? one(c.from('draft_prefs').select('mode, minutes').eq('draft', id).eq('club', club)) : [],
+    club ? one(c.from('draft_prefs').select('mode, minutes, pick_how').eq('draft', id).eq('club', club)) : [],
   ]);
-  return { draft: draft[0] || null, order, picks, queue: queue.map(r => r.player), prefs: prefs[0] || { mode: 'on_miss', minutes: null } };
+  return { draft: draft[0] || null, order, picks, queue: queue.map(r => r.player), prefs: prefs[0] || { mode: 'on_miss', minutes: null, pick_how: 'queue' } };
 }
 
 // Replace this club's queue (rank 1 = first choice).
@@ -35,9 +35,9 @@ export async function saveQueue(id, club, players) {
   if (ins.error) throw new Error(ins.error.message);
 }
 
-export async function savePrefs(id, club, mode, minutes) {
+export async function savePrefs(id, club, mode, minutes, pickHow = 'queue') {
   const { error } = await (await db()).from('draft_prefs')
-    .upsert({ draft: id, club, mode, minutes: mode === 'after_minutes' ? minutes : null }, { onConflict: 'draft,club' });
+    .upsert({ draft: id, club, mode, minutes: mode === 'after_minutes' ? minutes : null, pick_how: pickHow }, { onConflict: 'draft,club' });
   if (error) throw new Error(error.message);
 }
 

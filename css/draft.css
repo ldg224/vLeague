@@ -1,5 +1,5 @@
 /* Draft (0.21): board, queue, auto-pick, team values. */
-.draft { width: min(900px, 100%); margin: 0 auto; }
+.draft { width: min(1100px, 100%); margin: 0 auto; }
 .dr-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
 .dr-head .page-title { margin: 0; }
 .dr-clock { text-align: right; font: 700 1.8rem/1 var(--font-display); white-space: nowrap; }
@@ -42,3 +42,28 @@
   .dr-p .rt { display: none; }
   .dr-clock { font-size: 1.4rem; }
 }
+
+/* Board table and multi-level sorting (0.24) */
+.dr-recent-wrap { margin-bottom: 16px; }
+.dr-recent-wrap summary { cursor: pointer; font-weight: 700; margin-bottom: 8px; }
+.dr-sortbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px; }
+.dr-sortbar > span:first-child { font-weight: 700; font-size: .85rem; color: var(--muted); }
+.dr-chip { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; background: var(--card); overflow: hidden; }
+.dr-chip b { padding: 4px 8px; background: color-mix(in srgb, var(--club) 20%, transparent); font-size: .78rem; }
+.dr-chip button { border: 0; background: transparent; color: var(--text); padding: 5px 10px; font: 600 .82rem var(--font); cursor: pointer; }
+.dr-chip button:disabled { opacity: .3; cursor: default; }
+.dr-sortbar select { padding: 5px 8px; }
+.dr-hint { margin: 0 0 8px; font-size: .82rem; }
+.dr-tablewrap { overflow: auto; max-height: 70vh; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); }
+.dr-table { border-collapse: collapse; width: 100%; font-size: .92rem; font-variant-numeric: tabular-nums; }
+.dr-table th { position: sticky; top: 0; z-index: 1; background: var(--card); text-align: left; border-bottom: 1px solid var(--line); padding: 0; white-space: nowrap; }
+.dr-table th button { width: 100%; border: 0; background: transparent; color: var(--muted); font: 700 .8rem var(--font); text-align: left; padding: 10px 12px; cursor: pointer; }
+.dr-table th[aria-sort="ascending"] button, .dr-table th[aria-sort="descending"] button { color: var(--text); }
+.dr-table td { padding: 7px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.dr-table tbody tr:hover { background: color-mix(in srgb, var(--club) 7%, transparent); }
+.dr-table .c-name { width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.dr-table .c-act { text-align: right; }
+.dr-table .c-act .dr-b + .dr-b { margin-left: 6px; }
+.dr-ar sup { font-size: .65rem; }
+.dr-auto h3 { margin: 10px 0 0; font-size: .95rem; }
+@media (max-width: 640px) { .dr-table .c-number { display: none; } .dr-table td, .dr-table th button { padding-inline: 8px; } }

@@ -2,7 +2,8 @@
 // Create a draft, set the order, start/pause/resume/extend it, make or skip the pick on the clock, auto-assign the rest
 // (with a preview and Undo) and see or change every club's queue and auto-pick rule. The database checks everything again.
 
-const MODES = { always: 'Always (the moment it’s their turn)', on_miss: 'If they miss their turn', after_minutes: 'After a number of minutes', never: 'Never (the queue is only a reference)' };
+const MODES = { always: 'Always (the moment it’s their turn)', on_miss: 'If they miss their turn', after_minutes: 'After a number of minutes', never: 'Never (they pick themselves)' };
+const HOWS = { queue: 'From their queue', random: 'A random player' };
 const TIMEOUTS = { queue: 'Take the next player in their queue, else skip', best_value: 'Take the best-value free player', skip: 'Skip the pick' };
 const STATUS = { setup: 'Setting up', live: 'Live', paused: 'Paused', done: 'Finished' };
 const money = n => `$${Number(n || 0).toLocaleString('en-AU')}`;
@@ -201,10 +202,11 @@ export async function mountDraft(ctx) {
   const clubsPanel = () => `<section class="ed-invite"><h2>Clubs’ queues and auto-pick</h2>
     <p class="ed-hint">What each manager has set. You can change a club’s rule, or take a player out of its queue.</p>
     ${active.map(c => {
-      const pr = S.prefs.find(p => p.club === c.code) || { mode: 'on_miss', minutes: null };
+      const pr = S.prefs.find(p => p.club === c.code) || { mode: 'on_miss', minutes: null, pick_how: 'queue' }, how = pr.pick_how || 'queue';
       const q = S.queue.filter(x => x.club === c.code).sort((a, b) => a.rank - b.rank);
-      return `<details class="dr-team"><summary><b>${esc(c.short_name || c.name)}</b><span>${esc(MODES[pr.mode].split(' (')[0])} · ${q.length} queued</span></summary>
-        <div class="dr-club"><label>Auto-pick<select data-pref="${esc(c.code)}">${Object.entries(MODES).map(([k, v]) => `<option value="${k}"${k === pr.mode ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select></label>
+      return `<details class="dr-team"><summary><b>${esc(c.short_name || c.name)}</b><span>${esc(pr.mode === 'never' ? 'Picks themselves' : HOWS[how] + ': ' + MODES[pr.mode].split(' (')[0].toLowerCase())} · ${q.length} queued</span></summary>
+        <div class="dr-club"><label>Pick<select data-how="${esc(c.code)}">${Object.entries(HOWS).map(([k, v]) => `<option value="${k}"${k === how ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select></label>
+          <label>When<select data-pref="${esc(c.code)}">${Object.entries(MODES).map(([k, v]) => `<option value="${k}"${k === pr.mode ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select></label>
           <label ${pr.mode === 'after_minutes' ? '' : 'hidden'}>Minutes<input type="number" min="1" max="20160" value="${pr.minutes || ''}" data-prefmin="${esc(c.code)}"></label>
           ${q.length ? `<ol class="dr-q">${q.map(x => `<li>${esc(nameOf(x.player))}${S.players.find(p => p.id === x.player)?.club ? ' <i>(taken)</i>' : ''} <button class="dr-b" data-act="unqueue" data-club="${esc(c.code)}" data-player="${esc(x.player)}">Remove</button></li>`).join('')}</ol>` : '<p class="quiet">Nothing queued.</p>'}</div></details>`;
     }).join('')}</section>`;
@@ -308,11 +310,11 @@ export async function mountDraft(ctx) {
     const t = e.target;
     if (t.matches('[data-select]')) { selected = +t.value; undoFrom = null; preview = null; msg = ''; refresh(); }
     else if (t.dataset.pickno) run(() => write(client.from('draft_order').update({ club: t.value }).eq('draft', S.d.id).eq('pick_no', +t.dataset.pickno)), `Pick ${t.dataset.pickno} is now ${cname(t.value)}’s.`);
-    else if (t.dataset.pref || t.dataset.prefmin) {
-      const code = t.dataset.pref || t.dataset.prefmin, box = root.querySelector(`[data-pref="${CSS.escape(code)}"]`), mode = box.value;
+    else if (t.dataset.pref || t.dataset.prefmin || t.dataset.how) {
+      const code = t.dataset.pref || t.dataset.prefmin || t.dataset.how, box = root.querySelector(`[data-pref="${CSS.escape(code)}"]`), mode = box.value;
       const mins = mode === 'after_minutes' ? Math.round(+root.querySelector(`[data-prefmin="${CSS.escape(code)}"]`).value) || null : null;
       if (mode === 'after_minutes' && !mins) { root.querySelector(`[data-prefmin="${CSS.escape(code)}"]`).closest('label').hidden = false; return; }
-      run(() => write(client.from('draft_prefs').upsert({ draft: S.d.id, club: code, mode, minutes: mins }, { onConflict: 'draft,club' })), `${cname(code)}’s auto-pick is saved.`);
+      run(() => write(client.from('draft_prefs').upsert({ draft: S.d.id, club: code, mode, minutes: mins, pick_how: root.querySelector(`[data-how="${CSS.escape(code)}"]`).value }, { onConflict: 'draft,club' })), `${cname(code)}’s auto-pick is saved.`);
     }
   });
 

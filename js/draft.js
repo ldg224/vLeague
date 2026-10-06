@@ -5,12 +5,29 @@ import { esc } from './member.js';
 import { openDraft, loadDraft, saveQueue, savePrefs, makePick } from './draft-data.js';
 import { loadPlayers, forgetPlayers } from './players-data.js';
 import { ago } from './places.js';
+import { overall } from './names.js';
 
+// Auto-pick asks two things. WHAT to pick, then WHEN to do it.
+const HOW = [
+  ['queue', 'From my queue', 'The first player in my queue who is still free and fits the roster rules.'],
+  ['random', 'A random player', 'Any free player who fits the roster rules, chosen at random.'],
+];
 const MODES = [
-  ['always', 'Always', 'Pick from my queue the moment it’s my turn.'],
-  ['on_miss', 'If I miss my turn', 'Pick from my queue only when my pick timer runs out.'],
-  ['after_minutes', 'After a few minutes', 'Pick from my queue once my turn has lasted this long.'],
-  ['never', 'Never', 'My queue is only a reference. A missed turn is handled the way the office set.'],
+  ['always', 'The moment it’s my turn', 'Pick for me straight away.'],
+  ['after_minutes', 'After a few minutes', 'Pick for me once my turn has lasted this long.'],
+  ['on_miss', 'If I miss my turn', 'Pick for me only when my pick timer runs out.'],
+  ['never', 'Never', 'I’ll pick myself. A missed turn is handled the way the office set.'],
+];
+// The board's columns. dir: 1 = low to high, -1 = high to low. `first` is the direction a first click sorts by.
+const POS_ORDER = { GK: 0, DEF: 1, MID: 2, FWD: 3 };
+const COLS = [
+  { key: 'position', label: 'Pos', long: 'Position', first: 1, val: p => POS_ORDER[p.position] ?? 9 },
+  { key: 'name', label: 'Player', long: 'Name', first: 1, val: p => p.name.toLowerCase() },
+  { key: 'number', label: '#', long: 'Number', first: 1, val: p => p.number ?? 0 },
+  { key: 'offense', label: 'OFF', long: 'Offensive rating', first: -1, val: p => p.offense },
+  { key: 'defense', label: 'DEF', long: 'Defensive rating', first: -1, val: p => p.defense },
+  { key: 'overall', label: 'OVR', long: 'Overall rating', first: -1, val: p => overall(p) },
+  { key: 'value', label: 'Value', long: 'Value', first: -1, val: p => p.value },
 ];
 const TABS = [['board', 'Board'], ['queue', 'My queue'], ['auto', 'Auto-pick'], ['values', 'Team values']];
 const money = n => `$${Number(n || 0).toLocaleString('en-AU')}`;
@@ -63,14 +80,36 @@ if (ctx) {
         <div class="dr-clock${myTurn() ? ' mine' : ''}">${myTurn() ? '<small>Your pick</small>' : ''}${clock}</div></div>`;
     }
 
+    // Sorting: a list of levels, most important first (for example Position, then Defensive rating high to low).
+    let sort = [{ key: 'value', dir: -1 }];
+    const col = k => COLS.find(c => c.key === k);
+    const arrow = d => (d > 0 ? '▲' : '▼');
+    const sorted = list => [...list].sort((a, b) => {
+      for (const { key, dir } of sort) { const x = col(key).val(a), y = col(key).val(b); if (x !== y) return (x < y ? -1 : 1) * dir; }
+      return a.name < b.name ? -1 : 1;
+    });
+    function clickSort(key, add) {
+      const i = sort.findIndex(s => s.key === key);
+      if (add) { if (i >= 0) sort[i].dir *= -1; else sort.push({ key, dir: col(key).first }); }
+      else if (i === 0 && sort.length === 1) sort[0].dir *= -1;
+      else sort = [{ key, dir: i === 0 ? sort[0].dir * -1 : col(key).first }];
+    }
+
     function board() {
       const map = byId(), recent = st.picks.slice(-8).reverse(), q = new Set(st.queue);
-      const list = free().filter(p => (!filter.pos || p.position === filter.pos) && (!filter.q || p.name.toLowerCase().includes(filter.q.toLowerCase())))
-        .sort((a, b) => b.value - a.value).slice(0, 80);
-      return `<section class="dr-cols"><div><h2>Recent picks</h2>${recent.length ? `<ol class="dr-recent">${recent.map(r => `<li${r.club === code ? ' class="me"' : ''}><b>#${r.pick_no}</b> ${esc(nameOf(r.club))} took ${esc(map.get(r.player)?.name || r.player)} <small>${r.made_at ? esc(ago(new Date(r.made_at))) : ''}</small></li>`).join('')}</ol>` : '<p class="empty">No picks yet.</p>'}</div>
-        <div><h2>Available (${free().length})</h2>
-        <div class="dr-filter"><input type="search" id="q" placeholder="Search players" value="${esc(filter.q)}"><select id="pos"><option value="">All</option>${['GK', 'DEF', 'MID', 'FWD'].map(p => `<option${filter.pos === p ? ' selected' : ''}>${p}</option>`).join('')}</select></div>
-        <ul class="dr-list">${list.map(p => playerRow(p, `${code ? `<button class="dr-b" data-add="${esc(p.id)}"${q.has(p.id) ? ' disabled' : ''}>${q.has(p.id) ? 'Queued' : '+ Queue'}</button>` : ''}${myTurn() ? `<button class="dr-b pick" data-pick="${esc(p.id)}"${blocked(p) ? ` disabled title="${esc(blocked(p))}"` : ''}>Pick</button>` : ''}`)).join('') || '<li class="empty">No players match.</li>'}</ul></div></section>`;
+      const list = sorted(free().filter(p => (!filter.pos || p.position === filter.pos) && (!filter.q || p.name.toLowerCase().includes(filter.q.toLowerCase())))).slice(0, 400);
+      const unused = COLS.filter(c => !sort.some(s => s.key === c.key));
+      return `<details class="dr-recent-wrap" open><summary>Recent picks</summary>${recent.length ? `<ol class="dr-recent">${recent.map(r => `<li${r.club === code ? ' class="me"' : ''}><b>#${r.pick_no}</b> ${esc(nameOf(r.club))} took ${esc(map.get(r.player)?.name || r.player)} <small>${r.made_at ? esc(ago(new Date(r.made_at))) : ''}</small></li>`).join('')}</ol>` : '<p class="empty">No picks yet.</p>'}</details>
+        <section><h2>Available (${free().length})</h2>
+        <div class="dr-filter"><input type="search" id="q" placeholder="Search players" value="${esc(filter.q)}"><select id="pos" aria-label="Position"><option value="">All positions</option>${['GK', 'DEF', 'MID', 'FWD'].map(p => `<option${filter.pos === p ? ' selected' : ''}>${p}</option>`).join('')}</select></div>
+        <div class="dr-sortbar"><span>Sort by</span>${sort.map((s, i) => `<span class="dr-chip"><b>${i + 1}</b><button data-sflip="${i}" title="Flip direction">${esc(col(s.key).long)} ${arrow(s.dir)}</button><button data-sdel="${i}" aria-label="Stop sorting by ${esc(col(s.key).long)}"${sort.length > 1 ? '' : ' disabled'}>✕</button></span>`).join('')}
+          ${unused.length ? `<select id="sadd" aria-label="Add a sort"><option value="">+ Then by…</option>${unused.map(c => `<option value="${c.key}">${esc(c.long)}</option>`).join('')}</select>` : ''}
+          <button class="dr-b" data-sreset>Reset</button></div>
+        <p class="quiet dr-hint">Tap a heading to sort by it. Shift-tap, or use “Then by…”, to add a second or third level.</p>
+        <div class="dr-tablewrap"><table class="dr-table"><thead><tr>${COLS.map(c => { const i = sort.findIndex(s => s.key === c.key);
+          return `<th class="c-${c.key}" aria-sort="${i < 0 ? 'none' : sort[i].dir > 0 ? 'ascending' : 'descending'}"><button data-sort="${c.key}" title="${esc(c.long)}">${esc(c.label)}${i < 0 ? '' : ` <span class="dr-ar">${arrow(sort[i].dir)}${sort.length > 1 ? `<sup>${i + 1}</sup>` : ''}</span>`}</button></th>`; }).join('')}<th></th></tr></thead>
+          <tbody>${list.map(p => `<tr><td class="c-position">${esc(p.position)}</td><td class="c-name">${esc(p.name)}</td><td class="c-number">${esc(p.number ?? '')}</td><td>${p.offense}</td><td>${p.defense}</td><td>${overall(p).toFixed(1)}</td><td>${money(p.value)}</td>
+            <td class="c-act">${code ? `<button class="dr-b" data-add="${esc(p.id)}"${q.has(p.id) ? ' disabled' : ''}>${q.has(p.id) ? 'Queued' : '+ Queue'}</button>` : ''}${myTurn() ? `<button class="dr-b pick" data-pick="${esc(p.id)}"${blocked(p) ? ` disabled title="${esc(blocked(p))}"` : ''}>Pick</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="8" class="empty">No players match.</td></tr>'}</tbody></table></div></section>`;
     }
 
     function queueTab() {
@@ -83,9 +122,11 @@ if (ctx) {
 
     function autoTab() {
       if (!code) return '<p class="empty">Your account isn’t linked to a club.</p>';
-      const { mode, minutes } = st.prefs, max = st.draft.pick_minutes;
-      return `<section><h2>Auto-pick</h2><p class="quiet">What happens to your queue when you’re on the clock. The office can change this too.</p>
-        <form id="auto" class="dr-auto">${MODES.map(([v, l, h]) => `<label class="dr-mode"><input type="radio" name="mode" value="${v}"${mode === v ? ' checked' : ''}><span><b>${l}</b><br><small>${h}</small></span></label>`).join('')}
+      const { mode, minutes, pick_how: how = 'queue' } = st.prefs, max = st.draft.pick_minutes;
+      const radio = (name, list, cur) => list.map(([v, l, h]) => `<label class="dr-mode"><input type="radio" name="${name}" value="${v}"${cur === v ? ' checked' : ''}><span><b>${l}</b><br><small>${h}</small></span></label>`).join('');
+      return `<section><h2>Auto-pick</h2><p class="quiet">Let the draft pick for you when you can’t be here. The office can change this too.</p>
+        <form id="auto" class="dr-auto"><h3>What should it pick?</h3>${radio('how', HOW, how)}
+        <h3>When should it pick?</h3>${radio('mode', MODES, mode)}
         <label class="dr-min">Minutes into my turn <input type="number" name="minutes" min="1"${max ? ` max="${max}"` : ''} value="${esc(minutes ?? '')}"${mode === 'after_minutes' ? '' : ' disabled'}> ${max ? `<small>(up to ${max}, the pick timer)</small>` : ''}</label>
         <button class="dr-b pick" type="submit">Save</button></form></section>`;
     }
@@ -127,6 +168,10 @@ if (ctx) {
       const b = e.target.closest('button'); if (!b) return;
       const q = queue(), d = b.dataset;
       if (d.tab) { tab = d.tab; location.hash = tab; msg = ''; draw(); }
+      else if (d.sort) { clickSort(d.sort, e.shiftKey); draw(); }
+      else if (d.sflip !== undefined) { sort[+d.sflip].dir *= -1; draw(); }
+      else if (d.sdel !== undefined) { sort.splice(+d.sdel, 1); draw(); }
+      else if (d.sreset !== undefined) { sort = [{ key: 'value', dir: -1 }]; draw(); }
       else if (d.add) setQueue([...q, d.add]);
       else if (d.rm) setQueue(q.filter((_, i) => i !== +d.rm));
       else if (d.up || d.down) {
@@ -144,12 +189,15 @@ if (ctx) {
       if (e.target.id === 'q') { filter.q = e.target.value; const s = e.target.selectionStart; draw(); const i = main.querySelector('#q'); i.focus(); i.setSelectionRange(s, s); }
       if (e.target.name === 'mode') main.querySelector('[name=minutes]').disabled = e.target.value !== 'after_minutes';
     });
-    main.addEventListener('change', e => { if (e.target.id === 'pos') { filter.pos = e.target.value; draw(); } });
+    main.addEventListener('change', e => {
+      if (e.target.id === 'pos') { filter.pos = e.target.value; draw(); }
+      if (e.target.id === 'sadd' && e.target.value) { sort.push({ key: e.target.value, dir: col(e.target.value).first }); draw(); }
+    });
     main.addEventListener('submit', async e => {
       e.preventDefault();
-      const f = e.target, mode = f.mode.value, minutes = Math.round(+f.minutes.value), max = st.draft.pick_minutes;
+      const f = e.target, mode = f.mode.value, how = f.how.value, minutes = Math.round(+f.minutes.value), max = st.draft.pick_minutes;
       if (mode === 'after_minutes' && !(minutes >= 1 && (!max || minutes <= max))) { msg = `Enter minutes from 1${max ? ` to ${max}` : ''}.`; draw(); return; }
-      try { await savePrefs(draft0.id, code, mode, minutes); st.prefs = { mode, minutes: mode === 'after_minutes' ? minutes : null }; msg = 'Saved.'; } catch (er) { fail(er); }
+      try { await savePrefs(draft0.id, code, mode, minutes, how); st.prefs = { mode, minutes: mode === 'after_minutes' ? minutes : null, pick_how: how }; msg = 'Saved.'; } catch (er) { fail(er); }
       draw();
     });
     // Drag to reorder the queue.
