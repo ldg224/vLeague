@@ -10,6 +10,32 @@ export async function openDraft(now = new Date()) {
   } catch { return null; }
 }
 
+// Quiet times (0.28): when the pick timer doesn't run. quiet = [{ days: [0..6], from: 'HH:MM', to: 'HH:MM' }], Melbourne time.
+// A manager can still pick in them; only the clock stops. The database works out the deadline (supabase/migrations/0029).
+export const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+export const clockTime = t => { const [h, m] = String(t).split(':').map(Number); return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`; };
+export function describeQuiet(quiet = []) {
+  const order = [1, 2, 3, 4, 5, 6, 0];   // Monday first
+  const dayText = (w) => {
+    if (w.days.length === 7) return w.to <= w.from ? 'every night' : 'every day';
+    const on = order.filter(d => w.days.includes(d)), parts = [];
+    for (let i = 0; i < on.length;) {   // runs of three or more days become "Mon to Fri"
+      let k = i; while (k + 1 < on.length && order.indexOf(on[k + 1]) === order.indexOf(on[k]) + 1) k++;
+      if (k - i >= 2) parts.push(`${DAYS[on[i]]} to ${DAYS[on[k]]}`); else for (let m = i; m <= k; m++) parts.push(DAYS[on[m]]);
+      i = k + 1;
+    }
+    return parts.join(', ');
+  };
+  return quiet.map(w => `${clockTime(w.from)} to ${clockTime(w.to)}, ${dayText(w)}`).join('; ');
+}
+// Is it quiet now, when does that end or the next one start, and how much active time is left on the pick? null if unknown.
+export async function quietState(id) {
+  try {
+    const { data, error } = await (await db()).rpc('draft_quiet_state', { p_draft: id });
+    return error || !data ? null : { ...data, at: Date.now() };
+  } catch { return null; }
+}
+
 const one = async q => { const { data, error } = await q; if (error) throw new Error(error.message); return data || []; };
 
 // Everything the board needs in one go.

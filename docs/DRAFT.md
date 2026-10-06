@@ -62,3 +62,13 @@ A pick sets `players.club` (and so each club's value). **Active team value** = s
 3. **My queue**: add/remove/reorder players (`draft_queue`), with a "Pick now" button when it's my turn (`make_pick`).
 4. **Auto-pick settings** (`draft_prefs`): the four modes above, with the minutes box for `after_minutes`.
 5. **Team values** page: every club's roster and total (`club_values`), mine highlighted, live.
+
+## Active times (0.28)
+
+`drafts.quiet` is a list of quiet windows when the pick timer doesn't run: `[{"days":[0..6],"from":"22:00","to":"07:00"}]`
+(days it starts on, 0 = Sunday; Melbourne time; `to` at or before `from` ends the next morning). Only the clock stops: picks by
+managers and the office still work in quiet time. `pick_deadline` is always "N active minutes after `pick_started`", worked out
+by `_draft_add_active()` when a pick starts (and when the office extends or resumes); `office_set_quiet()` changes the schedule
+and keeps the current pick's remaining active time; `draft_quiet_state()` tells the page whether it's quiet now and how much
+active time is left, so the clock can freeze. "After N minutes" auto-picks count active minutes from `pick_started`. A club on
+"always" still picks the moment it's its turn.

@@ -428,3 +428,14 @@
 .fx-bye-one { display: inline-flex; align-items: center; gap: 2px; }
 .fx-bye-one .btn.small { padding: 2px 8px; min-height: 0; font-size: .78rem; }
 .fx-table td.bye.is-bye { color: var(--text); font-weight: 600; font-size: .75rem; background: color-mix(in srgb, var(--club, var(--blue-600)) 14%, transparent); }
+
+/* Active times (0.28) */
+.dr-qrows { display: grid; gap: 10px; margin: 10px 0; }
+.dr-qrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-md, 14px); }
+.dr-qdays { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.dr-qdays label { cursor: pointer; position: relative; }
+.dr-qdays input { position: absolute; opacity: 0; pointer-events: none; }
+.dr-qdays span { display: inline-block; min-width: 2.6em; padding: 5px 8px; border: 1px solid var(--line); border-radius: 999px; text-align: center; font-size: .82rem; font-weight: 600; color: var(--muted); }
+.dr-qdays input:checked + span { background: var(--tint-text, var(--blue-600)); border-color: transparent; color: var(--bg, #fff); }
+.dr-qdays input:focus-visible + span { outline: 2px solid var(--text); outline-offset: 2px; }
+.dr-qrow label { display: inline-flex; align-items: center; gap: 6px; font-size: .9rem; }

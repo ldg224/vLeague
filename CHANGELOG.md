@@ -3,6 +3,23 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.28.0 (2026-10-07)
+
+Draft active times. Needs `0029_draft_active_times.sql` (run it once).
+
+- **Added:** **Active times** in Editor → Draft. Add quiet times (for example 10 pm to 7 am every night, or a weekday lunch break)
+  when the **pick timer doesn't run**. Nobody is locked out: managers and the office can still pick in them, and the draft keeps
+  working. Only the countdown stops, so a pick that starts at 3 am gets its full time counted from 7 am. Pick days, a start and
+  an end, add as many as you like, or use "Every night, 10 pm to 7 am". Times are Melbourne time.
+- **Changed, managers' Draft page:** the clock shows **active time left** and freezes with "Timer paused" during a quiet time, with
+  a note saying when it resumes ("You can still pick"). When quiet times are set, a line under the roster rules lists them, and the
+  tour has a step for it. The Editor's clock does the same.
+- **Changed:** the pick timer, "Extend by", the "after N minutes" auto-pick and "if I miss my turn" all count active time only.
+  Changing the quiet times mid-draft keeps the active time the current pick had left. Auto-pick set to "the moment it's my
+  turn" is unchanged. Drafts with no quiet times behave exactly as before.
+- **Database:** `drafts.quiet` (the schedule) and `drafts.pick_started`, and functions that work out deadlines skipping quiet time
+  (`0029_draft_active_times.sql`). Checked with a dry run of 26 cases (overnight, daytime, weekend-crossing, invalid input).
+
 ## 0.27.1 (2026-10-07)
 
 - **Fixed, Draft:** the Available players table was drawn wrongly: its heading row didn't line up with the players and shared

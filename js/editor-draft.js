@@ -17,6 +17,9 @@ const POS = { GK: 'Goalkeepers', DEF: 'Defenders', MID: 'Midfielders', FWD: 'For
 const shuffle = a => a.map(x => [Math.random(), x]).sort((x, y) => x[0] - y[0]).map(x => x[1]);
 
 let selected = null, undoFrom = null, timer = null;
+// Active times (0.28): the schedule of quiet times, when the pick timer doesn't run. Days run Monday first.
+const QDAYS = [[1, 'Mon'], [2, 'Tue'], [3, 'Wed'], [4, 'Thu'], [5, 'Fri'], [6, 'Sat'], [0, 'Sun']];
+const OVERNIGHT = { days: [0, 1, 2, 3, 4, 5, 6], from: '22:00', to: '07:00' };
 
 export const draftView = () => '<h1>Draft</h1><div id="dr-root"><p class="quiet">Loading…</p></div>';
 
@@ -28,7 +31,7 @@ export async function mountDraft(ctx) {
   const client = await ctx.db();
   const active = ctx.clubs.filter(c => c.status !== 'withdrawn');
   const cname = code => { const c = ctx.clubs.find(x => x.code === code); return c?.short_name || c?.name || code || '?'; };
-  let S = null, msg = '', preview = null;
+  let S = null, msg = '', preview = null, qWork = null, qOpen = false;
 
   const need = r => { if (r.error) throw new Error(explain(r.error)); return r.data || []; };
 
@@ -36,7 +39,7 @@ export async function mountDraft(ctx) {
     const drafts = need(await client.from('drafts').select('*').order('id', { ascending: false }));
     const d = drafts.find(x => x.id === selected) || drafts.find(x => x.status !== 'done') || drafts[0] || null;
     selected = d?.id ?? null;
-    if (!d) return { drafts, d: null, order: [], picks: [], queue: [], prefs: [], players: [] };
+    if (!d) return { drafts, d: null, order: [], picks: [], queue: [], prefs: [], players: [], qs: null };
     const [order, picks, queue, prefs, players] = await Promise.all([
       client.from('draft_order').select('pick_no, club').eq('draft', d.id).order('pick_no'),
       client.from('draft_picks').select('pick_no, club, player, made_at, how').eq('draft', d.id).order('pick_no'),
@@ -44,7 +47,9 @@ export async function mountDraft(ctx) {
       client.from('draft_prefs').select('club, mode, minutes').eq('draft', d.id),
       client.from('players').select('id, name, position, club, value').order('id').range(0, 1999),
     ]);
-    return { drafts, d, order: need(order), picks: need(picks), queue: need(queue), prefs: need(prefs), players: need(players) };
+    let qs = null;   // how the clock stands: in quiet time?, when's the next, and how much active time is left
+    if (d.quiet?.length) { const r = await client.rpc('draft_quiet_state', { p_draft: d.id }); if (!r.error && r.data) qs = { ...r.data, at: Date.now() }; }
+    return { drafts, d, order: need(order), picks: need(picks), queue: need(queue), prefs: need(prefs), players: need(players), qs };
   }
 
   const pname = new Map();
@@ -178,6 +183,27 @@ export async function mountDraft(ctx) {
         <p class="ed-hint">Rules apply to managers’ picks and every automatic pick. Your own overrides ignore them. They don’t change players already picked.</p></form></details>`;
   };
 
+  // Active times: when the pick timer runs. Quiet times are the gaps; a manager can still pick in them.
+  const quietPanel = () => {
+    const d = S.d;
+    if (!Array.isArray(d.quiet)) return '<p class="ed-hint">Active times need the database update 0029_draft_active_times.sql. Run it once.</p>';
+    const rows = qWork || d.quiet, qs = S.qs;
+    const state = !d.quiet.length ? 'The timer runs all the time.'
+      : qs?.quiet_until ? `Quiet right now: the timer is paused until ${esc(when(qs.quiet_until))}.`
+      : qs?.next_quiet ? `The timer is running. The next quiet time starts ${esc(when(qs.next_quiet))}.` : 'The timer is running.';
+    return `<details class="ed-invite dr-settings dr-quietbox"${qOpen || qWork ? ' open' : ''}><summary><b>Active times</b> <small>${d.quiet.length ? `${d.quiet.length} quiet time${d.quiet.length === 1 ? '' : 's'} set` : 'the timer runs all the time'}</small></summary>
+      <p class="ed-hint">Add quiet times when the pick timer <b>doesn’t run</b>, for example overnight. Nobody is locked out: managers and you can still pick, and the draft keeps working. Only the countdown stops, so a pick that starts at 3 am gets its full time counted from when the quiet time ends. Melbourne time.</p>
+      <div class="dr-qrows">${rows.map((w, i) => `<div class="dr-qrow" data-i="${i}">
+        <span class="dr-qdays" role="group" aria-label="Days this quiet time starts">${QDAYS.map(([v, l]) => `<label><input type="checkbox" value="${v}"${w.days.includes(v) ? ' checked' : ''}><span>${l}</span></label>`).join('')}</span>
+        <label>From <input type="time" name="from" value="${esc(w.from)}"></label><label>Until <input type="time" name="to" value="${esc(w.to)}"></label>
+        <button class="dr-b" type="button" data-act="q-del" data-i="${i}" aria-label="Remove this quiet time">✕</button></div>`).join('') || '<p class="quiet">No quiet times.</p>'}</div>
+      <p class="ed-hint">A time that ends before it starts (like 10:00 pm until 7:00 am) runs overnight. The days are the days it starts on.</p>
+      <div class="ed-actions"><button class="btn ghost small" type="button" data-act="q-add">+ Add a quiet time</button>
+        <button class="btn ghost small" type="button" data-act="q-night">Every night, 10 pm to 7 am</button>
+        <button class="btn" type="button" data-act="q-save">Save active times</button>${rows.length ? '<button class="btn ghost" type="button" data-act="q-clear">Remove all</button>' : ''}</div>
+      <p class="ed-hint">${state}${d.status === 'live' ? ' Saving keeps the active time the current pick had left.' : ''}</p></details>`;
+  };
+
   const autoPanel = () => {
     const d = S.d;
     if (!['live', 'paused'].includes(d.status)) return '';
@@ -227,14 +253,18 @@ export async function mountDraft(ctx) {
   const picker = () => (S.drafts.length > 1 ? `<label class="dr-sel">Draft <select data-select>${S.drafts.map(x => `<option value="${x.id}"${x.id === selected ? ' selected' : ''}>${esc(x.name)} (${STATUS[x.status]})</option>`).join('')}</select></label>` : '');
 
   function draw() {
+    const qb = root.querySelector('.dr-quietbox'); if (qb) qOpen = qb.open;
     S.players.forEach(p => pname.set(p.id, p.name));
-    root.innerHTML = `<div class="dr-ed">${picker()}${S.d ? bar() + onClock() + autoPanel() + orderPanel() + settingsPanel() + boardPanel() + clubsPanel() : ''}${newForm()}</div>`;
+    root.innerHTML = `<div class="dr-ed">${picker()}${S.d ? bar() + onClock() + autoPanel() + orderPanel() + settingsPanel() + quietPanel() + boardPanel() + clubsPanel() : ''}${newForm()}</div>`;
     tick();
   }
   function tick() {
     root.querySelectorAll('.dr-count').forEach(el => {
-      const at = el.dataset.deadline ? new Date(el.dataset.deadline) : null;
-      el.textContent = at ? left(at - Date.now()) : '';
+      const at = el.dataset.deadline ? new Date(el.dataset.deadline) : null, q = S.qs;
+      if (!at) { el.textContent = ''; return; }
+      if (q?.active_left == null) { el.textContent = left(at - Date.now()); return; }   // no quiet times: the plain countdown
+      const paused = !!q.quiet_until && Date.now() < new Date(q.quiet_until);
+      el.textContent = left(paused ? q.active_left * 1000 : Math.max(0, q.active_left * 1000 - (Date.now() - q.at))) + (paused ? ' ⏸' : '');
     });
   }
 
@@ -254,6 +284,9 @@ export async function mountDraft(ctx) {
     const rows = seq.slice(startPick - 1).map((club, i) => ({ draft: draftId, pick_no: startPick + i, club }));
     if (rows.length) await write(client.from('draft_order').insert(rows));
   }
+
+  const readQuiet = () => [...root.querySelectorAll('.dr-qrow')].map(r => ({
+    days: [...r.querySelectorAll('input[type=checkbox]:checked')].map(c => +c.value).sort(), from: r.querySelector('[name=from]').value, to: r.querySelector('[name=to]').value }));
 
   root.addEventListener('submit', e => {
     e.preventDefault();
@@ -322,6 +355,22 @@ export async function mountDraft(ctx) {
     const b = e.target.closest('[data-act]');
     if (!b || !S) return;
     const d = S.d, act = b.dataset.act;
+    if (act === 'q-add' || act === 'q-night' || act === 'q-del' || act === 'q-clear') {
+      const cur = readQuiet(); qOpen = true;
+      qWork = act === 'q-clear' ? [] : act === 'q-del' ? cur.filter((_, i) => i !== +b.dataset.i)
+        : [...cur, act === 'q-night' ? { ...OVERNIGHT } : { days: [1, 2, 3, 4, 5], from: '12:00', to: '13:00' }];
+      return draw();
+    }
+    if (act === 'q-save') return run(async () => {
+      const q = readQuiet();
+      for (const w of q) {
+        if (!w.days.length) throw new Error('Tick at least one day for each quiet time.');
+        if (!w.from || !w.to) throw new Error('Give each quiet time a start and an end.');
+        if (w.from === w.to) throw new Error('A quiet time can’t start and end at the same time.');
+      }
+      await rpc('office_set_quiet', { p_draft: d.id, p_quiet: q });
+      qWork = null;
+    }, 'Active times saved.');
     if (act === 'start') run(() => rpc('office_draft_control', { p_draft: d.id, p_action: 'start' }), 'The draft is live. Managers can see the Draft tab now.');
     if (act === 'pause') run(() => rpc('office_draft_control', { p_draft: d.id, p_action: 'pause' }), 'Paused.');
     if (act === 'resume') run(() => rpc('office_draft_control', { p_draft: d.id, p_action: 'resume' }), 'Resumed with a fresh timer.');
@@ -345,7 +394,7 @@ export async function mountDraft(ctx) {
     }
     if (act === 'duplicate') run(async () => {
       const row = (await write(client.from('drafts').insert({ name: `${d.name} (copy)`.slice(0, 60), opens_at: d.opens_at, closes_at: d.closes_at, pick_minutes: d.pick_minutes,
-        on_timeout: d.on_timeout, rounds: d.rounds, roster_min: d.roster_min, roster_max: d.roster_max }).select('id').single())).data;
+        on_timeout: d.on_timeout, rounds: d.rounds, roster_min: d.roster_min, roster_max: d.roster_max, ...(Array.isArray(d.quiet) ? { quiet: d.quiet } : {}) }).select('id').single())).data;
       await writeOrder(row.id, 1, S.order.map(o => o.club));
       selected = row.id; undoFrom = null; preview = null;
     }, 'Duplicated as a new draft in set-up.');

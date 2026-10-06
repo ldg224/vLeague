@@ -124,3 +124,8 @@
 .dr-table .c-act { width: 1%; }
 .dr-table th.c-name button { text-align: left; justify-content: flex-start; }
 .dr-table.dt-board { min-width: min(100%, 760px); }
+
+/* Quiet times (0.28): the pick timer is paused. */
+.dr-quiet { color: var(--muted); }
+.dr-clock.quiet { color: var(--muted); }
+.dr-clock .dr-qs { color: var(--muted); }

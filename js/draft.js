@@ -3,7 +3,7 @@
 // Only reachable while a draft is live/paused inside its window; otherwise a short "no draft" note. Polls every 15 s.
 import { enterPlace } from './shell.js';
 import { esc } from './member.js';
-import { openDraft, loadDraft, saveQueue, savePrefs, makePick } from './draft-data.js';
+import { openDraft, loadDraft, saveQueue, savePrefs, makePick, quietState, describeQuiet } from './draft-data.js';
 import { loadPlayers, forgetPlayers } from './players-data.js';
 import { ago } from './places.js';
 import { overall } from './names.js';
@@ -54,7 +54,9 @@ if (ctx) {
     main.setAttribute('aria-busy', 'false');
   } else {
     let tab = (() => { const h = location.hash.slice(1); return h === 'queue' || h === 'auto' ? 'players' : TABS.some(t => t[0] === h) ? h : 'board'; })();
-    let st = await loadDraft(draft0.id, code), players = await loadPlayers({ fresh: true });
+    // The draft plus, when it has quiet times, how the clock stands (so it can freeze while the timer is paused).
+    const loadAll = async () => { const s = await loadDraft(draft0.id, code); s.qs = s.draft?.quiet?.length ? await quietState(draft0.id) : null; return s; };
+    let st = await loadAll(), players = await loadPlayers({ fresh: true });
     let msg = '';
     const byId = () => new Map(players.map(p => [p.id, p]));
 
@@ -90,12 +92,26 @@ if (ctx) {
         <div class="dr-bar" role="progressbar" aria-label="Weekly budget used" aria-valuemin="0" aria-valuemax="${CAP}" aria-valuenow="${used}"><i style="width:${pct.toFixed(1)}%"></i></div></div>`;
     }
 
+    // Quiet times: the pick timer doesn't run (managers can still pick). The clock shows ACTIVE time left, frozen while it's quiet.
+    const inQuiet = () => !!st.qs?.quiet_until && Date.now() < new Date(st.qs.quiet_until);
+    const clockMs = () => {
+      const d = st.draft; if (!d.pick_deadline) return 0;
+      const q = st.qs; if (!q || q.active_left == null) return Math.max(0, new Date(d.pick_deadline) - Date.now());
+      return inQuiet() ? q.active_left * 1000 : Math.max(0, q.active_left * 1000 - (Date.now() - q.at));
+    };
+    const quietNote = () => {
+      const q = st.draft.quiet;
+      if (!q?.length) return '';
+      return `<p class="quiet dr-quiet">${inQuiet() ? `⏸ Quiet time: the pick timer is paused until ${esc(new Date(st.qs.quiet_until).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' }))}. You can still pick.`
+        : `Pick timers pause ${esc(describeQuiet(q))}. You can still pick then.`}</p>`;
+    };
+
     function head() {
       const d = st.draft, t = turn();
-      const clock = d.status === 'paused' ? 'Paused' : d.status !== 'live' ? '' : `<span id="clock">${fmt(Math.max(0, d.pick_deadline ? new Date(d.pick_deadline) - Date.now() : 0))}</span>`;
+      const clock = d.status === 'paused' ? 'Paused' : d.status !== 'live' ? '' : `<span id="clock">${fmt(clockMs())}</span>`;
       return `<div class="dr-head"><div><h1 class="page-title" tabindex="-1">${esc(d.name || 'Draft')}</h1>
-        <p class="quiet">${t ? `Pick ${t.pick_no} of ${st.order.length}: <b>${esc(nameOf(t.club))}</b>${t.club === code ? ' (you)' : ''}` : 'Draft complete'}</p>${rulesText() ? `<p class="quiet">Roster rules: ${esc(rulesText())}</p>` : ''}</div>
-        <div class="dr-clock${myTurn() ? ' mine' : ''}">${myTurn() ? '<small>Your pick</small>' : ''}${clock}</div></div>${budget()}`;
+        <p class="quiet">${t ? `Pick ${t.pick_no} of ${st.order.length}: <b>${esc(nameOf(t.club))}</b>${t.club === code ? ' (you)' : ''}` : 'Draft complete'}</p>${rulesText() ? `<p class="quiet">Roster rules: ${esc(rulesText())}</p>` : ''}${quietNote()}</div>
+        <div class="dr-clock${myTurn() ? ' mine' : ''}${d.status === 'live' && inQuiet() ? ' quiet' : ''}">${myTurn() ? '<small>Your pick</small>' : ''}${d.status === 'live' && inQuiet() ? '<small class="dr-qs">⏸ Timer paused</small>' : ''}${clock}</div></div>${budget()}`;
     }
 
     // ---- tables. Two of them (picked players, available players), each with its own filters and sort levels.
@@ -200,7 +216,7 @@ if (ctx) {
         if (!await openDraft()) { location.reload(); return; }
         const typing = document.activeElement?.matches?.('input,select');
         forgetPlayers();
-        [st, players] = await Promise.all([loadDraft(draft0.id, code), loadPlayers({ fresh: true })]);
+        [st, players] = await Promise.all([loadAll(), loadPlayers({ fresh: true })]);
         if (!typing) draw();
       } catch { /* try again next time */ }
     }
@@ -274,6 +290,7 @@ if (ctx) {
           ? 'Right now it’s <b>your pick</b>. The clock counts down how long you have. You can pick any time before it hits zero.'
           : 'This shows which club is picking and how far through the draft we are. The clock counts down that club’s time. When it says <b>Your pick</b>, it’s you.',
         tip: 'Picks happen slowly over days, not all at once. Come back whenever you like.' },
+      { target: '.dr-quiet', optional: true, tab: 'board', title: 'Quiet times', text: 'To give everyone a rest, the pick timer pauses at set times, like overnight. Your clock stops counting then. <b>You can still make a pick</b> if you’re online.' },
       { target: '.dr-budget', title: 'Your weekly budget', text: 'Every player has a value. Your squad’s values add up against a weekly cap. The bar fills as you pick, turns <b>orange</b> when you’re close and <b>red</b> if you go over.', tip: 'It’s a guide only. It won’t stop you making a pick.' },
       { target: '.dr-tabs', title: 'Three tabs', text: '<b>Board</b> shows every pick so far. <b>Available players</b> is where you choose. <b>Team values</b> shows what every club has spent.' },
       { target: '.dr-tablewrap', tab: 'board', title: 'The board', text: 'A live list of every player already picked: who took them, which club, their ratings and value. Your own club’s picks are <b>highlighted</b>.', tip: 'It updates by itself every few seconds.' },
@@ -302,7 +319,13 @@ if (ctx) {
     main.setAttribute('aria-busy', 'false');
     if (!tourSeen('draft') && code) setTimeout(tour, 600);
     else if (!tourSeen('draft')) main.querySelector('.dr-help')?.classList.add('glow');
-    setInterval(() => { const c = document.getElementById('clock'); if (c && st.draft.pick_deadline) c.textContent = fmt(Math.max(0, new Date(st.draft.pick_deadline) - Date.now())); }, 1000);
+    let flipping = false;
+    setInterval(() => {
+      const c = document.getElementById('clock'); if (c && st.draft.pick_deadline) c.textContent = fmt(clockMs());
+      // Quiet time has just started or ended: look again so the clock and the note change over.
+      const q = st.qs, edge = q && [q.quiet_until, q.next_quiet].filter(Boolean).map(x => new Date(x).getTime()).find(x => x > q.at && x <= Date.now());
+      if (edge && !flipping) { flipping = true; refresh().finally(() => { flipping = false; }); }
+    }, 1000);
     setInterval(refresh, 15000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
   }
