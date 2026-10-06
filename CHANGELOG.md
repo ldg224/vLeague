@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.20.1 (2026-10-06)
+
+- **Added:** a **Quick create week** button above and below the list of weeks (Editor → Fixtures → Weeks). One press makes the next
+  week: paired from the weeks so far, timed like the last week a week later. If those dates have already passed, the kick-off
+  times are left blank so the week isn't locked before you've set its dates.
+- **Fixed:** weeks locking by themselves. A week's line-up deadline is its first kick-off minus the lock rule, and a deadline in the
+  past locks within a minute and can't be unlocked, so a kick-off time set in the past locked the week for good and changing the
+  lock time later did nothing. The Editor now asks before setting kick-offs (by hand, shift, move or re-time) that would lock the
+  week straight away.
+
 ## 0.20.0 (2026-10-06)
 
 Roster tools: full control over weeks and matches in Editor → Fixtures.

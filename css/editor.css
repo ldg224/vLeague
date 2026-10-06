@@ -379,3 +379,4 @@
   .fx-tools { grid-template-columns: 1fr; }
   .fx-bar { position: static; }
 }
+.fx-quick-create { margin: 6px 0 14px; }

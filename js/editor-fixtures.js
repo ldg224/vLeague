@@ -367,7 +367,9 @@ export async function mountFixtures(ctx) {
   function weeksView(m) {
     return `${barHtml(m)}<p class="ed-hint">Drag a week by its ⠿ handle to reorder, or use ▲ ▼. Tap one team then another to swap them, even across weeks. Everything you do here can be undone.</p>
       <p class="fx-allfold"><button class="btn ghost small" type="button" data-act="fold-all">Collapse all</button> <button class="btn ghost small" type="button" data-act="unfold-all">Expand all</button></p>
-      ${m.weeks.length ? m.weeks.map(w => weekCard(w, m)).join('') : '<p class="quiet">No weeks yet. Open the Planner to build one.</p>'}`;
+      <p class="fx-quick-create"><button class="btn" type="button" data-act="quick-create">+ Quick create week</button></p>
+      ${m.weeks.length ? m.weeks.map(w => weekCard(w, m)).join('') : '<p class="quiet">No weeks yet. Quick create one, or open the Planner.</p>'}
+      ${m.weeks.length ? '<p class="fx-quick-create"><button class="btn" type="button" data-act="quick-create">+ Quick create week</button></p>' : ''}`;
   }
 
   function plannerView(m) {
@@ -654,6 +656,38 @@ export async function mountFixtures(ctx) {
   }
   const inferGap = list => R.inferBlocks(list.map(f => f.starts_at))?.at(-1)?.gap;
 
+  // A week's line-ups lock at its first kick-off minus the lock rule, and a locked week can never be unlocked. If the
+  // kick-offs are in the past that happens within a minute, so ask before doing it.
+  function lockPasses(w, isoTimes) {
+    if (isLocked(w)) return false;
+    const r = round(w), first = isoTimes.filter(Boolean).sort()[0];
+    const at = r.lock_at_override ? new Date(r.lock_at_override) : first ? new Date(new Date(first).getTime() - r.lock_minutes_before * 60000) : null;
+    return !!at && at <= new Date();
+  }
+  async function confirmLock(w, isoTimes) {
+    if (!lockPasses(w, isoTimes)) return true;
+    return (await ask(`Those kick-offs are in the past, so ${model().labels.get(w)?.label || `week ${w}`}'s line-ups would lock within a minute, and a locked week can't be unlocked. Set them anyway?`, ['Set them anyway'])) === 0;
+  }
+
+  // One press: the next week, paired from the weeks so far, timed like the last week a week later. Kick-offs that would
+  // already be in the past are left blank, so the week doesn't lock before you've set its dates.
+  async function quickCreate() {
+    const m = model(), cs = codes(), week = lastWeek() + 1;
+    if (week > WEEK_MAX) return notify(`There's no room for another week (the limit is ${WEEK_MAX}).`, 'bad');
+    const prev = round(m.weeks.at(-1) || 1), dated = [...m.by.entries()].filter(([, l]) => l.some(f => f.starts_at)).at(-1);
+    const base = dated ? addDays(mondayOf(dateOf(dated[1].map(f => f.starts_at).filter(Boolean).sort()[0])), 7) : nextMon();
+    const pr = cs.length >= 2 ? R.pairWeek({ codes: cs, fixtures, week, seed: Math.floor(Math.random() * 2 ** 31) }) : { games: [], byes: [] };
+    let placed = R.placeWeek(pr.games, base, rows);
+    const blank = lockPasses(week, placed.map(p => p.at)) || (!!placed.length && !rows);
+    if (blank) placed = placed.map(p => ({ ...p, at: null }));
+    return run(`Quick create week ${week}`, async tx => {
+      await setRound(tx, week, { name: null, kind: 'regular', look: prev.look, lock_minutes_before: prev.lock_minutes_before, lock_at_override: null, ...(hasRoster ? { numbered: true, number_override: null } : {}) });
+      const taken = takenIds();
+      await insertFx(tx, placed.map(p => { const id = R.freshId(week, p.h, p.a, taken); taken.add(id); return { id, week, home: p.h, away: p.a, starts_at: p.at }; }));
+      return blank && placed.length ? 'Kick-off times are blank because those dates have passed. Set them when you know them.' : '';
+    });
+  }
+
   // ---------------------------------------------------------------- the CSV
   const csvCell = v => (/[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
   function toCsv() {
@@ -735,6 +769,7 @@ export async function mountFixtures(ctx) {
     // undo / redo / top bar
     if (act === 'undo') return undo();
     if (act === 'redo') return redo();
+    if (act === 'quick-create') return quickCreate();
     if (act === 'sim-all') return simulate(todo());
     if (act === 'clear-all') {
       if ((await ask(`Delete all ${fixtures.length} fixtures, their ${plural(results.size, 'result')} and every round?`, ['Yes, clear everything'])) !== 0) return;
@@ -842,12 +877,14 @@ export async function mountFixtures(ctx) {
       if (!d) return notify('Pick a date.', 'bad');
       if (!first) return notify('This week has no kick-off times yet. Use “Re-time with the Planner’s pattern”.', 'bad');
       const n = daysBetween(first, d); if (!n) return;
+      if (!(await confirmLock(week, list.map(x => x.starts_at && shiftIso(x.starts_at, n))))) return;
       return run(`Move week ${week} to ${d}`, async tx => shiftWeek(tx, list, n));
     }
-    if (act === 'week-shift') { const n = Number(b.dataset.n); return run(`Shift week ${week} by ${n} day${Math.abs(n) === 1 ? '' : 's'}`, async tx => shiftWeek(tx, m.by.get(week), n)); }
+    if (act === 'week-shift') { const n = Number(b.dataset.n); if (!(await confirmLock(week, m.by.get(week).map(x => x.starts_at && shiftIso(x.starts_at, n))))) return; return run(`Shift week ${week} by ${n} day${Math.abs(n) === 1 ? '' : 's'}`, async tx => shiftWeek(tx, m.by.get(week), n)); }
     if (act === 'week-retime') {
       const list = m.by.get(week), d = val('date') || (firstDate(list) ? mondayOf(firstDate(list)) : nextMon());
       const placed = R.placeWeek(gamesOf(list), d, rows);
+      if (!(await confirmLock(week, placed.map(p => p.at)))) return;
       return run(`Re-time week ${week}`, async tx => { for (let i = 0; i < list.length; i++) await setFx(tx, list[i], { starts_at: placed[i].at }); });
     }
     if (act === 'week-untime') return run(`Clear week ${week}'s times`, async tx => { for (const x of m.by.get(week)) if (x.starts_at) await setFx(tx, x, { starts_at: null }); });
@@ -955,6 +992,7 @@ export async function mountFixtures(ctx) {
     const row = t.closest('.fx-row');
     if (row && t.type === 'datetime-local') {
       const f = fixtures.find(x => x.id === row.dataset.id), [d, tm] = t.value.split('T');
+      if (d && !(await confirmLock(f.week, [melbourneToIso(d, tm || '19:00'), ...fixtures.filter(x => x.week === f.week && x.id !== f.id).map(x => x.starts_at)]))) return draw();
       return run('Change a kick-off', async tx => setFx(tx, f, { starts_at: d ? melbourneToIso(d, tm || '19:00') : null }));
     }
   });
