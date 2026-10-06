@@ -3,6 +3,10 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.16.1 (2026-10-06)
+
+- **Added:** the League matches list names any club that has a bye that week, under a Bye heading.
+
 ## 0.16.0 (2026-10-06)
 
 Edit anything in a club from the Editor.

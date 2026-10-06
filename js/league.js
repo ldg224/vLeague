@@ -71,8 +71,11 @@ if (ctx) {
       if (!groups.has(key)) groups.set(key, { label: k ? day(k, now) : 'Date to be confirmed', items: [] });
       groups.get(key).items.push(f);
     }
+    const playing = new Set(season.fixtures.filter(f => f.week === week).flatMap(f => [f.home, f.away]));
+    const byes = season.teams.filter(t => !playing.has(t.code));
+    const byeHtml = byes.length ? `<h3 class="day">Bye</h3><div class="byes">${byes.map(t => `<span class="bye">${crest(t, 20)}<span class="nm">${esc(fullNameOf(t))}</span></span>`).join('')}</div>` : '';
     return `<div class="weektabs" role="tablist" aria-label="Weeks">${weeks.map(w => `<button type="button" role="tab" data-week="${esc(w)}" aria-selected="${w === week}">${esc(w)}</button>`).join('')}</div>
-      <div role="tabpanel" aria-label="Week ${esc(week)}">${[...groups.values()].map(g => `<h3 class="day">${esc(g.label)}</h3><div class="fxs">${g.items.map(f => row(f, now)).join('')}</div>`).join('')}</div>`;
+      <div role="tabpanel" aria-label="Week ${esc(week)}">${[...groups.values()].map(g => `<h3 class="day">${esc(g.label)}</h3><div class="fxs">${g.items.map(f => row(f, now)).join('')}</div>`).join('')}${byeHtml}</div>`;
   }
 
   function leadersHtml(now) {
