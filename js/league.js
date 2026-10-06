@@ -49,10 +49,10 @@ if (ctx) {
     const won = side => (st === 'ft' && sc && (side === 'home' ? sc.home > sc.away : sc.away > sc.home) ? ' won' : '');
     const cls = `fx is-${st}${fx.home === mine || fx.away === mine ? ' me' : ''}`;
     const inner = `<span class="when">${left}</span>
-      <span class="team h${won('home')}"><span class="nm">${esc(nameOf(h))}</span>${crest(h, 24)}</span>
+      <span class="team h${won('home')}"><span class="nm">${esc(h.code)}</span>${crest(h, 24)}</span>
       ${hid ? `<button type="button" class="show-score" data-reveal="${esc(fx.id)}" aria-label="Show score: ${esc(nameOf(h))} against ${esc(nameOf(a))}">Show score</button>`
         : `<span class="res${sc ? '' : ' none'}${st === 'live' ? ' is-live' : ''}">${sc ? `<b>${sc.home}</b><b>${sc.away}</b>` : '<span class="v">v</span>'}</span>`}
-      <span class="team a${won('away')}">${crest(a, 24)}<span class="nm">${esc(nameOf(a))}</span></span>`;
+      <span class="team a${won('away')}">${crest(a, 24)}<span class="nm">${esc(a.code)}</span></span>`;
     const label = `${nameOf(h)} ${sc ? `${sc.home}, ${nameOf(a)} ${sc.away}` : `against ${nameOf(a)}`}`;
     // A hidden result: the row still opens the match (which reveals it), with the Show score button above the link.
     if (hid) return `<div class="${cls} hid"><a class="fx-open" href="${esc(matchUrl(fx))}" data-open="${esc(fx.id)}" aria-label="Watch ${esc(nameOf(h))} against ${esc(nameOf(a))}"></a>${inner}</div>`;

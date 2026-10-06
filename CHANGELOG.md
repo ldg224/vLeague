@@ -3,6 +3,10 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.15.1 (2026-10-06)
+
+- **Changed:** matches on the League page show club codes (initials) instead of short names.
+
 ## 0.15.0 (2026-10-06)
 
 A simpler Editor: Requests, Clubs, Managers and Phones are now one **Clubs** tab.
