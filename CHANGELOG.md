@@ -3,6 +3,21 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.23.0 (2026-10-07)
+
+More draft tools (Editor → Draft). Needs `0026_draft_tools.sql` (run).
+
+- **Added, roster rules:** the fewest and most players a club may hold in each position (for example at most 5 defenders). Set when
+  creating a draft or later under **Draft settings**. Managers' picks and every automatic pick (queue, timeout, auto-assign) follow
+  them, and the database refuses a pick that breaks them. A minimum also has to stay reachable: a club can't use up the picks it needs
+  to fill a position. Your own picks from the Editor are overrides and ignore the rules. Managers see the rules on the Draft board,
+  and the Pick button is greyed out for a player their club can't take.
+- **Added, order tools:** swap two picks, move a pick, add an extra pick, remove a pick, reverse, shuffle or rotate the unmade picks,
+  and ▲ ▼ ✕ on each pick. Rebuild the order with the first round shuffled, lowest or highest team value first, or A to Z.
+- **Added, draft tools:** **Delete draft** at any stage (choose whether its drafted players return to free agents), **Reset to set-up**,
+  **Finish now**, **Duplicate**, and editing a draft's name, window, pick time and timeout rule after it is created.
+- **Changed:** the auto-assign preview skips players a club isn't allowed to take.
+
 ## 0.22.1 (2026-10-07)
 
 - **Fixed:** the Editor's News and Draft tabs were squeezed into a narrow column. They now use the full width, like Players and Fixtures.

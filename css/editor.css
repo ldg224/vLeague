@@ -408,3 +408,18 @@
 .dr-team summary { display: flex; justify-content: space-between; gap: 10px; padding: 12px 14px; cursor: pointer; }
 .dr-team summary span { color: var(--muted); }
 .dr-b { padding: 3px 8px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--text); font: 600 .78rem var(--font); cursor: pointer; margin-left: 6px; }
+
+.dr-rules { border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 14px 14px; margin: 0; }
+.dr-rules legend { padding: 0 6px; font-weight: 600; color: var(--muted); font-size: .85rem; }
+.dr-rules legend i { font-style: normal; font-weight: 500; color: var(--faint); }
+.dr-rgrid { display: grid; grid-template-columns: minmax(7em, 1fr) 6em 6em; gap: 8px 12px; align-items: center; max-width: 380px; }
+.dr-rgrid b { font-size: .8rem; color: var(--faint); }
+.dr-rgrid input { width: 100%; min-width: 0; }
+.dr-settings summary, .dr-tools summary { cursor: pointer; color: var(--tint-text); font-weight: 600; }
+.dr-settings[open] summary { margin-bottom: 14px; }
+.dr-toolgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin: 12px 0 18px; }
+.dr-toolgrid > * { display: grid; gap: 6px; align-content: start; }
+.dr-toolgrid input[type=number] { width: 6.5em; }
+.dr-toolgrid small, .dr-settings small { color: var(--faint); }
+.dr-order li .dr-b { margin-left: 0; }
+.btn.danger { color: var(--bad, #e57373); }

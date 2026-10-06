@@ -39,6 +39,19 @@ if (ctx) {
     // My queue only keeps players who are still free.
     const queue = () => st.queue.filter(id => free().some(p => p.id === id));
 
+    // The office's roster rules (most/fewest per position). The database checks them again on every pick.
+    const rulesText = () => {
+      const mx = st.draft.roster_max || {}, mn = st.draft.roster_min || {};
+      return ['GK', 'DEF', 'MID', 'FWD'].filter(k => mx[k] != null || mn[k] != null)
+        .map(k => `${k} ${mn[k] != null && mx[k] != null ? (mn[k] === mx[k] ? mn[k] : `${mn[k]} to ${mx[k]}`) : mx[k] != null ? `up to ${mx[k]}` : `at least ${mn[k]}`}`).join(' · ');
+    };
+    const blocked = p => {
+      const mx = st.draft.roster_max || {}, mn = st.draft.roster_min || {}, have = pos => players.filter(x => x.team === code && x.position === pos).length;
+      if (mx[p.position] != null && have(p.position) >= mx[p.position]) return `You already have the most ${p.position} allowed (${mx[p.position]}).`;
+      const left = st.order.filter(o => o.club === code && o.pick_no > st.draft.current_pick).length;
+      const needed = Object.keys(mn).reduce((n, k) => n + Math.max(0, mn[k] - have(k) - (k === p.position ? 1 : 0)), 0);
+      return needed > left ? 'Taking this player would leave too few picks to fill every position.' : '';
+    };
     const playerRow = (p, extra = '', attrs = '') => `<li class="dr-p"${attrs}><span class="pos">${esc(p.position)}</span>
       <span class="nm">${esc(p.name)}</span><span class="rt">${p.offense}/${p.defense}</span><span class="val">${money(p.value)}</span>${extra}</li>`;
 
@@ -46,7 +59,7 @@ if (ctx) {
       const d = st.draft, t = turn();
       const clock = d.status === 'paused' ? 'Paused' : d.status !== 'live' ? '' : `<span id="clock">${fmt(Math.max(0, d.pick_deadline ? new Date(d.pick_deadline) - Date.now() : 0))}</span>`;
       return `<div class="dr-head"><div><h1 class="page-title" tabindex="-1">${esc(d.name || 'Draft')}</h1>
-        <p class="quiet">${t ? `Pick ${t.pick_no} of ${st.order.length}: <b>${esc(nameOf(t.club))}</b>${t.club === code ? ' (you)' : ''}` : 'Draft complete'}</p></div>
+        <p class="quiet">${t ? `Pick ${t.pick_no} of ${st.order.length}: <b>${esc(nameOf(t.club))}</b>${t.club === code ? ' (you)' : ''}` : 'Draft complete'}</p>${rulesText() ? `<p class="quiet">Roster rules: ${esc(rulesText())}</p>` : ''}</div>
         <div class="dr-clock${myTurn() ? ' mine' : ''}">${myTurn() ? '<small>Your pick</small>' : ''}${clock}</div></div>`;
     }
 
@@ -57,14 +70,14 @@ if (ctx) {
       return `<section class="dr-cols"><div><h2>Recent picks</h2>${recent.length ? `<ol class="dr-recent">${recent.map(r => `<li${r.club === code ? ' class="me"' : ''}><b>#${r.pick_no}</b> ${esc(nameOf(r.club))} took ${esc(map.get(r.player)?.name || r.player)} <small>${r.made_at ? esc(ago(new Date(r.made_at))) : ''}</small></li>`).join('')}</ol>` : '<p class="empty">No picks yet.</p>'}</div>
         <div><h2>Available (${free().length})</h2>
         <div class="dr-filter"><input type="search" id="q" placeholder="Search players" value="${esc(filter.q)}"><select id="pos"><option value="">All</option>${['GK', 'DEF', 'MID', 'FWD'].map(p => `<option${filter.pos === p ? ' selected' : ''}>${p}</option>`).join('')}</select></div>
-        <ul class="dr-list">${list.map(p => playerRow(p, `${code ? `<button class="dr-b" data-add="${esc(p.id)}"${q.has(p.id) ? ' disabled' : ''}>${q.has(p.id) ? 'Queued' : '+ Queue'}</button>` : ''}${myTurn() ? `<button class="dr-b pick" data-pick="${esc(p.id)}">Pick</button>` : ''}`)).join('') || '<li class="empty">No players match.</li>'}</ul></div></section>`;
+        <ul class="dr-list">${list.map(p => playerRow(p, `${code ? `<button class="dr-b" data-add="${esc(p.id)}"${q.has(p.id) ? ' disabled' : ''}>${q.has(p.id) ? 'Queued' : '+ Queue'}</button>` : ''}${myTurn() ? `<button class="dr-b pick" data-pick="${esc(p.id)}"${blocked(p) ? ` disabled title="${esc(blocked(p))}"` : ''}>Pick</button>` : ''}`)).join('') || '<li class="empty">No players match.</li>'}</ul></div></section>`;
     }
 
     function queueTab() {
       if (!code) return '<p class="empty">Your account isn’t linked to a club.</p>';
       const map = byId(), q = queue();
       return `<section><h2>My queue</h2><p class="quiet">Drag to reorder (or use the arrows). Add players from the Board. Players taken by other clubs drop off by themselves.</p>
-        ${myTurn() && q.length ? `<button class="dr-b pick big" data-pick="${esc(q[0])}">Pick now: ${esc(map.get(q[0])?.name)}</button>` : ''}
+        ${myTurn() && q.length ? `<button class="dr-b pick big" data-pick="${esc(q[0])}"${blocked(map.get(q[0])) ? ` disabled title="${esc(blocked(map.get(q[0])))}"` : ''}>Pick now: ${esc(map.get(q[0])?.name)}</button>` : ''}
         <ol class="dr-list" id="queue">${q.map((id, i) => playerRow(map.get(id), `<span class="mv"><button class="dr-b" data-up="${i}" aria-label="Move up"${i ? '' : ' disabled'}>▲</button><button class="dr-b" data-down="${i}" aria-label="Move down"${i < q.length - 1 ? '' : ' disabled'}>▼</button><button class="dr-b" data-rm="${i}" aria-label="Remove">✕</button></span>`, ` draggable="true" data-i="${i}"`)).join('') || '<li class="empty">Your queue is empty.</li>'}</ol></section>`;
     }
 

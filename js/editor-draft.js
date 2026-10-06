@@ -12,6 +12,9 @@ const when = iso => (iso ? new Date(iso).toLocaleString('en-AU', { weekday: 'sho
 const left = ms => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}:${String(s % 60).padStart(2, '0')}`; };
 const minutesText = m => (m % 1440 === 0 ? `${m / 1440} day${m === 1440 ? '' : 's'}` : m % 60 === 0 ? `${m / 60} hour${m === 60 ? '' : 's'}` : `${m} minutes`);
 
+const POS = { GK: 'Goalkeepers', DEF: 'Defenders', MID: 'Midfielders', FWD: 'Forwards' };
+const shuffle = a => a.map(x => [Math.random(), x]).sort((x, y) => x[0] - y[0]).map(x => x[1]);
+
 let selected = null, undoFrom = null, timer = null;
 
 export const draftView = () => '<h1>Draft</h1><div id="dr-root"><p class="quiet">Loading…</p></div>';
@@ -48,20 +51,66 @@ export async function mountDraft(ctx) {
   const turn = () => S.order.find(o => o.pick_no === S.d.current_pick) || null;
   const free = () => S.players.filter(p => !p.club);
 
-  // A new order: p.length clubs per round (snake flips every other round), as many rounds as the draft has.
-  function sequence(rounds, snake, random) {
-    let base = active.map(c => c.code);
-    if (random) base = base.map(c => [Math.random(), c]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
+  // The clubs in the current first round (so "keep the order" really keeps it), else every active club.
+  const firstRound = () => {
+    const codes = active.map(c => c.code), first = S.order.slice(0, codes.length).map(o => o.club);
+    return first.length === codes.length && codes.every(c => first.includes(c)) ? first : codes;
+  };
+  const teamValue = code => S.players.filter(p => p.club === code).reduce((n, p) => n + (p.value || 0), 0);
+  const baseFor = kind => {
+    const base = firstRound();
+    if (kind === 'random') return shuffle(base);
+    if (kind === 'low') return [...base].sort((a, b) => teamValue(a) - teamValue(b) || (cname(a) < cname(b) ? -1 : 1));
+    if (kind === 'high') return [...base].sort((a, b) => teamValue(b) - teamValue(a) || (cname(a) < cname(b) ? -1 : 1));
+    if (kind === 'alpha') return [...base].sort((a, b) => (cname(a) < cname(b) ? -1 : 1));
+    return base;
+  };
+  // One round per `rounds`; a snake flips every other round.
+  function sequence(rounds, snake, base) {
     const out = [];
     for (let r = 0; r < rounds; r++) out.push(...(snake && r % 2 ? [...base].reverse() : base));
     return out;
+  }
+  const made = () => (S.d.status === 'setup' ? 0 : S.d.current_pick - 1);
+  const madeClubs = () => S.order.filter(o => o.pick_no <= made()).map(o => o.club);
+  const restClubs = () => S.order.filter(o => o.pick_no > made()).map(o => o.club);
+
+  // Roster rules as two small tables of numbers: fewest and most of each position a club may hold.
+  const rulesFields = d => `<fieldset class="dr-rules"><legend>Roster rules per club <i>optional, leave blank for no limit</i></legend>
+    <div class="dr-rgrid"><span></span><b>Fewest</b><b>Most</b>${Object.entries(POS).map(([k, l]) => `<span>${l}</span>
+      <input name="min_${k}" type="number" min="0" max="50" value="${esc(d?.roster_min?.[k] ?? '')}" aria-label="Fewest ${l}">
+      <input name="max_${k}" type="number" min="0" max="50" value="${esc(d?.roster_max?.[k] ?? '')}" aria-label="Most ${l}">`).join('')}</div></fieldset>`;
+  function readRules(f, rounds) {
+    const roster_min = {}, roster_max = {};
+    for (const k of Object.keys(POS)) {
+      const lo = f[`min_${k}`].value.trim(), hi = f[`max_${k}`].value.trim();
+      if (lo !== '') roster_min[k] = Math.round(+lo);
+      if (hi !== '') roster_max[k] = Math.round(+hi);
+      if (roster_min[k] != null && roster_max[k] != null && roster_min[k] > roster_max[k]) throw new Error(`${POS[k]}: the fewest can't be more than the most.`);
+    }
+    const sumMin = Object.values(roster_min).reduce((a, b) => a + b, 0), sumMax = Object.keys(POS).reduce((a, k) => a + (roster_max[k] ?? Infinity), 0);
+    if (sumMin > rounds) throw new Error(`The fewest per position add up to ${sumMin}, but a club only gets ${rounds} pick${rounds === 1 ? '' : 's'}. Add rounds or lower the fewest.`);
+    if (sumMax < rounds) throw new Error(`The most per position add up to only ${sumMax}, fewer than the ${rounds} picks a club gets. Raise the most or lower the rounds.`);
+    return { roster_min, roster_max };
+  }
+  const rulesLine = d => {
+    const parts = Object.entries(POS).map(([k, l]) => { const lo = d.roster_min?.[k], hi = d.roster_max?.[k];
+      return lo == null && hi == null ? '' : `${l.toLowerCase()} ${lo != null && hi != null ? (lo === hi ? lo : `${lo} to ${hi}`) : hi != null ? `up to ${hi}` : `at least ${lo}`}`; }).filter(Boolean);
+    return parts.length ? parts.join(', ') : 'no position limits';
+  };
+  // Mirror of the database rule (0026), used for the auto-assign preview.
+  function allowed(d, have, p, clubCode, picksAfter) {
+    const mx = d.roster_max?.[p.position];
+    if (mx != null && (have[p.position] || 0) >= mx) return false;
+    const needed = Object.entries(d.roster_min || {}).reduce((n, [k, mn]) => n + Math.max(0, mn - (have[k] || 0) - (k === p.position ? 1 : 0)), 0);
+    return needed <= picksAfter;
   }
 
   const bar = () => {
     const d = S.d, t = turn();
     return `<section class="ed-invite dr-live"><div class="dr-top">
       <div><h2>${esc(d.name)} <span class="ed-pill ${d.status === 'live' ? 'approved' : d.status === 'paused' ? 'warn' : ''}">${STATUS[d.status]}</span></h2>
-        <p class="ed-hint">Open ${esc(when(d.opens_at))} to ${esc(when(d.closes_at))} · ${esc(minutesText(d.pick_minutes))} a pick · ${d.rounds} round${d.rounds === 1 ? '' : 's'} · ${S.order.length} picks · when time runs out: ${esc(TIMEOUTS[d.on_timeout].toLowerCase())}</p></div>
+        <p class="ed-hint">Open ${esc(when(d.opens_at))} to ${esc(when(d.closes_at))} · ${esc(minutesText(d.pick_minutes))} a pick · ${d.rounds} round${d.rounds === 1 ? '' : 's'} · ${S.order.length} picks · when time runs out: ${esc(TIMEOUTS[d.on_timeout].toLowerCase())}<br>Roster rules: ${esc(rulesLine(d))}</p></div>
       ${d.status === 'live' && t ? `<div class="dr-clock">${esc(cname(t.club))} on the clock<b class="dr-count" data-deadline="${esc(d.pick_deadline || '')}"></b><small>Pick ${d.current_pick} of ${S.order.length}</small></div>`
         : d.status === 'paused' && t ? `<div class="dr-clock">Paused<small>${esc(cname(t.club))} is up, pick ${d.current_pick} of ${S.order.length}</small></div>` : ''}</div>
       <div class="ed-actions">
@@ -71,7 +120,10 @@ export async function mountDraft(ctx) {
         ${d.status === 'live' ? `<button class="btn ghost" data-act="extend">Extend by</button><input class="dr-ext" type="number" min="1" value="60" aria-label="Minutes to add"> minutes` : ''}
         ${['live', 'paused'].includes(d.status) ? '<button class="btn ghost" data-act="skip">Skip this pick</button>' : ''}
         ${S.picks.length ? '<button class="btn ghost" data-act="undo">Undo last pick</button>' : ''}
-        ${d.status === 'setup' ? '<button class="btn ghost" data-act="delete">Delete draft</button>' : ''}</div>
+        ${d.status !== 'setup' ? '<button class="btn ghost" data-act="reset">Reset to set-up</button>' : ''}
+        ${['live', 'paused'].includes(d.status) ? '<button class="btn ghost" data-act="finish">Finish now</button>' : ''}
+        <button class="btn ghost" data-act="duplicate">Duplicate</button>
+        <button class="btn ghost danger" data-act="delete">Delete draft</button></div>
       <p class="ed-msg" role="status">${esc(msg)}</p></section>`;
   };
 
@@ -79,25 +131,50 @@ export async function mountDraft(ctx) {
     const d = S.d, t = turn();
     if (!t || !['live', 'paused'].includes(d.status)) return '';
     const list = free().sort((a, b) => b.value - a.value).slice(0, 400);
-    return `<section class="ed-invite"><h2>Pick for ${esc(cname(t.club))}</h2>
+    return `<section class="ed-invite"><h2>Pick for ${esc(cname(t.club))} <small>(override: ignores the roster rules)</small></h2>
       <p class="ed-hint">Use this to make or override the pick on the clock. The player joins ${esc(cname(t.club))} straight away.</p>
       <div class="ed-actions"><select class="dr-pl" aria-label="Player">${list.map(p => `<option value="${esc(p.id)}">${esc(p.name)} · ${esc(p.position)} · ${money(p.value)}</option>`).join('')}</select>
         <button class="btn" data-act="makepick">Pick this player</button></div></section>`;
   };
 
+  const clubSelect = (attrs, sel) => `<select ${attrs}>${active.map(c => `<option value="${esc(c.code)}"${c.code === sel ? ' selected' : ''}>${esc(c.short_name || c.name)}</option>`).join('')}</select>`;
+
   const orderPanel = () => {
-    const d = S.d, made = d.status === 'setup' ? 0 : d.current_pick - 1;
-    const rest = S.order.filter(o => o.pick_no > made);
+    const d = S.d, m = made(), rest = S.order.filter(o => o.pick_no > m);
+    const last = rest.length ? rest[rest.length - 1].pick_no : m;
     return `<section class="ed-invite"><h2>Draft order</h2>
       <form class="dr-build" novalidate>
         <div class="ed-fields"><label>Rounds<input name="rounds" type="number" min="1" max="50" value="${d.rounds}"></label>
           <label>Order<select name="snake"><option value="1">Snake (reverses each round)</option><option value="0">Same order every round</option></select></label>
-          <label>First round<select name="random"><option value="0">Keep the current order</option><option value="1">Shuffle the clubs</option></select></label></div>
+          <label>First round<select name="first"><option value="keep">Keep the current order</option><option value="random">Shuffle the clubs</option>
+            <option value="low">Lowest team value first</option><option value="high">Highest team value first</option><option value="alpha">A to Z</option></select></label></div>
         <div class="ed-actions"><button class="btn ghost" type="submit">${rest.length ? 'Rebuild the unmade picks' : 'Build the order'}</button></div>
-        <p class="ed-hint">${made ? `Picks 1 to ${made} are made and stay as they are.` : 'Replaces the whole order.'} You can still change any single pick below.</p></form>
-      ${rest.length ? `<details ${rest.length <= 40 ? 'open' : ''}><summary>${rest.length} pick${rest.length === 1 ? '' : 's'} still to make</summary>
-        <ol class="dr-order" start="${rest[0].pick_no}">${rest.map(o => `<li><span>Pick ${o.pick_no}</span><select data-pickno="${o.pick_no}" aria-label="Club for pick ${o.pick_no}">${active.map(c => `<option value="${esc(c.code)}"${c.code === o.club ? ' selected' : ''}>${esc(c.short_name || c.name)}</option>`).join('')}</select></li>`).join('')}</ol></details>` : ''}
+        <p class="ed-hint">${m ? `Picks 1 to ${m} are made and stay as they are.` : 'Replaces the whole order.'} Use the tools below to change single picks.</p></form>
+      ${rest.length ? `<details class="dr-tools"><summary>Order tools</summary>
+        <div class="dr-toolgrid">
+          <form class="dr-swap" novalidate><b>Swap two picks</b><div class="ed-actions"><input name="a" type="number" min="${m + 1}" max="${last}" placeholder="Pick" aria-label="First pick"><input name="b" type="number" min="${m + 1}" max="${last}" placeholder="Pick" aria-label="Second pick"><button class="btn ghost small" type="submit">Swap</button></div></form>
+          <form class="dr-move" novalidate><b>Move a pick</b><div class="ed-actions"><input name="from" type="number" min="${m + 1}" max="${last}" placeholder="From" aria-label="Move from pick"><input name="to" type="number" min="${m + 1}" max="${last}" placeholder="To" aria-label="Move to pick"><button class="btn ghost small" type="submit">Move</button></div><small>The picks in between shift along.</small></form>
+          <form class="dr-insert" novalidate><b>Add an extra pick</b><div class="ed-actions">${clubSelect('name="club" aria-label="Club"', active[0]?.code)}<input name="at" type="number" min="${m + 1}" max="${last + 1}" placeholder="At pick" aria-label="At pick number"><button class="btn ghost small" type="submit">Add</button></div><small>Later picks move down one.</small></form>
+          <div><b>Whole order</b><div class="ed-actions"><button class="btn ghost small" data-act="reverse">Reverse</button><button class="btn ghost small" data-act="shuffle">Shuffle</button>
+            <input class="dr-rot" type="number" value="1" aria-label="Rotate by"><button class="btn ghost small" data-act="rotate">Rotate by</button></div><small>These change only the ${rest.length} unmade pick${rest.length === 1 ? '' : 's'}.</small></div>
+        </div></details>
+        <ol class="dr-order" start="${rest[0].pick_no}">${rest.map((o, i) => `<li><span>Pick ${o.pick_no}</span>${clubSelect(`data-pickno="${o.pick_no}" aria-label="Club for pick ${o.pick_no}"`, o.club)}
+          <button class="dr-b" data-act="rowup" data-no="${o.pick_no}" aria-label="Move pick ${o.pick_no} up"${i ? '' : ' disabled'}>▲</button><button class="dr-b" data-act="rowdown" data-no="${o.pick_no}" aria-label="Move pick ${o.pick_no} down"${i < rest.length - 1 ? '' : ' disabled'}>▼</button><button class="dr-b" data-act="rowdel" data-no="${o.pick_no}" aria-label="Remove pick ${o.pick_no}">✕</button></li>`).join('')}</ol>` : ''}
     </section>`;
+  };
+
+  const settingsPanel = () => {
+    const d = S.d;
+    return `<details class="ed-invite dr-settings"><summary><b>Draft settings</b> <small>name, dates, pick time, roster rules</small></summary>
+      <form class="dr-set" novalidate>
+        <div class="ed-fields"><label>Name<input name="name" maxlength="60" value="${esc(d.name)}"></label>
+          <label>Opens <i>optional</i><input name="opens" type="datetime-local" value="${esc(localInput(d.opens_at))}"></label>
+          <label>Closes <i>optional</i><input name="closes" type="datetime-local" value="${esc(localInput(d.closes_at))}"></label></div>
+        <div class="ed-fields"><label>Time for each pick (hours)<input name="hours" type="number" min="0.02" max="336" step="any" value="${d.pick_minutes / 60}"></label>
+          <label>When time runs out<select name="timeout">${Object.entries(TIMEOUTS).map(([k, v]) => `<option value="${k}"${k === d.on_timeout ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select></label></div>
+        ${rulesFields(d)}
+        <div class="ed-actions"><button class="btn" type="submit">Save settings</button></div>
+        <p class="ed-hint">Rules apply to managers’ picks and every automatic pick. Your own overrides ignore them. They don’t change players already picked.</p></form></details>`;
   };
 
   const autoPanel = () => {
@@ -107,7 +184,7 @@ export async function mountDraft(ctx) {
     if (preview) return `<section class="ed-invite"><h2>Auto-assign the rest: preview</h2>
       <p class="ed-hint">Best value first, in draft order. Nothing is saved until you confirm. You can undo it afterwards.</p>
       <div class="pl-scroll"><table class="pl-table"><thead><tr><th>Pick</th><th>Club</th><th>Player</th><th>Value</th></tr></thead><tbody>${preview.map(r =>
-        `<tr><td>${r.pick_no}</td><td>${esc(cname(r.club))}</td><td>${r.p ? esc(r.p.name) + ' · ' + esc(r.p.position) : '<i>skipped (no players left)</i>'}</td><td>${r.p ? money(r.p.value) : ''}</td></tr>`).join('')}</tbody></table></div>
+        `<tr><td>${r.pick_no}</td><td>${esc(cname(r.club))}</td><td>${r.p ? esc(r.p.name) + ' · ' + esc(r.p.position) : '<i>skipped (nobody left who fits the rules)</i>'}</td><td>${r.p ? money(r.p.value) : ''}</td></tr>`).join('')}</tbody></table></div>
       <div class="ed-actions"><button class="btn" data-act="autofill">Assign ${preview.length} pick${preview.length === 1 ? '' : 's'}</button><button class="btn ghost" data-act="nopreview">Cancel</button></div></section>`;
     return `<section class="ed-invite"><h2>Auto-assign the rest</h2>
       <p class="ed-hint">Fills the ${rest.length} remaining pick${rest.length === 1 ? '' : 's'} with the best-value free players. ${free().length} free player${free().length === 1 ? '' : 's'} left.</p>
@@ -141,6 +218,7 @@ export async function mountDraft(ctx) {
         <label>Rounds (picks per club)<input name="rounds" type="number" min="1" max="50" value="${Math.max(1, Math.ceil(16 / Math.max(active.length, 1)) || 1)}"></label>
         <label>When time runs out<select name="timeout">${Object.entries(TIMEOUTS).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('')}</select></label></div>
       <label class="dr-check"><input type="checkbox" name="snake" checked> Snake order (reverses every round)</label>
+      ${rulesFields(null)}
       <div class="ed-actions"><button class="btn" type="submit">Create draft</button></div>
       <p class="ed-hint">It starts in set-up: nothing is visible to managers until you press Start. Players are drawn from the free agents (${S ? free().length : '…'} now).</p></form></section>`;
 
@@ -148,7 +226,7 @@ export async function mountDraft(ctx) {
 
   function draw() {
     S.players.forEach(p => pname.set(p.id, p.name));
-    root.innerHTML = `<div class="dr-ed">${picker()}${S.d ? bar() + onClock() + autoPanel() + orderPanel() + boardPanel() + clubsPanel() : ''}${newForm()}</div>`;
+    root.innerHTML = `<div class="dr-ed">${picker()}${S.d ? bar() + onClock() + autoPanel() + orderPanel() + settingsPanel() + boardPanel() + clubsPanel() : ''}${newForm()}</div>`;
     tick();
   }
   function tick() {
@@ -168,6 +246,7 @@ export async function mountDraft(ctx) {
   const rpc = async (name, args) => { const r = await client.rpc(name, args); if (r.error) throw new Error(explain(r.error)); return r.data; };
   const write = async q => { const r = await q; if (r.error) throw new Error(explain(r.error)); return r; };
 
+  async function saveRest(arr) { await writeOrder(S.d.id, made() + 1, [...madeClubs(), ...arr]); }
   async function writeOrder(draftId, startPick, seq) {
     await write(client.from('draft_order').delete().eq('draft', draftId).gte('pick_no', startPick));
     const rows = seq.slice(startPick - 1).map((club, i) => ({ draft: draftId, pick_no: startPick + i, club }));
@@ -182,21 +261,47 @@ export async function mountDraft(ctx) {
       if (name.length < 2) throw new Error('Give the draft a name.');
       if (!active.length) throw new Error('There are no clubs to draft for.');
       if (!(mins >= 1)) throw new Error('Give each pick some time.');
+      const rules = readRules(f, rounds);
       const row = (await write(client.from('drafts').insert({ name, opens_at: isoOf(f.opens.value), closes_at: isoOf(f.closes.value), pick_minutes: mins, rounds,
-        on_timeout: f.timeout.value }).select('id').single())).data;
-      await writeOrder(row.id, 1, sequence(rounds, f.snake.checked, false));
+        on_timeout: f.timeout.value, ...rules }).select('id').single())).data;
+      await writeOrder(row.id, 1, sequence(rounds, f.snake.checked, active.map(c => c.code)));
       selected = row.id; undoFrom = null;
     }, 'Draft created. Check the order, then press Start.');
+    if (f.matches('.dr-set')) run(async () => {
+      const d = S.d, name = f.name.value.trim(), mins = Math.round(+f.hours.value * 60);
+      if (name.length < 2) throw new Error('Give the draft a name.');
+      if (!(mins >= 1)) throw new Error('Give each pick some time.');
+      const rules = readRules(f, d.rounds);
+      await write(client.from('drafts').update({ name, opens_at: isoOf(f.opens.value), closes_at: isoOf(f.closes.value), pick_minutes: mins, on_timeout: f.timeout.value, ...rules }).eq('id', d.id));
+    }, 'Settings saved.');
     if (f.matches('.dr-build')) run(async () => {
-      const d = S.d, made = d.status === 'setup' ? 0 : d.current_pick - 1, rounds = Math.round(+f.rounds.value);
+      const d = S.d, m = made(), rounds = Math.round(+f.rounds.value);
       if (!(rounds >= 1)) throw new Error('Rounds must be at least 1.');
-      const snake = f.snake.value === '1', random = f.random.value === '1';
-      const seq = sequence(rounds, snake, random);
-      if (made >= seq.length) throw new Error('That many rounds is fewer than the picks already made.');
-      if (made) seq.splice(0, made, ...S.order.filter(o => o.pick_no <= made).map(o => o.club));   // made picks keep their clubs
+      const seq = sequence(rounds, f.snake.value === '1', baseFor(f.first.value));
+      if (m >= seq.length) throw new Error('That many rounds is fewer than the picks already made.');
+      seq.splice(0, m, ...madeClubs());   // made picks keep their clubs
       await write(client.from('drafts').update({ rounds }).eq('id', d.id));
-      await writeOrder(d.id, made + 1, seq);
+      await writeOrder(d.id, m + 1, seq);
     }, 'Order saved.');
+    const num = n => Math.round(+n);
+    const idx = no => no - made() - 1;   // a pick number's place among the unmade picks
+    const check = (...nos) => { for (const no of nos) if (!(idx(no) >= 0 && idx(no) < restClubs().length)) throw new Error(`Pick ${no || '?'} isn’t one of the unmade picks.`); };
+    if (f.matches('.dr-swap')) run(async () => {
+      const a = num(f.a.value), b = num(f.b.value); check(a, b);
+      const arr = restClubs(); [arr[idx(a)], arr[idx(b)]] = [arr[idx(b)], arr[idx(a)]];
+      await saveRest(arr);
+    }, 'Picks swapped.');
+    if (f.matches('.dr-move')) run(async () => {
+      const a = num(f.from.value), b = num(f.to.value); check(a, b);
+      const arr = restClubs(); const [x] = arr.splice(idx(a), 1); arr.splice(idx(b), 0, x);
+      await saveRest(arr);
+    }, 'Pick moved.');
+    if (f.matches('.dr-insert')) run(async () => {
+      const at = num(f.at.value), arr = restClubs();
+      if (!(at >= made() + 1 && at <= made() + arr.length + 1)) throw new Error('Choose a pick number among the unmade picks, or the one after the last.');
+      arr.splice(idx(at), 0, f.club.value);
+      await saveRest(arr);
+    }, 'Extra pick added.');
   });
 
   root.addEventListener('change', e => {
@@ -222,10 +327,45 @@ export async function mountDraft(ctx) {
     if (act === 'skip') run(() => rpc('office_set_pick', { p_draft: d.id, p_player: null }), 'Pick skipped.');
     if (act === 'makepick') run(async () => { await rpc('office_set_pick', { p_draft: d.id, p_player: root.querySelector('.dr-pl').value }); undoFrom = null; }, 'Pick made.');
     if (act === 'undo') run(async () => { await rpc('office_draft_undo', { p_draft: d.id }); undoFrom = null; }, 'Last pick undone.');
-    if (act === 'delete') run(async () => { await write(client.from('drafts').delete().eq('id', d.id)); selected = null; }, 'Draft deleted.');
+    if (act === 'delete') {
+      const picked = S.picks.filter(k => k.player).length;
+      if (!confirm(`Delete “${d.name}”? Its order, queues and auto-pick settings are removed. This can’t be undone.`)) return;
+      const release = picked > 0 && confirm(`${picked} player${picked === 1 ? ' was' : 's were'} drafted in it. Press OK to return them to free agents, or Cancel to leave them at their clubs.`);
+      run(async () => { await rpc('office_delete_draft', { p_draft: d.id, p_release: release }); selected = null; undoFrom = null; preview = null; }, release ? 'Draft deleted and its players returned to free agents.' : 'Draft deleted.');
+    }
+    if (act === 'reset') {
+      if (!confirm(`Reset “${d.name}” to set-up? Every pick is taken back and the players return to free agents. The order and settings stay.`)) return;
+      run(async () => { await rpc('office_draft_reset', { p_draft: d.id }); undoFrom = null; preview = null; }, 'Reset to set-up.');
+    }
+    if (act === 'finish') {
+      if (!confirm('Finish the draft now? Remaining picks stay empty.')) return;
+      run(() => write(client.from('drafts').update({ status: 'done', pick_deadline: null }).eq('id', d.id)), 'Draft finished.');
+    }
+    if (act === 'duplicate') run(async () => {
+      const row = (await write(client.from('drafts').insert({ name: `${d.name} (copy)`.slice(0, 60), opens_at: d.opens_at, closes_at: d.closes_at, pick_minutes: d.pick_minutes,
+        on_timeout: d.on_timeout, rounds: d.rounds, roster_min: d.roster_min, roster_max: d.roster_max }).select('id').single())).data;
+      await writeOrder(row.id, 1, S.order.map(o => o.club));
+      selected = row.id; undoFrom = null; preview = null;
+    }, 'Duplicated as a new draft in set-up.');
+    if (act === 'reverse') run(() => saveRest(restClubs().reverse()), 'Unmade picks reversed.');
+    if (act === 'shuffle') run(() => saveRest(shuffle(restClubs())), 'Unmade picks shuffled.');
+    if (act === 'rotate') run(() => { const arr = restClubs(), n = arr.length ? ((Math.round(+root.querySelector('.dr-rot').value) || 0) % arr.length + arr.length) % arr.length : 0; return saveRest([...arr.slice(n), ...arr.slice(0, n)]); }, 'Unmade picks rotated.');
+    if (['rowup', 'rowdown', 'rowdel'].includes(act)) run(() => {
+      const arr = restClubs(), i = +b.dataset.no - made() - 1, j = act === 'rowup' ? i - 1 : i + 1;
+      if (act === 'rowdel') arr.splice(i, 1); else [arr[i], arr[j]] = [arr[j], arr[i]];
+      return saveRest(arr);
+    }, act === 'rowdel' ? 'Pick removed.' : 'Pick moved.');
     if (act === 'preview') {
-      const pool = free().sort((a, b) => b.value - a.value || (a.id < b.id ? -1 : 1));
-      preview = S.order.filter(o => o.pick_no >= d.current_pick).map((o, i) => ({ pick_no: o.pick_no, club: o.club, p: pool[i] || null }));
+      const have = {};
+      for (const pl of S.players) if (pl.club) { const h = (have[pl.club] ||= {}); h[pl.position] = (h[pl.position] || 0) + 1; }
+      const pool = free().sort((a, b) => b.value - a.value || (a.id < b.id ? -1 : 1)), taken = new Set();
+      const todo = S.order.filter(o => o.pick_no >= d.current_pick);
+      preview = todo.map((o, i) => {
+        const after = todo.slice(i + 1).filter(x => x.club === o.club).length, h = (have[o.club] ||= {});
+        const p = pool.find(x => !taken.has(x.id) && allowed(d, h, x, o.club, after)) || null;
+        if (p) { taken.add(p.id); h[p.position] = (h[p.position] || 0) + 1; }
+        return { pick_no: o.pick_no, club: o.club, p };
+      });
       draw();
     }
     if (act === 'nopreview') { preview = null; draw(); }
