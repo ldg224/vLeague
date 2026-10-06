@@ -3,6 +3,18 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.28.1 (2026-10-07)
+
+Draft: a missed pick is no longer lost. Needs `0030_draft_random_instead_of_skip.sql`.
+
+- **Changed:** where the draft used to **skip** a pick (time ran out with nothing in the queue), it now picks a **random free
+  player who fits one of the club's open spots**, using the same roster rules as manager picks (position maximums, and keeping each
+  position's minimum reachable). It only skips if nobody left fits. "When time runs out" options now read: *a random player who
+  fits*, *the next player in their queue, else a random player who fits*, and *the best-value player who fits* (random if none
+  is allowed). Existing drafts keep working with no edit.
+- **Changed, Editor:** "Skip this pick" is now **Random pick for them**, and does the same.
+- Checked with a dry run of 8 cases (never picks a full position, each timeout rule, nobody fits, office and guest access).
+
 ## 0.28.0 (2026-10-07)
 
 Draft active times. Needs `0029_draft_active_times.sql` (run it once).

@@ -4,7 +4,7 @@
 
 const MODES = { always: 'Always (the moment it’s their turn)', on_miss: 'If they miss their turn', after_minutes: 'After a number of minutes', never: 'Never (they pick themselves)' };
 const HOWS = { queue: 'From their queue', random: 'A random player' };
-const TIMEOUTS = { queue: 'Take the next player in their queue, else skip', best_value: 'Take the best-value free player', skip: 'Skip the pick' };
+const TIMEOUTS = { queue: 'Take the next player in their queue, else a random player who fits', best_value: 'Take the best-value player who fits', skip: 'Pick a random player who fits their open positions' };
 const STATUS = { setup: 'Setting up', live: 'Live', paused: 'Paused', done: 'Finished' };
 const money = n => `$${Number(n || 0).toLocaleString('en-AU')}`;
 const localInput = iso => { if (!iso) return ''; const d = new Date(iso), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
@@ -124,7 +124,7 @@ export async function mountDraft(ctx) {
         ${d.status === 'live' ? '<button class="btn ghost" data-act="pause">Pause</button>' : ''}
         ${d.status === 'paused' ? '<button class="btn" data-act="resume">Resume</button>' : ''}
         ${d.status === 'live' ? `<button class="btn ghost" data-act="extend">Extend by</button><input class="dr-ext" type="number" min="1" value="60" aria-label="Minutes to add"> minutes` : ''}
-        ${['live', 'paused'].includes(d.status) ? '<button class="btn ghost" data-act="skip">Skip this pick</button>' : ''}
+        ${['live', 'paused'].includes(d.status) ? '<button class="btn ghost" data-act="skip" title="Picks a random free player who fits the club’s open positions">Random pick for them</button>' : ''}
         ${S.picks.length ? '<button class="btn ghost" data-act="undo">Undo last pick</button>' : ''}
         ${d.status !== 'setup' ? '<button class="btn ghost" data-act="reset">Reset to set-up</button>' : ''}
         ${['live', 'paused'].includes(d.status) ? '<button class="btn ghost" data-act="finish">Finish now</button>' : ''}
@@ -375,7 +375,7 @@ export async function mountDraft(ctx) {
     if (act === 'pause') run(() => rpc('office_draft_control', { p_draft: d.id, p_action: 'pause' }), 'Paused.');
     if (act === 'resume') run(() => rpc('office_draft_control', { p_draft: d.id, p_action: 'resume' }), 'Resumed with a fresh timer.');
     if (act === 'extend') run(() => rpc('office_draft_control', { p_draft: d.id, p_action: 'extend', p_minutes: Math.max(1, Math.round(+root.querySelector('.dr-ext').value) || 1) }), 'Time added.');
-    if (act === 'skip') run(() => rpc('office_set_pick', { p_draft: d.id, p_player: null }), 'Pick skipped.');
+    if (act === 'skip') run(() => rpc('office_set_pick', { p_draft: d.id, p_player: null }), 'A random player was picked.');
     if (act === 'makepick') run(async () => { await rpc('office_set_pick', { p_draft: d.id, p_player: root.querySelector('.dr-pl').value }); undoFrom = null; }, 'Pick made.');
     if (act === 'undo') run(async () => { await rpc('office_draft_undo', { p_draft: d.id }); undoFrom = null; }, 'Last pick undone.');
     if (act === 'delete') {

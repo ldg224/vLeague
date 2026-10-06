@@ -72,3 +72,10 @@ by `_draft_add_active()` when a pick starts (and when the office extends or resu
 and keeps the current pick's remaining active time; `draft_quiet_state()` tells the page whether it's quiet now and how much
 active time is left, so the clock can freeze. "After N minutes" auto-picks count active minutes from `pick_started`. A club on
 "always" still picks the moment it's its turn.
+
+## A missed pick is a random pick (0.28.1)
+
+A turn that times out with nothing usable in the queue, and the office's "Random pick for them", pick a random free player the
+club may take (`_draft_random_fit()`, which uses `_draft_can_pick()`: position maximums, and minimums that stay reachable). The
+pick is only skipped (`how = 'skip'`) if nobody left fits. The stored `on_timeout` values are unchanged: `skip` now means "random
+player who fits", `queue` means "queue, else random who fits", `best_value` is the best-value player who fits.
