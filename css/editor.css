@@ -193,3 +193,23 @@
   .ed-club summary::after { grid-column: 3; grid-row: 1; }
 }
 .ed-sec .ed-actions { margin-top: 10px; }
+
+/* ---------- pens: edit anything in a club (0.16) ---------- */
+.ed-pen { margin-left: 8px; padding: 2px 7px; border: 0; border-radius: 6px; background: transparent; color: var(--faint); cursor: pointer; font-size: .95rem; line-height: 1; vertical-align: middle; }
+.ed-pen:hover, .ed-pen:focus-visible { background: var(--surface-raised); color: var(--text); }
+.ed-pen[hidden], .ed-val[hidden] { display: none; }
+.ed-editor { display: block; }
+.ed-editor[hidden] { display: none; }
+.ed-inline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 2px 0; }
+.ed-inline input:not([type=color]):not([type=checkbox]):not([type=file]), .ed-inline select { min-width: 12em; flex: 1 1 12em; max-width: 24em; padding: 7px 10px; border-radius: var(--r-sm); border: 1px solid rgba(var(--edge),.16); background: var(--bg); color: var(--text); font: 500 .95rem var(--font); }
+.ed-inline input[type=color] { width: 44px; height: 34px; padding: 2px; border-radius: 8px; border: 1px solid rgba(var(--edge),.16); background: var(--bg); }
+.ed-none-opt { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: .88rem; }
+.ed-hint-inline { flex-basis: 100%; color: var(--faint); font-size: .8rem; }
+.ed-inline .ed-msg { flex-basis: 100%; margin: 0; }
+.ed-crest-pic { width: 40px; height: 40px; object-fit: contain; vertical-align: middle; }
+.ed-row2 { display: flex; flex-wrap: wrap; align-items: center; min-width: 0; }
+.ed-row2 .ed-editor { flex-basis: 100%; }
+.ed-line .ed-editor { flex-basis: 100%; }
+.ed-diff td { vertical-align: middle; }
+.ed-val > span { display: inline-flex; align-items: center; gap: 6px; }
+.ed-val i { display: inline-block; width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(var(--ink),.25); }

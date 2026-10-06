@@ -161,16 +161,11 @@ function clubItem(c, accts) {
         ${req ? `<section class="ed-sec">${requestCard(req)}</section>` : ''}
         <section class="ed-sec"><h3>Manager</h3>
           ${accts.length ? `<ul class="ed-accts">${accts.map(a => accountRow(a, false)).join('')}</ul>` : inviteForm(c)}
-          <p class="ed-line"><span>Phone</span>${phone ? `<a href="tel:${esc(phone.replace(/[^+\d]/g, ''))}">${esc(phone)}</a>` : '<span class="ed-pill warn">Not added yet</span>'}</p>
+          <div class="ed-line" data-field="phone"><span>Phone</span><span class="ed-val">${phone ? `<a href="tel:${esc(phone.replace(/[^+\d]/g, ''))}">${esc(phone)}</a>` : '<span class="ed-pill warn">Not added yet</span>'}</span>${pen('phone', 'phone number')}<span class="ed-editor" hidden></span></div>
         </section>
         <section class="ed-sec"><h3>Club details</h3>
           <table class="ed-diff">
-            <tr><th>Name</th><td>${esc(c.name)}${c.short_name ? ` <small>(${esc(c.short_name)})</small>` : ''}</td></tr>
-            <tr><th>Code</th><td>${esc(c.code)}</td></tr>
-            <tr><th>Colours</th><td class="ed-swatches">${swatch('Primary', c.colour)}${swatch('Secondary', c.colour2)}${swatch('Accent', accentOf(c))}</td></tr>
-            ${c.manager_name ? `<tr><th>Manager</th><td>${esc(c.manager_name)}</td></tr>` : ''}
-            ${c.stadium ? `<tr><th>Stadium</th><td>${esc(c.stadium)}</td></tr>` : ''}
-            ${c.motto ? `<tr><th>Motto</th><td>${esc(c.motto)}</td></tr>` : ''}
+            ${FIELDS.map(f => `<tr data-field="${f.key}"><th>${f.label}</th><td><span class="ed-val">${f.show(c)}</span>${pen(f.key, f.label.toLowerCase())}<span class="ed-editor" hidden></span></td></tr>`).join('')}
             <tr><th>Set-up</th><td>${c.setup_at ? `Sent ${esc(when(c.setup_at))}` : 'Not sent yet'}</td></tr>
           </table>
           ${c.setup_at ? `<div class="ed-actions"><button class="btn ghost small" type="button" data-act="reopen">Set up again</button></div>
@@ -186,6 +181,170 @@ function clubItem(c, accts) {
     </details></li>`;
 }
 
+// ---------------------------------------------------------------- editing (0.16)
+// A little pen next to everything in a club. It swaps the value for a small form; Save writes it, Cancel puts it back.
+// The office can change anything directly (no approval step). The database checks everything again.
+
+const pen = (key, label) => `<button class="ed-pen" type="button" data-edit="${key}" aria-label="Edit ${esc(label)}" title="Edit ${esc(label)}">✎</button>`;
+const dash = '<span class="quiet">—</span>';
+const crestPic = c => (c.crest_path ? `<img src="${esc(crestUrl(c.crest_path))}" alt="" class="ed-crest-pic">` : '<span class="quiet">None</span>');
+const STATUS = { active: 'Active', pending: 'Pending', withdrawn: 'Withdrawn' };
+
+// type: how it's edited. max/min: text length; optional: may be cleared.
+const FIELDS = [
+  { key: 'name', label: 'Name', type: 'text', min: 2, max: 40, show: c => esc(c.name) },
+  { key: 'short_name', label: 'Short name', type: 'text', max: 12, optional: true, show: c => (c.short_name ? esc(c.short_name) : dash) },
+  { key: 'code', label: 'Code', type: 'code', show: c => esc(c.code) },
+  { key: 'colour', label: 'Primary colour', type: 'colour', show: c => swatch('', c.colour) || dash },
+  { key: 'colour2', label: 'Secondary colour', type: 'colour', optional: true, show: c => swatch('', c.colour2) || dash },
+  { key: 'accent', label: 'Accent', type: 'accent', show: c => swatch('', accentOf(c)) },
+  { key: 'manager_name', label: 'Manager name', type: 'text', max: 40, optional: true, show: c => (c.manager_name ? esc(c.manager_name) : dash) },
+  { key: 'stadium', label: 'Stadium', type: 'text', max: 40, optional: true, show: c => (c.stadium ? esc(c.stadium) : dash) },
+  { key: 'motto', label: 'Motto', type: 'text', max: 80, optional: true, show: c => (c.motto ? esc(c.motto) : dash) },
+  { key: 'crest_path', label: 'Crest', type: 'crest', show: crestPic },
+  { key: 'status', label: 'Status', type: 'status', show: c => esc(STATUS[c.status] || c.status) },
+];
+
+// The form that replaces a value. `host` is the row (or account) holding .ed-val and .ed-editor.
+function openEditor(host, spec) {
+  const box = host.querySelector('.ed-editor'), val = host.querySelector('.ed-val'), penBtn = host.querySelector('.ed-pen');
+  if (!box) return;
+  document.querySelectorAll('.ed-editor:not([hidden]) [data-act="edit-cancel"]').forEach(b => b.click());   // one at a time
+  const { type, value = '', max, optional, hint } = spec;
+  let input;
+  if (type === 'colour' || type === 'accent') {
+    const set = /^#[0-9a-f]{6}$/i.test(value);
+    input = `<input type="color" name="v" value="${set ? esc(value) : '#64b5f6'}" aria-label="${esc(spec.label)}">`
+      + (optional ? `<label class="ed-none-opt"><input type="checkbox" name="none"${set ? '' : ' checked'}> None</label>` : '');
+  } else if (type === 'crest') {
+    input = '<input type="file" name="v" accept="image/*" required aria-label="Crest picture"><img class="ed-crest-pic ed-preview-pic" alt="" hidden>';
+  } else if (type === 'status') {
+    input = `<select name="v" aria-label="Status">${Object.entries(STATUS).map(([k, l]) => `<option value="${k}"${k === value ? ' selected' : ''}>${l}</option>`).join('')}</select>`;
+  } else {
+    input = `<input name="v" value="${esc(value)}" ${max ? `maxlength="${max}"` : ''} ${optional ? '' : 'required'} autocomplete="off" aria-label="${esc(spec.label)}"${type === 'code' ? ' style="text-transform:uppercase;width:6em"' : ''}>`;
+  }
+  box.innerHTML = `<form class="ed-inline" data-kind="${esc(spec.kind)}" data-fk="${esc(spec.field)}">${input}
+    <button class="btn small">Save</button>${type === 'accent' ? '<button class="btn ghost small" value="auto" type="submit" formnovalidate>Work it out</button>' : ''}
+    <button class="btn ghost small" type="button" data-act="edit-cancel">Cancel</button>
+    ${hint ? `<small class="ed-hint-inline">${esc(hint)}</small>` : ''}<span class="ed-msg" role="status"></span></form>`;
+  box.hidden = false; if (val) val.hidden = true; if (penBtn) penBtn.hidden = true;
+  box.querySelector('input:not([type=checkbox]), select')?.focus();
+}
+function closeEditor(host) {
+  const box = host.querySelector('.ed-editor');
+  box.hidden = true; box.innerHTML = '';
+  const val = host.querySelector('.ed-val'); if (val) val.hidden = false;
+  const penBtn = host.querySelector('.ed-pen'); if (penBtn) penBtn.hidden = false;
+}
+
+const clubOf = el => state.clubs.find(c => c.code === el.closest('.ed-club').dataset.code);
+
+function startClubEdit(btn) {
+  const host = btn.closest('[data-field]'), c = clubOf(btn), key = btn.dataset.edit;
+  if (key === 'phone') return openEditor(host, { kind: 'phone', field: 'phone', type: 'text', max: 20, optional: true, label: 'Phone number', value: phoneOf(c.code), hint: 'Leave empty to remove it.' });
+  const f = FIELDS.find(x => x.key === key);
+  openEditor(host, {
+    kind: 'club', field: key, type: f.type, max: f.max, optional: f.optional, label: f.label,
+    value: key === 'accent' ? accentOf(c) : c[key] || '',
+    hint: key === 'code' ? 'Changes everywhere (fixtures, players, line-ups). Not possible once the club has results.'
+      : key === 'colour' || key === 'colour2' ? 'The accent is worked out again from the colours.' : '',
+  });
+}
+
+function startAcctEdit(btn) {
+  const li = btn.closest('.ed-acct'), a = state.accounts.find(x => x.id === li.dataset.id), key = btn.dataset.editAcct;
+  openEditor(li.querySelector(`[data-acct-field="${key}"]`), key === 'email'
+    ? { kind: 'acct', field: 'email', type: 'text', max: 120, label: 'Email', value: a.email, hint: 'They sign in with the new address straight away.' }
+    : { kind: 'acct', field: 'name', type: 'text', max: 40, optional: true, label: 'Name', value: a.display_name || '' });
+}
+
+const HEX = /^#[0-9a-f]{6}$/i;
+
+// Works out the change a club form asks for, or throws a readable message.
+async function clubPatch(c, key, form, submitter) {
+  const f = FIELDS.find(x => x.key === key), v = form.elements.v;
+  const text = () => String(v.value || '').trim().replace(/\s+/g, ' ');
+  if (f.type === 'text') {
+    const t = text();
+    if (!t && !f.optional) throw new Error(`${f.label} can't be empty.`);
+    if (t && f.min && t.length < f.min) throw new Error(`${f.label} needs at least ${f.min} characters.`);
+    return { [key]: t || null };
+  }
+  if (f.type === 'code') {
+    const t = text().toUpperCase();
+    if (!/^[A-Z0-9]{2,4}$/.test(t)) throw new Error('A code is 2 to 4 letters or numbers.');
+    if (t === c.code) return {};
+    if (state.clubs.some(x => x.code === t)) throw new Error('That code is taken.');
+    const used = (await (await db()).from('fixtures').select('id').or(`home.eq.${c.code},away.eq.${c.code}`).limit(2000)).data || [];
+    const played = used.length ? (await (await db()).from('results').select('fixture').in('fixture', used.map(x => x.id)).limit(1)).data || [] : [];
+    if (played.length) throw new Error('This club has results, and they record its code, so it can’t change now.');
+    return { code: t };
+  }
+  if (f.type === 'colour') {
+    const none = form.elements.none?.checked, hex = none ? null : String(v.value).toLowerCase();
+    if (!none && !HEX.test(hex)) throw new Error('Pick a colour.');
+    const next = { colour: c.colour, colour2: c.colour2, [key]: hex };
+    return { [key]: hex, accent: next.colour ? accentFor(next.colour, next.colour2 || next.colour) : c.accent };
+  }
+  if (f.type === 'accent') {
+    if (submitter?.value === 'auto') return { accent: c.colour ? accentFor(c.colour, c.colour2 || c.colour) : null };
+    if (!HEX.test(v.value)) throw new Error('Pick a colour.');
+    return { accent: String(v.value).toLowerCase() };
+  }
+  if (f.type === 'status') return { status: v.value };
+  if (f.type === 'crest') {
+    const { prepareCrest, uploadCrest } = await import('./crest.js');
+    const { blob } = await prepareCrest(v.files[0]);
+    return { crest_path: await uploadCrest(blob, c.code) };
+  }
+  throw new Error('That can’t be changed here.');
+}
+
+async function saveInline(form, submitter) {
+  const msg = form.querySelector('.ed-msg'), host = form.closest('[data-field], [data-acct-field]');
+  const buttons = form.querySelectorAll('button');
+  const say = t => { msg.textContent = t; };
+  buttons.forEach(b => { b.disabled = true; }); say('Saving…');
+  try {
+    const c = db(), kind = form.dataset.kind, key = form.dataset.fk;
+    if (kind === 'club' || kind === 'phone') {
+      const club = clubOf(form);
+      if (kind === 'phone') {
+        const { error } = await (await c).rpc('office_set_phone', { p_club: club.code, p_phone: form.elements.v.value });
+        if (error) throw error;
+      } else {
+        const oldCode = club.code, patch = await clubPatch(club, key, form, submitter);
+        if (Object.keys(patch).length) {
+          const { data, error } = await (await c).from('clubs').update(patch).eq('code', oldCode).select('code');
+          if (error) throw error;
+          if (!data?.length) throw new Error('That didn’t save. Try again.');
+          if (patch.code && patch.code !== oldCode) {   // keep this club's panel open under its new code
+            if (state.open.delete(`club:${oldCode}`)) state.open.add(`club:${patch.code}`);
+          }
+        }
+      }
+    } else {
+      const li = form.closest('.ed-acct'), id = li.dataset.id;
+      if (key === 'name') {
+        const t = String(form.elements.v.value || '').trim().replace(/\s+/g, ' ') || null;
+        const { error } = await (await c).from('profiles').update({ display_name: t }).eq('id', id);
+        if (error) throw error;
+      } else {
+        const email = String(form.elements.v.value || '').trim().toLowerCase();
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error('That email doesn’t look right.');
+        const { data, error } = await (await c).functions.invoke('change-email', { body: { id, email } });
+        let problem = data?.error;
+        if (error) problem = (await error.context?.json?.().catch(() => null))?.error || 'The email didn’t change. Try again.';
+        if (problem) throw new Error(problem);
+      }
+    }
+    await refresh();
+  } catch (e) {
+    say(e.message && e.message.length < 200 && !/violates|syntax|relation|column|permission denied/i.test(e.message) ? explain(e) : 'That didn’t save. Try again.');
+    buttons.forEach(b => { b.disabled = false; });
+  }
+}
+
 // One account in a club's Manager section, or in "Accounts without a club" (loose), where it can be given a club.
 function accountRow(a, loose) {
   const taken = new Set(state.accounts.filter(x => x.club && x.role === 'manager').map(x => x.club));
@@ -194,7 +353,9 @@ function accountRow(a, loose) {
     return `<option value="${esc(c.code)}" ${off ? 'disabled' : ''}>${esc(c.name)}${off ? ' (has a manager)' : ''}</option>`;
   }).join('');
   return `<li class="ed-acct" data-id="${esc(a.id)}" data-email="${esc(a.email)}">
-    <span class="who"><b>${esc(a.display_name || a.email)}</b><small>${esc(a.email)}${a.role === 'office' ? ' · league office' : ''}</small>
+    <span class="who">
+      <span class="ed-row2" data-acct-field="name"><b class="ed-val">${esc(a.display_name || a.email)}</b><button class="ed-pen" type="button" data-edit-acct="name" aria-label="Edit name" title="Edit name">✎</button><span class="ed-editor" hidden></span></span>
+      <span class="ed-row2" data-acct-field="email"><small class="ed-val">${esc(a.email)}${a.role === 'office' ? ' · league office' : ''}</small><button class="ed-pen" type="button" data-edit-acct="email" aria-label="Edit email" title="Edit email">✎</button><span class="ed-editor" hidden></span></span>
       <small>${esc(accountState(a))}</small></span>
     ${loose ? `<label class="sr-only" for="club-${esc(a.id)}">Club</label><select id="club-${esc(a.id)}" data-act="link">${options}</select>` : ''}
     <span class="ed-actions"><button class="btn ghost small" data-act="reset" type="button">Send password link</button>
@@ -508,6 +669,8 @@ async function saveDigest(box) {
 // ---------------------------------------------------------------- events
 
 main.addEventListener('click', e => {
+  const penBtn = e.target.closest('button[data-edit], button[data-edit-acct]');
+  if (penBtn) return penBtn.dataset.edit ? startClubEdit(penBtn) : startAcctEdit(penBtn);
   const b = e.target.closest('button[data-act]');
   if (!b) return;
   const act = b.dataset.act;
@@ -525,6 +688,7 @@ main.addEventListener('click', e => {
   if (act === 'phones-copy' || act === 'phones-csv' || act === 'regs-csv') exportData(act);
   if (act === 'dl-remove') removeDeadline(b.closest('li'));
   if (act === 'dl-all') setAllDeadlines(b);
+  if (act === 'edit-cancel') closeEditor(b.closest('[data-field], [data-acct-field]'));
   if (act === 'unlink') askLink(b.closest('.ed-acct'), '');
   if (act === 'link-yes') link(b.closest('.ed-acct'), true);
   if (act === 'link-no') link(b.closest('.ed-acct'), false);
@@ -539,6 +703,7 @@ main.addEventListener('click', e => {
 main.addEventListener('submit', e => {
   e.preventDefault();
   if (e.target.classList.contains('ed-invite-club')) return invite(e.target);
+  if (e.target.classList.contains('ed-inline')) return saveInline(e.target, e.submitter);
   if (e.target.id === 'add-clubs') return addClubs(e.target);
   if (e.target.id === 'dl-add') return saveDeadline(Number(e.target.week.value), e.target.at.value, e.target.querySelector('.ed-msg'));
   if (e.target.classList.contains('ed-return')) review(e.target.closest('.ed-request'), false, e.target.note.value);

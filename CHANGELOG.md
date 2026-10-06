@@ -3,6 +3,19 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.16.0 (2026-10-06)
+
+Edit anything in a club from the Editor.
+
+- **Added:** a little pen (✎) next to everything in a club's panel: **name, short name, code, primary and secondary colour,
+  accent, manager name, stadium, motto, crest, status and phone number**, plus each manager account's **name and email**.
+  Press it, change it, Save (or Cancel). It saves straight away, with no approval step. Changing a colour works the accent
+  out again; **Work it out** does that for the accent by itself.
+- **Safety:** a club's code can be changed until it has results (they record the code); then it says why it can't.
+  Changing it updates fixtures, players and line-ups too. Changing an email takes effect at once (no confirmation email).
+- **Database:** `office_set_phone` lets the office set or clear a club's phone (`0017_office_set_phone.sql`), and a new
+  `change-email` function changes an account's sign-in email (office only).
+
 ## 0.15.1 (2026-10-06)
 
 - **Changed:** matches on the League page show club codes (initials) instead of short names.

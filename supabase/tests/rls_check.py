@@ -204,6 +204,15 @@ MAILABLE = f"update auth.users set email_confirmed_at = now(), last_sign_in_at =
 RES_PRE = '''insert into public.fixtures (id, week, home, away, starts_at) values ('w98-tur-lau', 98, 'TUR', 'LAU', now() + interval '1 day'), ('w97-tur-lau', 97, 'TUR', 'LAU', now() - interval '1 day'); insert into public.results (fixture, summary) values ('w98-tur-lau', '{"home":1,"away":0}'), ('w97-tur-lau', '{"home":2,"away":2}'); insert into storage.objects (bucket_id, name) values ('matches', 'w98-tur-lau.json.gz'), ('matches', 'w97-tur-lau.json.gz');'''
 
 SETTINGS_CHECKS = [
+    # the office sets any club's phone (0.16)
+    ('office', 'office sets a club phone and can clear it', '',
+     """select public.office_set_phone('TUR', '0412 345 678');
+        select public.office_set_phone('LAU', '+61 412 345 679');
+        select public.office_set_phone('LAU', '');
+        select (select phone from public.manager_phones where club = 'TUR') = '0412 345 678' and not exists (select 1 from public.manager_phones where club = 'LAU') as ok;"""),
+    ('office', 'office phone is checked like a manager phone', '', {'error': '8 to 15 digits'}, "select public.office_set_phone('TUR', '12');"),
+    ('manager', 'a manager cannot use the office phone function', '', {'error': 'Only the league office'}, "select public.office_set_phone('TUR', '0412 345 678');"),
+    ('anon', 'a guest cannot use the office phone function', '', {'error': 'permission denied'}, "select public.office_set_phone('TUR', '0412 345 678');"),
     # registrations keep a full copy of what was sent (0.15)
     ('manager', 'a submission keeps a full snapshot (form, colours, details, account)', '',
      """select public.update_club_style('{"colour":"#112233","motto":"Test motto","stadium":"Test Park"}'::jsonb);
