@@ -250,10 +250,19 @@ function markdown(text) {
     .map(p => (/^[-*] /m.test(p) ? `<ul>${p.split('\n').map(l => `<li>${inline(l.replace(/^[-*] /, ''))}</li>`).join('')}</ul>` : `<p>${inline(p).replace(/\n/g, '<br>')}</p>`)).join('');
 }
 
+let sbPosts = [];   // public posts the office wrote (Editor -> News, 0.18)
+async function loadPosts() {
+  sbPosts = await db().then(c => c.from('news').select('*').eq('kind', 'post').eq('public', true).order('created_at', { ascending: false }).limit(12))
+    .then(r => r.data || []).catch(() => sbPosts);
+}
+
 function drawNews() {
   const posts = guestNews(season).slice(0, 4);
-  if (!posts.length) { $('#newslist').innerHTML = '<p class="empty small">No news yet.</p>'; return; }
-  $('#newslist').innerHTML = posts.map(p => {
+  const mine = sbPosts.map(r => `<details class="post" style="--c:#1e88e5">
+      <summary><span class="post-title">${esc(r.title)}</span><span class="post-meta">${r.pinned ? 'Pinned, ' : ''}${esc(ago(new Date(r.created_at)))}</span></summary>
+      <div class="post-body">${markdown(r.body)}</div></details>`);
+  if (!posts.length && !mine.length) { $('#newslist').innerHTML = '<p class="empty small">No news yet.</p>'; return; }
+  $('#newslist').innerHTML = mine.join('') + posts.map(p => {
     const blocks = p.blocks || [];
     const embed = blocks.find(b => b.type === 'embed') || {};
     const title = embed.title || embed.author?.name || 'League update';
@@ -287,12 +296,12 @@ function drawClock(now = new Date()) { drawBoard(now); drawMatches(now); }
 function drawAll() {
   const now = new Date();
   drawClock(now); drawTable(now); drawLeaders(now);
-  if (JSON.stringify(season.news || []) !== newsShown) { newsShown = JSON.stringify(season.news || []); drawNews(); }
+  if (JSON.stringify([season.news || [], sbPosts]) !== newsShown) { newsShown = JSON.stringify([season.news || [], sbPosts]); drawNews(); }
 }
 
 async function refresh() {
   try {
-    [season] = await Promise.all([loadSeason(), loadDeadlines()]);
+    [season] = await Promise.all([loadSeason(), loadDeadlines(), loadPosts()]);
     season.fixtures ||= []; season.teams ||= []; season.players ||= [];
     drawAll();
   } catch (e) {

@@ -3,6 +3,18 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.18.0 (2026-10-06)
+
+League news, written in the Editor.
+
+- **Added:** an Editor **News** tab. Write a title and a message (bold, italic, lists and links), choose who it's for (**Everyone**
+  including guests, **Every manager**, or **chosen clubs**), pin it, and see it as a manager will before it goes out. `{team}` and
+  `{manager}` fill in for each manager. One-click **starters** write a Week preview (that week's fixtures and kick-offs) or a
+  Deadline reminder (the next line-up lock) for you. Posted news can be edited, pinned or deleted.
+- **Changed:** managers read posts in their Inbox as before (pinned first); guests see public posts in the dashboard's News.
+- **Database:** `news` gains `audience`, `public` and `pinned`. The database decides who can read a post, so a post for two clubs
+  can't be read by anyone else (`0019_news_posts.sql`).
+
 ## 0.17.0 (2026-10-06)
 
 A club's primary colour now runs its whole page, and the accent colour is gone.
