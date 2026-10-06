@@ -73,7 +73,7 @@ function render() {
   if (y) scrollTo(0, y);   // a redraw after an action keeps your place
   if (t === 'players') mountPlayers({ db, esc, explain, clubs: state.clubs });
   if (t === 'fixtures') mountFixtures({ db, esc, explain, clubs: state.clubs });
-  if (t === 'news') mountNews({ db, esc, explain, clubs: state.clubs, season: state.season, deadlines: state.deadlines });
+  if (t === 'news') mountNews({ db, esc, explain, clubs: state.clubs, season: state.season, deadlines: state.deadlines, accounts: state.accounts });
 }
 
 

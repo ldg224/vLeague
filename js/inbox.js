@@ -6,6 +6,7 @@ import { db } from './auth.js';
 import { inboxItems, readIds, markRead } from './inbox-data.js';
 import { kickoff } from './dashboard-data.js';
 import { markdown, inline, ago, day, time } from './places.js';
+import { newsBody } from './news-card.js';
 
 const ctx = await enterPlace('inbox');
 if (ctx) {
@@ -54,7 +55,7 @@ if (ctx) {
           body: `<div class="reveal" style="--rc:${esc(safeColour(d.colour))}">${src ? `<img src="${esc(src)}" alt="">` : ''}
             <b>${esc(d.name || '')}</b>${d.motto ? `<i>${esc(d.motto)}</i>` : ''}</div>${markdown(r.body, vars)}` };
       }
-      return { title: r.title, from: 'vLeague', body: markdown(r.body, vars) + (d.form === 'phone' ? phoneForm() : '') };
+      return { title: r.title, from: 'vLeague', body: newsBody(r, vars) + (d.form === 'phone' ? phoneForm() : '') };
     }
     const embed = (i.post.blocks || []).find(b => b.type === 'embed') || {};
     return { title: embed.title || embed.author?.name || 'League update',

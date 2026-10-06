@@ -3,6 +3,21 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.19.0 (2026-10-06)
+
+News you can email, with pictures, and a tidier Editor News tab.
+
+- **Added:** **email a post to managers**. Tick "Also email managers" when you publish (it says how many will get it), or press
+  **Email** on a post later. A post goes out once, only to managers in its audience, and each email has a one-click turn-off.
+  **Send me a test email** shows you exactly how it looks first. Managers can switch **League news** emails off in Settings.
+- **Added:** posts can carry a **picture** (shrunk in your browser before it uploads), an **accent colour** and a **button** with a
+  link. They show in the Inbox, on the guest dashboard and in the email.
+- **Changed:** the News tab is rebuilt as four cards (Message, Look, Who is it for, Send) beside a **live preview** of the post as
+  a manager sees it, with formatting buttons (bold, italic, list, link). The posted list shows each post's picture, audience and
+  whether it has been emailed.
+- **Database:** a public `news` picture bucket only the office can write to; `news.emailed_at` and `emailed_count`; the new
+  `send-news` function (`0020_news_email_images.sql`).
+
 ## 0.18.0 (2026-10-06)
 
 League news, written in the Editor.

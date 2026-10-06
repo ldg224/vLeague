@@ -33,6 +33,7 @@ if (ctx) {
     ${club ? row('Club changes sent back', toggle('email.sent_back', 'Club changes sent back', p.email.sent_back)) : ''}
     ${row('Line-ups out', toggle('email.lineups_out', 'Line-ups out', p.email.lineups_out))}
     ${row('Weekly round-up', toggle('email.weekly', 'Weekly round-up', p.email.weekly))}
+    ${club ? row('League news', toggle('email.news', 'League news', p.email.news)) : ''}
     <div class="set-actions"><button type="button" class="ghost-btn" id="test-email">Send me a test email</button><span class="test-result" id="test-result" aria-live="polite"></span></div>
   </section>
 

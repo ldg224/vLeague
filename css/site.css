@@ -207,3 +207,17 @@ html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after 
 
 /* Reserve room for the scrollbar so the page doesn't shift sideways when a page becomes long enough to scroll (0.12.1). */
 html { scrollbar-gutter: stable; }
+
+/* A news post (0.19): accent bar, optional picture, message, optional button. Drawn by js/news-card.js. */
+.nc { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+.nc-title { margin: 0; padding: 14px 18px 0; font-size: 1.15rem; line-height: 1.25; }
+.nc-body { border-left: 4px solid var(--nc, var(--blue-600)); margin: 6px 0; overflow-wrap: anywhere; }
+.nc-img { display: block; width: 100%; height: auto; max-height: 340px; object-fit: cover; }
+.nc-text { padding: 8px 16px 4px; color: var(--text-soft); }
+.nc-text p, .nc-text ul { margin: 0 0 10px; line-height: 1.5; }
+.nc-text ul { padding-left: 20px; }
+.nc-text h4 { margin: 12px 0 6px; font-size: 1rem; color: var(--text-strong); }
+.nc-text a { color: var(--accent-text); }
+.nc-act { margin: 4px 16px 14px; }
+.nc-btn { display: inline-block; padding: 10px 20px; border-radius: 10px; background: var(--nc, var(--blue-600)); color: #fff; font-weight: 700; text-decoration: none; }
+.nc-btn:hover { filter: brightness(1.1); }

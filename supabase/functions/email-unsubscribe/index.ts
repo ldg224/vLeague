@@ -6,7 +6,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 const SITE = 'https://ldg224.github.io/vLeague/';
 const KINDS: Record<string, string> = {
   deadline: 'deadline reminders', sent_back: 'emails when club changes are sent back',
-  lineups_out: 'line-ups out emails', weekly: 'the weekly round-up', office_digest: 'clubs-without-a-team emails',
+  lineups_out: 'line-ups out emails', weekly: 'the weekly round-up', office_digest: 'clubs-without-a-team emails', news: 'league news emails',
 };
 
 async function sign(text: string) {

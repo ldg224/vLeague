@@ -3,6 +3,7 @@
 // league news and the leaders. It redraws every 15 s so live scores tick on, and reloads the data every minute.
 import { currentUser, db } from './auth.js';
 import { VERSION } from './version.js';
+import { newsBody, safeColour as postColour } from './news-card.js';
 import {
   loadSeason, logoUrl, matchUrl, kickoff, status, shownScore, shownGoals, liveMinute,
   byKickoff, activeWeek, featured, ladder, leaders, guestNews, parseStamp,
@@ -258,9 +259,9 @@ async function loadPosts() {
 
 function drawNews() {
   const posts = guestNews(season).slice(0, 4);
-  const mine = sbPosts.map(r => `<details class="post" style="--c:#1e88e5">
+  const mine = sbPosts.map(r => `<details class="post" style="--c:${postColour(r.data?.colour)}">
       <summary><span class="post-title">${esc(r.title)}</span><span class="post-meta">${r.pinned ? 'Pinned, ' : ''}${esc(ago(new Date(r.created_at)))}</span></summary>
-      <div class="post-body">${markdown(r.body)}</div></details>`);
+      <div class="post-body">${newsBody(r)}</div></details>`);
   if (!posts.length && !mine.length) { $('#newslist').innerHTML = '<p class="empty small">No news yet.</p>'; return; }
   $('#newslist').innerHTML = mine.join('') + posts.map(p => {
     const blocks = p.blocks || [];
