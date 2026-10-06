@@ -123,7 +123,7 @@ export async function mountFixtures(ctx) {
   }
   const failText = e => {
     const m = String(e?.message || e || '');
-    if (/office_move_weeks|schema cache/i.test(m)) return 'This needs the database update from 0021_roster_tools.sql. Run it once, then try again.';
+    if (/office_move_weeks|office_unlock_week|schema cache/i.test(m)) return 'This needs the database update from 0021_roster_tools.sql / 0022_unlock_week.sql. Run it once, then try again.';
     if (/column .*(numbered|number_override|note)/i.test(m)) return 'Week numbering needs the database update from 0021_roster_tools.sql.';
     return /^[A-Z]/.test(m) && m.length < 220 && !/violates|syntax|relation|permission denied/i.test(m) ? m : explain(e);
   };
@@ -260,7 +260,7 @@ export async function mountFixtures(ctx) {
         </span>
       </div>
       ${open ? `${tools ? toolsHtml(w, m, list, r, locked) : ''}
-        <p class="fx-lock">${esc(lockText(w, list))}${r.note ? ` · <i>${esc(r.note)}</i>` : ''}</p>
+        <p class="fx-lock">${esc(lockText(w, list))}${locked ? ' <button class="btn ghost small" type="button" data-act="week-unlock">Unlock line-ups</button>' : ''}${r.note ? ` · <i>${esc(r.note)}</i>` : ''}</p>
         ${list.map(f => matchRow(f, m)).join('') || `<p class="quiet fx-none">No matches in this week yet.</p>`}
         <div class="fx-foot">
           ${resting.length ? `<span class="fx-byes"><b>Not playing:</b> ${resting.map(c => `<button type="button" class="fx-chip bye${sel?.bye === c.code && sel.week === w ? ' is-sel' : ''}" data-act="bye-chip" data-week="${w}" data-code="${esc(c.code)}" style="--club:${esc(colour(c.code))}">${esc(c.name)}</button>`).join('')}</span>` : ''}
@@ -888,6 +888,10 @@ export async function mountFixtures(ctx) {
       return run(`Re-time week ${week}`, async tx => { for (let i = 0; i < list.length; i++) await setFx(tx, list[i], { starts_at: placed[i].at }); });
     }
     if (act === 'week-untime') return run(`Clear week ${week}'s times`, async tx => { for (const x of m.by.get(week)) if (x.starts_at) await setFx(tx, x, { starts_at: null }); });
+    if (act === 'week-unlock') {
+      if ((await ask(`Unlock ${m.labels.get(week).label}'s line-ups? The saved copies of the club team sheets for this week are dropped, and the lock time is worked out again from its kick-offs. If that time is already in the past it locks again within a minute, so set the kick-offs or the lock time first. This can't be undone, and a week with played matches can't be unlocked.`, ['Unlock it'])) !== 0) return;
+      return run(`Unlock ${m.labels.get(week).label}`, async () => { const r = await (await ctx.db()).rpc('office_unlock_week', { p_week: week }); if (r.error) throw r.error; });
+    }
     if (act === 'lock-auto') return run('Lock automatically', async tx => setRound(tx, week, { lock_at_override: null }));
 
     // pairings

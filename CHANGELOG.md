@@ -8,6 +8,9 @@ Every published version of the vLeague app. Newest first. How versions work and 
 - **Added:** a **Quick create week** button above and below the list of weeks (Editor → Fixtures → Weeks). One press makes the next
   week: paired from the weeks so far, timed like the last week a week later. If those dates have already passed, the kick-off
   times are left blank so the week isn't locked before you've set its dates.
+- **Added:** **Unlock line-ups** on a locked week (next to its lock time). A locked week used to be stuck for good, even after its
+  matches were removed. Unlocking drops that week's saved line-up copies and works the deadline out again; it refuses a week with
+  played matches (`0022_unlock_week.sql`, **run it before using the button**).
 - **Fixed:** weeks locking by themselves. A week's line-up deadline is its first kick-off minus the lock rule, and a deadline in the
   past locks within a minute and can't be unlocked, so a kick-off time set in the past locked the week for good and changing the
   lock time later did nothing. The Editor now asks before setting kick-offs (by hand, shift, move or re-time) that would lock the

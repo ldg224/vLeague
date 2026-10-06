@@ -273,6 +273,17 @@ SETTINGS_CHECKS = [
 ]
 
 
+# 0.20.1: unlocking a week.
+UNLOCK_PRE = "insert into public.rounds (week) values (92); insert into public.fixtures (id, week, home, away, starts_at) values ('w92-a', 92, 'TUR', 'LAU', now() - interval '1 hour'); select public.lock_due_weeks();"
+UNLOCK_CHECKS = [
+    ('anon', 'guest cannot unlock a week', UNLOCK_PRE, {'error': 'permission denied'}, "select public.office_unlock_week(92);"),
+    ('manager', 'manager cannot unlock a week', UNLOCK_PRE, {'error': 'Only the league office'}, "select public.office_unlock_week(92);"),
+    ('office', 'office unlocks a week with no played matches', UNLOCK_PRE + " update public.rounds set lock_at_override = now() + interval '8 days' where week = 92;",
+     "select public.office_unlock_week(92); select locked_at is null and locks_at > now() + interval '7 days' as ok from public.deadlines where week = 92;"),
+    ('office', 'a week with a played match cannot be unlocked', UNLOCK_PRE + " insert into public.results (fixture, summary) values ('w92-a', '{}');", {'error': 'already been played'}, "select public.office_unlock_week(92);"),
+    ('office', 'an unlocked week is refused', '', {'error': 'isn'}, "select public.office_unlock_week(93);"),
+]
+
 # 0.20: the safe week mover. Weeks 91 to 93 are test weeks; everything is rolled back.
 WK_PRE = """insert into public.rounds (week, name) values (91, 'Alpha'), (92, 'Beta'), (93, null);
   insert into public.fixtures (id, week, home, away, starts_at) values
@@ -329,7 +340,7 @@ def main():
             ok = bool(rows_of(r) and r[-1].get('ok'))
         failed += not ok
         print(f"{'PASS' if ok else 'FAIL'}  [{who:7}] {desc}" + ('' if ok else f'  -> {r}'))
-    for who, desc, pre, *rest in ROSTER_CHECKS:
+    for who, desc, pre, *rest in UNLOCK_CHECKS + ROSTER_CHECKS:
         expect, body = (rest[0], rest[1]) if len(rest) == 2 else (None, rest[0])
         r = as_user(who, body, pre)
         if expect:
@@ -352,7 +363,7 @@ def main():
     clean = rows_of(left) and left[0]['n'] == 0
     print('PASS  test accounts cleaned up' if clean else f'FAIL  test accounts left behind: {left}')
     failed += not clean
-    total = len(CHECKS) + len(SETUP_CHECKS) + len(DEADLINE_CHECKS) + len(ROSTER_CHECKS) + len(SETTINGS_CHECKS) + 1
+    total = len(CHECKS) + len(SETUP_CHECKS) + len(DEADLINE_CHECKS) + len(UNLOCK_CHECKS) + len(ROSTER_CHECKS) + len(SETTINGS_CHECKS) + 1
     print(f'\n{total - failed}/{total} passed')
     sys.exit(1 if failed else 0)
 
