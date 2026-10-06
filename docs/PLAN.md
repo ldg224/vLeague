@@ -161,7 +161,9 @@ game settings. The idea: **Season, then Rounds, then Match windows, then Matches
       and scheduled from the Editor (off by default).
 - [ ] Match pages and the old site retired (match files are in the `matches` bucket, not on Pages).
 
-### 0.15: Inbox and press
+### 0.15.0: Simpler Editor (done): Requests, Clubs, Managers and Phones are one Clubs tab, with every registration kept in full
+
+### Inbox and press (was 0.15)
 - [ ] One inbox: news for this club, press conferences, deadlines; only things that need action or matter.
 - [ ] News audiences: one club, several, all clubs, guests only, everyone.
 - [ ] Press conference opening 24 hours before kick-off; answers quoted in the match preview; the press effect kept.

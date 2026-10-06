@@ -3,6 +3,22 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.15.0 (2026-10-06)
+
+A simpler Editor: Requests, Clubs, Managers and Phones are now one **Clubs** tab.
+
+- **Changed:** each club is a row that opens into its own panel: **approve or send back** what's waiting, its **manager
+  account** (send a password link, take them off the club, or invite one if it has none), its **phone number**, its
+  **details** (colours, stadium, motto, set-up status, **Set up again**) and **every registration it has sent**. Clubs
+  waiting on you come first and start open; panels stay open after you act. There's a search box, and the Clubs tab
+  shows how many are waiting.
+- **Added:** each registration keeps a **full copy** of what was sent: the form as typed, plus the club's colours, manager,
+  stadium, motto and account email at that moment. Earlier registrations show what they have and say so.
+- **Added:** downloads for **Phones CSV**, **Copy phone numbers** and **Registrations CSV** (every submission, every field).
+- **Changed:** accounts with no club (such as the office's own) are under **Accounts without a club**, where they can be
+  given one. Old `#requests`, `#managers` and `#phones` links open Clubs.
+- **Database:** registrations gain a `snapshot` column (`0016_request_snapshot.sql`).
+
 ## 0.14.1 (2026-10-06)
 
 - **Changed:** the full ladder on the League page shows each club's full name; matches keep the short names.

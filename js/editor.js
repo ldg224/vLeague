@@ -1,7 +1,6 @@
-// The league office's Editor (0.4): club requests to approve or send back, the clubs, manager accounts (invite,
-// link to a club, send a password link) and, from 0.6, each week's line-up deadline (with the office's "clubs
-// without a team" email since 0.7.1, as Settings is for managers). Fixtures, results, Simulate and news move in later
-// (docs/PLAN.md).
+// The league office's Editor. Clubs (0.15) is one place per club: its manager account and phone, its details, requests
+// to approve or send back, and a full copy of every registration it sent. Then Players (0.11), Fixtures with Simulate
+// (0.12 to 0.14) and each week's line-up deadline (0.6, with the office's "clubs without a team" email since 0.7.1).
 // The database checks everything again (supabase/migrations/0003_club_setup.sql); this page only asks.
 import { enter, clubs, chrome, esc, safeColour, crestUrl } from './member.js';
 import { db, sendPasswordReset } from './auth.js';
@@ -14,8 +13,10 @@ import { fixturesView, mountFixtures } from './editor-fixtures.js';
 chrome();
 const me = await enter('editor.html');
 const main = document.getElementById('main');
-const TABS = { requests: 'Requests', clubs: 'Clubs', players: 'Players', fixtures: 'Fixtures', managers: 'Managers', phones: 'Phones', deadlines: 'Deadlines' };
-let state = { clubs: [], requests: [], accounts: [], phones: null, deadlines: null, locked: [], season: null, digest: true };
+const TABS = { clubs: 'Clubs', players: 'Players', fixtures: 'Fixtures', deadlines: 'Deadlines' };
+// `open` is which club panels and submissions are expanded, kept across redraws so nothing snaps shut after an action.
+let state = { clubs: [], requests: [], accounts: [], phones: null, deadlines: null, locked: [], season: null, digest: true, open: new Set() };
+let firstLoad = true;
 
 // The accent a club shows: the one saved with its colours, or worked out the same way the wizard does.
 const accentOf = c => safeColour(c.accent || accentFor(c.colour, c.colour2));
@@ -38,7 +39,7 @@ async function load() {
   const c = await db();
   const [list, req, acc, dl, ws, season, mine, ph] = await Promise.all([
     clubs(),
-    c.from('club_requests').select('*').order('created_at', { ascending: false }).limit(60),
+    c.from('club_requests').select('*').order('created_at', { ascending: false }).limit(500),
     c.rpc('office_accounts'),
     c.from('deadlines').select('*').order('week'),
     c.from('week_sheets').select('week, club'),
@@ -49,52 +50,215 @@ async function load() {
   if (req.error || acc.error) throw new Error(explain(req.error || acc.error));
   state = {
     clubs: list, requests: req.data || [], accounts: acc.data || [], phones: ph.error ? null : ph.data || [],
-    deadlines: dl.error ? null : dl.data || [], locked: ws.data || [], season, digest: mine.email.office_digest,
+    deadlines: dl.error ? null : dl.data || [], locked: ws.data || [], season, digest: mine.email.office_digest, open: state.open,
   };
+  if (firstLoad) {   // clubs waiting on the office start open
+    firstLoad = false;
+    for (const r of state.requests) if (r.status === 'pending') state.open.add(`club:${r.club}`);
+  }
 }
 
 function tab() {
   const t = location.hash.slice(1);
-  return TABS[t] ? t : 'requests';
+  return TABS[t] ? t : 'clubs';   // the old Requests, Managers and Phones tabs are part of Clubs now
 }
 
 function render() {
   const t = tab();
   const pending = state.requests.filter(r => r.status === 'pending').length;
+  const y = scrollY;
   main.innerHTML = `<nav class="ed-tabs" aria-label="Editor">${Object.entries(TABS).map(([k, label]) =>
-    `<a href="#${k}" ${k === t ? 'aria-current="page"' : ''}>${label}${k === 'requests' && pending ? ` <span class="ed-count">${pending}</span>` : ''}</a>`).join('')}</nav>
-    <section id="view">${{ requests: requestsView, clubs: clubsView, players: playersView, fixtures: fixturesView, managers: managersView, phones: phonesView, deadlines: deadlinesView }[t]()}</section>`;
+    `<a href="#${k}" ${k === t ? 'aria-current="page"' : ''}>${label}${k === 'clubs' && pending ? ` <span class="ed-count">${pending}</span>` : ''}</a>`).join('')}</nav>
+    <section id="view">${{ clubs: clubsView, players: playersView, fixtures: fixturesView, deadlines: deadlinesView }[t]()}</section>`;
+  if (y) scrollTo(0, y);   // a redraw after an action keeps your place
   if (t === 'players') mountPlayers({ db, esc, explain, clubs: state.clubs });
   if (t === 'fixtures') mountFixtures({ db, esc, explain, clubs: state.clubs, accent: accentOf });
 }
 
-// ---------------------------------------------------------------- requests
 
-function requestsView() {
-  const pending = state.requests.filter(r => r.status === 'pending');
-  const done = state.requests.filter(r => r.status !== 'pending').slice(0, 12);
-  return `<h1>Requests</h1>
-    ${pending.length ? pending.map(requestCard).join('') : '<p class="quiet">Nothing waiting.</p>'}
-    ${done.length ? `<h2>Recently dealt with</h2><ul class="ed-history">${done.map(r => {
-      const c = state.clubs.find(x => x.code === r.club) || { code: r.club };
-      return `<li><b>${esc(c.name || r.club)}</b> ${r.kind === 'setup' ? 'set-up' : 'change'}
-        <span class="ed-pill ${r.status}">${r.status === 'approved' ? 'Approved' : 'Sent back'}</span>
-        <small>${esc(when(r.reviewed_at))}${r.office_note ? `: “${esc(r.office_note)}”` : ''}</small></li>`;
-    }).join('')}</ul>` : ''}`;
+// ---------------------------------------------------------------- clubs
+// One place per club (0.15): its manager account and phone, its details, what's waiting for approval, and a full copy of
+// every registration it has sent. Each club is a row that opens into a panel; clubs waiting on the office come first
+// and start open. What was Requests, Managers and Phones lives here.
+
+// One state per club, in the order a club moves through them.
+function clubState(c, m) {
+  if (c.status === 'withdrawn') return ['Withdrawn', ''];
+  if (!m) return ['No manager', 'warn'];
+  if (!m.last_sign_in_at) return ['Invited', ''];
+  if (!c.setup_at) return ['Setting up', ''];
+  if (state.requests.some(r => r.club === c.code && r.status === 'pending')) return ['Waiting for approval', 'warn'];
+  return ['Active', 'approved'];
 }
+
+const pendingOf = code => state.requests.find(r => r.club === code && r.status === 'pending');
+const phoneOf = code => (state.phones || []).find(p => p.club === code)?.phone || '';
+
+// The accounts linked to each club, the manager first (the office's own club can have both).
+function accountsByClub() {
+  const by = new Map();
+  for (const a of [...state.accounts].sort((x, y) => (x.role === 'manager' ? 0 : 1) - (y.role === 'manager' ? 0 : 1))) {
+    if (!a.club) continue;
+    if (!by.has(a.club)) by.set(a.club, []);
+    by.get(a.club).push(a);
+  }
+  return by;
+}
+
+const swatch = (label, v) => (v ? `<span><i style="background:${esc(safeColour(v))}"></i>${label} ${esc(v)}</span>` : '');
+
+function accountState(a) {
+  if (a.last_sign_in_at) return `Last signed in ${when(a.last_sign_in_at)}`;
+  if (a.invited_at && !a.confirmed_at) return `Invited ${when(a.invited_at)}, not accepted yet`;
+  return 'Never signed in';
+}
+
+function clubsView() {
+  const by = accountsByClub();
+  const rank = c => (pendingOf(c.code) ? 0 : c.status === 'withdrawn' ? 2 : 1);
+  const list = [...state.clubs].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
+  const live = state.clubs.filter(c => c.status !== 'withdrawn');
+  const phones = live.filter(c => phoneOf(c.code)).length;
+  const waiting = state.requests.filter(r => r.status === 'pending').length;
+  const loose = state.accounts.filter(a => !a.club);
+  return `<h1>Clubs</h1>
+    <div class="ed-bar">
+      <p class="ed-hint"><b>${live.length}</b> club${live.length === 1 ? '' : 's'}${waiting ? ` · <b>${waiting}</b> waiting for you` : ''}${state.phones ? ` · <b>${phones}</b> of ${live.length} phone numbers` : ''}</p>
+      <div class="ed-actions">
+        <button class="btn ghost small" type="button" data-act="phones-copy"${phones ? '' : ' disabled'}>Copy phone numbers</button>
+        <button class="btn ghost small" type="button" data-act="phones-csv"${phones ? '' : ' disabled'}>Phones CSV</button>
+        <button class="btn ghost small" type="button" data-act="regs-csv"${state.requests.length ? '' : ' disabled'}>Registrations CSV</button>
+      </div>
+    </div>
+    <p class="ed-msg" id="bar-msg" role="status"></p>
+    <input class="ed-find" type="search" placeholder="Find a club or manager" aria-label="Find a club or manager" autocomplete="off">
+    <ul class="ed-club-list">${list.map(c => clubItem(c, by.get(c.code) || [])).join('')}</ul>
+    <p class="quiet ed-none" hidden>No club matches that.</p>
+    <details class="ed-more"${state.open.has('add') ? ' open' : ''} data-key="add"><summary>Add clubs</summary>
+      <form class="ed-invite" id="add-clubs">
+        <label>One club per line <i>Name, or CODE, Name, or CODE, Name, Manager</i>
+          <textarea name="lines" rows="5" required placeholder="Northside FC&#10;WST, Westgate United&#10;HRB, Harbour Town, Sam"></textarea></label>
+        <p class="ed-hint">Codes (2 to 4 letters or numbers) and colours are picked for you if left out. Open the club afterwards to invite its manager; it sets itself up.</p>
+        <div class="ed-actions"><button class="btn">Add clubs</button></div>
+        <p class="ed-msg" role="status"></p>
+      </form></details>
+    ${loose.length ? `<details class="ed-more"${state.open.has('loose') ? ' open' : ''} data-key="loose"><summary>Accounts without a club (${loose.length})</summary>
+      <ul class="ed-accts">${loose.map(a => accountRow(a, true)).join('')}</ul></details>` : ''}`;
+}
+
+function clubItem(c, accts) {
+  const m = accts[0];
+  const [label, kind] = clubState(c, m);
+  const key = `club:${c.code}`, req = pendingOf(c.code);
+  const subs = state.requests.filter(r => r.club === c.code);
+  const phone = phoneOf(c.code);
+  return `<li class="ed-club" style="--club:${esc(accentOf(c))}" data-code="${esc(c.code)}" data-find="${esc(`${c.name} ${c.code} ${c.manager_name || ''} ${m?.email || ''}`.toLowerCase())}">
+    <details${state.open.has(key) ? ' open' : ''} data-key="${esc(key)}">
+      <summary>${crest(c.crest_path, c.code)}
+        <span class="who"><b>${esc(c.name)}</b><small>${esc(c.code)}${c.manager_name ? ` · ${esc(c.manager_name)}` : ''}${m ? ` · ${esc(m.email)}` : ''}</small></span>
+        <span class="ed-pill ${kind}">${esc(label)}</span></summary>
+      <div class="ed-panel">
+        ${req ? `<section class="ed-sec">${requestCard(req)}</section>` : ''}
+        <section class="ed-sec"><h3>Manager</h3>
+          ${accts.length ? `<ul class="ed-accts">${accts.map(a => accountRow(a, false)).join('')}</ul>` : inviteForm(c)}
+          <p class="ed-line"><span>Phone</span>${phone ? `<a href="tel:${esc(phone.replace(/[^+\d]/g, ''))}">${esc(phone)}</a>` : '<span class="ed-pill warn">Not added yet</span>'}</p>
+        </section>
+        <section class="ed-sec"><h3>Club details</h3>
+          <table class="ed-diff">
+            <tr><th>Name</th><td>${esc(c.name)}${c.short_name ? ` <small>(${esc(c.short_name)})</small>` : ''}</td></tr>
+            <tr><th>Code</th><td>${esc(c.code)}</td></tr>
+            <tr><th>Colours</th><td class="ed-swatches">${swatch('Primary', c.colour)}${swatch('Secondary', c.colour2)}${swatch('Accent', accentOf(c))}</td></tr>
+            ${c.manager_name ? `<tr><th>Manager</th><td>${esc(c.manager_name)}</td></tr>` : ''}
+            ${c.stadium ? `<tr><th>Stadium</th><td>${esc(c.stadium)}</td></tr>` : ''}
+            ${c.motto ? `<tr><th>Motto</th><td>${esc(c.motto)}</td></tr>` : ''}
+            <tr><th>Set-up</th><td>${c.setup_at ? `Sent ${esc(when(c.setup_at))}` : 'Not sent yet'}</td></tr>
+          </table>
+          ${c.setup_at ? `<div class="ed-actions"><button class="btn ghost small" type="button" data-act="reopen">Set up again</button></div>
+          <p class="ed-confirm" hidden>Show ${esc(c.name)} the setup wizard again?
+            <button class="btn small" type="button" data-act="reopen-yes">Yes</button>
+            <button class="btn ghost small" type="button" data-act="reopen-no">Cancel</button></p>` : ''}
+          <p class="ed-msg" role="status"></p>
+        </section>
+        <section class="ed-sec"><h3>Registrations <span class="ed-count-dim">${subs.length}</span></h3>
+          ${subs.length ? subs.map(r => submission(r, c)).join('') : '<p class="quiet">Nothing sent yet.</p>'}
+        </section>
+      </div>
+    </details></li>`;
+}
+
+// One account in a club's Manager section, or in "Accounts without a club" (loose), where it can be given a club.
+function accountRow(a, loose) {
+  const taken = new Set(state.accounts.filter(x => x.club && x.role === 'manager').map(x => x.club));
+  const options = `<option value="">Pick a club</option>` + state.clubs.map(c => {
+    const off = a.role === 'manager' && taken.has(c.code);
+    return `<option value="${esc(c.code)}" ${off ? 'disabled' : ''}>${esc(c.name)}${off ? ' (has a manager)' : ''}</option>`;
+  }).join('');
+  return `<li class="ed-acct" data-id="${esc(a.id)}" data-email="${esc(a.email)}">
+    <span class="who"><b>${esc(a.display_name || a.email)}</b><small>${esc(a.email)}${a.role === 'office' ? ' · league office' : ''}</small>
+      <small>${esc(accountState(a))}</small></span>
+    ${loose ? `<label class="sr-only" for="club-${esc(a.id)}">Club</label><select id="club-${esc(a.id)}" data-act="link">${options}</select>` : ''}
+    <span class="ed-actions"><button class="btn ghost small" data-act="reset" type="button">Send password link</button>
+      ${loose ? '' : '<button class="btn ghost small" data-act="unlink" type="button">Take off club</button>'}</span>
+    <p class="ed-confirm" hidden><span></span>
+      <button class="btn small" type="button" data-act="link-yes">Yes</button>
+      <button class="btn ghost small" type="button" data-act="link-no">Cancel</button></p>
+    <p class="ed-msg" role="status"></p></li>`;
+}
+
+function inviteForm(c) {
+  return `<form class="ed-invite ed-invite-club" data-club="${esc(c.code)}">
+    <p class="ed-hint">No manager yet. They get an email to set a password, then set the club up themselves.</p>
+    <div class="ed-fields">
+      <label>Email<input name="email" type="email" required autocomplete="off"></label>
+      <label>Name <i>Optional</i><input name="name" maxlength="40" autocomplete="off"></label>
+    </div>
+    <div class="ed-actions"><button class="btn small">Send invite</button></div>
+    <p class="ed-msg" role="status"></p></form>`;
+}
+
+// ---------------------------------------------------------------- registrations
+
+// Everything one submission held. Newer ones carry a full snapshot (what was typed, and the club's colours and details
+// at that moment); older ones only the columns, so those say what wasn't kept.
+function submissionFields(r) {
+  const s = r.snapshot || {};
+  const v = k => s[k] ?? r[k] ?? '';
+  return {
+    name: v('name'), short_name: v('short_name'), code: v('code'), crest_path: v('crest_path'), colour: s.colour || '', colour2: s.colour2 || '',
+    accent: s.accent || '', manager_name: s.manager_name || '', stadium: s.stadium || '', motto: s.motto || '', notes: r.notes || '',
+    email: s.email || '', full: Boolean(r.snapshot),
+  };
+}
+const OUTCOME = { pending: 'Waiting', approved: 'Approved', returned: 'Sent back' };
+
+function submission(r, c) {
+  const f = submissionFields(r), key = `sub:${r.id}`;
+  const row = (label, value) => (value ? `<tr><th>${label}</th><td>${value}</td></tr>` : '');
+  return `<details class="ed-sub"${state.open.has(key) ? ' open' : ''} data-key="${key}">
+    <summary><b>${r.kind === 'setup' ? 'Set-up' : 'Change'}</b> <small>${esc(when(r.created_at))}</small>
+      <span class="ed-pill ${r.status === 'approved' ? 'approved' : r.status === 'pending' ? 'warn' : ''}">${OUTCOME[r.status] || esc(r.status)}</span></summary>
+    <table class="ed-diff">
+      ${row('Name', esc(f.name))}${row('Short name', esc(f.short_name))}${row('Code', esc(f.code))}
+      ${f.crest_path ? `<tr><th>Crest</th><td>${crest(f.crest_path, f.code)}</td></tr>` : ''}
+      ${f.colour || f.colour2 || f.accent ? `<tr><th>Colours</th><td class="ed-swatches">${swatch('Primary', f.colour)}${swatch('Secondary', f.colour2)}${swatch('Accent', f.accent)}</td></tr>` : ''}
+      ${row('Manager', esc(f.manager_name))}${row('Stadium', esc(f.stadium))}${row('Motto', esc(f.motto))}
+      ${row('Account', esc(f.email))}
+      ${f.notes ? `<tr><th>Notes</th><td><blockquote>${esc(f.notes)}</blockquote></td></tr>` : ''}
+      ${r.reviewed_at ? row('Answered', `${esc(when(r.reviewed_at))}${r.office_note ? `: “${esc(r.office_note)}”` : ''}`) : ''}
+    </table>
+    ${f.full ? '' : '<p class="ed-hint">Colours, manager, stadium and motto weren’t kept for submissions sent before 0.15.</p>'}
+  </details>`;
+}
+
+// ---------------------------------------------------------------- approving
 
 function requestCard(r) {
   const c = state.clubs.find(x => x.code === r.club) || { code: r.club };
-  const accent = accentOf(c);
   const next = { name: r.name ?? c.name, short_name: r.short_name ?? c.short_name, code: r.code ?? c.code, crest_path: r.crest_path ?? c.crest_path };
   const row = (label, from, to, changed) => `<tr class="${changed ? 'changed' : ''}"><th>${label}</th>
     <td>${changed && from ? `<s>${esc(from)}</s> ` : ''}${esc(to || '—')}</td></tr>`;
-  return `<article class="ed-request" style="--club:${esc(accent)}" data-id="${r.id}">
-    <header>
-      ${crest(next.crest_path, next.code, 'big')}
-      <div><h3>${esc(next.name || c.name)}</h3>
-        <small>${r.kind === 'setup' ? 'Setting up the club' : 'Asking for a change'} · ${esc(when(r.created_at))}</small></div>
-    </header>
+  return `<article class="ed-request" data-id="${r.id}">
+    <h3>${r.kind === 'setup' ? 'Waiting for approval: setting up the club' : 'Waiting for approval: a change'} <small>${esc(when(r.created_at))}</small></h3>
     <table class="ed-diff">
       ${row('Name', c.name, next.name, r.name != null && r.name !== c.name)}
       ${row('Short name', c.short_name, next.short_name, r.short_name != null && r.short_name !== c.short_name)}
@@ -102,17 +266,8 @@ function requestCard(r) {
       <tr class="${r.crest_path ? 'changed' : ''}"><th>Crest</th><td class="ed-crests">
         ${r.crest_path && c.crest_path ? `${crest(c.crest_path, c.code, 'was')} <span aria-hidden="true">→</span>` : ''}
         ${crest(next.crest_path, next.code)} ${r.crest_path ? '' : '<small>no change</small>'}</td></tr>
-      <tr><th>Colours</th><td class="ed-swatches">${[['Primary', c.colour], ['Secondary', c.colour2], ['Accent', accent]]
-        .filter(([, v]) => v).map(([l, v]) => `<span><i style="background:${esc(safeColour(v))}"></i>${l}</span>`).join('')}</td></tr>
-      ${c.manager_name ? `<tr><th>Manager</th><td>${esc(c.manager_name)}</td></tr>` : ''}
-      ${c.stadium ? `<tr><th>Stadium</th><td>${esc(c.stadium)}</td></tr>` : ''}
-      ${c.motto ? `<tr><th>Motto</th><td>${esc(c.motto)}</td></tr>` : ''}
     </table>
     ${r.notes ? `<blockquote>${esc(r.notes)}</blockquote>` : ''}
-    <div class="ed-preview" aria-label="How it will look">
-      <div class="band"></div>
-      <div class="row">${crest(next.crest_path, next.code)}<b>${esc(next.short_name || next.name)}</b><span>${esc(next.code)}</span></div>
-    </div>
     <div class="ed-actions">
       <button class="btn" data-act="approve">Approve</button>
       <button class="btn ghost" data-act="return">Send back…</button>
@@ -138,46 +293,7 @@ async function review(card, approve, note) {
   await refresh();
 }
 
-// ---------------------------------------------------------------- clubs
-
-// One state per club, in the order a club moves through them.
-function clubState(c, m) {
-  if (c.status === 'withdrawn') return ['Withdrawn', ''];
-  if (!m) return ['No manager', 'warn'];
-  if (!m.last_sign_in_at) return ['Invited', ''];
-  if (!c.setup_at) return ['Setting up', ''];
-  if (state.requests.some(r => r.club === c.code && r.status === 'pending')) return ['Waiting for approval', 'warn'];
-  return ['Active', 'approved'];
-}
-
-function clubsView() {
-  // The office's own club counts too, so a manager account wins over the office if both are linked.
-  const managers = new Map(state.accounts.filter(a => a.club).sort((a, b) => (a.role === 'manager') - (b.role === 'manager'))
-    .map(a => [a.club, a]));
-  return `<h1>Clubs</h1>
-    <form class="ed-invite" id="add-clubs">
-      <h2>Add clubs</h2>
-      <label>One club per line <i>Name, or CODE, Name, or CODE, Name, Manager</i>
-        <textarea name="lines" rows="5" required placeholder="Northside FC&#10;WST, Westgate United&#10;HRB, Harbour Town, Sam"></textarea></label>
-      <p class="ed-hint">Codes (2 to 4 letters or numbers) and colours are picked for you if left out. Each club then gets a manager from the Managers tab and sets itself up.</p>
-      <div class="ed-actions"><button class="btn">Add clubs</button></div>
-      <p class="ed-msg" role="status"></p>
-    </form>
-    <ul class="club-rows ed-clubs">${state.clubs.map(c => {
-    const m = managers.get(c.code);
-    const [label, kind] = clubState(c, m);
-    return `<li style="--club:${esc(accentOf(c))}" data-code="${esc(c.code)}">
-      ${crest(c.crest_path, c.code)}
-      <span class="who"><b>${esc(c.name)}</b><small>${esc(c.code)}${m ? ` · ${esc(m.email)}` : ''}</small></span>
-      <span class="ed-pill ${kind}">${esc(label)}</span>
-      <span class="ed-setup">${c.setup_at ? `<button class="btn ghost small" type="button" data-act="reopen">Set up again</button>` : ''}</span>
-      <span class="ed-confirm" hidden>Show ${esc(c.name)} the setup wizard again?
-        <button class="btn small" type="button" data-act="reopen-yes">Yes</button>
-        <button class="btn ghost small" type="button" data-act="reopen-no">Cancel</button></span>
-      <p class="ed-msg" role="status"></p>
-    </li>`;
-  }).join('')}</ul>`;
-}
+// ---------------------------------------------------------------- adding clubs
 
 // A code from a name: initials of long names, else the first letters, else a number on the end.
 function suggestCode(name, taken) {
@@ -215,103 +331,63 @@ async function addClubs(form) {
   if (again) again.textContent = `Added ${rows.length} club${rows.length > 1 ? 's' : ''}: ${rows.map(r => r.code).join(', ')}.`;
 }
 
-async function reopen(li) {
-  li.querySelectorAll('button').forEach(b => { b.disabled = true; });
+async function reopen(sec) {
+  const li = sec.closest('.ed-club');
+  sec.querySelectorAll('button').forEach(b => { b.disabled = true; });
   const { error } = await (await db()).rpc('reopen_club_setup', { p_code: li.dataset.code });
   if (error) {
-    li.querySelector('.ed-msg').textContent = explain(error);
-    li.querySelectorAll('button').forEach(b => { b.disabled = false; });
+    sec.querySelector('.ed-msg').textContent = explain(error);
+    sec.querySelectorAll('button').forEach(b => { b.disabled = false; });
     return;
   }
   await refresh();
 }
 
-// ---------------------------------------------------------------- phones
+// ---------------------------------------------------------------- exports
 
-// One row per club still in the league: who to call and the number they added in their Inbox (private to the office).
-function phoneRows() {
-  const have = new Map((state.phones || []).map(p => [p.club, p.phone]));
-  const email = new Map(state.accounts.filter(a => a.club && a.role === 'manager').map(a => [a.club, a.email]));
-  return state.clubs.filter(c => c.status !== 'withdrawn')
-    .map(c => ({ club: c, name: c.name, code: c.code, manager: c.manager_name || '', email: email.get(c.code) || '', phone: have.get(c.code) || '' }));
-}
-
-function phonesView() {
-  if (!state.phones) return '<h1>Phones</h1><p class="quiet">The phone numbers didn’t load. Reload the page to try again.</p>';
-  const rows = phoneRows(), got = rows.filter(r => r.phone).length;
-  return `<h1>Phones</h1>
-    <p class="ed-hint">Every club’s manager is asked in their Inbox. <b>${got} of ${rows.length}</b> have added a number. Only you and that club can see it.</p>
-    <div class="ed-actions"><button class="btn small" type="button" data-act="phones-copy"${got ? '' : ' disabled'}>Copy all</button>
-      <button class="btn ghost small" type="button" data-act="phones-csv"${got ? '' : ' disabled'}>Download CSV</button></div>
-    <p class="ed-msg" role="status"></p>
-    <ul class="club-rows ed-clubs ed-phones">${rows.map(r => `<li style="--club:${esc(accentOf(r.club))}">
-      ${crest(r.club.crest_path, r.code)}
-      <span class="who"><b>${esc(r.name)}</b><small>${esc(r.manager || 'No manager name')}${r.email ? ` · ${esc(r.email)}` : ''}</small></span>
-      <span class="ph">${r.phone ? `<a href="tel:${esc(r.phone.replace(/[^+\d]/g, ''))}">${esc(r.phone)}</a>` : '<span class="ed-pill warn">Not added</span>'}</span>
-    </li>`).join('')}</ul>`;
-}
-
-async function phonesExport(kind, btn) {
-  const rows = phoneRows().filter(r => r.phone), msg = btn.closest('section').querySelector('.ed-msg');
-  if (kind === 'copy') {
-    const text = rows.map(r => `${r.name}${r.manager ? ` (${r.manager})` : ''}: ${r.phone}`).join('\n');
-    try { await navigator.clipboard.writeText(text); msg.textContent = `Copied ${rows.length} number${rows.length === 1 ? '' : 's'}.`; }
-    catch { msg.textContent = 'Couldn’t copy here. Use Download CSV instead.'; }
-    return;
-  }
-  const cell = v => `"${String(v).replace(/"/g, '""')}"`;
-  const csv = ['Club,Code,Manager,Email,Phone', ...rows.map(r => [r.name, r.code, r.manager, r.email, r.phone].map(cell).join(','))].join('\r\n');
+function download(name, text, type) {
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-  a.download = 'vleague-manager-phones.csv';
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  msg.textContent = `Downloaded ${rows.length} number${rows.length === 1 ? '' : 's'}.`;
+}
+const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+
+// Phones: one row per club still in the league, with who to call.
+function phoneRows() {
+  const email = new Map(state.accounts.filter(a => a.club && a.role === 'manager').map(a => [a.club, a.email]));
+  return state.clubs.filter(c => c.status !== 'withdrawn' && phoneOf(c.code))
+    .map(c => ({ name: c.name, code: c.code, manager: c.manager_name || '', email: email.get(c.code) || '', phone: phoneOf(c.code) }));
+}
+
+async function exportData(kind) {
+  const msg = document.getElementById('bar-msg');
+  if (kind === 'phones-copy') {
+    const rows = phoneRows();
+    const text = rows.map(r => `${r.name}${r.manager ? ` (${r.manager})` : ''}: ${r.phone}`).join('\n');
+    try { await navigator.clipboard.writeText(text); msg.textContent = `Copied ${rows.length} number${rows.length === 1 ? '' : 's'}.`; }
+    catch { msg.textContent = 'Couldn’t copy here. Use Phones CSV instead.'; }
+  } else if (kind === 'phones-csv') {
+    const rows = phoneRows();
+    download('vleague-manager-phones.csv', ['Club,Code,Manager,Email,Phone', ...rows.map(r => [r.name, r.code, r.manager, r.email, r.phone].map(cell).join(','))].join('\r\n'), 'text/csv');
+    msg.textContent = `Downloaded ${rows.length} number${rows.length === 1 ? '' : 's'}.`;
+  } else {
+    const head = ['Club', 'Code now', 'Kind', 'Sent', 'Outcome', 'Answered', 'Office note', 'Name', 'Short name', 'Code', 'Primary', 'Secondary', 'Accent', 'Manager', 'Stadium', 'Motto', 'Notes', 'Account'];
+    const rows = state.requests.map(r => {
+      const f = submissionFields(r), c = state.clubs.find(x => x.code === r.club);
+      return [c?.name || r.club, r.club, r.kind, r.created_at, r.status, r.reviewed_at || '', r.office_note || '', f.name, f.short_name, f.code, f.colour, f.colour2, f.accent, f.manager_name, f.stadium, f.motto, f.notes, f.email].map(cell).join(',');
+    });
+    download('vleague-registrations.csv', [head.join(','), ...rows].join('\r\n'), 'text/csv');
+    msg.textContent = `Downloaded ${rows.length} submission${rows.length === 1 ? '' : 's'}.`;
+  }
 }
 
 // ---------------------------------------------------------------- managers
 
-function accountState(a) {
-  if (a.last_sign_in_at) return `Last signed in ${when(a.last_sign_in_at)}`;
-  if (a.invited_at && !a.confirmed_at) return `Invited ${when(a.invited_at)}, not accepted yet`;
-  return 'Never signed in';
-}
-
-function managersView() {
-  const taken = new Set(state.accounts.filter(a => a.club && a.role === 'manager').map(a => a.club));
-  // A club has one manager: clubs with one are greyed out for invites and for other managers (the office can share).
-  const clubOptions = (selected, block) => `<option value="">${block === 'invite' ? 'Pick a club' : 'No club'}</option>` +
-    state.clubs.map(c => {
-      const off = block && c.code !== selected && taken.has(c.code);
-      return `<option value="${esc(c.code)}" ${c.code === selected ? 'selected' : ''} ${off ? 'disabled' : ''}>${esc(c.name)}${off ? ' (has a manager)' : ''}</option>`;
-    }).join('');
-  return `<h1>Managers</h1>
-    <form class="ed-invite" id="invite">
-      <h2>Invite a manager</h2>
-      <div class="ed-fields">
-        <label>Email<input name="email" type="email" required autocomplete="off"></label>
-        <label>Name <i>Optional</i><input name="name" maxlength="40" autocomplete="off"></label>
-        <label>Club<select name="club" required>${clubOptions('', 'invite')}</select></label>
-      </div>
-      <div class="ed-actions"><button class="btn">Send invite</button></div>
-      <p class="ed-msg" role="status"></p>
-    </form>
-    <ul class="ed-accounts">${state.accounts.map(a => `<li data-id="${esc(a.id)}" data-email="${esc(a.email)}">
-      <span class="who"><b>${esc(a.display_name || a.email)}</b><small>${esc(a.email)}${a.role === 'office' ? ' · league office' : ''}</small>
-        <small>${esc(accountState(a))}</small></span>
-      <label class="sr-only" for="club-${esc(a.id)}">Club</label>
-      <select id="club-${esc(a.id)}" data-act="link" data-was="${esc(a.club || '')}">${clubOptions(a.club, a.role === 'manager')}</select>
-      <button class="btn ghost small" data-act="reset" type="button">Send password link</button>
-      <span class="ed-confirm" hidden><span></span>
-        <button class="btn small" type="button" data-act="link-yes">Yes</button>
-        <button class="btn ghost small" type="button" data-act="link-no">Cancel</button></span>
-      <p class="ed-msg" role="status"></p>
-    </li>`).join('')}</ul>`;
-}
-
 async function invite(form) {
   const msg = form.querySelector('.ed-msg');
-  const data = Object.fromEntries(new FormData(form));
+  const data = { ...Object.fromEntries(new FormData(form)), club: form.dataset.club };
   form.querySelector('button').disabled = true;
   msg.textContent = 'Sending…';
   const { data: res, error } = await (await db()).functions.invoke('invite-manager', { body: data });
@@ -320,31 +396,29 @@ async function invite(form) {
   form.querySelector('button').disabled = false;
   if (problem) { msg.textContent = explain(problem); return; }
   await refresh();
-  const again = document.querySelector('#invite .ed-msg');
+  // The page redraws after an invite; say it went, on the club's own panel.
+  const again = document.querySelector(`.ed-club[data-code="${CSS.escape(data.club)}"] .ed-accts .ed-msg`);
   if (again) again.textContent = `Invite sent to ${data.email}.`;
 }
 
-// Changing an account's club asks first: one mis-tap would otherwise take a manager off their club.
-function askLink(li, select) {
-  const to = state.clubs.find(c => c.code === select.value);
+// Moving an account to a club, or taking it off its club, asks first: one mis-tap would otherwise cut a manager off.
+function askLink(li, to) {
+  const club = state.clubs.find(c => c.code === to);
   const who = li.querySelector('.who b').textContent;
   const box = li.querySelector('.ed-confirm');
-  box.querySelector('span').textContent = to ? `Move ${who} to ${to.name}?` : `Take ${who} off their club?`;
+  box.dataset.to = to || '';
+  box.querySelector('span').textContent = club ? `Move ${who} to ${club.name}?` : `Take ${who} off their club?`;
   box.hidden = false;
   li.querySelector('.ed-msg').textContent = '';
 }
 
 async function link(li, yes) {
-  const select = li.querySelector('select'), msg = li.querySelector('.ed-msg');
-  li.querySelector('.ed-confirm').hidden = true;
-  if (!yes) { select.value = select.dataset.was; return; }
-  const club = select.value;
-  const { error } = await (await db()).from('profiles').update({ club: club || null }).eq('id', li.dataset.id);
-  if (error) { select.value = select.dataset.was; msg.textContent = explain(error); return; }
-  select.dataset.was = club;
-  const a = state.accounts.find(x => x.id === li.dataset.id);
-  if (a) a.club = club || null;
-  msg.textContent = club ? 'Moved.' : 'Taken off the club.';
+  const box = li.querySelector('.ed-confirm'), msg = li.querySelector('.ed-msg'), select = li.querySelector('select');
+  box.hidden = true;
+  if (!yes) { if (select) select.value = ''; return; }
+  const { error } = await (await db()).from('profiles').update({ club: box.dataset.to || null }).eq('id', li.dataset.id);
+  if (error) { msg.textContent = explain(error); return; }
+  await refresh();
 }
 
 // ---------------------------------------------------------------- line-up deadlines (0.6)
@@ -436,25 +510,26 @@ async function saveDigest(box) {
 main.addEventListener('click', e => {
   const b = e.target.closest('button[data-act]');
   if (!b) return;
+  const act = b.dataset.act;
   const card = b.closest('.ed-request');
-  if (b.dataset.act === 'approve') review(card, true);
-  if (b.dataset.act === 'return') { card.querySelector('.ed-return').hidden = false; card.querySelector('textarea').focus(); }
-  if (b.dataset.act === 'cancel') card.querySelector('.ed-return').hidden = true;
-  if (b.dataset.act === 'reopen') b.closest('li').querySelector('.ed-confirm').hidden = false;
-  if (b.dataset.act === 'reopen-no') b.closest('.ed-confirm').hidden = true;
-  if (b.dataset.act === 'reopen-yes') reopen(b.closest('li'));
-  if (b.dataset.act === 'dl-save') {
+  if (act === 'approve') review(card, true);
+  if (act === 'return') { card.querySelector('.ed-return').hidden = false; card.querySelector('textarea').focus(); }
+  if (act === 'cancel') card.querySelector('.ed-return').hidden = true;
+  if (act === 'reopen') b.closest('.ed-sec').querySelector('.ed-confirm').hidden = false;
+  if (act === 'reopen-no') b.closest('.ed-confirm').hidden = true;
+  if (act === 'reopen-yes') reopen(b.closest('.ed-sec'));
+  if (act === 'dl-save') {
     const li = b.closest('li');
     saveDeadline(Number(li.dataset.week), li.querySelector('input').value, li.querySelector('.ed-msg'));
   }
-  if (b.dataset.act === 'phones-copy') phonesExport('copy', b);
-  if (b.dataset.act === 'phones-csv') phonesExport('csv', b);
-  if (b.dataset.act === 'dl-remove') removeDeadline(b.closest('li'));
-  if (b.dataset.act === 'dl-all') setAllDeadlines(b);
-  if (b.dataset.act === 'link-yes') link(b.closest('li'), true);
-  if (b.dataset.act === 'link-no') link(b.closest('li'), false);
-  if (b.dataset.act === 'reset') {
-    const li = b.closest('li');
+  if (act === 'phones-copy' || act === 'phones-csv' || act === 'regs-csv') exportData(act);
+  if (act === 'dl-remove') removeDeadline(b.closest('li'));
+  if (act === 'dl-all') setAllDeadlines(b);
+  if (act === 'unlink') askLink(b.closest('.ed-acct'), '');
+  if (act === 'link-yes') link(b.closest('.ed-acct'), true);
+  if (act === 'link-no') link(b.closest('.ed-acct'), false);
+  if (act === 'reset') {
+    const li = b.closest('.ed-acct');
     b.disabled = true;
     sendPasswordReset(li.dataset.email)
       .then(() => { li.querySelector('.ed-msg').textContent = 'Password link sent.'; })
@@ -463,14 +538,27 @@ main.addEventListener('click', e => {
 });
 main.addEventListener('submit', e => {
   e.preventDefault();
-  if (e.target.id === 'invite') return invite(e.target);
+  if (e.target.classList.contains('ed-invite-club')) return invite(e.target);
   if (e.target.id === 'add-clubs') return addClubs(e.target);
   if (e.target.id === 'dl-add') return saveDeadline(Number(e.target.week.value), e.target.at.value, e.target.querySelector('.ed-msg'));
   if (e.target.classList.contains('ed-return')) review(e.target.closest('.ed-request'), false, e.target.note.value);
 });
 main.addEventListener('change', e => {
-  if (e.target.dataset.act === 'link') askLink(e.target.closest('li'), e.target);
+  if (e.target.dataset.act === 'link' && e.target.value) askLink(e.target.closest('.ed-acct'), e.target.value);
   if (e.target.dataset.act === 'digest') saveDigest(e.target);
+});
+// Remember what's open, so a redraw (after approving, inviting...) leaves the panels as they were. `toggle` doesn't bubble.
+main.addEventListener('toggle', e => {
+  const k = e.target.dataset?.key;
+  if (k) e.target.open ? state.open.add(k) : state.open.delete(k);
+}, true);
+// Find a club: hides the rows that don't match; nothing is redrawn.
+main.addEventListener('input', e => {
+  if (!e.target.classList.contains('ed-find')) return;
+  const q = e.target.value.trim().toLowerCase();
+  let shown = 0;
+  main.querySelectorAll('.ed-club').forEach(li => { const hit = !q || li.dataset.find.includes(q); li.hidden = !hit; shown += hit; });
+  main.querySelector('.ed-none').hidden = shown > 0;
 });
 addEventListener('hashchange', () => { if (state.clubs.length) render(); });
 

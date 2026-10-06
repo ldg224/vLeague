@@ -204,6 +204,13 @@ MAILABLE = f"update auth.users set email_confirmed_at = now(), last_sign_in_at =
 RES_PRE = '''insert into public.fixtures (id, week, home, away, starts_at) values ('w98-tur-lau', 98, 'TUR', 'LAU', now() + interval '1 day'), ('w97-tur-lau', 97, 'TUR', 'LAU', now() - interval '1 day'); insert into public.results (fixture, summary) values ('w98-tur-lau', '{"home":1,"away":0}'), ('w97-tur-lau', '{"home":2,"away":2}'); insert into storage.objects (bucket_id, name) values ('matches', 'w98-tur-lau.json.gz'), ('matches', 'w97-tur-lau.json.gz');'''
 
 SETTINGS_CHECKS = [
+    # registrations keep a full copy of what was sent (0.15)
+    ('manager', 'a submission keeps a full snapshot (form, colours, details, account)', '',
+     """select public.update_club_style('{"colour":"#112233","motto":"Test motto","stadium":"Test Park"}'::jsonb);
+        select public.submit_club_request('{"name":"Turtle Test","short_name":"TT"}'::jsonb);
+        select snapshot->>'name' = 'Turtle Test' and snapshot->>'colour' = '#112233' and snapshot->>'motto' = 'Test motto'
+          and snapshot->>'stadium' = 'Test Park' and snapshot->>'email' = 'rls-test-manager@example.invalid' as ok
+        from public.club_requests where club = 'TUR' and status = 'pending';"""),
     ('manager', 'manager saves own settings', '',
      f"""insert into public.user_settings (user_id, prefs) values ('{FAKE_MANAGER}', '{{"clock":"24"}}');
         select prefs->>'clock' = '24' as ok from public.user_settings;"""),

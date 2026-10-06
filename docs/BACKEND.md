@@ -32,7 +32,7 @@ makes invites and password resets work.
 | `clubs` | Each club's public identity: code, name, colours, crest, manager name, status | Everyone, guests too | League office |
 | `profiles` | One per account: role (`manager` or `office`) and club. Made automatically for every new account. | Yourself; the office reads all | League office only (nobody can promote themselves) |
 | `team_sheets` | Each club's current team sheet (formation, tactics, XI, set pieces) | That club's manager and the office | That club's manager and the office |
-| `club_requests` | A manager's request to set up or change their club's name, short name, code or crest, and the office's answer | That club's manager and the office | Only through the functions below |
+| `club_requests` | A manager's request to set up or change their club's name, short name, code or crest, and the office's answer. Since 0.15 each keeps a full `snapshot` (the form as typed plus the club's colours, manager, stadium, motto and account email at that moment) | That club's manager and the office | Only through the functions below |
 | `news` | League news. For now only the crest reveal posted when the office approves a club (the full news system comes in 0.7) | Everyone, guests too | League office (and the approval function) |
 | `deadlines` | The line-up deadline for each week (0.6), and when that week was locked | Everyone, guests too | League office; a locked week can't be moved or deleted |
 | `team_sheet_versions` | Every save of every team sheet, with the time (kept by a trigger on `team_sheets`) | League office | Nobody directly |
