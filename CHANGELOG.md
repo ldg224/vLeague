@@ -3,6 +3,12 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.21.1 (2026-10-06)
+
+- **Added:** each week has a **Counts for the ladder** setting (Editor → Fixtures → Week tools → Name and numbering). Untick it for a
+  showcase or pre-season week: its matches are still played, shown and simulated, but add nothing to the table (finals already work
+  this way). Such weeks show a "Not on the ladder" tag. Needs `0025_week_ladder.sql`; until it's run the box is greyed out.
+
 ## 0.21.0 (2026-10-06)
 
 Draft, manager side (the Editor → Draft tab and the database, `0023_draft.sql`, come from the office side of the same version).

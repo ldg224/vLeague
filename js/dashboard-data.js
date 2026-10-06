@@ -59,7 +59,7 @@ export async function loadSeason() {
     season: 1, league: 'vLeague', live_minutes: 45, points: { win: 3, draw: 1, loss: 0 }, news: [], players,
     teams: cl.data.map(x => ({ code: x.code, name: x.name, short_name: x.short_name, colour: x.colour || '#475569', manager: x.manager_name || '',
       ...(x.status === 'withdrawn' || x.status === 'pending' ? { withdrawn: true } : {}) })),
-    fixtures: fx.data.map(f => ({ id: f.id, week: f.week, look: lookOf(f), round: labels.get(f.week).label, ...(labels.get(f.week).name ? { round_name: labels.get(f.week).name } : {}), home: f.home, away: f.away, ...(f.starts_at ? melbParts(f.starts_at) : {}),
+    fixtures: fx.data.map(f => ({ id: f.id, week: f.week, look: lookOf(f), round: labels.get(f.week).label, ...(rounds.get(f.week)?.counts_for_ladder === false ? { exhibition: true } : {}), ...(labels.get(f.week).name ? { round_name: labels.get(f.week).name } : {}), home: f.home, away: f.away, ...(f.starts_at ? melbParts(f.starts_at) : {}),
       ...(f.stage ? { stage: f.stage } : {}), ...(f.postponed ? { postponed: true } : {}), ...(result.has(f.id) ? { result: result.get(f.id) } : {}) })),
   };
 }
@@ -153,7 +153,7 @@ export function ladder(s, now = new Date()) {
   const rows = Object.fromEntries(s.teams.filter(t => !t.withdrawn).map(t => [t.code, { team: t, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0, form: [] }]));
   for (const a of s.adjustments || []) if (rows[a.team]) rows[a.team].pts += a.points;
   for (const f of finished(s, now)) {
-    if (f.stage) continue;
+    if (f.stage || f.exhibition) continue;   // finals and showcase / pre-season weeks don't count for the ladder
     const h = rows[f.home], a = rows[f.away];
     if (!h || !a) continue;
     for (const [r, gf, ga] of [[h, f.result.home, f.result.away], [a, f.result.away, f.result.home]]) {

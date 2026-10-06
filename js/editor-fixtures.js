@@ -47,7 +47,7 @@ export async function mountFixtures(ctx) {
 
   // ---------------------------------------------------------------- state
   let fixtures = [], results = new Map(), rounds = [], looks = [], deadlines = new Map();
-  let busy = false, msg = '', msgKind = '', hasRoster = true;
+  let busy = false, msg = '', msgKind = '', hasRoster = true, hasLadder = true;
   let view = VIEWS.some(v => v[0] === store.get('view', 'weeks')) ? store.get('view', 'weeks') : 'weeks';
   const folded = new Set(store.get('folded', []));
   const toolsOpen = new Set(), moreOpen = new Set();
@@ -78,6 +78,7 @@ export async function mountFixtures(ctx) {
     fixtures = fx.data; results = new Map((rs.data || []).map(r => [r.fixture, r.summary])); rounds = rd.data || [];
     looks = lk.data?.length ? lk.data : [{ key: 'classic', name: 'Classic' }];
     deadlines = new Map((dl.data || []).map(d => [d.week, d]));
+    hasLadder = !(await c.from('rounds').select('counts_for_ladder').limit(1)).error;   // false until 0025_week_ladder.sql is run
     hasRoster = !(await c.from('rounds').select('numbered').limit(1)).error;   // false until 0021_roster_tools.sql is run
   }
 
@@ -85,7 +86,7 @@ export async function mountFixtures(ctx) {
     const weeks = R.weekNumbers(fixtures, rounds), labels = R.roundLabels(weeks, rounds);
     return { weeks, labels, by: new Map(weeks.map(w => [w, fixtures.filter(f => f.week === w).sort(byKick)])) };
   };
-  const round = w => ({ week: w, name: null, kind: 'regular', look: 'classic', lock_minutes_before: 180, lock_at_override: null, numbered: true, number_override: null, note: null, ...(rounds.find(r => r.week === w) || {}) });
+  const round = w => ({ week: w, name: null, kind: 'regular', look: 'classic', lock_minutes_before: 180, lock_at_override: null, numbered: true, number_override: null, note: null, counts_for_ladder: true, ...(rounds.find(r => r.week === w) || {}) });
   const isLocked = w => !!deadlines.get(w)?.locked_at;
   const played = list => list.filter(f => results.has(f.id));
   const lastWeek = () => Math.max(0, ...fixtures.map(f => f.week), ...rounds.map(r => r.week));
@@ -123,6 +124,7 @@ export async function mountFixtures(ctx) {
   }
   const failText = e => {
     const m = String(e?.message || e || '');
+    if (/counts_for_ladder/i.test(m)) return 'The ladder setting needs the database update from 0025_week_ladder.sql. Run it once, then try again.';
     if (/office_move_weeks|office_unlock_week|schema cache/i.test(m)) return 'This needs the database update from 0021_roster_tools.sql / 0022_unlock_week.sql. Run it once, then try again.';
     if (/column .*(numbered|number_override|note)/i.test(m)) return 'Week numbering needs the database update from 0021_roster_tools.sql.';
     return /^[A-Z]/.test(m) && m.length < 220 && !/violates|syntax|relation|permission denied/i.test(m) ? m : explain(e);
@@ -171,7 +173,7 @@ export async function mountFixtures(ctx) {
     return step(tx, async () => (await ctx.db()).from('fixtures').update(patch).eq('id', f.id), async () => (await ctx.db()).from('fixtures').update(prev).eq('id', f.id));
   };
   const KNOWN = ['week', 'name', 'kind', 'look', 'lock_minutes_before', 'lock_at_override'];
-  const roundRow = (w, patch = {}) => { const all = { ...round(w), ...patch, week: w }; return Object.fromEntries(Object.entries(all).filter(([k]) => KNOWN.includes(k) || (hasRoster && NEW_COLS.includes(k)))); };
+  const roundRow = (w, patch = {}) => { const all = { ...round(w), ...patch, week: w }; return Object.fromEntries(Object.entries(all).filter(([k]) => KNOWN.includes(k) || (hasRoster && NEW_COLS.includes(k)) || (hasLadder && k === 'counts_for_ladder'))); };
   function setRound(tx, w, patch) {
     const prev = rounds.find(r => r.week === w), row = roundRow(w, patch);
     return step(tx, async () => (await ctx.db()).from('rounds').upsert(row),
@@ -250,7 +252,7 @@ export async function mountFixtures(ctx) {
         <span class="fx-grip" draggable="${locked ? 'false' : 'true'}" data-drag="week" title="${locked ? 'Locked: this week can’t be moved' : 'Drag to reorder the weeks'}" aria-hidden="true">⠿</span>
         <button class="btn ghost small fx-fold" type="button" data-act="fold" aria-expanded="${open}" aria-label="${open ? 'Collapse' : 'Expand'} ${esc(L.label)}">${open ? '▾' : '▸'}</button>
         <h2>${esc(L.label)} <small>week ${w} · ${esc(span)}</small></h2>
-        <span class="fx-pills">${locked ? '<span class="ed-pill approved">Locked</span>' : ''}${L.numbered ? '' : '<span class="ed-pill">No number</span>'}${r.kind !== 'regular' ? `<span class="ed-pill">${esc(KINDS.find(k => k[0] === r.kind)?.[1] || r.kind)}</span>` : ''}
+        <span class="fx-pills">${locked ? '<span class="ed-pill approved">Locked</span>' : ''}${L.numbered ? '' : '<span class="ed-pill">No number</span>'}${r.counts_for_ladder === false ? '<span class="ed-pill warn">Not on the ladder</span>' : ''}${r.kind !== 'regular' ? `<span class="ed-pill">${esc(KINDS.find(k => k[0] === r.kind)?.[1] || r.kind)}</span>` : ''}
           ${list.length ? `<span class="ed-pill">${done}/${list.length} played</span>` : '<span class="ed-pill warn">Empty</span>'}${undated ? `<span class="ed-pill warn">${undated} no time</span>` : ''}</span>
         <span class="fx-quick">
           <button class="btn ghost small" type="button" data-act="week-up" ${mv(-1) ? '' : 'disabled'} title="Swap places with the week before" aria-label="Move up">▲</button>
@@ -304,6 +306,7 @@ export async function mountFixtures(ctx) {
         <label class="fx-check"><input type="checkbox" data-r="numbered" ${r.numbered ? 'checked' : ''} ${hasRoster ? '' : 'disabled'}> Counts as a numbered round</label>
         <label>Show round number <input type="number" data-r="number_override" min="0" max="999" value="${r.number_override ?? ''}" placeholder="${m.labels.get(w).numbered ? `auto (${m.labels.get(w).no})` : 'none'}" ${hasRoster && r.numbered ? '' : 'disabled'}></label>
         <label>Look <select data-r="look">${lookOpts(r.look)}</select></label>
+        <label class="fx-check"><input type="checkbox" data-r="counts_for_ladder" ${r.counts_for_ladder === false ? '' : 'checked'} ${hasLadder ? '' : 'disabled'}> Counts for the ladder (untick for a showcase or pre-season week)</label>
         <label class="fx-wide">Note (only you see it) <input data-r="note" value="${esc(r.note || '')}" maxlength="300" ${hasRoster ? '' : 'disabled'}></label>
       </fieldset>
       <fieldset class="fx-set"><legend>Line-up lock</legend>
@@ -584,7 +587,7 @@ export async function mountFixtures(ctx) {
     if (to < 1 || to > WEEK_MAX) throw new Error(`Weeks go from 1 to ${WEEK_MAX}.`);
     if (fixtures.some(f => f.week === to)) throw new Error(`Week ${to} already has matches. Copy to a free week, or delete that week first.`);
     const src = round(w), taken = takenIds();
-    if (!rounds.some(r => r.week === to)) await setRound(tx, to, { name: src.name ? `${src.name} (copy)`.slice(0, 40) : null, kind: src.kind, look: src.look, lock_minutes_before: src.lock_minutes_before, lock_at_override: null, ...(hasRoster ? { numbered: src.numbered, number_override: null } : {}) });
+    if (!rounds.some(r => r.week === to)) await setRound(tx, to, { name: src.name ? `${src.name} (copy)`.slice(0, 40) : null, kind: src.kind, look: src.look, lock_minutes_before: src.lock_minutes_before, lock_at_override: null, counts_for_ladder: src.counts_for_ladder, ...(hasRoster ? { numbered: src.numbered, number_override: null } : {}) });
     await insertFx(tx, list.map(f => { const [h, a] = flip ? [f.away, f.home] : [f.home, f.away], id = R.freshId(to, h, a, taken); taken.add(id); return { id, week: to, home: h, away: a, starts_at: f.starts_at && days ? shiftIso(f.starts_at, days) : f.starts_at, stage: f.stage || null }; }));
   }
 
