@@ -3,6 +3,12 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.27.1 (2026-10-07)
+
+- **Fixed, Draft:** the Available players table was drawn wrongly: its heading row didn't line up with the players and shared
+  space with the first one, and there was a wide empty gap. The table was accidentally picking up the page's two-column layout.
+  The headings are now a solid row above the players, the columns line up under them, and the Player column no longer stretches.
+
 ## 0.27.0 (2026-10-07)
 
 Byes, and one less Editor tab. Needs `0028_byes.sql` (run it once).

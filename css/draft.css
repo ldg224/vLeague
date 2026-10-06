@@ -115,3 +115,12 @@
 .dr-ar { font-size: .7rem; color: var(--club-text, var(--text)); }
 .dr-p .rts { display: inline-flex; gap: 4px; }
 .dr-p .rts .rt { min-width: 1.9em; padding: 0 4px; font-size: .8rem; }
+
+/* Available players table (0.27.1): an opaque heading row that nothing scrolls through, and no stretched Player column. */
+.dr-table th { background: var(--surface-raised, var(--surface)); z-index: 2; box-shadow: 0 1px 0 var(--line); border-bottom: 0; }
+.dr-tablewrap { width: fit-content; max-width: 100%; }
+.dr-table { width: auto; min-width: min(100%, 560px); }
+.dr-table .c-name { width: auto; min-width: 12em; max-width: 22em; overflow: hidden; text-overflow: ellipsis; }
+.dr-table .c-act { width: 1%; }
+.dr-table th.c-name button { text-align: left; justify-content: flex-start; }
+.dr-table.dt-board { min-width: min(100%, 760px); }

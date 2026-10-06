@@ -131,7 +131,7 @@ if (ctx) {
     }
     function table(t, rows, rowHtml, empty) {
       const cols = colsOf(t), s = SORTS[t];
-      return `<div class="dr-tablewrap"><table class="dr-table dr-${t}"><thead><tr>${cols.map(c => { const i = s.findIndex(x => x.key === c.key);
+      return `<div class="dr-tablewrap"><table class="dr-table dt-${t}"><thead><tr>${cols.map(c => { const i = s.findIndex(x => x.key === c.key);
         return `<th class="c-${c.key}" aria-sort="${i < 0 ? 'none' : s[i].dir > 0 ? 'ascending' : 'descending'}"><button data-t="${t}" data-sort="${c.key}" title="${esc(c.long)}">${esc(c.label)}${i < 0 ? '' : ` <span class="dr-ar">${arrow(s[i].dir)}${s.length > 1 ? `<sup>${i + 1}</sup>` : ''}</span>`}</button></th>`; }).join('')}${t === 'avail' ? '<th></th>' : ''}</tr></thead>
         <tbody>${rows.map(rowHtml).join('') || `<tr><td colspan="${cols.length + 1}" class="empty">${empty}</td></tr>`}</tbody></table></div>`;
     }
