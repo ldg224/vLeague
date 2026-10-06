@@ -117,7 +117,7 @@
    tab content keeps its comfortable reading width; the Players and Fixtures lists use the full width. */
 .member-main:has(.ed-tabs) { width: min(1080px, 100%); }
 .member-main:has(.ed-tabs) #view > * { max-width: 560px; }
-.member-main:has(.ed-tabs) #view > #pl-root, .member-main:has(.ed-tabs) #view > #fx-root { max-width: none; }
+.member-main:has(.ed-tabs) #view > #pl-root, .member-main:has(.ed-tabs) #view > #fx-root, .member-main:has(.ed-tabs) #view > #news-root, .member-main:has(.ed-tabs) #view > #dr-root { max-width: none; }
 
 /* ---------- fixtures (0.12) ---------- */
 .fx-week h2 { margin-top: 28px; }

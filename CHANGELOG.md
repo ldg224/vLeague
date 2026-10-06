@@ -3,6 +3,10 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.22.1 (2026-10-07)
+
+- **Fixed:** the Editor's News and Draft tabs were squeezed into a narrow column. They now use the full width, like Players and Fixtures.
+
 ## 0.22.0 (2026-10-07)
 
 Draft, office side. Needs `0023_draft.sql`, `0024_draft_tick.sql` and `0025_week_ladder.sql` (all run).
