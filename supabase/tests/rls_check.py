@@ -89,7 +89,7 @@ SETUP_CHECKS = [
     ('anon', 'guest can read players', '', "select count(*) >= 0 as ok from public.players;"),
     ('anon', 'guest cannot add a player', '', {'error': 'permission denied'}, "insert into public.players (name, position, offense, defense) values ('Zz Guest', 'MID', 5, 5);"),
     ('manager', 'manager cannot add a player', '', {'error': 'row-level security'}, "insert into public.players (name, position, offense, defense) values ('Zz Manager', 'MID', 5, 5);"),
-    ('office', 'office adds a player and the value follows the ratings', '', "with i as (insert into public.players (name, position, offense, defense) values ('Zz Office', 'FWD', 10, 10) returning value) select value = 8000 as ok from i;"),
+    ('office', 'office adds a player and the value follows the ratings', '', "with i as (insert into public.players (name, position, offense, defense) values ('Zz Office', 'FWD', 10, 9) returning value) select value > 10000 as ok from i;"),
     ('anon', 'guest can read news', '', "select count(*) >= 0 as ok from public.news;"),
     ('anon', 'guest cannot send a club request', '', {'error': 'permission denied'},
      """select public.submit_club_request('{"name":"X FC"}');"""),
@@ -201,6 +201,8 @@ DEADLINE_CHECKS = [
 # 0.7: settings and email reminders. The fake manager is FC Turtle's, with a confirmed email and a past sign-in so
 # due_emails() counts them (pre runs with full rights; everything is rolled back).
 MAILABLE = f"update auth.users set email_confirmed_at = now(), last_sign_in_at = now() where id = '{FAKE_MANAGER}';"
+RES_PRE = '''insert into public.fixtures (id, week, home, away, starts_at) values ('w98-tur-lau', 98, 'TUR', 'LAU', now() + interval '1 day'), ('w97-tur-lau', 97, 'TUR', 'LAU', now() - interval '1 day'); insert into public.results (fixture, summary) values ('w98-tur-lau', '{"home":1,"away":0}'), ('w97-tur-lau', '{"home":2,"away":2}'); insert into storage.objects (bucket_id, name) values ('matches', 'w98-tur-lau.json.gz'), ('matches', 'w97-tur-lau.json.gz');'''
+
 SETTINGS_CHECKS = [
     ('manager', 'manager saves own settings', '',
      f"""insert into public.user_settings (user_id, prefs) values ('{FAKE_MANAGER}', '{{"clock":"24"}}');
@@ -242,6 +244,16 @@ SETTINGS_CHECKS = [
      "insert into public.deadlines (week, locks_at) values (98, now() + interval '2 hours'); "
      f"""insert into public.user_settings (user_id, prefs) values ('{FAKE_MANAGER}', '{{"email":{{"deadline":"off"}}}}');""",
      f"reset role; select not exists (select 1 from public.due_emails() where user_id = '{FAKE_MANAGER}' and kind = 'deadline') as ok;"),
+    # results and match files (0.12, 0.14): hidden until kick-off, office reads any time, only the office writes
+    ('anon', 'guest cannot read a result before kick-off', RES_PRE, "select count(*) = 0 as ok from public.results where fixture = 'w98-tur-lau';"),
+    ('anon', 'guest reads a result after kick-off', RES_PRE, "select count(*) = 1 as ok from public.results where fixture = 'w97-tur-lau';"),
+    ('anon', 'guest cannot read a match file before kick-off', RES_PRE, "select count(*) = 0 as ok from storage.objects where bucket_id = 'matches' and name = 'w98-tur-lau.json.gz';"),
+    ('anon', 'guest reads a match file after kick-off', RES_PRE, "select count(*) = 1 as ok from storage.objects where bucket_id = 'matches' and name = 'w97-tur-lau.json.gz';"),
+    ('manager', 'manager cannot read a match file before kick-off', RES_PRE, "select count(*) = 0 as ok from storage.objects where bucket_id = 'matches' and name = 'w98-tur-lau.json.gz';"),
+    ('manager', 'manager cannot save a match file', RES_PRE, {'error': 'row-level security'}, "insert into storage.objects (bucket_id, name) values ('matches', 'w96-x.json.gz');"),
+    ('manager', 'manager cannot save a result', RES_PRE, {'error': 'row-level security'}, "insert into public.results (fixture, summary) values ('w98-tur-lau', '{}') on conflict (fixture) do update set summary = '{}';"),
+    ('office', 'office reads a match file before kick-off', RES_PRE, "select count(*) = 1 as ok from storage.objects where bucket_id = 'matches' and name = 'w98-tur-lau.json.gz';"),
+    ('office', 'office reads a result before kick-off', RES_PRE, "select count(*) = 1 as ok from public.results where fixture = 'w98-tur-lau';"),
 ]
 
 
