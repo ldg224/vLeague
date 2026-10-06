@@ -273,6 +273,34 @@ SETTINGS_CHECKS = [
 ]
 
 
+# 0.20: the safe week mover. Weeks 91 to 93 are test weeks; everything is rolled back.
+WK_PRE = """insert into public.rounds (week, name) values (91, 'Alpha'), (92, 'Beta'), (93, null);
+  insert into public.fixtures (id, week, home, away, starts_at) values
+    ('w91-a', 91, 'TUR', 'LAU', now() + interval '30 days'), ('w92-a', 92, 'TUR', 'LAU', now() + interval '40 days'), ('w93-a', 93, 'LAU', 'TUR', now() + interval '50 days');"""
+WK_LOCK = WK_PRE + " update public.deadlines set locks_at = now() - interval '1 hour' where week = 91; select public.lock_due_weeks();"
+ROSTER_CHECKS = [
+    ('anon', 'guest cannot move weeks', WK_PRE, {'error': 'permission denied'}, """select public.office_move_weeks('{"91":92,"92":91}');"""),
+    ('manager', 'manager cannot move weeks', WK_PRE, {'error': 'Only the league office'}, """select public.office_move_weeks('{"91":92,"92":91}');"""),
+    ('office', 'office swaps two weeks: matches and rounds travel together', WK_PRE,
+     """select public.office_move_weeks('{"91":92,"92":91}');
+        select (select week from public.fixtures where id = 'w91-a') = 92 and (select week from public.fixtures where id = 'w92-a') = 91
+           and (select name from public.rounds where week = 92) = 'Alpha' and (select name from public.rounds where week = 91) = 'Beta' as ok;"""),
+    ('office', 'office rotates three weeks at once', WK_PRE,
+     """select public.office_move_weeks('{"91":92,"92":93,"93":91}');
+        select (select week from public.fixtures where id = 'w91-a') = 92 and (select week from public.fixtures where id = 'w92-a') = 93
+           and (select week from public.fixtures where id = 'w93-a') = 91 and (select name from public.rounds where week = 93) = 'Beta' as ok;"""),
+    ('office', 'office pushes weeks up to open a gap and the old week number is free', WK_PRE,
+     """select public.office_move_weeks('{"93":94,"92":93,"91":92}');
+        select (select array_agg(week order by week) from public.fixtures where id like 'w9_-a') = array[92, 93, 94]
+           and not exists (select 1 from public.deadlines where week = 91) as ok;"""),
+    ('office', 'a week cannot move onto a week that is in use', WK_PRE, {'error': 'already in use'}, """select public.office_move_weeks('{"91":92}');"""),
+    ('office', 'a locked week cannot be moved', WK_LOCK, {'error': 'locked line-ups'}, """select public.office_move_weeks('{"91":96}');"""),
+    ('office', 'nothing can move onto a locked week', WK_LOCK, {'error': 'locked line-ups'}, """select public.office_move_weeks('{"92":91}');"""),
+    ('office', 'a week’s match blocks follow it', WK_PRE + " insert into public.match_windows (week, starts_at) values (91, now() + interval '30 days');",
+     """select public.office_move_weeks('{"91":97}'); select (select count(*) from public.match_windows where week = 97) = 1 as ok;"""),
+]
+
+
 def main():
     failed = 0
     for who, desc, body in CHECKS:
@@ -301,6 +329,15 @@ def main():
             ok = bool(rows_of(r) and r[-1].get('ok'))
         failed += not ok
         print(f"{'PASS' if ok else 'FAIL'}  [{who:7}] {desc}" + ('' if ok else f'  -> {r}'))
+    for who, desc, pre, *rest in ROSTER_CHECKS:
+        expect, body = (rest[0], rest[1]) if len(rest) == 2 else (None, rest[0])
+        r = as_user(who, body, pre)
+        if expect:
+            ok = isinstance(r, dict) and expect['error'].lower() in r.get('error', '').lower()
+        else:
+            ok = bool(rows_of(r) and r[-1].get('ok'))
+        failed += not ok
+        print(f"{'PASS' if ok else 'FAIL'}  [{who:7}] {desc}" + ('' if ok else f'  -> {r}'))
     for who, desc, pre, *rest in SETTINGS_CHECKS:
         expect, body = (rest[0], rest[1]) if len(rest) == 2 else (None, rest[0])
         r = as_user(who, body, pre)
@@ -315,7 +352,7 @@ def main():
     clean = rows_of(left) and left[0]['n'] == 0
     print('PASS  test accounts cleaned up' if clean else f'FAIL  test accounts left behind: {left}')
     failed += not clean
-    total = len(CHECKS) + len(SETUP_CHECKS) + len(DEADLINE_CHECKS) + len(SETTINGS_CHECKS) + 1
+    total = len(CHECKS) + len(SETUP_CHECKS) + len(DEADLINE_CHECKS) + len(ROSTER_CHECKS) + len(SETTINGS_CHECKS) + 1
     print(f'\n{total - failed}/{total} passed')
     sys.exit(1 if failed else 0)
 

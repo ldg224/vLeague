@@ -19,13 +19,14 @@ function starters({ season, deadlines, clubs }) {
   const upcoming = (season?.fixtures || []).map(f => ({ f, k: kickoff(f) })).filter(x => x.k && x.k > now && !x.f.postponed)
     .sort((a, b) => a.k - b.k);
   const week = upcoming[0]?.f.week;
+  const wk = w => season?.rounds?.[w]?.label || `Week ${w}`;   // "Round 4", "Christmas Cup"...
   const list = upcoming.filter(x => x.f.week === week);
   const next = (deadlines || []).filter(d => !d.locked_at && new Date(d.locks_at) > now).sort((a, b) => new Date(a.locks_at) - new Date(b.locks_at))[0];
   const out = [];
-  if (list.length) out.push({ key: `Week ${week} preview`, title: `Week ${week}: what's on`,
-    body: `Week ${week} kicks off ${fmt(list[0].k)}.\n\n${list.map(x => `- ${name(x.f.home)} v ${name(x.f.away)}, ${fmt(x.k)}`).join('\n')}\n\nGood luck, {manager}.` });
-  if (next) out.push({ key: 'Deadline reminder', title: `Week ${next.week} line-ups lock ${fmt(new Date(next.locks_at))}`,
-    body: `Line-ups for week ${next.week} lock on **${fmt(new Date(next.locks_at))}**. Check My club: if {team} hasn't picked a team, it's not too late.`,
+  if (list.length) out.push({ key: `${wk(week)} preview`, title: `${wk(week)}: what's on`,
+    body: `${wk(week)} kicks off ${fmt(list[0].k)}.\n\n${list.map(x => `- ${name(x.f.home)} v ${name(x.f.away)}, ${fmt(x.k)}`).join('\n')}\n\nGood luck, {manager}.` });
+  if (next) out.push({ key: 'Deadline reminder', title: `${wk(next.week)} line-ups lock ${fmt(new Date(next.locks_at))}`,
+    body: `Line-ups for ${wk(next.week)} lock on **${fmt(new Date(next.locks_at))}**. Check My club: if {team} hasn't picked a team, it's not too late.`,
     button: { label: 'Open My club', url: 'https://ldg224.github.io/vLeague/club.html' } });
   return out;
 }

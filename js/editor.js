@@ -584,6 +584,9 @@ const pad = n => String(n).padStart(2, '0');
 const localInput = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 const full = t => new Date(t).toLocaleString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 
+// A week's name: "Round 4", "Christmas Cup"... with its week number when that isn't the same (0.20).
+const wk = w => { const l = state.season?.rounds?.[w]?.label; return !l || l === `Round ${w}` ? `Week ${w}` : `${l} (week ${w})`; };
+
 // Each week in the season with its first kick-off, plus any week that only has a deadline.
 function weeks() {
   const first = new Map();
@@ -606,12 +609,12 @@ function deadlinesView() {
     const d = byWeek.get(w);
     const kick = first ? `First kick-off ${full(first)}` : 'No fixtures';
     if (d?.locked_at) {
-      return `<li class="ed-dl locked"><b>Week ${w}</b><small>${esc(kick)}</small><span class="ed-pill approved">Locked</span>
+      return `<li class="ed-dl locked"><b>${esc(wk(w))}</b><small>${esc(kick)}</small><span class="ed-pill approved">Locked</span>
         <span class="state">${esc(full(d.locks_at))} · ${sheets(w)} of ${state.clubs.length} team sheets</span></li>`;
     }
     const value = d ? localInput(new Date(d.locks_at)) : first ? localInput(new Date(first - 3600e3)) : '';
     const late = d && first && new Date(d.locks_at) > first;
-    return `<li class="ed-dl" data-week="${w}"><b>Week ${w}</b><small>${esc(kick)}</small>
+    return `<li class="ed-dl" data-week="${w}"><b>${esc(wk(w))}</b><small>${esc(kick)}</small>
       <label class="sr-only" for="dl-${w}">Week ${w} deadline</label>
       <input id="dl-${w}" type="datetime-local" value="${value}"${d ? '' : ' class="suggested"'}>
       <span class="ed-actions"><button class="btn small" data-act="dl-save" type="button">${d ? 'Save' : 'Set'}</button>

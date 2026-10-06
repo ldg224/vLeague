@@ -83,7 +83,7 @@ function matchCard(s, code, now) {
     }
   }
   return `<section class="hm-card hm-match">
-      <p class="hm-label">${st === 'live' ? 'Now' : 'Next match'} · Week ${esc(fx.week)} · ${home ? 'Home' : 'Away'}</p>
+      <p class="hm-label">${st === 'live' ? 'Now' : 'Next match'} · ${esc(fx.round || `Week ${fx.week}`)} · ${home ? 'Home' : 'Away'}</p>
       <div class="hm-teams">${side(fx.home)}<div class="hm-mid">${mid}</div>${side(fx.away)}</div>
       ${foot ? `<div class="hm-foot">${foot}</div>` : ''}
     </section>`;
@@ -102,7 +102,7 @@ function reveal(s, code, now) {
     return `<figure class="hm-xi${c === code ? ' us' : ''}" data-club="${esc(c)}"><figcaption>${crest(c, 'hm-mini')}<b>${esc(nameOf(c))}</b></figcaption>
       ${row ? '<div class="hm-pitch"></div>' : '<p class="hm-sub">No team sheet. The engine picks the team.</p>'}</figure>`;
   };
-  return `<section class="hm-card hm-reveal"><h2>Team sheets <span>Week ${esc(fx.week)}</span></h2>
+  return `<section class="hm-card hm-reveal"><h2>Team sheets <span>${esc(fx.round || `Week ${fx.week}`)}</span></h2>
       <div class="hm-xis">${side(fx.home)}${side(fx.away)}</div></section>`;
 }
 

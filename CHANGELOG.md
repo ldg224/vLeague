@@ -3,6 +3,40 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.20.0 (2026-10-06)
+
+Roster tools: full control over weeks and matches in Editor → Fixtures.
+
+- **Added, weeks:** **reorder** (▲ ▼, or drag a week by its ⠿ handle), **renumber** (to a free number, swap with a taken one, push
+  later weeks up, or move to a position), **insert a blank week** before or after, **delete** a week (optionally closing the
+  gap), **copy** a week to another number (dates shifted, home and away optionally swapped), and **whole-season** tools: close
+  gaps in the numbers, put weeks in date order, reverse the order, shift every date. Every move keeps each week's matches,
+  results, name, look and line-up lock together. A week whose line-ups have locked stays put.
+- **Added, numbers and names:** a week can be **named** (shown next to its number, "Round 5 · Opening Week"; `round_name` is kept on each fixture for the live scoreboard later), **numbered automatically** (it follows the week when weeks move),
+  given **a round number you choose**, or have **no number at all** (a Christmas Cup, a break week). Dashboard, League, Home,
+  News starters and Deadlines show these names. A private **note** per week.
+- **Added, matches:** change **home, away** or both; **swap home and away**; **swap any two teams** by tapping one then another
+  (across weeks, or with a club that isn't playing); **move or copy** a match to another week; **swap kick-offs**; set a
+  semi-final or grand final; **drag a match onto another week**; tick several matches to **move, shift, set a date or time,
+  swap home/away, postpone or remove** them together.
+- **Added, building weeks:** **Next week, built from the weeks so far**: pairs the clubs with opponents they haven't met,
+  keeps byes and home games fair, avoids recent repeats, looks ahead so the last weeks of a round robin still work, and can
+  make several weeks at once. It shows a **preview** with a **re-roll** before anything is saved, and "Same as the last week"
+  copies the last week's kick-off pattern. Also per week: **Re-pair** (new opponents), **Fill the rest** (pair whoever isn't
+  playing), **Re-time** with the pattern, **Clear times**, **Postpone all**. **Add a custom week** makes an empty week to fill
+  by hand.
+- **Added, checks and views:** **Checks** finds a club playing twice in a week, matches with no time, early rematches, runs of
+  home or away games, uneven byes, clubs inactive but scheduled, and weeks that overlap. **Clubs by week** is a grid of every
+  club's opponent each week. **Meetings** counts how often each pair plays.
+- **Added, safety:** **Undo and Redo** for everything above (up to 40 steps; a result removed on the way stays removed), a
+  question before anything removes a saved result, and a failed step puts back whatever it had already changed.
+- **Added, import and export:** copy the roster as CSV or plain text, or paste matches in (`week, home, away, date, time`).
+- **Changed:** weeks are no longer given a typed-in name like "Round 5"; the round number is worked out, so it stays right when
+  weeks move. Round names older than this are cleared by the migration and show as the same "Round N".
+- **Database:** `rounds` gains `numbered`, `number_override` and `note`; `office_move_weeks()` moves any set of weeks in one safe
+  step (`0021_roster_tools.sql`). **Run that migration before using the new week tools.** Until then the site keeps working and
+  the Editor says what to run.
+
 ## 0.19.1 (2026-10-06)
 
 - **Fixed:** emails showed stray `=20` (and similar) through the text. They're now sent in a plainer encoding that every mail app reads

@@ -34,6 +34,7 @@ makes invites and password resets work.
 | `team_sheets` | Each club's current team sheet (formation, tactics, XI, set pieces) | That club's manager and the office | That club's manager and the office |
 | `club_requests` | A manager's request to set up or change their club's name, short name, code or crest, and the office's answer. Since 0.15 each keeps a full `snapshot` (the form as typed plus the club's colours, manager, stadium, motto and account email at that moment) | That club's manager and the office | Only through the functions below |
 | `news` | League news. For now only the crest reveal posted when the office approves a club (the full news system comes in 0.7) | Everyone, guests too | League office (and the approval function) |
+| `rounds` | One per week (0.13): name, type, scoreboard look, line-up lock rule. Since 0.20 also `numbered` (counts as a numbered round), `number_override` (the round number to show) and `note`. The week number is the order; the round number shown is worked out. | Everyone, guests too | League office |
 | `deadlines` | The line-up deadline for each week (0.6), and when that week was locked | Everyone, guests too | League office; a locked week can't be moved or deleted |
 | `team_sheet_versions` | Every save of every team sheet, with the time (kept by a trigger on `team_sheets`) | League office | Nobody directly |
 | `week_sheets` | Each club's team sheet as it was at the week's deadline: what Simulate plays with, and the reveal | Everyone, guests too | Nobody directly; only `lock_due_weeks()` |
@@ -46,6 +47,8 @@ makes invites and password resets work.
 `clubs.setup_at` is empty until the club's manager has sent "Set up your club" (setup.html). Every manager, the
 office's own club included, is taken there at sign-in while it's empty, and never again once it's sent, until the
 office presses "Set up again" (Editor → Clubs), which empties it and starts the process again.
+
+**Moving weeks** (0.20, `0021_roster_tools.sql`). `office_move_weeks('{"3":5,"5":3}')` moves weeks to new numbers in one step (swaps and rotations included): each week's matches, round and match blocks travel together, and unlocked line-up deadlines follow. It refuses a week with locked line-ups (as source or target) and a target number already in use. Only the office can call it (`rls_check.py` checks this).
 
 **Line-up deadlines** (0.6, `0005_lineup_deadlines.sql`; the user's decision, 1 October 2026). The office sets a
 deadline per week (Editor → Deadlines). `lock_due_weeks()` runs every minute (pg_cron job `vleague-lock-weeks`): for

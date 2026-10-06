@@ -6,6 +6,7 @@
 import { db, ready } from './auth.js';
 import { loadPlayers } from './players-data.js';
 import { SUPABASE_URL } from './config.js';
+import { roundLabels, weekNumbers } from './roster.js';
 
 const LIVE_SITE = 'https://ldg224.github.io/s3/';
 
@@ -43,20 +44,22 @@ export async function loadSeason() {
     c.from('fixtures').select('id, week, home, away, starts_at, stage, postponed, window_id').order('week').order('starts_at').range(0, 1999),
     c.from('results').select('fixture, summary, file').range(0, 1999),
     loadPlayers().catch(() => []),
-    c.from('rounds').select('week, name, look'), c.from('looks').select('key, name, settings'), c.from('match_windows').select('id, look').range(0, 1999),
+    c.from('rounds').select('*'), c.from('looks').select('key, name, settings'), c.from('match_windows').select('id, look').range(0, 1999),
   ]);
   if (cl.error || fx.error) throw new Error('The league data didn’t load.');
   crests = Object.fromEntries(cl.data.filter(x => x.crest_path).map(x => [x.code, x.crest_path]));
   const result = new Map((rs.data || []).map(r => [r.fixture, { ...r.summary, ...(r.file ? { file: r.file } : {}) }]));
   const rounds = new Map((rd.data || []).map(r => [r.week, r])), windowLook = new Map((wn.data || []).map(w => [w.id, w.look]));
   const looks = Object.fromEntries((lk.data || []).map(l => [l.key, l]));
+  // Round names and numbers (0.20): a week can be named, numbered automatically or by hand, or have no number.
+  const labels = roundLabels(weekNumbers(fx.data, rd.data || []), rd.data || []);
   const lookOf = f => windowLook.get(f.window_id) || rounds.get(f.week)?.look || 'classic';
   return {
-    looks,
+    looks, rounds: Object.fromEntries([...labels].map(([w, l]) => [w, { label: l.label, short: l.short, numbered: l.numbered }])),
     season: 1, league: 'vLeague', live_minutes: 45, points: { win: 3, draw: 1, loss: 0 }, news: [], players,
     teams: cl.data.map(x => ({ code: x.code, name: x.name, short_name: x.short_name, colour: x.colour || '#475569', manager: x.manager_name || '',
       ...(x.status === 'withdrawn' || x.status === 'pending' ? { withdrawn: true } : {}) })),
-    fixtures: fx.data.map(f => ({ id: f.id, week: f.week, look: lookOf(f), ...(rounds.get(f.week)?.name ? { round: rounds.get(f.week).name } : {}), home: f.home, away: f.away, ...(f.starts_at ? melbParts(f.starts_at) : {}),
+    fixtures: fx.data.map(f => ({ id: f.id, week: f.week, look: lookOf(f), round: labels.get(f.week).label, ...(labels.get(f.week).name ? { round_name: labels.get(f.week).name } : {}), home: f.home, away: f.away, ...(f.starts_at ? melbParts(f.starts_at) : {}),
       ...(f.stage ? { stage: f.stage } : {}), ...(f.postponed ? { postponed: true } : {}), ...(result.has(f.id) ? { result: result.get(f.id) } : {}) })),
   };
 }

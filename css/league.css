@@ -29,7 +29,7 @@
 /* Week tabs: one row that scrolls sideways on its own */
 .weektabs { position: relative; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 8px 0 4px; }
 .weektabs::-webkit-scrollbar { display: none; }
-.weektabs::before { content: 'Week'; align-self: center; margin-right: 4px; font-size: .82rem; font-weight: 700; color: var(--faint); }
+.weektabs::before { content: 'Round'; align-self: center; margin-right: 4px; font-size: .82rem; font-weight: 700; color: var(--faint); }
 .weektabs button { flex: none; min-width: 38px; height: 34px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font: 700 .9rem var(--font); cursor: pointer; }
 .weektabs button:hover { color: var(--text); border-color: var(--blue-400); }
 .weektabs button[aria-selected="true"] { background: var(--blue-700); border-color: var(--blue-700); color: var(--white); }

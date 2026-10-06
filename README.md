@@ -25,6 +25,7 @@ Virtual football. The home of vLeague from Season 1: sign in, manage your club, 
 - `js/auth.js`: sign in and out, profile and landing page, password reset and set, guest flag, `db()` (Supabase Auth, loaded from jsDelivr).
 - `js/signin.js`, `js/set-password.js`: the sign-in pages. `js/member.js` + `js/home.js` + `js/editor.js` + `css/member.css`: the signed-in pages.
 - `js/dashboard.js` + `js/dashboard-data.js` + `css/dashboard.css`: the dashboard (`?src=` loads other data, on localhost only).
+- `js/editor-fixtures.js` + `js/roster.js`: the Editor's Fixtures tab and its roster logic (pairing, moving weeks, round labels, checks); `roster.js` has no page or database code.
 - `js/version.js`: the version shown in footers.
 - `css/site.css`: brand tokens, buttons, messages and the sign-in pages.
 - `supabase/migrations/`: the database setup, in order. `supabase/tests/rls_check.py`: checks the security rules as guest, manager and office.

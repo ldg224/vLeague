@@ -237,11 +237,13 @@ async function teamSheet(box, { club, squad, userId, season }) {
     }[state];
   }
 
+  const wk = w => season?.rounds?.[w]?.label || `Week ${w}`;
+
   function drawDeadline(now = new Date()) {
     const next = deadlines.find(d => new Date(d.locks_at) > now), el = $('#deadline', box);
     if (!next) { el.textContent = 'No deadline set'; return; }
     const at = new Date(next.locks_at);
-    el.innerHTML = `Counts for <b>week ${esc(next.week)}</b> · locks ${esc(when(at, now))}${at - now < 86400000 ? ` · <span class="left">${esc(left(at, now))}</span>` : ''}`;
+    el.innerHTML = `Counts for <b>${esc(wk(next.week))}</b> · locks ${esc(when(at, now))}${at - now < 86400000 ? ` · <span class="left">${esc(left(at, now))}</span>` : ''}`;
   }
 
   // The last week that locked: the sheet the database copied for it (or why there's none).
@@ -257,7 +259,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
     if (data) body = `<div class="locked-pitch"></div>${data.saved_at ? `<p class="quiet">Saved ${esc(tidy(dateTime.format(new Date(data.saved_at))))}</p>` : ''}`;
     else if (!last.locked_at || error) body = '<p class="quiet">Locking…</p>';
     else body = '<p class="quiet">No sheet was saved before the deadline, so the team was picked automatically.</p>';
-    el.innerHTML = `<details class="sect locked"${open}><summary><span>Week ${esc(last.week)} team sheet</span><span class="lock-tag">Locked</span></summary>${body}</details>`;
+    el.innerHTML = `<details class="sect locked"${open}><summary><span>${esc(wk(last.week))} team sheet</span><span class="lock-tag">Locked</span></summary>${body}</details>`;
     if (data) renderPitch($('.locked-pitch', el), { ...normaliseSheet(data, squad), players: season.players });
   }
 

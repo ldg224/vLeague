@@ -205,7 +205,7 @@ function drawMatches(now = new Date()) {
   if (!weekPinned || !weeks.includes(week)) week = activeWeek(season, now);
   const i = weeks.indexOf(week);
   $('#weeks').hidden = false;
-  $('#week-label').textContent = `Week ${week}`;
+  $('#week-label').textContent = season.rounds?.[week]?.label || `Week ${week}`;
   $('#week-prev').disabled = i <= 0;
   $('#week-next').disabled = i >= weeks.length - 1;
   const list = season.fixtures.filter(f => f.week === week).sort(byKickoff);
