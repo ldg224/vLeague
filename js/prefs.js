@@ -8,7 +8,7 @@ import { status } from './dashboard-data.js';
 
 const DEFAULTS = {
   spoilers: false, clock: '12', revealed: [], read: [],
-  email: { deadline: '24h', sent_back: true, lineups_out: false, weekly: false, news: true, office_digest: true },
+  email: { deadline: '24h', draft: 'both', sent_back: true, lineups_out: false, weekly: false, news: true, office_digest: true },
 };
 const CACHE = 'vleague-prefs';
 const DEVICE = 'vleague-device';

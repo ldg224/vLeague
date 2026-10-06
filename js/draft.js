@@ -1,6 +1,7 @@
 // Draft (0.21): the manager's side of the limited-time draft. Three tabs: Board (every pick so far), Available players (with
 // My queue and Auto-pick beside them) and Team values. A budget bar under the roster rules shows the weekly cap used.
-// Only reachable while a draft is live/paused inside its window; otherwise a short "no draft" note. Polls every 15 s.
+// Only reachable while a draft is live/paused inside its window; otherwise a short "no draft" note. Updates the moment a pick is
+// made (realtime), with a 15 s poll as backup. Tap a player's name for their card; picks are confirmed in a small dialog.
 import { enterPlace } from './shell.js';
 import { esc } from './member.js';
 import { openDraft, loadDraft, saveQueue, savePrefs, makePick, quietState, describeQuiet } from './draft-data.js';
@@ -8,6 +9,7 @@ import { loadPlayers, forgetPlayers } from './players-data.js';
 import { ago } from './places.js';
 import { overall } from './names.js';
 import { startTour, tourSeen } from './tour.js';
+import { db } from './auth.js';
 
 // Auto-pick asks two things. WHAT to pick, then WHEN to do it.
 const HOW = [
@@ -57,7 +59,7 @@ if (ctx) {
     // The draft plus, when it has quiet times, how the clock stands (so it can freeze while the timer is paused).
     const loadAll = async () => { const s = await loadDraft(draft0.id, code); s.qs = s.draft?.quiet?.length ? await quietState(draft0.id) : null; return s; };
     let st = await loadAll(), players = await loadPlayers({ fresh: true });
-    let msg = '';
+    let msg = '', sub = 'players';   // sub: which part of Available players shows on a phone (players, queue or auto-pick)
     const byId = () => new Map(players.map(p => [p.id, p]));
 
     const turn = () => st.order.find(o => o.pick_no === st.draft.current_pick) || null;
@@ -81,7 +83,7 @@ if (ctx) {
       return needed > left ? 'Taking this player would leave too few picks to fill every position.' : '';
     };
     const playerRow = (p, extra = '', attrs = '') => `<li class="dr-p"${attrs}><span class="pos">${esc(p.position)}</span>
-      <span class="nm">${esc(p.name)}</span><span class="rts">${chip(p.offense)}${chip(p.defense)}</span><span class="val">${money(p.value)}</span>${extra}</li>`;
+      <span class="nm"><button class="dr-name" data-player="${esc(p.id)}">${esc(p.name)}</button></span><span class="rts">${chip(p.offense)}${chip(p.defense)}</span><span class="val">${money(p.value)}</span>${extra}</li>`;
 
     // How much of the weekly cap this club's squad uses (the draft shows it; it doesn't block a pick).
     function budget() {
@@ -115,7 +117,7 @@ if (ctx) {
     }
 
     // ---- tables. Two of them (picked players, available players), each with its own filters and sort levels.
-    const F = { avail: { q: '', pos: '' }, board: { q: '', pos: '', club: '' } };
+    const F = { avail: { q: '', pos: '', max: '', fit: false }, board: { q: '', pos: '', club: '' } };
     const DEFAULT = { avail: [{ key: 'value', dir: -1 }], board: [{ key: 'pick', dir: 1 }] };
     const SORTS = { avail: DEFAULT.avail.map(s => ({ ...s })), board: DEFAULT.board.map(s => ({ ...s })) };
     const colsOf = t => (t === 'board' ? [EXTRA.pick, EXTRA.club, ...COLS, EXTRA.how] : COLS);
@@ -132,13 +134,15 @@ if (ctx) {
       else SORTS[t] = [{ key, dir: i === 0 ? s[0].dir * -1 : col(t, key).first }];
     }
     const passes = (t, r) => { const f = F[t]; return (!f.pos || r.position === f.pos) && (!f.club || r.club === f.club)
-      && (!f.q || `${r.name} ${r.clubName || ''}`.toLowerCase().includes(f.q.toLowerCase())); };
+      && (!f.q || `${r.name} ${r.clubName || ''}`.toLowerCase().includes(f.q.toLowerCase()))
+      && (t !== 'avail' || ((!+f.max || r.value <= +f.max) && (!f.fit || !blocked(r)))); };
 
     function toolbar(t) {
       const f = F[t], s = SORTS[t], unused = colsOf(t).filter(c => !s.some(x => x.key === c.key));
       const clubs = [...new Set(st.order.map(o => o.club))].sort((a, b) => (a === code ? -1 : b === code ? 1 : nameOf(a) < nameOf(b) ? -1 : 1));
       return `<div class="dr-filter"><input type="search" data-f="q" data-t="${t}" placeholder="${t === 'board' ? 'Search players or clubs' : 'Search players'}" value="${esc(f.q)}">
         <select data-f="pos" data-t="${t}" aria-label="Position"><option value="">All positions</option>${['GK', 'DEF', 'MID', 'FWD'].map(p => `<option${f.pos === p ? ' selected' : ''}>${p}</option>`).join('')}</select>
+        ${t === 'avail' ? `<input type="number" inputmode="numeric" min="0" step="1000" data-f="max" data-t="avail" placeholder="Max value $" aria-label="Maximum value" value="${esc(f.max)}">${code ? `<label class="dr-fit"><input type="checkbox" data-f="fit" data-t="avail"${f.fit ? ' checked' : ''}> Fits my squad</label>` : ''}` : ''}
         ${t === 'board' ? `<select data-f="club" data-t="board" aria-label="Club"><option value="">All clubs</option>${clubs.map(c => `<option value="${esc(c)}"${f.club === c ? ' selected' : ''}>${esc(nameOf(c))}${c === code ? ' (you)' : ''}</option>`).join('')}</select>` : ''}</div>
         <div class="dr-sortbar"><span>Sort by</span>${s.map((x, i) => `<span class="dr-chip"><b>${i + 1}</b><button data-t="${t}" data-sflip="${i}" title="Flip direction">${esc(col(t, x.key).long)} ${arrow(x.dir)}</button><button data-t="${t}" data-sdel="${i}" aria-label="Stop sorting by ${esc(col(t, x.key).long)}"${s.length > 1 ? '' : ' disabled'}>✕</button></span>`).join('')}
           ${unused.length ? `<select data-sadd="${t}" aria-label="Add a sort"><option value="">+ Then by…</option>${unused.map(c => `<option value="${c.key}">${esc(c.long)}</option>`).join('')}</select>` : ''}
@@ -162,8 +166,8 @@ if (ctx) {
       const rows = st.picks.map(k => { const p = map.get(k.player);
         return { ...(p || { name: '— skipped —', position: '', number: null, offense: 0, defense: 0, value: 0 }), pick_no: k.pick_no, club: k.club, clubName: nameOf(k.club), how: k.how, skipped: !p }; });
       const shown = sorted('board', rows.filter(r => passes('board', r)));
-      return `<section><h2>Picked players (${st.picks.length} of ${st.order.length} picks made)</h2>${toolbar('board')}
-        ${table('board', shown, r => `<tr class="${r.club === code ? 'me' : ''}${r.skipped ? ' skipped' : ''}"><td class="c-pick">${r.pick_no}</td><td class="c-club">${esc(r.clubName)}</td><td class="c-position">${esc(r.position)}</td><td class="c-name">${esc(r.name)}</td><td class="c-number">${esc(r.number ?? '')}</td>${r.skipped ? '<td class="c-offense"></td><td class="c-defense"></td><td class="c-overall"></td><td class="c-value"></td>' : ratings(r)}<td class="c-how">${esc(HOWS[r.how] || r.how)}</td></tr>`,
+      return `<section><h2>Picked players (${st.picks.length} of ${st.order.length} picks made) <button class="dr-b dr-export" data-export title="Download every pick so far as a spreadsheet">Download CSV</button></h2>${toolbar('board')}
+        ${table('board', shown, r => `<tr class="${r.club === code ? 'me' : ''}${r.skipped ? ' skipped' : ''}"><td class="c-pick">${r.pick_no}</td><td class="c-club">${esc(r.clubName)}</td><td class="c-position">${esc(r.position)}</td><td class="c-name">${r.skipped ? esc(r.name) : `<button class="dr-name" data-player="${esc(r.id)}">${esc(r.name)}</button>`}</td><td class="c-number">${esc(r.number ?? '')}</td>${r.skipped ? '<td class="c-offense"></td><td class="c-defense"></td><td class="c-overall"></td><td class="c-value"></td>' : ratings(r)}<td class="c-how">${esc(HOWS[r.how] || r.how)}</td></tr>`,
           st.picks.length ? 'No picks match.' : 'No picks yet.')}</section>`;
     }
 
@@ -189,10 +193,12 @@ if (ctx) {
     function playersTab(autoOpen) {
       const q = new Set(st.queue);
       const shown = sorted('avail', free().filter(p => passes('avail', p))).slice(0, 400);
-      return `<div class="dr-avail"><aside class="dr-side">${queuePanel()}${autoPanel(autoOpen)}</aside>
+      const qn = queue().length;
+      return `<div class="dr-availwrap"><nav class="dr-sub" aria-label="Show">${[['players', 'Players'], ['queue', `My queue${qn ? ` (${qn})` : ''}`], ['auto', 'Auto-pick']].map(([k, l]) => `<button type="button" data-sub="${k}" aria-pressed="${sub === k}">${l}</button>`).join('')}</nav>
+        <div class="dr-avail" data-sub="${sub}"><aside class="dr-side">${queuePanel()}${autoPanel(autoOpen)}</aside>
         <section class="dr-main"><h2>Available players (${free().length})</h2>${toolbar('avail')}
-        ${table('avail', shown, p => `<tr><td class="c-position">${esc(p.position)}</td><td class="c-name">${esc(p.name)}</td><td class="c-number">${esc(p.number ?? '')}</td>${ratings(p)}
-          <td class="c-act">${code ? `<button class="dr-b" data-add="${esc(p.id)}"${q.has(p.id) ? ' disabled' : ''}>${q.has(p.id) ? 'Queued' : '+ Queue'}</button>` : ''}${myTurn() ? `<button class="dr-b pick" data-pick="${esc(p.id)}"${blocked(p) ? ` disabled title="${esc(blocked(p))}"` : ''}>Pick</button>` : ''}</td></tr>`, 'No players match.')}</section></div>`;
+        ${table('avail', shown, p => `<tr><td class="c-position">${esc(p.position)}</td><td class="c-name"><button class="dr-name" data-player="${esc(p.id)}">${esc(p.name)}</button></td><td class="c-number">${esc(p.number ?? '')}</td>${ratings(p)}
+          <td class="c-act">${code ? `<button class="dr-b" data-add="${esc(p.id)}"${q.has(p.id) ? ' disabled' : ''}>${q.has(p.id) ? 'Queued' : '+ Queue'}</button>` : ''}${myTurn() ? `<button class="dr-b pick" data-pick="${esc(p.id)}"${blocked(p) ? ` disabled title="${esc(blocked(p))}"` : ''}>Pick</button>` : ''}</td></tr>`, 'No players match.')}</section></div></div>`;
     }
 
     function valuesTab() {
@@ -205,20 +211,72 @@ if (ctx) {
     }
 
     function draw() {
+      const y = window.scrollY, wraps = [...main.querySelectorAll('.dr-tablewrap')].map(w => w.scrollTop), side = main.querySelector('.dr-side')?.scrollTop || 0;
       const open = [...main.querySelectorAll('details.dr-team')].map(d => d.open), autoOpen = main.querySelector('.dr-autobox')?.open ?? true;
       main.innerHTML = `<div class="draft">${head()}<nav class="dr-tabs" role="tablist">${TABS.map(([id, l]) => `<button role="tab" data-tab="${id}" aria-selected="${tab === id}">${l}</button>`).join('')}<button class="dr-help" data-tour title="A step-by-step guide to this page"><b>?</b> How it works</button></nav>
         <p class="dr-msg" role="status">${esc(msg)}</p>${tab === 'players' ? playersTab(autoOpen) : { board: boardTab, values: valuesTab }[tab]()}</div>`;
       if (tab === 'values') main.querySelectorAll('details.dr-team').forEach((d, i) => { if (i in open) d.open = open[i]; });
+      // A redraw (a refresh, a pick, a sort) must not throw you back to the top of a long table.
+      main.querySelectorAll('.dr-tablewrap').forEach((w, i) => { w.scrollTop = wraps[i] || 0; });
+      const sd = main.querySelector('.dr-side'); if (sd) sd.scrollTop = side;
+      if (window.scrollY !== y) window.scrollTo(0, y);
     }
 
+    // What the page shows, boiled down, so a refresh that found nothing new doesn't redraw (and disturb) the page.
+    const sig = () => JSON.stringify([st.draft.status, st.draft.current_pick, st.draft.pick_deadline, st.draft.quiet, st.picks.length, st.queue, st.prefs,
+      st.qs?.quiet_until, st.qs?.next_quiet, players.length, players.filter(p => p.team).length, players.reduce((n, p) => n + (p.value || 0), 0)]);
     async function refresh() {
       try {
         if (!await openDraft()) { location.reload(); return; }
-        const typing = document.activeElement?.matches?.('input,select');
+        const typing = document.activeElement?.matches?.('input,select'), before = sig();
         forgetPlayers();
         [st, players] = await Promise.all([loadAll(), loadPlayers({ fresh: true })]);
-        if (!typing) draw();
+        if (!typing && sig() !== before) draw();
       } catch { /* try again next time */ }
+    }
+
+    // ---- a small in-page dialog (instead of the browser's plain popup), used for confirming a pick and for a player's card
+    function sheet(html) {
+      return new Promise(res => {
+        const dlg = document.createElement('dialog');
+        dlg.className = 'dr-dialog';
+        dlg.innerHTML = html;
+        dlg.addEventListener('close', () => { dlg.remove(); res(dlg.returnValue); });
+        dlg.addEventListener('click', e => { const b = e.target.closest('[data-close]'); if (b) dlg.close(b.dataset.close); else if (e.target === dlg) dlg.close(''); });
+        document.body.append(dlg);
+        dlg.showModal();
+        dlg.querySelector('[data-close="ok"], [data-close]')?.focus();
+      });
+    }
+    const bigRatings = p => `<div class="dr-rt3"><span><small>OFF</small>${chip(p.offense)}</span><span><small>DEF</small>${chip(p.defense)}</span><span><small>OVR</small>${chip(overall(p), 1)}</span><span><small>Value</small><b>${money(p.value)}</b></span></div>`;
+    async function confirmPick(p) {
+      const mine = players.filter(x => x.team === code), used = mine.reduce((n, x) => n + (x.value || 0), 0), after = used + (p.value || 0);
+      const same = mine.filter(x => x.position === p.position).length + 1;
+      return await sheet(`<h2>Pick ${esc(p.name)}?</h2><p class="dr-sub1">${esc(p.position)}${p.number != null ? ` · #${esc(p.number)}` : ''} for ${esc(nameOf(code))}</p>${bigRatings(p)}
+        <p class="dr-line">Squad value <b>${money(used)}</b> → <b class="${after > CAP ? 'over' : ''}">${money(after)}</b> of ${money(CAP)}${after > CAP ? ' <span class="over">(over the cap)</span>' : ''}</p>
+        <p class="dr-line">You’d have ${same} ${esc(p.position)}.</p>
+        <div class="dr-btns"><button class="dr-b" data-close="">Cancel</button><button class="dr-b pick" data-close="ok">Pick ${esc(p.name)}</button></div>`) === 'ok';
+    }
+    async function playerCard(id) {
+      const p = byId().get(id); if (!p) return;
+      const k = st.picks.find(x => x.player === id), queued = st.queue.includes(id), why = !p.team && myTurn() ? blocked(p) : '';
+      const status = p.team ? `Picked by <b>${esc(nameOf(p.team))}</b>${k ? ` (pick ${k.pick_no})` : ''}` : 'Available';
+      const acts = [!p.team && code ? `<button class="dr-b" data-close="queue"${queued ? ' disabled' : ''}>${queued ? 'In your queue' : '+ Queue'}</button>` : '',
+        !p.team && myTurn() ? `<button class="dr-b pick" data-close="pick"${why ? ` disabled title="${esc(why)}"` : ''}>Pick</button>` : ''].join('');
+      const r = await sheet(`<h2>${esc(p.name)}</h2><p class="dr-sub1">${esc(p.position)}${p.number != null ? ` · #${esc(p.number)}` : ''} · ${status}</p>${bigRatings(p)}
+        ${why ? `<p class="dr-line over">${esc(why)}</p>` : ''}<div class="dr-btns"><button class="dr-b" data-close="">Close</button>${acts}</div>`);
+      if (r === 'queue') await addToQueue(id); else if (r === 'pick') await pickPlayer(id);
+    }
+    const csvCell = v => (/[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
+    function exportBoard() {
+      const map = byId();
+      const rows = [['Pick', 'Club', 'Position', 'Player', 'Number', 'Offence', 'Defence', 'Overall', 'Value', 'How'],
+        ...st.picks.map(k => { const p = map.get(k.player); return [k.pick_no, nameOf(k.club), p?.position || '', p?.name || '(skipped)', p?.number ?? '', p?.offense ?? '', p?.defense ?? '',
+          p ? overall(p).toFixed(1) : '', p?.value ?? '', HOWS[k.how] || k.how]; })];
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob(['\ufeff' + rows.map(r => r.map(csvCell).join(',')).join('\n')], { type: 'text/csv' }));
+      a.download = `${(st.draft.name || 'draft').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-board.csv`;
+      a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     }
 
     const fail = e => { msg = /not your turn/i.test(e.message) ? 'It isn’t your turn.' : /taken|already/i.test(e.message) ? 'That player has just been taken.' : `That didn’t work: ${e.message}`; };
@@ -228,6 +286,14 @@ if (ctx) {
       draw();
     }
 
+    const addToQueue = id => setQueue([...queue(), id]);
+    async function pickPlayer(id, btn) {
+      const p = byId().get(id);
+      if (!p || !(await confirmPick(p))) return;
+      if (btn) btn.disabled = true;
+      try { await makePick(draft0.id, id); msg = `You picked ${p.name}.`; await refresh(); } catch (er) { fail(er); }
+      draw();
+    }
     main.addEventListener('click', async e => {
       const b = e.target.closest('button'); if (!b) return;
       const q = queue(), d = b.dataset;
@@ -237,24 +303,21 @@ if (ctx) {
       else if (d.sflip !== undefined) { SORTS[d.t][+d.sflip].dir *= -1; draw(); }
       else if (d.sdel !== undefined) { SORTS[d.t].splice(+d.sdel, 1); draw(); }
       else if (d.sreset !== undefined) { SORTS[d.t] = DEFAULT[d.t].map(s => ({ ...s })); draw(); }
-      else if (d.add) setQueue([...q, d.add]);
+      else if (d.sub) { sub = d.sub; draw(); }
+      else if (d.export !== undefined) exportBoard();
+      else if (d.player) playerCard(d.player);
+      else if (d.add) addToQueue(d.add);
       else if (d.rm) setQueue(q.filter((_, i) => i !== +d.rm));
       else if (d.up || d.down) {
         const i = +(d.up ?? d.down), j = d.up ? i - 1 : i + 1, n = [...q];
         [n[i], n[j]] = [n[j], n[i]]; setQueue(n);
-      } else if (d.pick) {
-        const p = byId().get(d.pick);
-        if (!confirm(`Pick ${p?.name || 'this player'} for ${nameOf(code)}?`)) return;
-        b.disabled = true;
-        try { await makePick(draft0.id, d.pick); msg = `You picked ${p?.name}.`; await refresh(); } catch (er) { fail(er); }
-        draw();
-      }
+      } else if (d.pick) pickPlayer(d.pick, b);
     });
     main.addEventListener('input', e => {
       const t = e.target;
-      if (t.dataset.f === 'q') {
+      if (t.dataset.f === 'q' || t.dataset.f === 'max') {
         F[t.dataset.t].q = t.value; const s = t.selectionStart; draw();
-        const i = main.querySelector(`[data-f="q"][data-t="${t.dataset.t}"]`); i.focus(); i.setSelectionRange(s, s);
+        const i = main.querySelector(`[data-f="q"][data-t="${t.dataset.t}"]`); i.focus(); try { i.setSelectionRange(s, s); } catch { /* number boxes have no caret to restore */ }
       }
     });
     // Auto-pick saves as it changes. "After a few minutes" waits for a valid number of minutes.
@@ -268,7 +331,7 @@ if (ctx) {
     main.addEventListener('change', e => {
       const t = e.target;
       if (t.form?.id === 'auto') { saveAuto(t.form); return; }
-      if (t.dataset.f && t.dataset.t) { F[t.dataset.t][t.dataset.f] = t.value; draw(); }
+      if (t.dataset.f && t.dataset.t) { F[t.dataset.t][t.dataset.f] = t.type === 'checkbox' ? t.checked : t.value; draw(); }
       else if (t.dataset.sadd && t.value) { SORTS[t.dataset.sadd].push({ key: t.value, dir: col(t.dataset.sadd, t.value).first }); draw(); }
     });
     main.addEventListener('submit', e => e.preventDefault());
@@ -293,25 +356,27 @@ if (ctx) {
       { target: '.dr-quiet', optional: true, tab: 'board', title: 'Quiet times', text: 'To give everyone a rest, the pick timer pauses at set times, like overnight. Your clock stops counting then. <b>You can still make a pick</b> if you’re online.' },
       { target: '.dr-budget', title: 'Your weekly budget', text: 'Every player has a value. Your squad’s values add up against a weekly cap. The bar fills as you pick, turns <b>orange</b> when you’re close and <b>red</b> if you go over.', tip: 'It’s a guide only. It won’t stop you making a pick.' },
       { target: '.dr-tabs', title: 'Three tabs', text: '<b>Board</b> shows every pick so far. <b>Available players</b> is where you choose. <b>Team values</b> shows what every club has spent.' },
-      { target: '.dr-tablewrap', tab: 'board', title: 'The board', text: 'A live list of every player already picked: who took them, which club, their ratings and value. Your own club’s picks are <b>highlighted</b>.', tip: 'It updates by itself every few seconds.' },
+      { target: '.dr-tablewrap', tab: 'board', title: 'The board', text: 'A live list of every player already picked: who took them, which club, their ratings and value. Your own club’s picks are <b>highlighted</b>.', tip: 'It updates the moment someone picks. “Download CSV” saves it as a spreadsheet.' },
       { target: ['.dr-filter', '.dr-sortbar'], tab: 'board', title: 'Search, filter and sort', text: 'Type a name, or choose a position or club to narrow the list. <b>Tap any column heading</b> to sort by it, and tap again to flip it.', tip: 'Want the best defenders? Sort by Position, then add “Then by… Defensive rating”.' },
-      { target: '.dr-main .dr-tablewrap', tab: 'players', title: 'Available players', text: 'Everyone who hasn’t been taken yet. <b>OFF</b> is attack, <b>DEF</b> is defence, <b>OVR</b> is the overall rating, and <b>Value</b> is what they cost against your cap.' },
-      { target: '[data-add]', optional: true, tab: 'players', title: 'Add to your queue', text: 'Press <b>+ Queue</b> next to any player you like. It adds them to your queue so you don’t have to hunt for them later.' },
-      { target: '.dr-queue', tab: 'players', title: 'My queue', text: 'Your wish list, best player first. Drag players or use the <b>▲ ▼</b> arrows to rank them, and <b>✕</b> to remove one. If someone else takes a player, they drop off by themselves.', tip: 'Fill it with plenty of players so you’re never stuck.' },
-      { target: '.dr-autobox', optional: true, tab: 'players', title: 'Auto-pick', text: 'Can’t be online? Let the draft pick <b>for you</b>. Choose <b>what</b> to pick (from your queue, or at random) and <b>when</b> (straight away, after a few minutes, or only if you miss your turn).', tip: 'It saves as you change it. Nothing to press.' },
-      { target: '.dr-avail', tab: 'players', title: 'Making a pick', text: () => myTurn()
-          ? 'It’s your turn, so every row has a <b>Pick</b> button, and your queue has a big <b>Pick now</b> button. You’ll be asked to confirm.'
+      { target: '.dr-main .dr-tablewrap', tab: 'players', sub: 'players', title: 'Available players', text: 'Everyone who hasn’t been taken yet. <b>OFF</b> is attack, <b>DEF</b> is defence, <b>OVR</b> is the overall rating, and <b>Value</b> is what they cost against your cap. The colours run from red (weak) to green (outstanding).', tip: 'Tap a player’s name for their card. Use “Fits my squad” and “Max value” to narrow the list.' },
+      { target: '[data-add]', optional: true, tab: 'players', sub: 'players', title: 'Add to your queue', text: 'Press <b>+ Queue</b> next to any player you like. It adds them to your queue so you don’t have to hunt for them later.' },
+      { target: '.dr-queue', tab: 'players', sub: 'queue', title: 'My queue', text: 'Your wish list, best player first. Drag players or use the <b>▲ ▼</b> arrows to rank them, and <b>✕</b> to remove one. If someone else takes a player, they drop off by themselves.', tip: 'Fill it with plenty of players so you’re never stuck.' },
+      { target: '.dr-autobox', optional: true, tab: 'players', sub: 'auto', title: 'Auto-pick', text: 'Can’t be online? Let the draft pick <b>for you</b>. Choose <b>what</b> to pick (from your queue, or at random) and <b>when</b> (straight away, after a few minutes, or only if you miss your turn).', tip: 'It saves as you change it. Nothing to press.' },
+      { target: '.dr-avail', tab: 'players', sub: 'players', title: 'Making a pick', text: () => myTurn()
+          ? 'It’s your turn, so every row has a <b>Pick</b> button, and your queue has a big <b>Pick now</b> button. You’ll be asked to confirm, and shown what it does to your budget.'
           : 'When it’s your turn, a <b>Pick</b> button appears on every row, and your queue gets a big <b>Pick now</b> button. You’ll be asked to confirm first.' },
       { target: '.dr-teams', tab: 'values', title: 'Team values', text: 'Tap a club to open its squad and see what it has spent against the cap. Your club is at the top and already open.' },
       { target: '.dr-help', tab: 'board', title: 'You’re ready', text: 'That’s everything. If you ever get stuck, tap <b>How it works</b> and the tour will start again.' },
     ];
     async function tour() {
-      const was = tab;
+      const was = tab, wasSub = sub;
       await startTour(STEPS(), {
         key: 'draft',
-        before: async s => { if (s.tab && tab !== s.tab) { tab = s.tab; msg = ''; draw(); await new Promise(r => requestAnimationFrame(r)); } },
+        before: async s => {
+          if ((s.tab && tab !== s.tab) || (s.sub && sub !== s.sub)) { if (s.tab) tab = s.tab; if (s.sub) sub = s.sub; msg = ''; draw(); await new Promise(r => requestAnimationFrame(r)); }
+        },
       });
-      if (tab !== was) { tab = was; draw(); }
+      if (tab !== was || sub !== wasSub) { tab = was; sub = wasSub; draw(); }
       main.querySelector('.dr-help')?.classList.remove('glow');
     }
 
@@ -326,7 +391,16 @@ if (ctx) {
       const q = st.qs, edge = q && [q.quiet_until, q.next_quiet].filter(Boolean).map(x => new Date(x).getTime()).find(x => x > q.at && x <= Date.now());
       if (edge && !flipping) { flipping = true; refresh().finally(() => { flipping = false; }); }
     }, 1000);
-    setInterval(refresh, 15000);
+    setInterval(refresh, 15000);   // backup: the live channel below does the real work
+    // Live updates: hear about a pick or a clock change the moment it happens. If this can't connect, the 15 s poll still works.
+    try {
+      let soon = null;
+      const kick = () => { clearTimeout(soon); soon = setTimeout(refresh, 250); };
+      (await db()).channel(`draft-${draft0.id}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'draft_picks', filter: `draft=eq.${draft0.id}` }, kick)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'drafts', filter: `id=eq.${draft0.id}` }, kick)
+        .subscribe();
+    } catch { /* polling covers it */ }
     document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
   }
 }

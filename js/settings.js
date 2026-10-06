@@ -1,5 +1,5 @@
 // Settings (0.7): a manager's account, email reminders, appearance, matches, accessibility. Every control saves on change.
-// The office's own email choice lives in the Editor (Deadlines).
+// The office's own email choice lives in the Editor (Clubs).
 // Synced settings (data-pref) go to Supabase through prefs.js and get a "Saved" tick; per-device ones (data-dev)
 // apply at once and stay in this browser.
 import { enterPlace } from './shell.js';
@@ -30,6 +30,7 @@ if (ctx) {
 
   <section class="sect" aria-labelledby="h-email"><div class="sect-head"><h2 id="h-email">Email reminders</h2><span class="sect-note">${esc(email)}</span></div>
     ${row('Deadline reminder', seg('email.deadline', 'Deadline reminder', [['24h', '24 h before'], ['3h', '3 h before'], ['both', 'Both'], ['off', 'Off']], p.email.deadline))}
+    ${club ? row('Draft: your pick', seg('email.draft', 'Draft emails', [['both', 'On the clock + warning'], ['turn', 'On the clock'], ['off', 'Off']], p.email.draft)) : ''}
     ${club ? row('Club changes sent back', toggle('email.sent_back', 'Club changes sent back', p.email.sent_back)) : ''}
     ${row('Line-ups out', toggle('email.lineups_out', 'Line-ups out', p.email.lineups_out))}
     ${row('Weekly round-up', toggle('email.weekly', 'Weekly round-up', p.email.weekly))}

@@ -79,3 +79,12 @@ A turn that times out with nothing usable in the queue, and the office's "Random
 club may take (`_draft_random_fit()`, which uses `_draft_can_pick()`: position maximums, and minimums that stay reachable). The
 pick is only skipped (`how = 'skip'`) if nobody left fits. The stored `on_timeout` values are unchanged: `skip` now means "random
 player who fits", `queue` means "queue, else random who fits", `best_value` is the best-value player who fits.
+
+## Emails, live updates and the phone page (0.29)
+
+Two emails go through the normal reminder system (`due_emails()` in `0031_draft_notifications.sql`, composed by `send-reminders`):
+`draft_turn` ("you're on the clock", once per pick) and `draft_warn` (about 120 minutes of active timer left, only for picks of 180
+minutes or more). The setting is `email.draft` = `both` (default) | `turn` | `off`; unsubscribing from either switches it off. They aren't
+sent in the draft's quiet times, between 10 pm and 8 am Melbourne, or to a club whose auto-pick is "always". The page subscribes to
+Supabase realtime on `draft_picks` and `drafts` (they're in the `supabase_realtime` publication) and refreshes on any change, with the
+15 s poll as a backup. Players' cards and the pick dialog are `<dialog>` elements built in `js/draft.js`.

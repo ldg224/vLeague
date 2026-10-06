@@ -129,3 +129,78 @@
 .dr-quiet { color: var(--muted); }
 .dr-clock.quiet { color: var(--muted); }
 .dr-clock .dr-qs { color: var(--muted); }
+
+/* 0.29: player cards and the pick dialog, value filter, phone sub-tabs, download button */
+.dr-name { border: 0; background: none; padding: 0; margin: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--text) 25%, transparent); text-underline-offset: 3px; }
+.dr-name:hover { text-decoration-color: var(--club); color: var(--club-text, var(--text)); }
+.dr-p .nm .dr-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.dr-filter { flex-wrap: wrap; align-items: center; }
+.dr-filter input[type="number"] { width: 9.5em; flex: 0 1 auto; }
+.dr-fit { display: inline-flex; align-items: center; gap: 6px; font-size: .88rem; color: var(--muted); white-space: nowrap; cursor: pointer; }
+.dr-export { margin-left: 8px; vertical-align: middle; }
+.dr-sub { display: none; }
+.dr-dialog { width: min(420px, calc(100vw - 24px)); box-sizing: border-box; padding: 20px 22px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface, #111827); color: var(--text); box-shadow: 0 22px 60px rgba(0, 0, 0, .5); animation: dr-pop .22s cubic-bezier(.2, .8, .2, 1); }
+.dr-dialog::backdrop { background: rgba(4, 8, 16, .7); animation: tour-fade .2s ease; }
+@keyframes dr-pop { from { opacity: 0; transform: translateY(10px) scale(.97); } }
+.dr-dialog h2 { margin: 0 0 2px; font: 700 1.35rem/1.15 var(--font-display); letter-spacing: .02em; text-transform: uppercase; }
+.dr-sub1 { margin: 0 0 14px; color: var(--muted); font-size: .92rem; }
+.dr-rt3 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+.dr-rt3 span { display: grid; justify-items: center; gap: 4px; padding: 8px 4px; border: 1px solid var(--line); border-radius: 12px; }
+.dr-rt3 small { color: var(--muted); font-size: .7rem; font-weight: 700; letter-spacing: .06em; }
+.dr-rt3 .rt { font-size: 1.1rem; min-width: 2.4em; }
+.dr-rt3 b { font-size: 1rem; font-variant-numeric: tabular-nums; }
+.dr-line { margin: 6px 0; font-size: .92rem; }
+.dr-line .over, .dr-line.over, b.over, .over { color: #e05555; }
+.dr-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.dr-btns .dr-b { padding: 9px 16px; font-size: .9rem; }
+@media (max-width: 900px) {
+  .dr-sub { display: flex; gap: 4px; padding: 4px; margin-bottom: 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); }
+  .dr-sub button { flex: 1; padding: 8px 6px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font: 700 .85rem var(--font); cursor: pointer; }
+  .dr-sub button[aria-pressed="true"] { background: var(--club); color: var(--on-club); }
+  .dr-avail[data-sub="players"] .dr-side { display: none; }
+  .dr-avail[data-sub="queue"] .dr-main, .dr-avail[data-sub="queue"] .dr-autobox { display: none; }
+  .dr-avail[data-sub="auto"] .dr-main, .dr-avail[data-sub="auto"] .dr-queue { display: none; }
+}
+@media (max-width: 640px) {
+  .dr-dialog { margin: auto auto 12px; }
+  .dr-table .c-name { min-width: 7.5em; max-width: 12em; }
+  .dr-table .c-offense, .dr-table .c-defense, .dr-table .c-overall { width: 3.6em; }
+  .dr-table td { padding: 6px 6px; }
+  .dr-table .c-act .dr-b { padding: 6px 8px; }
+  .dr-filter input[type="search"] { flex-basis: 100%; }
+  .dr-tablewrap { max-height: 62vh; }
+}
+
+/* The page's grid has one automatic column, so a wide table stretched the whole page past a phone's screen (0.29). Pin it to the screen. */
+.member:has(.draft) { grid-template-columns: minmax(0, 1fr); }
+.member-main:has(.draft) { min-width: 0; }
+@media (max-width: 640px) {
+  /* Phones: the Available players table fits the screen without sideways scrolling (overall rating is still a sort option). */
+  .dt-avail .c-overall, .dt-avail .c-number { display: none; }
+  .dr-table .c-name { min-width: 5.5em; max-width: 9.5em; }
+  .dr-table .c-position { width: 3em; }
+  .dr-table .c-value { width: 4.6em; font-size: .85rem; }
+  .dt-avail .c-act { white-space: nowrap; }
+  .dt-avail .c-act .dr-b { padding: 6px 7px; font-size: .75rem; }
+  .dr-hint { display: none; }
+}
+.dr-table .c-name .dr-name { display: block; max-width: 22em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 640px) {
+  .dr-table .c-name .dr-name { max-width: 7.8em; }
+  .dr-table th button { padding: 9px 6px; }
+  .dr-table .rt { min-width: 1.9em; padding: 1px 2px; font-size: .8rem; }
+  .dr-table .c-offense, .dr-table .c-defense { width: 2.7em; }
+  .dr-table .c-value { width: 4.2em; padding-inline: 4px; font-size: .78rem; }
+  .dt-avail [data-add] { font-size: 0; padding: 6px 9px; }
+  .dt-avail [data-add]::before { content: '+'; font-size: .95rem; line-height: 1; }
+  .dt-avail [data-add]:disabled::before { content: '✓'; }
+}
+@media (max-width: 640px) {
+  /* One button per row on a phone: Pick on your turn, otherwise +. (A player's card has both.) */
+  .dt-avail .c-act:has([data-pick]) [data-add] { display: none; }
+  .dr-table .c-name .dr-name { max-width: 6.6em; }
+  .dr-table .c-position { width: 2.6em; font-size: .72rem; }
+  .dr-table td { padding-inline: 4px; }
+  .dt-avail .c-act { padding-right: 6px; }
+}
+@media (max-width: 640px) { .dr-table .c-name .dr-name { max-width: 5.8em; } .dr-table th button { padding-inline: 4px; } .dt-avail .c-act .dr-b { padding-inline: 6px; } }

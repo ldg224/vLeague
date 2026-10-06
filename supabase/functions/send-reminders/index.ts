@@ -148,7 +148,29 @@ async function compose(r: Row, s: Season | null, admin: any): Promise<Mail | nul
       subject: `${clubs.length} club${clubs.length === 1 ? '' : 's'} without a team for week ${d.week}`,
       heading: `Week ${d.week} locks ${shortWhen(d.locks_at)}`,
       lines: [`These clubs haven’t picked a team yet: ${clubs.map(esc).join(', ')}.`],
-      button: ['Open the Editor', `${SITE}editor.html#deadlines`],
+      button: ['Open the Editor', `${SITE}editor.html#fixtures`],
+    };
+  }
+  if (r.kind === 'draft_turn' || r.kind === 'draft_warn') {
+    const left = Number(d.left_min) || 0;
+    const nice = left >= 90 ? `${Math.round(left / 60)} hours` : `${left} minutes`;
+    const fallback = d.queued > 0
+      ? `You have ${d.queued} player${d.queued === 1 ? '' : 's'} in your queue, so the draft will take the first one who fits.`
+      : d.timeout === 'best_value' ? 'The draft will take the best-value player who fits your squad.' : 'The draft will take a random player who fits your open positions.';
+    if (r.kind === 'draft_turn') {
+      return {
+        subject: `You’re on the clock: pick ${d.pick} of ${d.of}`,
+        heading: 'It’s your pick',
+        lines: [`Hi ${first}, you’re up in <b>${esc(d.draft)}</b> (pick ${d.pick} of ${d.of}).`,
+          `Your timer runs out about <b>${esc(when(d.deadline))}</b>. If you’re not around, ${esc(fallback.charAt(0).toLowerCase() + fallback.slice(1))}`],
+        button: ['Make your pick', `${SITE}draft.html`],
+      };
+    }
+    return {
+      subject: `About ${nice} left on your draft pick`,
+      heading: 'Your pick time is nearly up',
+      lines: [`Hi ${first}, you have about <b>${esc(nice)}</b> left to pick in <b>${esc(d.draft)}</b> (pick ${d.pick} of ${d.of}).`, esc(fallback)],
+      button: ['Make your pick', `${SITE}draft.html`],
     };
   }
   return null;

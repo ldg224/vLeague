@@ -3,6 +3,28 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.29.0 (2026-10-07)
+
+Draft: emails, instant updates, a better phone page. Needs `0031_draft_notifications.sql` (run it once) and the two email functions
+redeployed (`send-reminders`, `email-unsubscribe`).
+
+- **Added, emails:** managers now get **"You're on the clock"** when their pick starts and **"Your pick time is nearly up"** (about two
+  hours of timer left, for drafts with picks of three hours or more). They explain what happens if the manager isn't around (their queue,
+  else a random player who fits). They never go out in the draft's quiet times or between 10 pm and 8 am, a pick is emailed once, and a
+  club on "auto-pick the moment it's my turn" isn't emailed. New Settings choice **Draft: your pick** (On the clock + warning, On the
+  clock, Off), and every email has its one-click turn-off.
+- **Added, instant updates:** the Draft page updates the moment anyone picks or the clock changes (it still checks every 15 seconds as a
+  backup). It also no longer jumps back to the top of a long table on each refresh, and doesn't redraw when nothing changed.
+- **Added, phones:** the page now fits a phone's screen (a wide table was stretching the whole page sideways). Available players has
+  **Players / My queue / Auto-pick** buttons instead of one long scroll, and its table fits without sideways scrolling: one button per row
+  (Pick on your turn, otherwise +), and ratings OFF and DEF.
+- **Added:** **tap a player's name** for their card (ratings, value, who has them, Queue and Pick buttons); **Max value** and **Fits my
+  squad** filters on Available players; a proper **Pick dialog** (instead of the browser's plain popup) showing the player's ratings and
+  what the pick does to your budget and position count; **Download CSV** of the board.
+- **Fixed:** the Editor's email link for the clubs-without-a-team digest pointed at the removed Deadlines tab; it now opens Fixtures.
+- **Database:** `0031_draft_notifications.sql` adds the draft emails to `due_emails()` and turns on live updates for the draft tables.
+  Checked with a dry run of 10 email cases (timing, settings, quiet times, once-only, auto-pick clubs).
+
 ## 0.28.1 (2026-10-07)
 
 Draft: a missed pick is no longer lost. Needs `0030_draft_random_instead_of_skip.sql`.

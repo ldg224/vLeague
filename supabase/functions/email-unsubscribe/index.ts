@@ -7,6 +7,7 @@ const SITE = 'https://ldg224.github.io/vLeague/';
 const KINDS: Record<string, string> = {
   deadline: 'deadline reminders', sent_back: 'emails when club changes are sent back',
   lineups_out: 'line-ups out emails', weekly: 'the weekly round-up', office_digest: 'clubs-without-a-team emails', news: 'league news emails',
+  draft_turn: 'draft emails', draft_warn: 'draft emails',
 };
 
 async function sign(text: string) {
@@ -33,7 +34,8 @@ Deno.serve(async req => {
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
   const { data: row } = await admin.from('user_settings').select('prefs').eq('user_id', user).maybeSingle();
   const prefs = row?.prefs || {};
-  prefs.email = { ...(prefs.email || {}), [kind]: kind === 'deadline' ? 'off' : false };
+  const key = kind.startsWith('draft_') ? 'draft' : kind;   // both draft emails share one setting
+  prefs.email = { ...(prefs.email || {}), [key]: key === 'deadline' || key === 'draft' ? 'off' : false };
   const { error } = await admin.from('user_settings').upsert({ user_id: user, prefs });
   if (error) return req.method === 'POST' ? new Response('error', { status: 500 }) : page('That didn’t work', 'Try again, or change it in Settings.', 500);
   return req.method === 'POST' ? new Response('ok') : page('Done', `You won’t get ${KINDS[kind]} any more.`);
