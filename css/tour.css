@@ -1,0 +1,68 @@
+/* Guided tour (0.26): dark screen, glowing spotlight, floating card. See js/tour.js. */
+.tour { position: fixed; inset: 0; z-index: 1000; animation: tour-fade .3s ease both; }
+.tour.out { animation: tour-fade .25s ease reverse both; pointer-events: none; }
+.tour-open { overflow-x: hidden; }
+
+/* The spotlight is a see-through box; its enormous shadow is the dark screen, so the highlighted thing stays bright. */
+.tour-spot {
+  position: fixed; top: 50%; left: 50%; width: 0; height: 0; border-radius: 14px; pointer-events: none;
+  box-shadow: 0 0 0 100vmax rgba(4, 8, 16, .78), 0 0 0 2px var(--club, #4aa3ff), 0 0 28px 4px color-mix(in srgb, var(--club, #4aa3ff) 55%, transparent);
+  transition: top .45s cubic-bezier(.3, .8, .2, 1), left .45s cubic-bezier(.3, .8, .2, 1), width .45s cubic-bezier(.3, .8, .2, 1), height .45s cubic-bezier(.3, .8, .2, 1), opacity .3s;
+  animation: tour-pulse 2.2s ease-in-out infinite;
+}
+.tour-spot.none { opacity: 0; width: 0 !important; height: 0 !important; box-shadow: 0 0 0 100vmax rgba(4, 8, 16, .78); animation: none; }
+@keyframes tour-pulse {
+  50% { box-shadow: 0 0 0 100vmax rgba(4, 8, 16, .78), 0 0 0 3px var(--club, #4aa3ff), 0 0 44px 10px color-mix(in srgb, var(--club, #4aa3ff) 40%, transparent); }
+}
+@keyframes tour-fade { from { opacity: 0; } }
+
+.tour-card {
+  position: fixed; top: 0; left: 0; width: min(380px, calc(100vw - 20px)); box-sizing: border-box; padding: 18px 20px 16px;
+  border: 1px solid var(--line); border-radius: 18px; color: var(--text); background: var(--card-strong, #111827);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 18px 50px rgba(0, 0, 0, .45);
+  transition: transform .45s cubic-bezier(.3, .8, .2, 1);
+}
+.tour-card.in > * { animation: tour-rise .4s cubic-bezier(.2, .8, .2, 1) both; }
+.tour-card.in > :nth-child(2) { animation-delay: .04s; } .tour-card.in > :nth-child(3) { animation-delay: .09s; }
+.tour-card.in > :nth-child(4) { animation-delay: .14s; } .tour-card.in > :nth-child(n+5) { animation-delay: .18s; }
+@keyframes tour-rise { from { opacity: 0; transform: translateY(8px); } }
+/* A pointer toward the spotlight. */
+.tour-card::before {
+  content: ''; position: absolute; width: 14px; height: 14px; background: inherit; border: 1px solid var(--line); border-radius: 3px;
+  left: var(--arrow, 50%); margin-left: -7px; transform: rotate(45deg); display: none;
+}
+.tour-card[data-side="below"]::before { display: block; top: -8px; border-right: 0; border-bottom: 0; }
+.tour-card[data-side="above"]::before { display: block; bottom: -8px; border-left: 0; border-top: 0; }
+
+.tour-count { font: 700 .72rem var(--font); letter-spacing: .08em; text-transform: uppercase; color: var(--club-text, var(--muted)); margin-bottom: 4px; }
+.tour-title { margin: 0 0 6px; font: 700 1.3rem/1.15 var(--font-display); letter-spacing: .02em; text-transform: uppercase; outline: none; }
+.tour-text { margin: 0; font-size: .95rem; line-height: 1.5; color: var(--text); }
+.tour-text b { color: var(--club-text, var(--text)); }
+.tour-tip { margin: 10px 0 0; padding: 8px 10px; border-radius: 10px; font-size: .84rem; color: var(--muted); background: color-mix(in srgb, var(--club, #4aa3ff) 14%, transparent); }
+.tour-dots { display: flex; gap: 5px; margin: 14px 0 12px; }
+.tour-dots i { height: 5px; width: 5px; border-radius: 99px; background: color-mix(in srgb, var(--text) 22%, transparent); transition: width .3s, background .3s; }
+.tour-dots i.was { background: color-mix(in srgb, var(--club, #4aa3ff) 60%, transparent); }
+.tour-dots i.now { width: 20px; background: var(--club, #4aa3ff); }
+.tour-btns { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.tour-btns button { font: 700 .88rem var(--font); cursor: pointer; border-radius: 999px; }
+.tour-btns > span { display: flex; gap: 8px; }
+.tour-skip { border: 0; background: none; color: var(--muted); padding: 8px 4px; }
+.tour-skip:hover { color: var(--text); }
+.tour-back { border: 1px solid var(--line); background: transparent; color: var(--text); padding: 9px 16px; }
+.tour-next { border: 1px solid var(--club, #4aa3ff); background: var(--club, #4aa3ff); color: var(--on-club, #fff); padding: 9px 20px; transition: transform .15s; }
+.tour-next:hover { transform: translateY(-1px); }
+.tour-next.nudge { animation: tour-nudge .5s ease; }
+@keyframes tour-nudge { 25% { transform: scale(1.12); } 50% { transform: scale(.96); } 75% { transform: scale(1.06); } }
+.tour-btns button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+/* The "How it works" button on the Draft page. */
+.dr-tabs .dr-help { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; color: var(--text); border-color: color-mix(in srgb, var(--club) 60%, var(--line)); }
+.dr-help b { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--club); color: var(--on-club); font-size: .75rem; }
+.dr-help.glow { animation: tour-glow 1.8s ease-in-out 3; }
+@keyframes tour-glow { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--club) 35%, transparent); } }
+
+@media (max-width: 640px) { .tour-card { padding: 16px 16px 14px; } .tour-title { font-size: 1.15rem; } }
+html.reduce-motion .tour, html.reduce-motion .tour-spot, html.reduce-motion .tour-card, html.reduce-motion .tour-card.in > *, html.reduce-motion .dr-help.glow { animation: none !important; transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .tour, .tour-spot, .tour-card, .tour-card.in > *, .tour-dots i, .dr-help.glow { animation: none !important; transition: none !important; }
+}

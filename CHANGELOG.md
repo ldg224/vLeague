@@ -3,6 +3,17 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.26.0 (2026-10-07)
+
+A guided tour of the Draft page.
+
+- **Added:** a **How it works** tour on the Draft page. The screen darkens, a glowing spotlight moves from one part of the page to
+  the next (clock, budget, tabs, board, sorting, available players, queue, auto-pick, making a pick, team values) and a card
+  explains each in plain words. Next/Back buttons or arrow keys, Esc to leave. It opens by itself the first time a manager visits
+  the Draft page, and the **? How it works** button beside the tabs starts it again any time. It follows reduced-motion settings.
+- **Changed, Draft tables:** headings now line up with their columns (numbers centred, value on the right). OFF, DEF and OVR use the
+  same red-to-green rating chips as the club page, and the tables are lighter: smaller headings, muted club/value/how columns.
+
 ## 0.25.0 (2026-10-07)
 
 The managers' Draft page, reorganised.

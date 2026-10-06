@@ -23,7 +23,7 @@
 .dr-p[draggable="true"] { cursor: grab; }
 .dr-p .pos { font-weight: 700; font-size: .78rem; color: var(--muted); }
 .dr-p .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dr-p .rt, .dr-p .val { font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.dr-p .rts, .dr-p .val { font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .mv { display: flex; gap: 4px; }
 .dr-b { padding: 5px 10px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--text); font: 600 .8rem var(--font); cursor: pointer; }
 .dr-b:disabled { opacity: .4; cursor: default; }
@@ -39,7 +39,7 @@
 @media (max-width: 640px) {
   .dr-cols { grid-template-columns: 1fr; }
   .dr-p { grid-template-columns: 38px minmax(0, 1fr) auto; }
-  .dr-p .rt { display: none; }
+  .dr-p .rts { display: none; }
   .dr-clock { font-size: 1.4rem; }
 }
 
@@ -83,7 +83,7 @@
 .dr-main, .dr-avail > * { min-width: 0; }
 .dr-queue h2 small { font: 600 .8rem var(--font); color: var(--muted); margin-left: 6px; }
 .dr-side .dr-list .dr-p { grid-template-columns: 34px minmax(0, 1fr) auto; }
-.dr-side .dr-list .dr-p .rt { display: none; }
+.dr-side .dr-list .dr-p .rts { display: none; }
 .dr-side .dr-list .dr-p .val { display: none; }
 .dr-autobox { border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); padding: 10px 12px; }
 .dr-autobox summary { cursor: pointer; font-weight: 700; }
@@ -95,3 +95,23 @@
 .dr-table tr.skipped td { color: var(--faint); font-style: italic; }
 .dr-table .c-pick { color: var(--muted); }
 @media (max-width: 900px) { .dr-avail { grid-template-columns: 1fr; } .dr-side { position: static; max-height: none; } }
+
+/* Tidier tables (0.26): numbers centred under their headings, value on the right, rating chips instead of bare numbers. */
+.dr-table th button { display: flex; align-items: center; gap: 4px; padding: 10px 12px; font-size: .74rem; letter-spacing: .04em; text-transform: uppercase; }
+.dr-table td { padding: 6px 12px; border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent); }
+.dr-table tbody tr:last-child td { border-bottom: 0; }
+.dr-table .c-pick, .dr-table .c-position, .dr-table .c-number, .dr-table .c-offense, .dr-table .c-defense, .dr-table .c-overall { text-align: center; }
+.dr-table th.c-pick button, .dr-table th.c-position button, .dr-table th.c-number button, .dr-table th.c-offense button, .dr-table th.c-defense button, .dr-table th.c-overall button { justify-content: center; }
+.dr-table .c-value, .dr-table th.c-value { text-align: right; }
+.dr-table th.c-value button { justify-content: flex-end; }
+.dr-table .c-pick, .dr-table .c-number { width: 3.2em; }
+.dr-table .c-offense, .dr-table .c-defense, .dr-table .c-overall { width: 4.6em; }
+.dr-table .c-position { width: 4.4em; font-weight: 700; font-size: .78rem; color: var(--muted); }
+.dr-table .c-value { width: 6em; color: var(--muted); }
+.dr-table .c-how { color: var(--muted); font-size: .85rem; }
+.dr-table .c-club { color: var(--muted); }
+.dr-table .rt { min-width: 2.3em; padding: 1px 4px; font-size: .85rem; }
+.dr-table th[aria-sort="none"] .dr-ar { display: none; }
+.dr-ar { font-size: .7rem; color: var(--club-text, var(--text)); }
+.dr-p .rts { display: inline-flex; gap: 4px; }
+.dr-p .rts .rt { min-width: 1.9em; padding: 0 4px; font-size: .8rem; }

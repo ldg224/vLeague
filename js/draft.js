@@ -7,6 +7,7 @@ import { openDraft, loadDraft, saveQueue, savePrefs, makePick } from './draft-da
 import { loadPlayers, forgetPlayers } from './players-data.js';
 import { ago } from './places.js';
 import { overall } from './names.js';
+import { startTour, tourSeen } from './tour.js';
 
 // Auto-pick asks two things. WHAT to pick, then WHEN to do it.
 const HOW = [
@@ -78,7 +79,7 @@ if (ctx) {
       return needed > left ? 'Taking this player would leave too few picks to fill every position.' : '';
     };
     const playerRow = (p, extra = '', attrs = '') => `<li class="dr-p"${attrs}><span class="pos">${esc(p.position)}</span>
-      <span class="nm">${esc(p.name)}</span><span class="rt">${p.offense}/${p.defense}</span><span class="val">${money(p.value)}</span>${extra}</li>`;
+      <span class="nm">${esc(p.name)}</span><span class="rts">${chip(p.offense)}${chip(p.defense)}</span><span class="val">${money(p.value)}</span>${extra}</li>`;
 
     // How much of the weekly cap this club's squad uses (the draft shows it; it doesn't block a pick).
     function budget() {
@@ -134,7 +135,9 @@ if (ctx) {
         return `<th class="c-${c.key}" aria-sort="${i < 0 ? 'none' : s[i].dir > 0 ? 'ascending' : 'descending'}"><button data-t="${t}" data-sort="${c.key}" title="${esc(c.long)}">${esc(c.label)}${i < 0 ? '' : ` <span class="dr-ar">${arrow(s[i].dir)}${s.length > 1 ? `<sup>${i + 1}</sup>` : ''}</span>`}</button></th>`; }).join('')}${t === 'avail' ? '<th></th>' : ''}</tr></thead>
         <tbody>${rows.map(rowHtml).join('') || `<tr><td colspan="${cols.length + 1}" class="empty">${empty}</td></tr>`}</tbody></table></div>`;
     }
-    const ratings = p => `<td>${p.offense}</td><td>${p.defense}</td><td>${overall(p).toFixed(1)}</td><td>${money(p.value)}</td>`;
+    // Ratings use the app's red-to-green chips (css/site.css .rt) so strong and weak players stand out at a glance.
+    const chip = (v, dec) => { const n = Number(v) || 0; return `<span class="rt rt-${Math.min(10, Math.max(1, Math.round(n)))}">${dec ? n.toFixed(1) : n}</span>`; };
+    const ratings = p => `<td class="c-offense">${chip(p.offense)}</td><td class="c-defense">${chip(p.defense)}</td><td class="c-overall">${chip(overall(p), 1)}</td><td class="c-value">${money(p.value)}</td>`;
     const HOWS = { manual: 'Picked', queue: 'Queue', auto: 'Auto', office: 'Office', skip: 'Skipped' };
 
     // Board: every pick made so far, as a spreadsheet.
@@ -144,7 +147,7 @@ if (ctx) {
         return { ...(p || { name: '— skipped —', position: '', number: null, offense: 0, defense: 0, value: 0 }), pick_no: k.pick_no, club: k.club, clubName: nameOf(k.club), how: k.how, skipped: !p }; });
       const shown = sorted('board', rows.filter(r => passes('board', r)));
       return `<section><h2>Picked players (${st.picks.length} of ${st.order.length} picks made)</h2>${toolbar('board')}
-        ${table('board', shown, r => `<tr class="${r.club === code ? 'me' : ''}${r.skipped ? ' skipped' : ''}"><td class="c-pick">${r.pick_no}</td><td class="c-club">${esc(r.clubName)}</td><td class="c-position">${esc(r.position)}</td><td class="c-name">${esc(r.name)}</td><td class="c-number">${esc(r.number ?? '')}</td>${r.skipped ? '<td></td><td></td><td></td><td></td>' : ratings(r)}<td class="c-how">${esc(HOWS[r.how] || r.how)}</td></tr>`,
+        ${table('board', shown, r => `<tr class="${r.club === code ? 'me' : ''}${r.skipped ? ' skipped' : ''}"><td class="c-pick">${r.pick_no}</td><td class="c-club">${esc(r.clubName)}</td><td class="c-position">${esc(r.position)}</td><td class="c-name">${esc(r.name)}</td><td class="c-number">${esc(r.number ?? '')}</td>${r.skipped ? '<td class="c-offense"></td><td class="c-defense"></td><td class="c-overall"></td><td class="c-value"></td>' : ratings(r)}<td class="c-how">${esc(HOWS[r.how] || r.how)}</td></tr>`,
           st.picks.length ? 'No picks match.' : 'No picks yet.')}</section>`;
     }
 
@@ -187,7 +190,7 @@ if (ctx) {
 
     function draw() {
       const open = [...main.querySelectorAll('details.dr-team')].map(d => d.open), autoOpen = main.querySelector('.dr-autobox')?.open ?? true;
-      main.innerHTML = `<div class="draft">${head()}<nav class="dr-tabs" role="tablist">${TABS.map(([id, l]) => `<button role="tab" data-tab="${id}" aria-selected="${tab === id}">${l}</button>`).join('')}</nav>
+      main.innerHTML = `<div class="draft">${head()}<nav class="dr-tabs" role="tablist">${TABS.map(([id, l]) => `<button role="tab" data-tab="${id}" aria-selected="${tab === id}">${l}</button>`).join('')}<button class="dr-help" data-tour title="A step-by-step guide to this page"><b>?</b> How it works</button></nav>
         <p class="dr-msg" role="status">${esc(msg)}</p>${tab === 'players' ? playersTab(autoOpen) : { board: boardTab, values: valuesTab }[tab]()}</div>`;
       if (tab === 'values') main.querySelectorAll('details.dr-team').forEach((d, i) => { if (i in open) d.open = open[i]; });
     }
@@ -212,6 +215,7 @@ if (ctx) {
     main.addEventListener('click', async e => {
       const b = e.target.closest('button'); if (!b) return;
       const q = queue(), d = b.dataset;
+      if (d.tour !== undefined) { tour(); return; }
       if (d.tab) { tab = d.tab; location.hash = tab; msg = ''; draw(); }
       else if (d.sort) { clickSort(d.t, d.sort, e.shiftKey); draw(); }
       else if (d.sflip !== undefined) { SORTS[d.t][+d.sflip].dir *= -1; draw(); }
@@ -263,8 +267,41 @@ if (ctx) {
       const n = queue(); n.splice(to, 0, n.splice(from, 1)[0]); from = null; setQueue(n);
     });
 
+    // ---- the guided tour (js/tour.js). Each step may switch tab first; what it says depends on whether it's your turn.
+    const STEPS = () => [
+      { title: 'Welcome to the draft', text: 'This is where you pick the players for your club. This quick tour shows you every part of the page, one bit at a time. It takes about a minute.', tip: 'Use the Next button or your arrow keys. Press Esc to leave at any time.' },
+      { target: '.dr-head', tab: 'board', title: 'Whose turn is it?', text: () => myTurn()
+          ? 'Right now it’s <b>your pick</b>. The clock counts down how long you have. You can pick any time before it hits zero.'
+          : 'This shows which club is picking and how far through the draft we are. The clock counts down that club’s time. When it says <b>Your pick</b>, it’s you.',
+        tip: 'Picks happen slowly over days, not all at once. Come back whenever you like.' },
+      { target: '.dr-budget', title: 'Your weekly budget', text: 'Every player has a value. Your squad’s values add up against a weekly cap. The bar fills as you pick, turns <b>orange</b> when you’re close and <b>red</b> if you go over.', tip: 'It’s a guide only. It won’t stop you making a pick.' },
+      { target: '.dr-tabs', title: 'Three tabs', text: '<b>Board</b> shows every pick so far. <b>Available players</b> is where you choose. <b>Team values</b> shows what every club has spent.' },
+      { target: '.dr-tablewrap', tab: 'board', title: 'The board', text: 'A live list of every player already picked: who took them, which club, their ratings and value. Your own club’s picks are <b>highlighted</b>.', tip: 'It updates by itself every few seconds.' },
+      { target: ['.dr-filter', '.dr-sortbar'], tab: 'board', title: 'Search, filter and sort', text: 'Type a name, or choose a position or club to narrow the list. <b>Tap any column heading</b> to sort by it, and tap again to flip it.', tip: 'Want the best defenders? Sort by Position, then add “Then by… Defensive rating”.' },
+      { target: '.dr-main .dr-tablewrap', tab: 'players', title: 'Available players', text: 'Everyone who hasn’t been taken yet. <b>OFF</b> is attack, <b>DEF</b> is defence, <b>OVR</b> is the overall rating, and <b>Value</b> is what they cost against your cap.' },
+      { target: '[data-add]', optional: true, tab: 'players', title: 'Add to your queue', text: 'Press <b>+ Queue</b> next to any player you like. It adds them to your queue so you don’t have to hunt for them later.' },
+      { target: '.dr-queue', tab: 'players', title: 'My queue', text: 'Your wish list, best player first. Drag players or use the <b>▲ ▼</b> arrows to rank them, and <b>✕</b> to remove one. If someone else takes a player, they drop off by themselves.', tip: 'Fill it with plenty of players so you’re never stuck.' },
+      { target: '.dr-autobox', optional: true, tab: 'players', title: 'Auto-pick', text: 'Can’t be online? Let the draft pick <b>for you</b>. Choose <b>what</b> to pick (from your queue, or at random) and <b>when</b> (straight away, after a few minutes, or only if you miss your turn).', tip: 'It saves as you change it. Nothing to press.' },
+      { target: '.dr-avail', tab: 'players', title: 'Making a pick', text: () => myTurn()
+          ? 'It’s your turn, so every row has a <b>Pick</b> button, and your queue has a big <b>Pick now</b> button. You’ll be asked to confirm.'
+          : 'When it’s your turn, a <b>Pick</b> button appears on every row, and your queue gets a big <b>Pick now</b> button. You’ll be asked to confirm first.' },
+      { target: '.dr-teams', tab: 'values', title: 'Team values', text: 'Tap a club to open its squad and see what it has spent against the cap. Your club is at the top and already open.' },
+      { target: '.dr-help', tab: 'board', title: 'You’re ready', text: 'That’s everything. If you ever get stuck, tap <b>How it works</b> and the tour will start again.' },
+    ];
+    async function tour() {
+      const was = tab;
+      await startTour(STEPS(), {
+        key: 'draft',
+        before: async s => { if (s.tab && tab !== s.tab) { tab = s.tab; msg = ''; draw(); await new Promise(r => requestAnimationFrame(r)); } },
+      });
+      if (tab !== was) { tab = was; draw(); }
+      main.querySelector('.dr-help')?.classList.remove('glow');
+    }
+
     draw();
     main.setAttribute('aria-busy', 'false');
+    if (!tourSeen('draft') && code) setTimeout(tour, 600);
+    else if (!tourSeen('draft')) main.querySelector('.dr-help')?.classList.add('glow');
     setInterval(() => { const c = document.getElementById('clock'); if (c && st.draft.pick_deadline) c.textContent = fmt(Math.max(0, new Date(st.draft.pick_deadline) - Date.now())); }, 1000);
     setInterval(refresh, 15000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
