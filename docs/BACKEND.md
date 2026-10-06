@@ -51,7 +51,7 @@ office presses "Set up again" (Editor → Clubs), which empties it and starts th
 **Moving weeks** (0.20, `0021_roster_tools.sql`). `office_move_weeks('{"3":5,"5":3}')` moves weeks to new numbers in one step (swaps and rotations included): each week's matches, round and match blocks travel together, and unlocked line-up deadlines follow. It refuses a week with locked line-ups (as source or target) and a target number already in use. Only the office can call it (`rls_check.py` checks this).
 
 **Line-up deadlines** (0.6, `0005_lineup_deadlines.sql`; the user's decision, 1 October 2026). The office sets a
-deadline per week (Editor → Deadlines). `lock_due_weeks()` runs every minute (pg_cron job `vleague-lock-weeks`): for
+deadline per week (Editor → Fixtures; the Deadlines tab was removed in 0.27). `lock_due_weeks()` runs every minute (pg_cron job `vleague-lock-weeks`): for
 each deadline that has passed, it copies every club's last save from *before* the deadline into `week_sheets`, so a
 late-running job never lets a later change in. Managers keep editing `team_sheets` at any time; after week N locks,
 changes count for week N+1. Clubs that never saved get no row and the engine picks their team. The s3 Editor's

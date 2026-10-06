@@ -423,3 +423,8 @@
 .dr-toolgrid small, .dr-settings small { color: var(--faint); }
 .dr-order li .dr-b { margin-left: 0; }
 .btn.danger { color: var(--bad, #e57373); }
+
+/* Byes (0.27): clubs on a bye are listed apart from clubs that have no match yet. */
+.fx-bye-one { display: inline-flex; align-items: center; gap: 2px; }
+.fx-bye-one .btn.small { padding: 2px 8px; min-height: 0; font-size: .78rem; }
+.fx-table td.bye.is-bye { color: var(--text); font-weight: 600; font-size: .75rem; background: color-mix(in srgb, var(--club, var(--blue-600)) 14%, transparent); }

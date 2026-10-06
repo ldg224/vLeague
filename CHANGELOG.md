@@ -3,6 +3,20 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.27.0 (2026-10-07)
+
+Byes, and one less Editor tab. Needs `0028_byes.sql` (run it once).
+
+- **Added, byes:** a week can now name the clubs that are **on a bye**. In Editor → Fixtures, under each week, clubs with no match
+  are split into **No match or bye yet** (with a **Bye** button each, and **All on a bye**) and **On a bye** (✕ to undo). The
+  Checks list no longer mentions a club on a bye; it still flags a club that has neither a match nor a bye, so an unfinished
+  roster still shows up. "Clubs by week" shows **Bye** for a bye and "–" for not placed yet. Weeks made by Quick create, the
+  planner or Fill the rest record their byes automatically, and the bye counts and fair rotation use the byes you set.
+- **Removed:** the **Deadlines** tab. Line-up locks are set per round in Fixtures (a lock rule, or an exact time), and have been
+  worked out from kick-offs since 0.13. A locked week there now also shows how many team sheets were saved ("14 of 16 team
+  sheets"). The **Email me about clubs without a team** checkbox moved to the top of **Clubs**. Old `#deadlines` links open Clubs.
+- The public Fixtures page is unchanged: it still shows a "Bye" for any club without a match.
+
 ## 0.26.0 (2026-10-07)
 
 A guided tour of the Draft page.

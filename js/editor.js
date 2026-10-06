@@ -1,10 +1,10 @@
 // The league office's Editor. Clubs (0.15) is one place per club: its manager account and phone, its details, requests
 // to approve or send back, and a full copy of every registration it sent. Then Players (0.11), Fixtures with Simulate
-// (0.12 to 0.14) and each week's line-up deadline (0.6, with the office's "clubs without a team" email since 0.7.1).
+// (0.12 to 0.14) and the office's "clubs without a team" email (0.7.1; its checkbox is on Clubs).
 // The database checks everything again (supabase/migrations/0003_club_setup.sql); this page only asks.
 import { enter, clubs, chrome, esc, safeColour, crestUrl } from './member.js';
 import { db, sendPasswordReset } from './auth.js';
-import { loadSeason, kickoff } from './dashboard-data.js';
+import { loadSeason } from './dashboard-data.js';
 import { prefs, setPref } from './prefs.js';
 import { playersView, mountPlayers } from './editor-players.js';
 import { fixturesView, mountFixtures } from './editor-fixtures.js';
@@ -14,7 +14,7 @@ import { draftView, mountDraft } from './editor-draft.js';
 chrome();
 const me = await enter('editor.html');
 const main = document.getElementById('main');
-const TABS = { clubs: 'Clubs', players: 'Players', fixtures: 'Fixtures', news: 'News', draft: 'Draft', deadlines: 'Deadlines' };
+const TABS = { clubs: 'Clubs', players: 'Players', fixtures: 'Fixtures', news: 'News', draft: 'Draft' };
 // `open` is which club panels and submissions are expanded, kept across redraws so nothing snaps shut after an action.
 let state = { clubs: [], requests: [], accounts: [], phones: null, deadlines: null, locked: [], season: null, digest: true, open: new Set() };
 let firstLoad = true;
@@ -70,7 +70,7 @@ function render() {
   const y = scrollY;
   main.innerHTML = `<nav class="ed-tabs" aria-label="Editor">${Object.entries(TABS).map(([k, label]) =>
     `<a href="#${k}" ${k === t ? 'aria-current="page"' : ''}>${label}${k === 'clubs' && pending ? ` <span class="ed-count">${pending}</span>` : ''}</a>`).join('')}</nav>
-    <section id="view">${{ clubs: clubsView, players: playersView, fixtures: fixturesView, news: newsView, draft: draftView, deadlines: deadlinesView }[t]()}</section>`;
+    <section id="view">${{ clubs: clubsView, players: playersView, fixtures: fixturesView, news: newsView, draft: draftView }[t]()}</section>`;
   if (y) scrollTo(0, y);   // a redraw after an action keeps your place
   if (t === 'players') mountPlayers({ db, esc, explain, clubs: state.clubs });
   if (t === 'fixtures') mountFixtures({ db, esc, explain, clubs: state.clubs });
@@ -134,6 +134,7 @@ function clubsView() {
       </div>
     </div>
     <p class="ed-msg" id="bar-msg" role="status"></p>
+    <label class="ed-digest"><input type="checkbox" data-act="digest"${state.digest ? ' checked' : ''}> Email me about clubs without a team<span class="ed-msg" role="status"></span></label>
     <input class="ed-find" type="search" placeholder="Find a club or manager" aria-label="Find a club or manager" autocomplete="off">
     <ul class="ed-club-list">${list.map(c => clubItem(c, by.get(c.code) || [])).join('')}</ul>
     <p class="quiet ed-none" hidden>No club matches that.</p>
@@ -578,86 +579,7 @@ async function link(li, yes) {
   await refresh();
 }
 
-// ---------------------------------------------------------------- line-up deadlines (0.6)
-// At a week's deadline the database copies every club's team sheet: that copy is what Simulate uses for the week
-// and what everyone sees from then on. A locked week can't be moved (supabase/migrations/0005_lineup_deadlines.sql).
-
-const pad = n => String(n).padStart(2, '0');
-const localInput = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-const full = t => new Date(t).toLocaleString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
-
-// A week's name: "Round 4", "Christmas Cup"... with its week number when that isn't the same (0.20).
-const wk = w => { const l = state.season?.rounds?.[w]?.label; return !l || l === `Round ${w}` ? `Week ${w}` : `${l} (week ${w})`; };
-
-// Each week in the season with its first kick-off, plus any week that only has a deadline.
-function weeks() {
-  const first = new Map();
-  for (const f of state.season?.fixtures || []) {
-    const k = kickoff(f);
-    if (f.week == null) continue;
-    const had = first.get(f.week);
-    if (!first.has(f.week) || (k && (!had || k < had))) first.set(f.week, k);
-  }
-  for (const d of state.deadlines || []) if (!first.has(d.week)) first.set(d.week, null);
-  return [...first.entries()].sort((a, b) => a[0] - b[0]);
-}
-
-function deadlinesView() {
-  if (!state.deadlines) return '<h1>Deadlines</h1><p class="quiet">The deadlines didn’t load. <a href="editor.html#deadlines">Try again</a></p>';
-  const list = weeks();
-  const byWeek = new Map(state.deadlines.map(d => [d.week, d]));
-  const sheets = w => state.locked.filter(s => s.week === w).length;
-  const rows = list.map(([w, first]) => {
-    const d = byWeek.get(w);
-    const kick = first ? `First kick-off ${full(first)}` : 'No fixtures';
-    if (d?.locked_at) {
-      return `<li class="ed-dl locked"><b>${esc(wk(w))}</b><small>${esc(kick)}</small><span class="ed-pill approved">Locked</span>
-        <span class="state">${esc(full(d.locks_at))} · ${sheets(w)} of ${state.clubs.length} team sheets</span></li>`;
-    }
-    const value = d ? localInput(new Date(d.locks_at)) : first ? localInput(new Date(first - 3600e3)) : '';
-    const late = d && first && new Date(d.locks_at) > first;
-    return `<li class="ed-dl" data-week="${w}"><b>${esc(wk(w))}</b><small>${esc(kick)}</small>
-      <label class="sr-only" for="dl-${w}">Week ${w} deadline</label>
-      <input id="dl-${w}" type="datetime-local" value="${value}"${d ? '' : ' class="suggested"'}>
-      <span class="ed-actions"><button class="btn small" data-act="dl-save" type="button">${d ? 'Save' : 'Set'}</button>
-        ${d ? '<button class="btn ghost small" data-act="dl-remove" type="button">Remove</button>' : ''}</span>
-      ${d ? '' : '<span class="ed-pill warn">Not set</span>'}
-      <p class="ed-msg" role="status">${late ? 'After the first kick-off' : ''}</p></li>`;
-  }).join('');
-  const unset = list.filter(([w, first]) => first && !byWeek.has(w)).length;
-  return `<h1>Deadlines</h1>
-    ${unset ? `<div class="ed-bulk"><button class="btn small" data-act="dl-all" type="button">Set ${unset === 1 ? 'the empty week' : `all ${unset} empty weeks`} to 1 h before kick-off</button><p class="ed-msg" role="status"></p></div>` : ''}
-    <label class="ed-digest"><input type="checkbox" data-act="digest"${state.digest ? ' checked' : ''}> Email me about clubs without a team<span class="ed-msg" role="status"></span></label>
-    ${list.length ? `<ul class="ed-dls">${rows}</ul>` : '<p class="quiet">No fixtures.</p>'}
-    <form class="ed-dl-add" id="dl-add"><h2>Another week</h2><div class="ed-fields">
-      <label>Week<input name="week" type="number" min="1" max="99" required></label>
-      <label>Deadline<input name="at" type="datetime-local" required></label></div>
-      <div class="ed-actions"><button class="btn">Set</button></div><p class="ed-msg" role="status"></p></form>`;
-}
-
-async function saveDeadline(week, value, msg) {
-  if (!value) { msg.textContent = 'Pick a date and time.'; return; }
-  const { error } = await (await db()).from('deadlines').upsert({ week, locks_at: new Date(value).toISOString() });
-  if (error) { msg.textContent = explain(error); return; }
-  await refresh();
-}
-
-// Every week with fixtures but no deadline gets one an hour before its first kick-off.
-async function setAllDeadlines(btn) {
-  const msg = btn.parentNode.querySelector('.ed-msg');
-  const set = new Set((state.deadlines || []).map(d => d.week));
-  const rows = weeks().filter(([w, first]) => first && !set.has(w)).map(([week, first]) => ({ week, locks_at: new Date(first - 3600e3).toISOString() }));
-  btn.disabled = true;
-  const { error } = await (await db()).from('deadlines').upsert(rows);
-  if (error) { msg.textContent = explain(error); btn.disabled = false; return; }
-  await refresh();
-}
-
-async function removeDeadline(li) {
-  const { error } = await (await db()).from('deadlines').delete().eq('week', Number(li.dataset.week));
-  if (error) { li.querySelector('.ed-msg').textContent = explain(error); return; }
-  await refresh();
-}
+// Line-up deadlines are set per round in Editor → Fixtures (a lock rule, or an exact time). The old Deadlines tab is gone (0.27).
 
 async function saveDigest(box) {
   const msg = box.parentNode.querySelector('.ed-msg');
@@ -680,13 +602,7 @@ main.addEventListener('click', e => {
   if (act === 'reopen') b.closest('.ed-sec').querySelector('.ed-confirm').hidden = false;
   if (act === 'reopen-no') b.closest('.ed-confirm').hidden = true;
   if (act === 'reopen-yes') reopen(b.closest('.ed-sec'));
-  if (act === 'dl-save') {
-    const li = b.closest('li');
-    saveDeadline(Number(li.dataset.week), li.querySelector('input').value, li.querySelector('.ed-msg'));
-  }
   if (act === 'phones-copy' || act === 'phones-csv' || act === 'regs-csv') exportData(act);
-  if (act === 'dl-remove') removeDeadline(b.closest('li'));
-  if (act === 'dl-all') setAllDeadlines(b);
   if (act === 'edit-cancel') closeEditor(b.closest('[data-field], [data-acct-field]'));
   if (act === 'unlink') askLink(b.closest('.ed-acct'), '');
   if (act === 'link-yes') link(b.closest('.ed-acct'), true);
@@ -704,7 +620,6 @@ main.addEventListener('submit', e => {
   if (e.target.classList.contains('ed-invite-club')) return invite(e.target);
   if (e.target.classList.contains('ed-inline')) return saveInline(e.target, e.submitter);
   if (e.target.id === 'add-clubs') return addClubs(e.target);
-  if (e.target.id === 'dl-add') return saveDeadline(Number(e.target.week.value), e.target.at.value, e.target.querySelector('.ed-msg'));
   if (e.target.classList.contains('ed-return')) review(e.target.closest('.ed-request'), false, e.target.note.value);
 });
 main.addEventListener('change', e => {

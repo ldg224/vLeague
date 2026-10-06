@@ -46,8 +46,8 @@ export async function mountFixtures(ctx) {
   };
 
   // ---------------------------------------------------------------- state
-  let fixtures = [], results = new Map(), rounds = [], looks = [], deadlines = new Map();
-  let busy = false, msg = '', msgKind = '', hasRoster = true, hasLadder = true;
+  let fixtures = [], results = new Map(), rounds = [], looks = [], deadlines = new Map(), sheets = [];
+  let busy = false, msg = '', msgKind = '', hasRoster = true, hasLadder = true, hasByes = true;
   let view = VIEWS.some(v => v[0] === store.get('view', 'weeks')) ? store.get('view', 'weeks') : 'weeks';
   const folded = new Set(store.get('folded', []));
   const toolsOpen = new Set(), moreOpen = new Set();
@@ -69,24 +69,26 @@ export async function mountFixtures(ctx) {
   // ---------------------------------------------------------------- loading
   async function load() {
     const c = await ctx.db();
-    const [fx, rd, lk, rs, dl] = await Promise.all([
+    const [fx, rd, lk, rs, dl, ws] = await Promise.all([
       c.from('fixtures').select('id, week, home, away, starts_at, stage, postponed, window_id').order('week').order('starts_at').range(0, 1999),
       c.from('rounds').select('*').order('week'), c.from('looks').select('key, name').order('name'),
-      c.from('results').select('fixture, summary').range(0, 1999), c.from('deadlines').select('week, locks_at, locked_at'),
+      c.from('results').select('fixture, summary').range(0, 1999), c.from('deadlines').select('week, locks_at, locked_at'), c.from('week_sheets').select('week, club').range(0, 1999),
     ]);
     if (fx.error) throw new Error(explain(fx.error));
     fixtures = fx.data; results = new Map((rs.data || []).map(r => [r.fixture, r.summary])); rounds = rd.data || [];
     looks = lk.data?.length ? lk.data : [{ key: 'classic', name: 'Classic' }];
-    deadlines = new Map((dl.data || []).map(d => [d.week, d]));
+    deadlines = new Map((dl.data || []).map(d => [d.week, d])); sheets = ws.data || [];
     hasLadder = !(await c.from('rounds').select('counts_for_ladder').limit(1)).error;   // false until 0025_week_ladder.sql is run
     hasRoster = !(await c.from('rounds').select('numbered').limit(1)).error;   // false until 0021_roster_tools.sql is run
+    hasByes = !(await c.from('rounds').select('byes').limit(1)).error;   // false until 0028_byes.sql is run
   }
 
   const model = () => {
     const weeks = R.weekNumbers(fixtures, rounds), labels = R.roundLabels(weeks, rounds);
     return { weeks, labels, by: new Map(weeks.map(w => [w, fixtures.filter(f => f.week === w).sort(byKick)])) };
   };
-  const round = w => ({ week: w, name: null, kind: 'regular', look: 'classic', lock_minutes_before: 180, lock_at_override: null, numbered: true, number_override: null, note: null, counts_for_ladder: true, ...(rounds.find(r => r.week === w) || {}) });
+  const round = w => ({ week: w, name: null, kind: 'regular', look: 'classic', lock_minutes_before: 180, lock_at_override: null, numbered: true, number_override: null, note: null, counts_for_ladder: true, byes: [], ...(rounds.find(r => r.week === w) || {}) });
+  const byeMap = () => R.byeMapOf(rounds);
   const isLocked = w => !!deadlines.get(w)?.locked_at;
   const played = list => list.filter(f => results.has(f.id));
   const lastWeek = () => Math.max(0, ...fixtures.map(f => f.week), ...rounds.map(r => r.week));
@@ -94,7 +96,7 @@ export async function mountFixtures(ctx) {
 
   function lockText(w, list) {
     const first = list.filter(f => f.starts_at && !f.postponed).map(f => f.starts_at).sort()[0], r = round(w), d = deadlines.get(w);
-    if (d?.locked_at) return `Line-ups locked ${fullFmt.format(new Date(d.locks_at))}`;
+    if (d?.locked_at) return `Line-ups locked ${fullFmt.format(new Date(d.locks_at))} · ${sheets.filter(x => x.week === w).length} of ${active().length} team sheets`;
     if (r.lock_at_override) return `Line-ups lock ${fullFmt.format(new Date(r.lock_at_override))} (picked by hand)`;
     return first ? `Line-ups lock ${fullFmt.format(new Date(new Date(first).getTime() - r.lock_minutes_before * 60000))}` : 'No kick-off set yet';
   }
@@ -173,7 +175,7 @@ export async function mountFixtures(ctx) {
     return step(tx, async () => (await ctx.db()).from('fixtures').update(patch).eq('id', f.id), async () => (await ctx.db()).from('fixtures').update(prev).eq('id', f.id));
   };
   const KNOWN = ['week', 'name', 'kind', 'look', 'lock_minutes_before', 'lock_at_override'];
-  const roundRow = (w, patch = {}) => { const all = { ...round(w), ...patch, week: w }; return Object.fromEntries(Object.entries(all).filter(([k]) => KNOWN.includes(k) || (hasRoster && NEW_COLS.includes(k)) || (hasLadder && k === 'counts_for_ladder'))); };
+  const roundRow = (w, patch = {}) => { const all = { ...round(w), ...patch, week: w }; return Object.fromEntries(Object.entries(all).filter(([k]) => KNOWN.includes(k) || (hasRoster && NEW_COLS.includes(k)) || (hasLadder && k === 'counts_for_ladder') || (hasByes && k === 'byes'))); };
   function setRound(tx, w, patch) {
     const prev = rounds.find(r => r.week === w), row = roundRow(w, patch);
     return step(tx, async () => (await ctx.db()).from('rounds').upsert(row),
@@ -245,7 +247,9 @@ export async function mountFixtures(ctx) {
     const first = list.map(f => f.starts_at).filter(Boolean).sort()[0], lastK = list.map(f => f.starts_at).filter(Boolean).sort().at(-1);
     const span = first ? (dateOf(first) === dateOf(lastK) ? dayFmt.format(new Date(first)) : `${dayFmt.format(new Date(first))} – ${dayFmt.format(new Date(lastK))}`) : 'no dates yet';
     const playing = new Set(list.flatMap(f => [f.home, f.away]));
-    const resting = active().filter(c => !playing.has(c.code));
+    const resting = active().filter(c => !playing.has(c.code)), onBye = new Set(r.byes || []);
+    const byeClubs = resting.filter(c => onBye.has(c.code)), loose = resting.filter(c => !onBye.has(c.code));
+    const chip = c => `<button type="button" class="fx-chip bye${sel?.bye === c.code && sel.week === w ? ' is-sel' : ''}" data-act="bye-chip" data-week="${w}" data-code="${esc(c.code)}" style="--club:${esc(colour(c.code))}">${esc(c.name)}</button>`;
     const mv = n => !locked && m.weeks[i + n] != null && !isLocked(m.weeks[i + n]);
     return `<section class="fx-week${locked ? ' is-locked' : ''}${!L.numbered ? ' is-unnumbered' : ''}" data-week="${w}">
       <div class="fx-head">
@@ -265,7 +269,8 @@ export async function mountFixtures(ctx) {
         <p class="fx-lock">${esc(lockText(w, list))}${locked ? ' <button class="btn ghost small" type="button" data-act="week-unlock">Unlock line-ups</button>' : ''}${r.note ? ` · <i>${esc(r.note)}</i>` : ''}</p>
         ${list.map(f => matchRow(f, m)).join('') || `<p class="quiet fx-none">No matches in this week yet.</p>`}
         <div class="fx-foot">
-          ${resting.length ? `<span class="fx-byes"><b>Not playing:</b> ${resting.map(c => `<button type="button" class="fx-chip bye${sel?.bye === c.code && sel.week === w ? ' is-sel' : ''}" data-act="bye-chip" data-week="${w}" data-code="${esc(c.code)}" style="--club:${esc(colour(c.code))}">${esc(c.name)}</button>`).join('')}</span>` : ''}
+          ${loose.length ? `<span class="fx-byes"><b>No match or bye yet:</b> ${loose.map(c => `<span class="fx-bye-one">${chip(c)}${hasByes ? `<button type="button" class="btn ghost small" data-act="bye-set" data-week="${w}" data-code="${esc(c.code)}" title="Put ${esc(c.name)} on a bye this week">Bye</button>` : ''}</span>`).join('')}${hasByes && loose.length > 1 ? `<button type="button" class="btn ghost small" data-act="bye-all" data-week="${w}">All on a bye</button>` : ''}</span>` : ''}
+          ${byeClubs.length ? `<span class="fx-byes"><b>On a bye:</b> ${byeClubs.map(c => `<span class="fx-bye-one">${chip(c)}<button type="button" class="btn ghost small" data-act="bye-clear" data-week="${w}" data-code="${esc(c.code)}" aria-label="Take ${esc(c.name)} off the bye" title="Take off the bye">✕</button></span>`).join('')}</span>` : ''}
           <button class="btn ghost small" type="button" data-act="add-here">+ Add a match</button>
         </div>` : ''}
     </section>`;
@@ -454,9 +459,9 @@ export async function mountFixtures(ctx) {
   function gridView(m) {
     const cs = codes(), fx = fixtures;
     if (!m.weeks.length) return '<p class="quiet">No weeks yet.</p>';
-    const st = R.statsOf(fx, cs);
-    return `<p class="ed-hint">Each club's opponent in each week. Italic = away. “–” = not playing.</p><div class="fx-scroll"><table class="fx-table"><thead><tr><th>Club</th>${m.weeks.map(w => `<th title="${esc(m.labels.get(w).label)}" class="${m.labels.get(w).numbered ? '' : 'nonum'}">${esc(m.labels.get(w).short)}</th>`).join('')}<th>H</th><th>A</th><th>Bye</th></tr></thead>
-      <tbody>${cs.map(c => `<tr><th style="--club:${esc(colour(c))}"><span class="fx-team">${esc(name(c))}</span></th>${m.weeks.map(w => { const r = R.clubRoster(fx, w, c); return r ? `<td class="${r.home ? 'h' : 'a'}${r.fixture.postponed ? ' pp' : ''}${results.has(r.fixture.id) ? ' done' : ''}" title="${esc(`${m.labels.get(w).label}: ${r.home ? 'home v' : 'away at'} ${name(r.opp)}`)}">${esc(r.opp)}</td>` : '<td class="bye">–</td>'; }).join('')}
+    const st = R.statsOf(fx, cs, Infinity, byeMap());
+    return `<p class="ed-hint">Each club's opponent in each week. Italic = away. “Bye” = on a bye. “–” = no match or bye yet.</p><div class="fx-scroll"><table class="fx-table"><thead><tr><th>Club</th>${m.weeks.map(w => `<th title="${esc(m.labels.get(w).label)}" class="${m.labels.get(w).numbered ? '' : 'nonum'}">${esc(m.labels.get(w).short)}</th>`).join('')}<th>H</th><th>A</th><th>Bye</th></tr></thead>
+      <tbody>${cs.map(c => `<tr><th style="--club:${esc(colour(c))}"><span class="fx-team">${esc(name(c))}</span></th>${m.weeks.map(w => { const r = R.clubRoster(fx, w, c); return r ? `<td class="${r.home ? 'h' : 'a'}${r.fixture.postponed ? ' pp' : ''}${results.has(r.fixture.id) ? ' done' : ''}" title="${esc(`${m.labels.get(w).label}: ${r.home ? 'home v' : 'away at'} ${name(r.opp)}`)}">${esc(r.opp)}</td>` : byeMap().get(w)?.has(c) ? '<td class="bye is-bye" title="On a bye">Bye</td>' : '<td class="bye" title="No match or bye yet">–</td>'; }).join('')}
         <td>${st.home.get(c)}</td><td>${st.away.get(c)}</td><td>${st.byes.get(c)}</td></tr>`).join('')}</tbody></table></div>`;
   }
 
@@ -559,8 +564,8 @@ export async function mountFixtures(ctx) {
       const week = o.week + k;
       if (week > WEEK_MAX) throw new Error(`That would go past week ${WEEK_MAX}.`);
       if (!o.insert && m.weeks.includes(week) && fixtures.some(f => f.week === week)) throw new Error(`Week ${week} already has matches. Pick an empty week, tick “Make room”, or use Fill the rest on that week.`);
-      const pr = R.pairWeek({ codes: cs, fixtures: [...fixtures.filter(f => f.week < o.week), ...virtual], week, rest: o.rest, seed: o.seed + k * 101, recent: o.recent, avoid: o.avoid });
-      const meet = R.statsOf([...fixtures.filter(f => f.week < o.week), ...virtual], cs).meet;
+      const pr = R.pairWeek({ byeWeeks: byeMap(), codes: cs, fixtures: [...fixtures.filter(f => f.week < o.week), ...virtual], week, rest: o.rest, seed: o.seed + k * 101, recent: o.recent, avoid: o.avoid });
+      const meet = R.statsOf([...fixtures.filter(f => f.week < o.week), ...virtual], cs, Infinity, byeMap()).meet;
       const placed = R.placeWeek(pr.games, addDays(o.start, k * o.every), rows).map(p => ({ ...p, met: meet.get(R.pairKey(p.h, p.a)) || 0 }));
       virtual.push(...placed.map(p => ({ week, home: p.h, away: p.a, starts_at: p.at })));
       out.push({ week, placed, byes: pr.byes, fresh: pr.fresh, rematches: pr.rematches });
@@ -572,7 +577,7 @@ export async function mountFixtures(ctx) {
     const o = p.opts, m = model();
     await makeRoom(tx, m, o.week, o.count, o.insert);
     for (const w of p.weeks) {
-      await setRound(tx, w.week, { name: null, kind: 'regular', look: o.look, lock_minutes_before: o.lock, lock_at_override: null, ...(hasRoster ? { numbered: true, number_override: null } : {}) });
+      await setRound(tx, w.week, { name: null, kind: 'regular', look: o.look, lock_minutes_before: o.lock, lock_at_override: null, byes: w.byes || [], ...(hasRoster ? { numbered: true, number_override: null } : {}) });
       const taken = takenIds();
       await insertFx(tx, w.placed.map(p => { const id = R.freshId(w.week, p.h, p.a, taken); taken.add(id); return { id, week: w.week, home: p.h, away: p.a, starts_at: p.at }; }));
     }
@@ -640,21 +645,21 @@ export async function mountFixtures(ctx) {
     if (!list.length) return;
     const cs = codes(), inWeek = new Set(list.flatMap(f => [f.home, f.away]));
     if (!(await confirmPlayed(list, `Re-pairing week ${w}`))) return;
-    const pr = R.pairWeek({ codes: cs, fixtures, week: w, rest: cs.filter(c => !inWeek.has(c)), seed: Math.floor(Math.random() * 2 ** 31) });
+    const pr = R.pairWeek({ byeWeeks: byeMap(), codes: cs, fixtures, week: w, rest: cs.filter(c => !inWeek.has(c)), seed: Math.floor(Math.random() * 2 ** 31) });
     if (pr.games.length !== list.length) return notify('Couldn’t re-pair that week with the clubs in it (an odd number is playing). Use Fill the rest instead.', 'bad');
     return run(`Re-pair week ${w}`, async tx => { for (let i = 0; i < list.length; i++) { await clearResult(tx, list[i]); await setFx(tx, list[i], { home: pr.games[i][0], away: pr.games[i][1] }); } return pr.rematches ? `${plural(pr.rematches, 'rematch', 'rematches')} couldn’t be avoided.` : ''; });
   }
 
   async function fillWeek(w) {
     const m = model(), list = m.by.get(w) || [], cs = codes();
-    const pr = R.pairWeek({ codes: cs, fixtures, week: w, fixed: gamesOf(list), seed: Math.floor(Math.random() * 2 ** 31) });
+    const pr = R.pairWeek({ byeWeeks: byeMap(), codes: cs, fixtures, week: w, fixed: gamesOf(list), seed: Math.floor(Math.random() * 2 ** 31) });
     if (!pr.games.length) return notify('Everyone who can play is already in this week.', 'bad');
     const times = list.map(f => f.starts_at).filter(Boolean).sort(), lastT = times.at(-1), gap = (inferGap(list) || (rows && rows.at(-1)?.gap) || 90);
     return run(`Fill week ${w}`, async tx => {
-      await ensureRound(tx, w);
+      await ensureRound(tx, w, hasByes && pr.byes.length ? { byes: [...new Set([...(round(w).byes || []), ...pr.byes])] } : undefined);
       const taken = takenIds();
       await insertFx(tx, pr.games.map(([h, a], k) => { const id = R.freshId(w, h, a, taken); taken.add(id); return { id, week: w, home: h, away: a, starts_at: lastT ? melbourneToIso(dateOf(lastT), addMinutes(timeOf(lastT), gap * (k + 1))) : null }; }));
-      return pr.byes.length ? `${pr.byes.map(name).join(', ')} still ${pr.byes.length > 1 ? 'aren’t' : 'isn’t'} playing.` : '';
+      return pr.byes.length ? `${pr.byes.map(name).join(', ')} ${pr.byes.length > 1 ? 'are' : 'is'} now on a bye.` : '';
     });
   }
   const inferGap = list => R.inferBlocks(list.map(f => f.starts_at))?.at(-1)?.gap;
@@ -679,12 +684,12 @@ export async function mountFixtures(ctx) {
     if (week > WEEK_MAX) return notify(`There's no room for another week (the limit is ${WEEK_MAX}).`, 'bad');
     const prev = round(m.weeks.at(-1) || 1), dated = [...m.by.entries()].filter(([, l]) => l.some(f => f.starts_at)).at(-1);
     const base = dated ? addDays(mondayOf(dateOf(dated[1].map(f => f.starts_at).filter(Boolean).sort()[0])), 7) : nextMon();
-    const pr = cs.length >= 2 ? R.pairWeek({ codes: cs, fixtures, week, seed: Math.floor(Math.random() * 2 ** 31) }) : { games: [], byes: [] };
+    const pr = cs.length >= 2 ? R.pairWeek({ byeWeeks: byeMap(), codes: cs, fixtures, week, seed: Math.floor(Math.random() * 2 ** 31) }) : { games: [], byes: [] };
     let placed = R.placeWeek(pr.games, base, rows);
     const blank = lockPasses(week, placed.map(p => p.at)) || (!!placed.length && !rows);
     if (blank) placed = placed.map(p => ({ ...p, at: null }));
     return run(`Quick create week ${week}`, async tx => {
-      await setRound(tx, week, { name: null, kind: 'regular', look: prev.look, lock_minutes_before: prev.lock_minutes_before, lock_at_override: null, ...(hasRoster ? { numbered: true, number_override: null } : {}) });
+      await setRound(tx, week, { name: null, kind: 'regular', look: prev.look, lock_minutes_before: prev.lock_minutes_before, lock_at_override: null, byes: pr.byes, ...(hasRoster ? { numbered: true, number_override: null } : {}) });
       const taken = takenIds();
       await insertFx(tx, placed.map(p => { const id = R.freshId(week, p.h, p.a, taken); taken.add(id); return { id, week, home: p.h, away: p.a, starts_at: p.at }; }));
       return blank && placed.length ? 'Kick-off times are blank because those dates have passed. Set them when you know them.' : '';
@@ -908,6 +913,12 @@ export async function mountFixtures(ctx) {
       if ((await ask(`Remove ${plural(list.length, 'result')} from week ${week}?`, ['Remove them'])) !== 0) return;
       try { const sim = await import('./simulate.js'), c = await ctx.db(); for (const x of list) { await sim.removeResult(c, x); results.delete(x.id); } } catch (err) { return notify(err.message, 'bad'); }
       return draw();
+    }
+    if (act === 'bye-set' || act === 'bye-clear' || act === 'bye-all') {
+      const cur = round(week).byes || [], code = b.dataset.code;
+      const playing = new Set((m.by.get(week) || []).flatMap(x => [x.home, x.away]));
+      const next = act === 'bye-set' ? [...new Set([...cur, code])] : act === 'bye-clear' ? cur.filter(c => c !== code) : [...new Set([...cur, ...codes().filter(c => !playing.has(c))])];
+      return run('Set byes', async tx => ensureRound(tx, week, { byes: next }));
     }
     if (act === 'week-copytext') return copy(R.weekText(`${m.labels.get(week).label} (week ${week})`, m.by.get(week), name, when), t => notify(t));
 

@@ -159,7 +159,10 @@ export const pairKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 
 // Read the roster for pairing: how often each pair has met (and when last), each club's home and away games, byes and
 // recent venues. Only weeks before `before` count, so a week can be re-planned from what came before it.
-export function statsOf(fixtures, codes, before = Infinity) {
+// byeMap (from byeMapOf) is the byes the office has set: week -> Set of club codes. A week with some set counts exactly
+// those; a week with none falls back to guessing (a club that sat out a week where nearly everyone else played).
+export const byeMapOf = (rounds = []) => new Map(rounds.filter(r => r.byes?.length).map(r => [r.week, new Set(r.byes)]));
+export function statsOf(fixtures, codes, before = Infinity, byeMap = null) {
   const meet = new Map(), last = new Map(), lastHome = new Map(), home = new Map(), away = new Map(), byes = new Map(), lastBye = new Map(), venues = new Map();
   codes.forEach(c => { home.set(c, 0); away.set(c, 0); byes.set(c, 0); venues.set(c, []); });
   const used = fixtures.filter(f => f.week < before);
@@ -172,9 +175,10 @@ export function statsOf(fixtures, codes, before = Infinity) {
       if (home.has(f.home)) { home.set(f.home, home.get(f.home) + 1); venues.get(f.home).push('H'); }
       if (away.has(f.away)) { away.set(f.away, away.get(f.away) + 1); venues.get(f.away).push('A'); }
     }
-    // A bye only counts in a week where nearly everyone played (a short week of two games is a choice, not a bye).
-    if (games.length * 2 >= codes.length - 1) {
-      const playing = new Set(games.flatMap(f => [f.home, f.away]));
+    const playing = new Set(games.flatMap(f => [f.home, f.away])), set = byeMap?.get(w);
+    if (set) { for (const c of codes) if (set.has(c) && !playing.has(c)) { byes.set(c, byes.get(c) + 1); lastBye.set(c, w); } }
+    // Otherwise a bye only counts in a week where nearly everyone played (a short week of two games is a choice, not a bye).
+    else if (games.length * 2 >= codes.length - 1) {
       for (const c of codes) if (!playing.has(c)) { byes.set(c, byes.get(c) + 1); lastBye.set(c, w); }
     }
   }
@@ -271,11 +275,12 @@ function canFinish(nodes, ok, depth, rand) {
 //   fixed      [[home, away], ...] games already decided; their clubs aren't paired again
 //   avoid      how strongly to avoid rematches: 'strict' (rematch only when there's no choice), 'normal'
 //   recent     weeks within which a rematch is least wanted
+//   byeWeeks   the byes already set (byeMapOf), so the bye rotation counts them
 // Everyone is paired with someone new while that is possible, looking ahead so the last weeks of a round robin still
 // work out; after that (a second round) the pairs that met longest ago come first. Returns
 // { games: [[home, away], ...], byes: [codes], rematches, fresh }.
-export function pairWeek({ codes, fixtures, week = Infinity, rest = [], fixed = [], seed = 1, recent = 4, avoid = 'normal' }) {
-  const rand = rng(seed), st = statsOf(fixtures, codes, week);
+export function pairWeek({ codes, fixtures, week = Infinity, rest = [], fixed = [], seed = 1, recent = 4, avoid = 'normal', byeWeeks = null }) {
+  const rand = rng(seed), st = statsOf(fixtures, codes, week, byeWeeks);
   const fixedClubs = new Set(fixed.flat()), resting = new Set(rest);
   const base = codes.filter(c => !fixedClubs.has(c) && !resting.has(c));
   const byes = [...resting].filter(c => codes.includes(c));
@@ -345,7 +350,7 @@ export function checkRoster({ fixtures, clubs, rounds = [], names = {} }) {
   const active = clubs.filter(c => c.status === 'active').map(c => c.code), activeSet = new Set(active);
   const weeks = weekNumbers(fixtures, rounds), labels = roundLabels(weeks, rounds);
   const by = new Map(weeks.map(w => [w, fixtures.filter(f => f.week === w)]));
-  const st = statsOf(fixtures, active);
+  const byeMap = byeMapOf(rounds), st = statsOf(fixtures, active, Infinity, byeMap);
   const venues = new Map(active.map(c => [c, []])), seen = new Map();   // seen: pair -> meetings so far
 
   for (const w of weeks) {
@@ -363,8 +368,9 @@ export function checkRoster({ fixtures, clubs, rounds = [], names = {} }) {
       const mine = timed.filter(f => f.home === c || f.away === c).map(f => new Date(f.starts_at).getTime()).sort();
       if (mine.some((t, i) => i && t - mine[i - 1] < 100 * 60000)) add('warn', w, `${nm(c)} have two kick-offs less than 100 minutes apart in ${L}.`);
     }
-    const resting = active.filter(c => !count.has(c));
-    if (resting.length && resting.length < active.length) add('info', w, `${L}: ${resting.map(nm).join(', ')} ${resting.length === 1 ? 'is' : 'are'} not playing.`);
+    // A club on a bye is fine. A club with neither a match nor a bye hasn't been placed yet (the roster is unfinished).
+    const onBye = byeMap.get(w), loose = active.filter(c => !count.has(c) && !onBye?.has(c));
+    if (loose.length) add('info', w, `${L}: ${loose.map(nm).join(', ')} ${loose.length === 1 ? 'has' : 'have'} no match or bye yet.`);
     // Rematches before a club has met everyone.
     for (const f of games) {
       const k = pairKey(f.home, f.away), before = seen.get(k) || 0;
