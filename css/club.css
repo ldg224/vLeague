@@ -72,7 +72,7 @@
 .pl.in .pl-slot { background: color-mix(in srgb, var(--club) 18%, transparent); color: var(--text); }
 .pl.in .pl-slot.off { box-shadow: inset 0 0 0 1px var(--amber); }
 .pl.sel { background: color-mix(in srgb, var(--club) 16%, transparent); box-shadow: inset 3px 0 0 var(--club); }
-.pl.fits .pl-pos { color: color-mix(in srgb, var(--club) var(--club-ink), var(--navy)); }
+.pl.fits .pl-pos { color: var(--club-text); }
 
 /* Set pieces */
 .pieces { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }

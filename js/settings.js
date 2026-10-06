@@ -37,7 +37,6 @@ if (ctx) {
   </section>
 
   <section class="sect" aria-labelledby="h-look"><div class="sect-head"><h2 id="h-look">Appearance</h2></div>
-    ${club ? row('Accent', seg('accent', 'Accent', [['club', 'Club colour'], ['blue', 'vLeague blue']], p.accent)) : ''}
     ${row('Theme', seg('theme', 'Theme', [['dark', 'Dark'], ['light', 'Light'], ['system', 'System']], dev.theme, 'dev'), { tick: false })}
     ${row('Text size', seg('text', 'Text size', [['100', 'Default'], ['112', 'Large'], ['125', 'Larger'], ['140', 'Largest']], dev.text, 'dev'), { tick: false })}
     <p class="sample" aria-hidden="true">Week 3 · ${esc(club?.short_name || club?.name || 'FC Turtle')} 2–1 Lads United</p>
@@ -64,10 +63,6 @@ if (ctx) {
   }
   const busy = (el, on) => el.closest('.set-row')?.querySelector('.tick')?.classList.toggle('busy', on);
 
-  function accentNow(v) {
-    if (!club) return;
-    document.body.style.setProperty('--club', v === 'blue' ? 'var(--blue-300)' : safeColour(club.accent || club.colour));
-  }
 
   async function savePref(el, path, value, undo) {
     busy(el, true);
@@ -84,8 +79,7 @@ if (ctx) {
       const pick = x => group.querySelectorAll('[data-v]').forEach(y => y.setAttribute('aria-checked', y === x));
       pick(b);
       if (group.dataset.dev) { setDevice(group.dataset.dev, b.dataset.v); return; }
-      if (group.dataset.pref === 'accent') accentNow(b.dataset.v);
-      await savePref(group, group.dataset.pref, b.dataset.v, () => { pick(was); if (group.dataset.pref === 'accent') accentNow(was?.dataset.v); });
+      await savePref(group, group.dataset.pref, b.dataset.v, () => { pick(was); });
     } else if (sw) {
       const on = sw.getAttribute('aria-checked') !== 'true';
       sw.setAttribute('aria-checked', on);

@@ -4,7 +4,6 @@
 // The database checks everything again (supabase/migrations/0003_club_setup.sql); this page only asks.
 import { enter, clubs, chrome, esc, safeColour, crestUrl } from './member.js';
 import { db, sendPasswordReset } from './auth.js';
-import { accentFor } from './club-colour.js';
 import { loadSeason, kickoff } from './dashboard-data.js';
 import { prefs, setPref } from './prefs.js';
 import { playersView, mountPlayers } from './editor-players.js';
@@ -18,8 +17,8 @@ const TABS = { clubs: 'Clubs', players: 'Players', fixtures: 'Fixtures', deadlin
 let state = { clubs: [], requests: [], accounts: [], phones: null, deadlines: null, locked: [], season: null, digest: true, open: new Set() };
 let firstLoad = true;
 
-// The accent a club shows: the one saved with its colours, or worked out the same way the wizard does.
-const accentOf = c => safeColour(c.accent || accentFor(c.colour, c.colour2));
+// The colour a club shows: its primary colour.
+const colourOf = c => safeColour(c.colour);
 
 // Database messages, in plain words. Ours are already readable ('That code is taken.'); Postgres's aren't.
 function explain(error) {
@@ -72,7 +71,7 @@ function render() {
     <section id="view">${{ clubs: clubsView, players: playersView, fixtures: fixturesView, deadlines: deadlinesView }[t]()}</section>`;
   if (y) scrollTo(0, y);   // a redraw after an action keeps your place
   if (t === 'players') mountPlayers({ db, esc, explain, clubs: state.clubs });
-  if (t === 'fixtures') mountFixtures({ db, esc, explain, clubs: state.clubs, accent: accentOf });
+  if (t === 'fixtures') mountFixtures({ db, esc, explain, clubs: state.clubs });
 }
 
 
@@ -152,7 +151,7 @@ function clubItem(c, accts) {
   const key = `club:${c.code}`, req = pendingOf(c.code);
   const subs = state.requests.filter(r => r.club === c.code);
   const phone = phoneOf(c.code);
-  return `<li class="ed-club" style="--club:${esc(accentOf(c))}" data-code="${esc(c.code)}" data-find="${esc(`${c.name} ${c.code} ${c.manager_name || ''} ${m?.email || ''}`.toLowerCase())}">
+  return `<li class="ed-club" style="--club:${esc(colourOf(c))}" data-code="${esc(c.code)}" data-find="${esc(`${c.name} ${c.code} ${c.manager_name || ''} ${m?.email || ''}`.toLowerCase())}">
     <details${state.open.has(key) ? ' open' : ''} data-key="${esc(key)}">
       <summary>${crest(c.crest_path, c.code)}
         <span class="who"><b>${esc(c.name)}</b><small>${esc(c.code)}${c.manager_name ? ` · ${esc(c.manager_name)}` : ''}${m ? ` · ${esc(m.email)}` : ''}</small></span>
@@ -197,7 +196,6 @@ const FIELDS = [
   { key: 'code', label: 'Code', type: 'code', show: c => esc(c.code) },
   { key: 'colour', label: 'Primary colour', type: 'colour', show: c => swatch('', c.colour) || dash },
   { key: 'colour2', label: 'Secondary colour', type: 'colour', optional: true, show: c => swatch('', c.colour2) || dash },
-  { key: 'accent', label: 'Accent', type: 'accent', show: c => swatch('', accentOf(c)) },
   { key: 'manager_name', label: 'Manager name', type: 'text', max: 40, optional: true, show: c => (c.manager_name ? esc(c.manager_name) : dash) },
   { key: 'stadium', label: 'Stadium', type: 'text', max: 40, optional: true, show: c => (c.stadium ? esc(c.stadium) : dash) },
   { key: 'motto', label: 'Motto', type: 'text', max: 80, optional: true, show: c => (c.motto ? esc(c.motto) : dash) },
@@ -212,7 +210,7 @@ function openEditor(host, spec) {
   document.querySelectorAll('.ed-editor:not([hidden]) [data-act="edit-cancel"]').forEach(b => b.click());   // one at a time
   const { type, value = '', max, optional, hint } = spec;
   let input;
-  if (type === 'colour' || type === 'accent') {
+  if (type === 'colour') {
     const set = /^#[0-9a-f]{6}$/i.test(value);
     input = `<input type="color" name="v" value="${set ? esc(value) : '#64b5f6'}" aria-label="${esc(spec.label)}">`
       + (optional ? `<label class="ed-none-opt"><input type="checkbox" name="none"${set ? '' : ' checked'}> None</label>` : '');
@@ -224,7 +222,7 @@ function openEditor(host, spec) {
     input = `<input name="v" value="${esc(value)}" ${max ? `maxlength="${max}"` : ''} ${optional ? '' : 'required'} autocomplete="off" aria-label="${esc(spec.label)}"${type === 'code' ? ' style="text-transform:uppercase;width:6em"' : ''}>`;
   }
   box.innerHTML = `<form class="ed-inline" data-kind="${esc(spec.kind)}" data-fk="${esc(spec.field)}">${input}
-    <button class="btn small">Save</button>${type === 'accent' ? '<button class="btn ghost small" value="auto" type="submit" formnovalidate>Work it out</button>' : ''}
+    <button class="btn small">Save</button>
     <button class="btn ghost small" type="button" data-act="edit-cancel">Cancel</button>
     ${hint ? `<small class="ed-hint-inline">${esc(hint)}</small>` : ''}<span class="ed-msg" role="status"></span></form>`;
   box.hidden = false; if (val) val.hidden = true; if (penBtn) penBtn.hidden = true;
@@ -245,9 +243,9 @@ function startClubEdit(btn) {
   const f = FIELDS.find(x => x.key === key);
   openEditor(host, {
     kind: 'club', field: key, type: f.type, max: f.max, optional: f.optional, label: f.label,
-    value: key === 'accent' ? accentOf(c) : c[key] || '',
+    value: c[key] || '',
     hint: key === 'code' ? 'Changes everywhere (fixtures, players, line-ups). Not possible once the club has results.'
-      : key === 'colour' || key === 'colour2' ? 'The accent is worked out again from the colours.' : '',
+      : key === 'colour' ? 'The whole page of this club is this colour.' : '',
   });
 }
 
@@ -283,13 +281,7 @@ async function clubPatch(c, key, form, submitter) {
   if (f.type === 'colour') {
     const none = form.elements.none?.checked, hex = none ? null : String(v.value).toLowerCase();
     if (!none && !HEX.test(hex)) throw new Error('Pick a colour.');
-    const next = { colour: c.colour, colour2: c.colour2, [key]: hex };
-    return { [key]: hex, accent: next.colour ? accentFor(next.colour, next.colour2 || next.colour) : c.accent };
-  }
-  if (f.type === 'accent') {
-    if (submitter?.value === 'auto') return { accent: c.colour ? accentFor(c.colour, c.colour2 || c.colour) : null };
-    if (!HEX.test(v.value)) throw new Error('Pick a colour.');
-    return { accent: String(v.value).toLowerCase() };
+    return { [key]: hex };
   }
   if (f.type === 'status') return { status: v.value };
   if (f.type === 'crest') {
@@ -386,7 +378,7 @@ function submissionFields(r) {
   const v = k => s[k] ?? r[k] ?? '';
   return {
     name: v('name'), short_name: v('short_name'), code: v('code'), crest_path: v('crest_path'), colour: s.colour || '', colour2: s.colour2 || '',
-    accent: s.accent || '', manager_name: s.manager_name || '', stadium: s.stadium || '', motto: s.motto || '', notes: r.notes || '',
+    manager_name: s.manager_name || '', stadium: s.stadium || '', motto: s.motto || '', notes: r.notes || '',
     email: s.email || '', full: Boolean(r.snapshot),
   };
 }
@@ -401,7 +393,7 @@ function submission(r, c) {
     <table class="ed-diff">
       ${row('Name', esc(f.name))}${row('Short name', esc(f.short_name))}${row('Code', esc(f.code))}
       ${f.crest_path ? `<tr><th>Crest</th><td>${crest(f.crest_path, f.code)}</td></tr>` : ''}
-      ${f.colour || f.colour2 || f.accent ? `<tr><th>Colours</th><td class="ed-swatches">${swatch('Primary', f.colour)}${swatch('Secondary', f.colour2)}${swatch('Accent', f.accent)}</td></tr>` : ''}
+      ${f.colour || f.colour2 ? `<tr><th>Colours</th><td class="ed-swatches">${swatch('Primary', f.colour)}${swatch('Secondary', f.colour2)}</td></tr>` : ''}
       ${row('Manager', esc(f.manager_name))}${row('Stadium', esc(f.stadium))}${row('Motto', esc(f.motto))}
       ${row('Account', esc(f.email))}
       ${f.notes ? `<tr><th>Notes</th><td><blockquote>${esc(f.notes)}</blockquote></td></tr>` : ''}
@@ -534,10 +526,10 @@ async function exportData(kind) {
     download('vleague-manager-phones.csv', ['Club,Code,Manager,Email,Phone', ...rows.map(r => [r.name, r.code, r.manager, r.email, r.phone].map(cell).join(','))].join('\r\n'), 'text/csv');
     msg.textContent = `Downloaded ${rows.length} number${rows.length === 1 ? '' : 's'}.`;
   } else {
-    const head = ['Club', 'Code now', 'Kind', 'Sent', 'Outcome', 'Answered', 'Office note', 'Name', 'Short name', 'Code', 'Primary', 'Secondary', 'Accent', 'Manager', 'Stadium', 'Motto', 'Notes', 'Account'];
+    const head = ['Club', 'Code now', 'Kind', 'Sent', 'Outcome', 'Answered', 'Office note', 'Name', 'Short name', 'Code', 'Primary', 'Secondary', 'Manager', 'Stadium', 'Motto', 'Notes', 'Account'];
     const rows = state.requests.map(r => {
       const f = submissionFields(r), c = state.clubs.find(x => x.code === r.club);
-      return [c?.name || r.club, r.club, r.kind, r.created_at, r.status, r.reviewed_at || '', r.office_note || '', f.name, f.short_name, f.code, f.colour, f.colour2, f.accent, f.manager_name, f.stadium, f.motto, f.notes, f.email].map(cell).join(',');
+      return [c?.name || r.club, r.club, r.kind, r.created_at, r.status, r.reviewed_at || '', r.office_note || '', f.name, f.short_name, f.code, f.colour, f.colour2, f.manager_name, f.stadium, f.motto, f.notes, f.email].map(cell).join(',');
     });
     download('vleague-registrations.csv', [head.join(','), ...rows].join('\r\n'), 'text/csv');
     msg.textContent = `Downloaded ${rows.length} submission${rows.length === 1 ? '' : 's'}.`;

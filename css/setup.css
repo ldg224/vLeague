@@ -7,7 +7,7 @@
 
 .su-head { display: grid; gap: 6px; }
 .su-kicker:empty { display: none; }
-.su-kicker { margin: 0; color: var(--club); font: 600 .78rem var(--font); letter-spacing: .12em; text-transform: uppercase; }
+.su-kicker { margin: 0; color: var(--club-text); font: 600 .78rem var(--font); letter-spacing: .12em; text-transform: uppercase; }
 .su-main .su-head h1 { margin: 0; color: var(--text); font-size: clamp(1.9rem, 6vw, 2.5rem); line-height: 1.05; }
 .su-head .msg:not([hidden]) { display: block; margin-top: 6px; }
 
@@ -75,7 +75,7 @@ body:not(.su-edit) .su-step-head { display: none; }
 .su-check:empty { display: none; }
 .su-main code { font: 600 .85em ui-monospace, 'Cascadia Mono', Consolas, monospace; color: var(--text); }
 
-/* The accent preview: a miniature Home. */
+/* The club preview: a miniature Home in the club's colour. */
 .su-preview { display: grid; justify-items: center; gap: 12px; padding-top: 6px; }
 .su-phone {
   width: min(280px, 100%); border-radius: 18px; overflow: hidden; border: 1px solid var(--line);
@@ -89,8 +89,8 @@ body:not(.su-edit) .su-step-head { display: none; }
 .su-phone-body { display: grid; justify-items: center; gap: 8px; padding: 12px 16px 22px; text-align: center; }
 .su-phone-crest { width: 72px; height: 72px; object-fit: contain; filter: drop-shadow(0 10px 26px color-mix(in srgb, var(--club) 40%, transparent)); }
 .su-phone-name { font: 700 1.35rem/1 var(--font-display); text-transform: uppercase; overflow-wrap: anywhere; }
-.su-phone-chip { margin-top: 4px; padding: 4px 10px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--club) 50%, transparent); color: var(--club); font-size: .75rem; font-weight: 600; }
-.su-phone-link { color: var(--club); font-size: .82rem; font-weight: 700; }
+.su-phone-chip { margin-top: 4px; padding: 4px 10px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--club) 50%, transparent); color: var(--club-text); font-size: .75rem; font-weight: 600; }
+.su-phone-link { color: var(--club-text); font-size: .82rem; font-weight: 700; }
 .su-nocrest { display: grid; place-items: center; border-radius: 50%; background: var(--surface-raised); color: var(--muted); font: 700 1rem var(--font-display); }
 
 .su-chip { display: inline-block; width: 16px; height: 16px; border-radius: 5px; border: 1px solid rgba(var(--ink),.25); vertical-align: -3px; }

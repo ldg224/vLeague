@@ -3,6 +3,18 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.17.0 (2026-10-06)
+
+A club's primary colour now runs its whole page, and the accent colour is gone.
+
+- **Changed:** on a manager's pages (Home, My club, Inbox, League, Settings and the set-up wizard) the club's **primary colour** is
+  used as picked: the page background and cards take a tint of it, and the band, buttons, selected tabs and pills, switches, links and
+  the club's row in the table use the colour itself. Text on top of it is white or dark, whichever reads better, and coloured text
+  is lightened (or darkened on the light theme) so a navy or black club still reads.
+- **Removed:** the **accent** (the club colour lifted until it read on navy) is gone everywhere: the Editor's Accent pen and
+  "Work it out", the wizard's "Shown lighter" note, and the **Accent** setting in Settings (Club colour / vLeague blue).
+- **Database:** the `clubs.accent` column is dropped (`0018_remove_accent.sql`). The Editor and signed-out pages stay vLeague navy and blue.
+
 ## 0.16.1 (2026-10-06)
 
 - **Added:** the League matches list names any club that has a bye that week, under a Bye heading.

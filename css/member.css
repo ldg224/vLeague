@@ -1,5 +1,6 @@
-/* vLeague signed-in pages (home, editor). The page stays vLeague navy; a manager's club shows only as accents
-   (the band across the top and a soft glow of club colour), per the roadmap. --club is set by the page. */
+/* vLeague signed-in pages (home, editor). A club's primary colour runs its whole page (body.themed, 0.17): the page, the
+   cards, the buttons, the links and the band all take it. --club is the colour as picked, --on-club the text on top of it
+   and --club-text the colour as text; js/shell.js sets them. The Editor and signed-out pages stay vLeague navy and blue. */
 
 .member {
   --club: var(--blue-300);
@@ -67,7 +68,7 @@
 .places a:hover { color: var(--text); background: rgba(var(--ink),.05); }
 .places a[aria-current="page"] { color: var(--text); background: color-mix(in srgb, var(--club) 16%, transparent); }
 .places svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.places a[aria-current="page"] svg { stroke: color-mix(in srgb, var(--club) var(--club-ink), var(--navy)); }
+.places a[aria-current="page"] svg { stroke: var(--club-text); }
 .places .dot {
   min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--club); color: var(--bg);
   font: 700 .7rem/18px var(--font); text-align: center;
@@ -95,3 +96,44 @@
   .club-rows .status { display: none; }
 }
 
+
+/* ---------- the club's colour across the page (0.17) ---------- */
+.member.themed {
+  --brand: var(--club-text); --accent-text: var(--club-text); --focus: var(--club-text); --tint-text: var(--club-text);
+  --brand-grad: linear-gradient(135deg, var(--club), color-mix(in srgb, var(--club) 78%, #000000));
+  --tint-bg: color-mix(in srgb, var(--club) 14%, transparent); --tint-border: color-mix(in srgb, var(--club) 40%, transparent);
+  --ring: color-mix(in srgb, var(--club) 25%, transparent);
+  --bg: color-mix(in srgb, var(--club) 13%, #0a0f19);
+  --surface: color-mix(in srgb, var(--club) 9%, #111827);
+  --surface-raised: color-mix(in srgb, var(--club) 14%, #182133);
+  --surface-hover: color-mix(in srgb, var(--club) 20%, #182133);
+  --bar: color-mix(in srgb, var(--club) 13%, rgba(10, 15, 25, 0.86)); --bar-strong: color-mix(in srgb, var(--club) 13%, rgba(10, 15, 25, 0.94));
+  --card: color-mix(in srgb, var(--club) 10%, rgba(17, 24, 39, 0.72)); --card-strong: color-mix(in srgb, var(--club) 10%, rgba(17, 24, 39, 0.85));
+  background: radial-gradient(80vmax 50vmax at 50% 0%, color-mix(in srgb, var(--club) 34%, transparent), transparent 70%) no-repeat, var(--bg);
+}
+:root[data-theme="light"] .member.themed {
+  --bg: color-mix(in srgb, var(--club) 9%, #f4f7fb);
+  --surface: color-mix(in srgb, var(--club) 5%, #ffffff);
+  --surface-raised: color-mix(in srgb, var(--club) 12%, #ffffff);
+  --surface-hover: color-mix(in srgb, var(--club) 18%, #ffffff);
+  --bar: color-mix(in srgb, var(--club) 9%, rgba(244, 247, 251, 0.9)); --bar-strong: color-mix(in srgb, var(--club) 9%, rgba(244, 247, 251, 0.96));
+  --card: color-mix(in srgb, var(--club) 6%, rgba(255, 255, 255, 0.9)); --card-strong: color-mix(in srgb, var(--club) 6%, rgba(255, 255, 255, 0.95));
+  background: radial-gradient(80vmax 50vmax at 50% 0%, color-mix(in srgb, var(--club) 22%, transparent), transparent 70%) no-repeat, var(--bg);
+}
+/* Solid club-coloured buttons, with the text that reads on them and a light edge so a dark club still shows. */
+.member.themed .btn:not(.ghost) { background: var(--club); color: var(--on-club); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--club) 55%, #ffffff), 0 10px 30px color-mix(in srgb, var(--club) 35%, transparent); }
+.member.themed .btn:not(.ghost):hover { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--club) 40%, #ffffff), 0 12px 36px color-mix(in srgb, var(--club) 45%, transparent); }
+.member.themed .club-band.on { height: 6px; box-shadow: 0 1px 0 color-mix(in srgb, var(--club) 50%, #ffffff); }
+.member.themed .member-main a:not(.btn) { color: var(--club-text); }
+.member.themed .places a[aria-current="page"] { background: color-mix(in srgb, var(--club) 26%, transparent); }
+.member.themed .places .dot { background: var(--club); color: var(--on-club); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--club) 50%, #ffffff); }
+/* Everything that was vLeague blue on a club's page takes the club colour: selected pills and tabs, switches, small buttons,
+   focus edges. The text on top is --on-club, so a yellow club gets dark text and a navy one gets white. */
+.member.themed { --blue-400: color-mix(in srgb, var(--club) 80%, #ffffff); }
+.member.themed .weektabs button[aria-selected="true"], .member.themed .seg button[aria-checked="true"], .member.themed .formations button[aria-checked="true"],
+.member.themed .presets button[aria-pressed="true"], .member.themed .custom summary b, .member.themed .steps button[aria-checked="true"],
+.member.themed .save-btn, .member.themed .small-btn {
+  background: var(--club); border-color: var(--club); color: var(--on-club); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--club) 55%, #ffffff);
+}
+.member.themed .save-btn:hover, .member.themed .small-btn:hover { background: color-mix(in srgb, var(--club) 88%, #ffffff); }
+.member.themed .switch[aria-checked="true"] { background: var(--club); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--club) 55%, #ffffff); }

@@ -36,7 +36,6 @@
   --autofill: var(--autofill);
   --pitch-line: 144, 202, 249;
   --shadow: 0, 0, 0;
-  --club-ink: 100%;   /* how much of the club colour club-coloured text keeps; light mode darkens pale ones */
   /* Results (W/D/L form chips and result badges): status colours, deliberately outside the blue ramp. */
   --res-w: #22a55b; --res-d: #7c8594; --res-l: #e5484d;
   color-scheme: dark;
@@ -77,7 +76,6 @@
   --autofill: #ffffff;
   --pitch-line: 25, 118, 210;
   --shadow: 30, 50, 90;
-  --club-ink: 52%;
   --res-w: #1b8a4b; --res-d: #6b7585; --res-l: #d03a3f;
   color-scheme: light;
 }
@@ -85,6 +83,10 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 html, body { height: 100%; }
+/* The club's colour as text: the colour itself mixed toward white (dark theme) or black (light theme), so any club colour,
+   even a navy, reads. Set on body, where the page puts --club (js/shell.js). */
+body { --club-text: color-mix(in srgb, var(--club, var(--blue-300)) 58%, #ffffff); }
+:root[data-theme="light"] body { --club-text: color-mix(in srgb, var(--club, var(--blue-300)) 62%, #000000); }
 body {
   margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 1rem; line-height: 1.5;
   -webkit-font-smoothing: antialiased;

@@ -4,6 +4,7 @@
 // (supabase/migrations/0013_fixtures_results.sql, 0014_season_planner.sql). Since 0.14 each match can be simulated here
 // (js/simulate.js): its result and match file are saved, and it can be played again or its result removed.
 import { loadSeason } from './dashboard-data.js';
+import { safeColour } from './member.js';
 
 const ZONE = 'Australia/Melbourne';
 const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: ZONE, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
@@ -75,7 +76,7 @@ export async function mountFixtures(ctx) {
   let fixtures = [], results = new Map(), busy = false, rounds = [], looks = [], pattern = 'saturday', rows = structuredClone(PATTERNS.saturday[1]);
   const clubs = () => ctx.clubs.filter(c => c.status === 'active');
   const name = code => ctx.clubs.find(c => c.code === code)?.name || code;
-  const colour = code => { const c = ctx.clubs.find(x => x.code === code); return c && ctx.accent ? ctx.accent(c) : '#64b5f6'; };   // the club's colour, lifted so it reads
+  const colour = code => { const c = ctx.clubs.find(x => x.code === code); return c ? safeColour(c.colour) : '#64b5f6'; };   // the club's colour
   const say = (el, t) => { if (el) el.textContent = t; };
   const opts = (list, sel) => list.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(sel) ? 'selected' : ''}>${esc(l)}</option>`).join('');
   const lookOpts = sel => opts(looks.map(l => [l.key, l.name]), sel);

@@ -4,7 +4,7 @@
 // crest go to the league office for approval (rpc submit_club_request). The crest is optional: the code badge stands in.
 import { enter, chrome, esc, crestUrl } from './member.js';
 import { db } from './auth.js';
-import { accentInfo, contrast } from './club-colour.js';
+import { contrast, onColour } from './club-colour.js';
 import { prepareCrest, uploadCrest } from './crest.js';
 
 const $ = id => document.getElementById(id);
@@ -38,7 +38,6 @@ const values = () => ({
   colour: hex('colour'), colour2: hex('colour2'),
   manager_name: val('manager_name'), stadium: val('stadium'), motto: val('motto'), notes: val('notes'),
 });
-const accent = () => { const v = values(); return accentInfo(v.colour, v.colour2); };
 const crestSrc = () => crest?.url || (base.crest_path ? crestUrl(base.crest_path) : '');
 
 // ---------------------------------------------------------------- drafts (wizard only, this device)
@@ -93,8 +92,10 @@ function checkCode() {
 
 function paintColours() {
   const v = values();
-  const info = accent();
-  document.body.style.setProperty('--club', info.accent);
+  const club1 = /^#[0-9a-f]{6}$/i.test(v.colour) ? v.colour : '#64b5f6';
+  document.body.style.setProperty('--club', club1);
+  document.body.style.setProperty('--on-club', onColour(club1));
+  document.body.classList.add('themed');
   for (const k of ['colour', 'colour2']) {
     if (v[k]) $(`${k}-pick`).value = v[k];
     form.elements[k].setAttribute('aria-invalid', v[k] ? 'false' : 'true');
@@ -102,17 +103,14 @@ function paintColours() {
   // One short line, only when what shows differs from what was picked.
   let check = '';
   if (!v.colour || !v.colour2) check = 'Use a colour code like #1e88e5.';
-  else if (info.from === 'colour' && info.lifted) check = `Shown lighter, as <code>${info.accent}</code>.`;
-  else if (info.from === 'colour2') check = 'Shown in your second colour.';
-  else if (info.from !== 'colour') check = 'Shown in vLeague blue.';
   else if (contrast(v.colour, v.colour2) < 1.5) check = 'These two are hard to tell apart.';
   $('check').innerHTML = check;
-  $('accent-preview').innerHTML = preview(v, info);
+  $('club-preview').innerHTML = preview(v, club1);
   paintCrest();
 }
 
-function preview(v, info) {
-  return `<div class="su-phone" style="--club:${info.accent}">
+function preview(v, colour) {
+  return `<div class="su-phone" style="--club:${colour}">
       <div class="su-phone-band"></div>
       <div class="su-phone-top"><img src="assets/brand/crest.svg" alt=""><span>v<b>LEAGUE</b></span></div>
       <div class="su-phone-body">
@@ -174,8 +172,8 @@ function go(n) {
 const identityChanged = v => Boolean(crest) || IDENTITY.some(k => (v[k] || '') !== (base[k] || ''));
 
 async function saveStyle() {
-  const v = values(), info = accent();
-  const style = { colour: v.colour, colour2: v.colour2, accent: info.accent, motto: v.motto, manager_name: v.manager_name, stadium: v.stadium };
+  const v = values();
+  const style = { colour: v.colour, colour2: v.colour2, motto: v.motto, manager_name: v.manager_name, stadium: v.stadium };
   const { error } = await (await db()).rpc('update_club_style', { p: style });
   if (error) throw new Error(explain(error, 'Your colours and details didn’t save. Try again.'));
   Object.assign(club, style);

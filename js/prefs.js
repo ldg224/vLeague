@@ -1,5 +1,5 @@
 // Settings (0.7). Two kinds:
-// - synced: what follows the account to every device (Supabase user_settings): accent, spoiler-free results and the
+// - synced: what follows the account to every device (Supabase user_settings): spoiler-free results and the
 //   matches already revealed, Inbox posts read, clock, email choices. prefs() loads them once per page (cached).
 // - device: how the app looks on this screen (localStorage 'vleague-device'): theme, text size, reduced motion. Applied by
 //   a one-line script in each page's <head> before the page paints, and again by setDevice().
@@ -7,7 +7,7 @@ import { db, currentUser } from './auth.js';
 import { status } from './dashboard-data.js';
 
 const DEFAULTS = {
-  accent: 'club', spoilers: false, clock: '12', revealed: [], read: [],
+  spoilers: false, clock: '12', revealed: [], read: [],
   email: { deadline: '24h', sent_back: true, lineups_out: false, weekly: false, office_digest: true },
 };
 const CACHE = 'vleague-prefs';
@@ -40,7 +40,7 @@ export function prefs() {
 }
 export const prefsNow = () => current;
 
-// setPref('email.deadline', '3h'), setPref('accent', 'blue'). Saves the whole object; resolves once saved.
+// setPref('email.deadline', '3h'), setPref('clock', '24'). Saves the whole object; resolves once saved.
 export async function setPref(path, value) {
   await prefs();
   if (!userId) throw new Error('Sign in first.');

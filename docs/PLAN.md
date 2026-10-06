@@ -8,10 +8,10 @@ next match, XI, inbox). Guests get one beautiful matchday page. One league, one 
 
 ## Decisions
 
-- **Club colours lean the design; they don't change the page.** The page stays vLeague navy with blue buttons and a
-  white LIVE. A club shows only as accents: the band across the top, the crest, a soft glow behind its Home match
-  card, its pitch, its charts, its table row. The accent is worked out once when colours are saved and lifted if
-  too dark to see (Lads United's navy); white or grey clubs use vLeague blue.
+- **A club's primary colour runs its whole page (0.17, the user's decision, 6 October 2026).** It replaces the earlier "accents
+  only" rule. The page, cards, band, buttons, tabs, links and charts take the colour as picked; text on it is white or dark, and
+  coloured text is lightened so a dark club still reads. There is no separate accent colour. The Editor and signed-out pages stay
+  vLeague navy and blue.
 - **Guests stay fully signed out.** The dashboard is the guest profile and signs out anyone who arrives signed in.
   No guest accounts for now.
 - **No chat, ever, and nothing sent to the league's WhatsApp group** (it stays for personal messages). Reactions on

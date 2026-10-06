@@ -94,10 +94,10 @@ SETUP_CHECKS = [
     ('anon', 'guest cannot send a club request', '', {'error': 'permission denied'},
      """select public.submit_club_request('{"name":"X FC"}');"""),
     ('manager', 'manager changes own colours and motto instantly', '',
-     """select public.update_club_style('{"colour":"#0CF6F3","accent":"#0cf6f3","motto":"  Slow and steady "}');
+     """select public.update_club_style('{"colour":"#0CF6F3","motto":"  Slow and steady "}');
         select motto = 'Slow and steady' and colour = '#0cf6f3' as ok from public.clubs where code = 'TUR';"""),
     ('manager', 'manager cannot save a bad colour', '', {'error': 'Colours must look like'},
-     """select public.update_club_style('{"accent":"red"}');"""),
+     """select public.update_club_style('{"colour":"red"}');"""),
     ('manager', 'first request is a setup and marks the wizard done', '',
      """select public.submit_club_request('{"name":"FC Turtle","short_name":"Turtle","code":"TRT","notes":"hi"}');
         select (select kind from public.club_requests where club = 'TUR' and status = 'pending') = 'setup'

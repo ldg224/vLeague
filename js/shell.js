@@ -1,7 +1,8 @@
 // The places a manager moves between: Home, My club, Inbox, League (0.5) and Settings (its own tab from 0.7.1;
 // managers only, so an account without a club doesn't get it). Each page calls enterPlace() once: it signs the
-// visitor in (or sends them on), wires the top bar and footer, paints the club accent and band, draws the nav, and
+// visitor in (or sends them on), wires the top bar and footer, paints the club's colour and band, draws the nav, and
 // loads the club row, the league data and the account's settings together.
+import { onColour } from './club-colour.js';
 import { enter, chrome, safeColour, esc } from './member.js';
 import { prefs } from './prefs.js';
 import { db } from './auth.js';
@@ -39,10 +40,14 @@ export function badge(place, n) {
   dot.hidden = !n;
 }
 
-// The club's accent, or vLeague blue if the account chose that in Settings.
-export function paintClub(club, accent = 'club') {
+// The club's primary colour runs the page (css/member.css, body.themed): --club is the colour itself, --on-club the text that
+// reads on top of it. A club with no valid colour yet stays vLeague blue.
+export function paintClub(club) {
   if (!club) return;
-  document.body.style.setProperty('--club', accent === 'blue' ? 'var(--blue-300)' : safeColour(club.accent || club.colour));
+  const colour = safeColour(club.colour), s = document.body.style;
+  s.setProperty('--club', colour);
+  s.setProperty('--on-club', onColour(colour));
+  document.body.classList.add('themed');
   document.getElementById('band')?.classList.add('on');
 }
 
@@ -63,7 +68,7 @@ export async function enterPlace(place) {
     loadSeason().catch(() => null),
     prefs(),
   ]);
-  paintClub(club, settings.accent);
+  paintClub(club);
   const team = club && season ? season.teams.find(t => t.code === club.code) || null : null;
   return { me, club, season, team, prefs: settings, main: document.getElementById('main') };
 }

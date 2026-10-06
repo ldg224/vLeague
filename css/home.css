@@ -26,7 +26,7 @@
   background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--club) 20%, transparent), transparent 70%), var(--card-strong);
   border-color: color-mix(in srgb, var(--club) 30%, var(--line));
 }
-.hm-label { margin: 0 0 18px; color: color-mix(in srgb, var(--club) var(--club-ink), var(--navy)); font: 600 .78rem var(--font); letter-spacing: .1em; text-transform: uppercase; }
+.hm-label { margin: 0 0 18px; color: var(--club-text); font: 600 .78rem var(--font); letter-spacing: .1em; text-transform: uppercase; }
 .hm-none { margin: 6px 0; font: 700 1.5rem var(--font-display); text-transform: uppercase; color: var(--muted); }
 .hm-teams { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; }
 .hm-side { display: grid; justify-items: center; gap: 8px; min-width: 0; }
@@ -85,7 +85,7 @@
 .hm-stat strong { font: 700 1.35rem/1.1 var(--font-display); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .hm-stat span { color: var(--faint); font-size: .75rem; font-weight: 600; }
 .hm-stat.big { background: color-mix(in srgb, var(--club) 16%, var(--surface-raised)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--club) 35%, transparent); }
-.hm-stat.big strong { color: color-mix(in srgb, var(--club) var(--club-ink), var(--navy)); }
+.hm-stat.big strong { color: var(--club-text); }
 .hm-form { display: flex; align-items: center; gap: 5px; margin: 14px 0 0; }
 .hm-form .hm-k { margin-right: 6px; }
 

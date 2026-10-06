@@ -51,7 +51,7 @@ if (ctx) {
       if (r.kind === 'crest_reveal') {
         const src = d.crest_path ? crestUrl(d.crest_path) : '';
         return { title: r.title, from: 'vLeague',
-          body: `<div class="reveal" style="--rc:${esc(safeColour(d.accent || d.colour))}">${src ? `<img src="${esc(src)}" alt="">` : ''}
+          body: `<div class="reveal" style="--rc:${esc(safeColour(d.colour))}">${src ? `<img src="${esc(src)}" alt="">` : ''}
             <b>${esc(d.name || '')}</b>${d.motto ? `<i>${esc(d.motto)}</i>` : ''}</div>${markdown(r.body, vars)}` };
       }
       return { title: r.title, from: 'vLeague', body: markdown(r.body, vars) + (d.form === 'phone' ? phoneForm() : '') };
