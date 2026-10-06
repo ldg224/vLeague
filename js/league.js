@@ -7,7 +7,7 @@ import { esc, clubs } from './member.js';
 import {
   loadSeason, matchUrl, kickoff, status, shownScore, liveMinute, byKickoff, activeWeek, ladder, leaders,
 } from './dashboard-data.js';
-import { crest, teamOf, nameOf, useClubs, day } from './places.js';
+import { crest, teamOf, nameOf, fullNameOf, useClubs, day } from './places.js';
 import { prefs, fmtTime, spoilerHidden, revealScore } from './prefs.js';
 
 const ctx = await enterPlace('league');
@@ -28,7 +28,7 @@ if (ctx) {
       <thead><tr><th scope="col"><abbr title="Position">#</abbr></th><th scope="col" class="club">Club</th><th scope="col"><abbr title="Played">P</abbr></th><th scope="col" class="wide"><abbr title="Won">W</abbr></th><th scope="col" class="wide"><abbr title="Drawn">D</abbr></th><th scope="col" class="wide"><abbr title="Lost">L</abbr></th><th scope="col"><abbr title="Goal difference">GD</abbr></th><th scope="col"><abbr title="Points">Pts</abbr></th><th scope="col" class="form">Form</th></tr></thead>
       <tbody>${rows.map(r => `<tr${r.team.code === mine ? ' class="me"' : ''}>
         <td class="pos">${r.rank}</td>
-        <th scope="row" class="club"><span class="cl">${crest(r.team, 22)}<span class="nm">${esc(nameOf(r.team))}</span></span></th>
+        <th scope="row" class="club"><span class="cl">${crest(r.team, 22)}<span class="nm">${esc(fullNameOf(r.team))}</span></span></th>
         <td>${r.p}</td><td class="wide">${r.w}</td><td class="wide">${r.d}</td><td class="wide">${r.l}</td>
         <td>${r.gd > 0 ? '+' : ''}${r.gd}</td><td class="pts">${r.pts}</td>
         <td class="form"><span class="chips">${r.form.map(o => `<abbr class="res-${o}" title="${label[o]}">${o}</abbr>`).join('')}</span></td></tr>`).join('')}</tbody>

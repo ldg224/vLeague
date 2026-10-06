@@ -3,6 +3,10 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.14.1 (2026-10-06)
+
+- **Changed:** the full ladder on the League page shows each club's full name; matches keep the short names.
+
 ## 0.14.0 (2026-10-06)
 
 Simulate.
