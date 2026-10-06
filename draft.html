@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Draft | vLeague</title>
+  <meta name="theme-color" content="#0a0f19">
+  <script>try{var d=JSON.parse(localStorage.getItem('vleague-device')||'{}');var th=d.theme||'dark';document.documentElement.dataset.theme=th==='light'||(th==='system'&&matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';if(d.text&&d.text!=='100')document.documentElement.style.fontSize=d.text+'%';if(d.motion==='reduce')document.documentElement.classList.add('reduce-motion')}catch(e){}</script>
+  <link rel="icon" type="image/png" href="assets/brand/favicon.png">
+  <link rel="apple-touch-icon" href="assets/brand/app-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Figtree:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/site.css">
+  <link rel="stylesheet" href="css/member.css">
+  <link rel="stylesheet" href="css/places.css">
+  <link rel="stylesheet" href="css/pitch.css">
+  <link rel="stylesheet" href="css/draft.css">
+  <script type="module" src="js/draft.js"></script>
+</head>
+<body class="member">
+  <div class="club-band" id="band" aria-hidden="true"></div>
+  <header class="member-top">
+    <a class="brand" href="home.html"><img src="assets/brand/crest.svg" alt=""><span>v<b>LEAGUE</b></span></a>
+    <nav class="places" id="places"></nav>
+  </header>
+  <main class="member-main wide" id="main" aria-busy="true">
+    <p class="quiet">Loading…</p>
+  </main>
+  <footer class="member-foot"><a class="to-editor" href="editor.html">Editor</a><a id="version" href="https://github.com/ldg224/vLeague/releases" target="_blank" rel="noopener"></a></footer>
+</body>
+</html>

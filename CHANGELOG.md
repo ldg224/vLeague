@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.21.0 (2026-10-06)
+
+Draft, manager side (the Editor → Draft tab and the database, `0023_draft.sql`, come from the office side of the same version).
+
+- **Added:** a **Draft** tab, shown only while a draft is live or paused and inside its opening window. **Board**: whose pick it is, a
+  countdown, recent picks, and the available players (search and position filter) with **+ Queue** and, on your turn, **Pick**.
+- **Added:** **My queue**: drag (or use the arrows) to rank players, remove them, and **Pick now** on your turn.
+- **Added:** **Auto-pick** per club: always, if I miss my turn, after a number of minutes, or never (reference only).
+- **Added:** **Team values**: every club's roster with each player's value and the club total, your club first and highlighted.
+
 ## 0.20.1 (2026-10-06)
 
 - **Added:** a **Quick create week** button above and below the list of weeks (Editor → Fixtures → Weeks). One press makes the next
