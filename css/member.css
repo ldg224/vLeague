@@ -74,6 +74,7 @@
   font: 700 .7rem/18px var(--font); text-align: center;
 }
 .places .dot[hidden] { display: none; }
+.places a[hidden] { display: none; }
 .has-places .member-top .brand { margin-right: 0; }
 .has-places .member-top .places { margin: 0 auto; }
 

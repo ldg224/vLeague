@@ -380,3 +380,31 @@
   .fx-bar { position: static; }
 }
 .fx-quick-create { margin: 6px 0 14px; }
+
+/* Draft tab (0.22) */
+.dr-ed { display: grid; gap: 16px; }
+.dr-ed .ed-invite { margin-bottom: 0; }
+.dr-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap; }
+.dr-top h2 { margin: 0 0 4px; }
+.dr-ed .dr-clock { text-align: right; font: 700 1.1rem/1.2 var(--font); }
+.dr-ed .dr-clock b { display: block; font: 700 1.8rem/1.1 var(--font-display); }
+.dr-ed .dr-clock small { display: block; font: 500 .8rem var(--font); color: var(--muted); }
+.dr-ext { width: 80px; }
+.dr-pl { min-width: 0; max-width: 100%; flex: 1 1 260px; }
+.dr-sel { display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--muted); }
+.dr-check { display: flex; align-items: center; gap: 8px; }
+.dr-order { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px 14px; }
+.dr-order li { display: flex; align-items: center; gap: 8px; }
+.dr-order li span { width: 4.5em; color: var(--muted); font-size: .85rem; }
+.dr-order select { flex: 1; min-width: 0; }
+.dr-recent { list-style: none; margin: 0; padding: 0; }
+.dr-recent li { padding: 6px 0; border-bottom: 1px solid var(--line); }
+.dr-recent small { color: var(--faint); margin-left: 6px; }
+.dr-club { display: grid; gap: 10px; padding: 0 14px 14px; }
+.dr-club label { display: grid; gap: 6px; font-size: .85rem; font-weight: 600; color: var(--muted); }
+.dr-q { margin: 0; padding-left: 20px; }
+.dr-q li { padding: 3px 0; }
+.dr-team { border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 8px; }
+.dr-team summary { display: flex; justify-content: space-between; gap: 10px; padding: 12px 14px; cursor: pointer; }
+.dr-team summary span { color: var(--muted); }
+.dr-b { padding: 3px 8px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--text); font: 600 .78rem var(--font); cursor: pointer; margin-left: 6px; }

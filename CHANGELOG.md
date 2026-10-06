@@ -3,6 +3,19 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.22.0 (2026-10-07)
+
+Draft, office side. Needs `0023_draft.sql`, `0024_draft_tick.sql` and `0025_week_ladder.sql` (all run).
+
+- **Added:** an **Editor → Draft** tab. Create a draft (window, time per pick, rounds, what happens when time runs out), build or
+  shuffle the order (snake or the same every round) and change any single pick. Start, pause, resume and extend the clock, skip
+  a pick, or make/override the pick on the clock. **Auto-assign the rest** shows a preview first and can be undone; **Undo last
+  pick** takes back a pick. See every club's queue and auto-pick rule, change the rule, or remove a queued player.
+- **Added:** the draft clock runs in the database (every minute): a club's auto-pick rule and the timeout rule are applied
+  without anyone watching.
+- **Fixed:** the Draft tab flashed up for everyone, then vanished. It now stays hidden until a draft is open.
+- **Not yet:** "you're on the clock" emails.
+
 ## 0.21.1 (2026-10-06)
 
 - **Added:** each week has a **Counts for the ladder** setting (Editor → Fixtures → Week tools → Name and numbering). Untick it for a

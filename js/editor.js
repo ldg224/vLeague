@@ -9,11 +9,12 @@ import { prefs, setPref } from './prefs.js';
 import { playersView, mountPlayers } from './editor-players.js';
 import { fixturesView, mountFixtures } from './editor-fixtures.js';
 import { newsView, mountNews } from './editor-news.js';
+import { draftView, mountDraft } from './editor-draft.js';
 
 chrome();
 const me = await enter('editor.html');
 const main = document.getElementById('main');
-const TABS = { clubs: 'Clubs', players: 'Players', fixtures: 'Fixtures', news: 'News', deadlines: 'Deadlines' };
+const TABS = { clubs: 'Clubs', players: 'Players', fixtures: 'Fixtures', news: 'News', draft: 'Draft', deadlines: 'Deadlines' };
 // `open` is which club panels and submissions are expanded, kept across redraws so nothing snaps shut after an action.
 let state = { clubs: [], requests: [], accounts: [], phones: null, deadlines: null, locked: [], season: null, digest: true, open: new Set() };
 let firstLoad = true;
@@ -69,10 +70,11 @@ function render() {
   const y = scrollY;
   main.innerHTML = `<nav class="ed-tabs" aria-label="Editor">${Object.entries(TABS).map(([k, label]) =>
     `<a href="#${k}" ${k === t ? 'aria-current="page"' : ''}>${label}${k === 'clubs' && pending ? ` <span class="ed-count">${pending}</span>` : ''}</a>`).join('')}</nav>
-    <section id="view">${{ clubs: clubsView, players: playersView, fixtures: fixturesView, news: newsView, deadlines: deadlinesView }[t]()}</section>`;
+    <section id="view">${{ clubs: clubsView, players: playersView, fixtures: fixturesView, news: newsView, draft: draftView, deadlines: deadlinesView }[t]()}</section>`;
   if (y) scrollTo(0, y);   // a redraw after an action keeps your place
   if (t === 'players') mountPlayers({ db, esc, explain, clubs: state.clubs });
   if (t === 'fixtures') mountFixtures({ db, esc, explain, clubs: state.clubs });
+  if (t === 'draft') mountDraft({ db, esc, explain, clubs: state.clubs });
   if (t === 'news') mountNews({ db, esc, explain, clubs: state.clubs, season: state.season, deadlines: state.deadlines, accounts: state.accounts });
 }
 
