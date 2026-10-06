@@ -157,16 +157,19 @@ game settings. The idea: **Season, then Rounds, then Match windows, then Matches
 ### 0.14: Simulate (done in 0.14.0), news and the old site retires
 - [x] Simulate in Editor → Fixtures (one match, a week or everything unplayed; play again; remove result); engine copied
       into `js/sim/`; reminder emails read Supabase; match files in a private `matches` bucket (readable from kick-off).
-- [ ] News composer, approvals and history in the app. Optional league events such as deadline day, set up
-      and scheduled from the Editor (off by default).
+- [x] News composer and history in the Editor (done in 0.18.0): audience (everyone, every manager, chosen clubs),
+      pin, live preview, starters (week preview, deadline reminder). Approvals, forms and polls are still to come.
+- [ ] Optional league events such as deadline day, set up and scheduled from the Editor (off by default).
 - [ ] Match pages and the old site retired (match files are in the `matches` bucket, not on Pages).
 
 ### 0.15.0: Simpler Editor (done): Requests, Clubs, Managers and Phones are one Clubs tab, with every registration kept in full
 
-### Inbox and press (was 0.15)
+### Inbox and press (next; 0.15 became the simpler Editor, 0.18 became news)
 - [ ] One inbox: news for this club, press conferences, deadlines; only things that need action or matter.
-- [ ] News audiences: one club, several, all clubs, guests only, everyone.
-- [ ] Press conference opening 24 hours before kick-off; answers quoted in the match preview; the press effect kept.
+- [x] News audiences: one club, several, all clubs, everyone (0.18.0). Guests-only is not offered yet.
+- [ ] Press conference opening 24 hours before kick-off. **Preset answers, not typed text** (user's decision, 6 October 2026):
+      each question has a few answers with a tone (confident, humble, deflecting...), which moves the press-effect
+      meters (fans, happiness, team and opposition performance, capped at 3%). Chosen answers are quoted in the match preview.
 - [ ] Reactions on results, news and press answers.
 
 ### 0.16: Match centre
