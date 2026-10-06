@@ -1,7 +1,9 @@
 // Editor → Fixtures (0.12, season planner 0.13): plan a season from a pattern (match windows with their own gaps), name
 // rounds, pick a scoreboard look and a line-up lock rule per week, then set times, postpone or remove.
 // Kick-off times are entered in Melbourne time and stored as an exact instant. The database checks everything again
-// (supabase/migrations/0013_fixtures_results.sql, 0014_season_planner.sql); results are filled in by Simulate (0.14).
+// (supabase/migrations/0013_fixtures_results.sql, 0014_season_planner.sql). Since 0.14 each match can be simulated here
+// (js/simulate.js): its result and match file are saved, and it can be played again or its result removed.
+import { loadSeason } from './dashboard-data.js';
 
 const ZONE = 'Australia/Melbourne';
 const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: ZONE, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
@@ -53,7 +55,7 @@ export function placeWeek(games, base, wins) {
 }
 
 export function fixturesView() {
-  return '<h1>Fixtures</h1><div id="fx-root"><p class="quiet">Loading fixtures…</p></div>';
+  return '<h1>Fixtures</h1><div id="fx-sim" class="fx-sim" role="status" hidden></div><div id="fx-root"><p class="quiet">Loading fixtures…</p></div>';
 }
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -70,7 +72,7 @@ export async function mountFixtures(ctx) {
   const root = document.getElementById('fx-root');
   if (!root) return;
   const { esc, explain } = ctx;
-  let fixtures = [], rounds = [], looks = [], pattern = 'saturday', rows = structuredClone(PATTERNS.saturday[1]);
+  let fixtures = [], results = new Map(), busy = false, rounds = [], looks = [], pattern = 'saturday', rows = structuredClone(PATTERNS.saturday[1]);
   const clubs = () => ctx.clubs.filter(c => c.status === 'active');
   const name = code => ctx.clubs.find(c => c.code === code)?.name || code;
   const colour = code => { const c = ctx.clubs.find(x => x.code === code); return c && ctx.accent ? ctx.accent(c) : '#64b5f6'; };   // the club's colour, lifted so it reads
@@ -80,12 +82,13 @@ export async function mountFixtures(ctx) {
 
   async function load() {
     const c = await ctx.db();
-    const [fx, rd, lk] = await Promise.all([
+    const [fx, rd, lk, rs] = await Promise.all([
       c.from('fixtures').select('id, week, home, away, starts_at, stage, postponed, window_id').order('week').order('starts_at').range(0, 1999),
       c.from('rounds').select('*').order('week'), c.from('looks').select('key, name').order('name'),
+      c.from('results').select('fixture, summary').range(0, 1999),
     ]);
     if (fx.error) throw new Error(explain(fx.error));
-    fixtures = fx.data; rounds = rd.data || []; looks = lk.data?.length ? lk.data : [{ key: 'classic', name: 'Classic' }];
+    fixtures = fx.data; results = new Map((rs.data || []).map(r => [r.fixture, r.summary])); rounds = rd.data || []; looks = lk.data?.length ? lk.data : [{ key: 'classic', name: 'Classic' }];
   }
   const round = w => rounds.find(r => r.week === w) || { week: w, name: null, kind: 'regular', look: 'classic', lock_minutes_before: 180, lock_at_override: null };
   const clubOpts = sel => clubs().map(c => `<option value="${esc(c.code)}" ${c.code === sel ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
@@ -108,7 +111,8 @@ export async function mountFixtures(ctx) {
   function draw() {
     const weeks = [...new Set(fixtures.map(f => f.week))].sort((a, b) => a - b);
     root.innerHTML = `<p class="pl-sum"><b>${fixtures.length}</b> fixture${fixtures.length === 1 ? '' : 's'} over ${weeks.length} week${weeks.length === 1 ? '' : 's'}.
-        ${weeks.length ? `<button class="btn ghost small" type="button" data-act="clear-all">Clear everything</button>
+        ${weeks.length ? `<button class="btn small" type="button" data-act="sim-all" ${todo().length ? '' : 'disabled'}>Simulate all unplayed (${todo().length})</button>
+        <button class="btn ghost small" type="button" data-act="clear-all">Clear everything</button>
         <span class="ed-confirm" hidden>Delete all ${fixtures.length} fixtures, their results and every round? <button class="btn small" type="button" data-act="clear-all-yes">Yes, clear all</button> <button class="btn ghost small" type="button" data-act="clear-no">Keep</button></span>` : ''}</p>
       <form class="ed-invite" id="fx-gen"><h2>Plan a season</h2>
         <p class="ed-hint">Pick a pattern for each week. Games are spread over the blocks below in order; a week can have several blocks, each with its own start and gap (0 games = all the rest). Times are Melbourne time.</p>
@@ -133,17 +137,73 @@ export async function mountFixtures(ctx) {
         <h2>Week ${w}</h2><input class="fx-rname" value="${esc(r.name || '')}" placeholder="Name this round (optional)" maxlength="40" aria-label="Round name">
         <select data-r="look" aria-label="Scoreboard look">${lookOpts(r.look)}</select>
         <select data-r="lock_minutes_before" aria-label="Lock line-ups before the first game">${opts(LOCKS, r.lock_minutes_before)}</select></div>
+        <button class="btn small" type="button" data-act="sim-week" ${todo(w).length ? '' : 'disabled'}>Simulate week (${todo(w).length})</button>
         <button class="btn ghost small" type="button" data-act="clear-week">Clear week</button>
         <span class="ed-confirm" hidden>Delete all ${fixtures.filter(f => f.week === w).length} fixtures in week ${w} and their results? <button class="btn small" type="button" data-act="clear-week-yes">Yes, clear</button> <button class="btn ghost small" type="button" data-act="clear-no">Keep</button></span>
         <p class="fx-lock">${esc(lockText(w))}</p>
         ${fixtures.filter(f => f.week === w).map(f => `<div class="fx-row" data-id="${esc(f.id)}">
-        <span class="fx-teams"><b class="fx-team" style="--club:${esc(colour(f.home))}">${esc(name(f.home))}</b> v <b class="fx-team" style="--club:${esc(colour(f.away))}">${esc(name(f.away))}</b>${f.stage ? ` <small>${esc(f.stage)}</small>` : ''}${f.postponed ? ' <small>postponed</small>' : ''}</span>
+        <span class="fx-teams"><b class="fx-team" style="--club:${esc(colour(f.home))}">${esc(name(f.home))}</b> v <b class="fx-team" style="--club:${esc(colour(f.away))}">${esc(name(f.away))}</b>${f.stage ? ` <small>${esc(f.stage)}</small>` : ''}${f.postponed ? ' <small>postponed</small>' : ''}${results.has(f.id) ? ` <b class="fx-score">${results.get(f.id).home}–${results.get(f.id).away}</b>` : ''}</span>
         <input type="datetime-local" value="${toLocalInput(f.starts_at)}" aria-label="Kick-off (Melbourne time)">
+        ${f.postponed ? '' : results.has(f.id)
+          ? '<button class="btn ghost small" type="button" data-act="again">Play again</button><button class="btn ghost small" type="button" data-act="unplay">Remove result</button>'
+          : '<button class="btn small" type="button" data-act="sim">Simulate</button>'}
         <button class="btn ghost small" type="button" data-act="postpone">${f.postponed ? 'Restore' : 'Postpone'}</button>
         <button class="btn ghost small" type="button" data-act="del">Remove</button>
         <span class="ed-confirm" hidden>Remove this match and its result? <button class="btn small" type="button" data-act="del-yes">Yes</button> <button class="btn ghost small" type="button" data-act="del-no">Keep</button></span>
+        <span class="ed-confirm" data-res hidden><span></span> <button class="btn small" type="button" data-act="res-yes">Yes</button> <button class="btn ghost small" type="button" data-act="res-no">Keep</button></span>
       </div>`).join('')}</section>`; }).join('')}
       <p class="ed-msg" id="fx-msg" role="status"></p>`;
+  }
+
+  // Matches still to play, in kick-off order (a red card in one game can rule a player out of the next).
+  const todo = week => fixtures.filter(f => !f.postponed && !results.has(f.id) && (week == null || f.week === week));
+
+  // Plays the matches one after another and saves each. One match that can't be played stops with its reason; in a
+  // batch it's skipped and listed at the end.
+  async function simulate(list) {
+    if (busy) return;
+    busy = true;
+    const panel = document.getElementById('fx-sim');
+    panel.hidden = false;
+    let cancelled = false, done = 0;
+    const skipped = [];
+    panel.innerHTML = `<p class="fx-sim-what"></p><div class="vid-bar"><span></span></div><p class="fx-sim-status"></p>
+      <button class="btn ghost small" type="button">Cancel</button>`;
+    const what = panel.querySelector('.fx-sim-what'), bar = panel.querySelector('.vid-bar span'), status = panel.querySelector('.fx-sim-status'), cancel = panel.querySelector('button');
+    cancel.onclick = () => { cancelled = true; cancel.disabled = true; status.textContent = 'Stopping after this match…'; };
+    try {
+      const [sim, c, season] = await Promise.all([import('./simulate.js'), ctx.db(), loadSeason()]);
+      for (const f of list) {
+        if (cancelled) break;
+        what.textContent = `${name(f.home)} v ${name(f.away)} · week ${f.week}${list.length > 1 ? ` (${done + 1} of ${list.length})` : ''}`;
+        try {
+          const fx = season.fixtures.find(x => x.id === f.id);
+          if (!fx) throw new Error('That match isn’t in the league data yet. Reload the page.');
+          // A fresh seed each time, so playing a match again gives a new result.
+          const data = await sim.simulateFixture(c, season, fx, { seed: Math.floor(Math.random() * 2 ** 31), onProgress: frac => {
+            bar.style.width = `${Math.round(((done + Math.min(1, frac)) / list.length) * 100)}%`;
+            status.textContent = frac < 0.02 ? 'Loading the simulator (the first time takes a moment)…' : `Playing the match… ${Math.round(frac * 100)}%`;
+          } });
+          status.textContent = 'Saving…';
+          const summary = await sim.saveResult(c, fx, data);
+          fx.result = summary;                        // later matches see this game's red cards
+          results.set(f.id, summary);
+          done++;
+          draw();
+        } catch (e) {
+          if (list.length === 1) throw e;
+          skipped.push(`${name(f.home)} v ${name(f.away)}: ${e.message}`);
+        }
+      }
+      bar.style.width = '100%';
+      status.textContent = `${done} match${done === 1 ? '' : 'es'} played${cancelled ? ' (stopped)' : ''}.${skipped.length ? ` Skipped ${skipped.length}:` : ''}`;
+      if (skipped.length) panel.insertAdjacentHTML('beforeend', `<ul class="fx-sim-skipped">${skipped.map(t => `<li>${esc(t)}</li>`).join('')}</ul>`);
+    } catch (e) {
+      status.textContent = e.message;
+    }
+    cancel.textContent = 'Close'; cancel.disabled = false; cancel.onclick = () => { panel.hidden = true; };
+    busy = false;
+    draw();
   }
 
   const idFor = (w, h, a) => `w${w}-${h}-${a}`.toLowerCase();
@@ -192,6 +252,8 @@ export async function mountFixtures(ctx) {
   root.addEventListener('click', async e => {
     const b = e.target.closest('[data-act]'); if (!b) return;
     const act = b.dataset.act;
+    if (act === 'sim-all') return simulate(todo());
+    if (act === 'sim-week') return simulate(todo(Number(b.closest('.fx-week').dataset.week)));
     if (act === 'win-add') { rows.push({ day: 6, time: '19:00', games: 0, gap: 90 }); pattern = 'custom'; return draw(); }
     if (act === 'win-del') { rows.splice(Number(b.closest('.fx-win').dataset.i), 1); pattern = 'custom'; return draw(); }
     if (act.startsWith('clear-')) {
@@ -207,6 +269,20 @@ export async function mountFixtures(ctx) {
       await load(); return draw();
     }
     const row = b.closest('.fx-row'), f = fixtures.find(x => x.id === row.dataset.id);
+    if (act === 'sim') return simulate([f]);
+    if (act === 'again' || act === 'unplay') {
+      const box = row.querySelector('[data-res]');
+      box.dataset.then = act; box.hidden = false;
+      box.firstElementChild.textContent = act === 'again' ? 'Replace its result with a new match?' : 'Remove this result and its match file?';
+      return;
+    }
+    if (act === 'res-no') { row.querySelector('[data-res]').hidden = true; return; }
+    if (act === 'res-yes') {
+      const then = row.querySelector('[data-res]').dataset.then;
+      if (then === 'again') return simulate([f]);
+      try { await (await import('./simulate.js')).removeResult(await ctx.db(), f); } catch (err) { return say(document.getElementById('fx-msg'), err.message); }
+      results.delete(f.id); return draw();
+    }
     if (act === 'del' || act === 'del-no') { row.querySelector('[data-act="del"]').hidden = act === 'del'; row.querySelector('.ed-confirm').hidden = act === 'del-no'; return; }
     const c = await ctx.db();
     const { error } = act === 'del-yes' ? await c.from('fixtures').delete().eq('id', f.id) : await c.from('fixtures').update({ postponed: !f.postponed }).eq('id', f.id);

@@ -40,6 +40,7 @@ makes invites and password resets work.
 | `user_settings` | Settings that follow an account (0.7): accent, spoiler-free results and revealed matches, clock, start page, email choices (`prefs` jsonb) | Yourself | Yourself |
 | `manager_phones` | Each manager's phone number (0.10), saved by the Inbox form through `save_my_phone()` | That club's manager and the office | Only through the function; the office can delete |
 | `players` | The league's players (0.11): name, position, offense and defense (1 to 10), club (empty = free agent), and `value`, the price worked out from the ratings | Everyone, guests too | League office |
+| `matches` (storage bucket) | Full match files `<fixture id>.json.gz` (0.14): private; readable by anyone only once the match has kicked off, by the office any time | See left | League office |
 | `email_log` | Every reminder email sent (account, kind, key), so none is sent twice | League office | Nobody directly; only `send-reminders` |
 
 `clubs.setup_at` is empty until the club's manager has sent "Set up your club" (setup.html). Every manager, the

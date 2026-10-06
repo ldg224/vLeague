@@ -154,10 +154,12 @@ game settings. The idea: **Season, then Rounds, then Match windows, then Matches
 - Questions: build the planner before Simulate (this order) or after? Lock rule per window (proposed) or per match?
   Do finals need a bracket view?
 
-### 0.14: Simulate, news and the old site retires
-- [ ] Simulate, news composer, approvals and history in the app. Optional league events such as deadline day, set up
+### 0.14: Simulate (done in 0.14.0), news and the old site retires
+- [x] Simulate in Editor → Fixtures (one match, a week or everything unplayed; play again; remove result); engine copied
+      into `js/sim/`; reminder emails read Supabase; match files in a private `matches` bucket (readable from kick-off).
+- [ ] News composer, approvals and history in the app. Optional league events such as deadline day, set up
       and scheduled from the Editor (off by default).
-- [ ] season.json retired as the source of truth; match files published to this site's Pages.
+- [ ] Match pages and the old site retired (match files are in the `matches` bucket, not on Pages).
 
 ### 0.15: Inbox and press
 - [ ] One inbox: news for this club, press conferences, deadlines; only things that need action or matter.

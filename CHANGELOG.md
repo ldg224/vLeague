@@ -3,6 +3,23 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.14.0 (2026-10-06)
+
+Simulate.
+
+- **Added:** Editor → Fixtures can play matches. **Simulate** on a match, **Simulate week** on a week, or **Simulate all
+  unplayed**, with a progress bar and Cancel. Each club plays its week's locked team sheet; a club with no locked sheet
+  gets the engine's own picks; players sent off in an earlier game miss the next one. The first run loads the engine
+  (about 10 MB, then cached by the browser).
+- **Added:** each played match shows its score in the Editor. **Play again** replaces it with a new match; **Remove
+  result** takes the result and its match file away.
+- **Added:** the match engine now lives in this app (`js/sim/`), so vLeague no longer depends on the s3 test site for it.
+- **Changed:** the reminder emails read fixtures and results from the database instead of the s3 site (needs the
+  `send-reminders` function redeployed).
+- **Database:** full match files (about 2 MB each) are kept in a private `matches` bucket and can't be read by anyone but
+  the office until the match kicks off (`0015_match_files.sql`). This replaces the plan to publish them on this site.
+- Match pages (the "Match" link) come later, with the match centre.
+
 ## 0.13.1 (2026-10-06)
 
 - **Added:** Editor → Fixtures can clear a whole week (**Clear week**) or every fixture (**Clear everything**), each with a

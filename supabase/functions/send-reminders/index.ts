@@ -7,7 +7,6 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts';
 
 const SITE = 'https://ldg224.github.io/vLeague/';
-const SEASON = 'https://ldg224.github.io/s3/data/season.json';
 const ORIGINS = ['https://ldg224.github.io', 'http://localhost:8767'];
 const TZ = 'Australia/Melbourne';
 const env = (k: string) => Deno.env.get(k) || '';
@@ -72,12 +71,25 @@ type Season = { teams: any[]; players: any[]; fixtures: any[] };
 const teamName = (s: Season | null, code: string) => s?.teams.find(t => t.code === code)?.name || code;
 const fixtureOf = (s: Season | null, club: string, week: number) =>
   s?.fixtures.find(f => f.week === week && (f.home === club || f.away === club)) || null;
-// season.json dates and times are Melbourne local time.
-const kickoff = (f: any) => {
-  const local = new Date(`${f.date}T${f.time || '00:00'}:00Z`);
-  const offset = new Date(local.toLocaleString('en-US', { timeZone: TZ })).getTime() - new Date(local.toLocaleString('en-US', { timeZone: 'UTC' })).getTime();
-  return new Date(local.getTime() - offset);
-};
+const kickoff = (f: any) => new Date(f.starts_at);
+
+// The league as the emails need it, read from the database (clubs, players, fixtures with their results). A result
+// counts as played once its match has kicked off, the same rule the site uses.
+async function loadSeason(admin: any): Promise<Season | null> {
+  const [clubs, players, fixtures, results] = await Promise.all([
+    admin.from('clubs').select('code, name'),
+    admin.from('players').select('id, name'),
+    admin.from('fixtures').select('id, week, home, away, starts_at, postponed').range(0, 1999),
+    admin.from('results').select('fixture, summary').range(0, 1999),
+  ]);
+  if (clubs.error || players.error || fixtures.error || results.error) return null;
+  const summary = new Map((results.data as any[]).map(r => [r.fixture, r.summary]));
+  return {
+    teams: clubs.data,
+    players: players.data,
+    fixtures: (fixtures.data as any[]).map(f => ({ ...f, result: f.postponed ? null : summary.get(f.id) || null })),
+  };
+}
 
 // ---------------------------------------------------------------- each kind of email
 
@@ -121,7 +133,7 @@ async function compose(r: Row, s: Season | null, admin: any): Promise<Mail | nul
   }
   if (r.kind === 'weekly') {
     const since = Date.now() - 7 * 864e5;
-    const done = (s?.fixtures || []).filter(f => f.result && f.date && kickoff(f).getTime() > since && kickoff(f).getTime() < Date.now() - 2 * 3600e3);
+    const done = (s?.fixtures || []).filter(f => f.result && f.starts_at && kickoff(f).getTime() > since && kickoff(f).getTime() < Date.now() - 2 * 3600e3);
     if (!done.length) return null;
     return {
       subject: 'Your vLeague week',
@@ -196,7 +208,7 @@ Deno.serve(async req => {
   const { data: due, error } = await admin.rpc('due_emails');
   if (error) return reply({ error: error.message }, 500);
   if (!due?.length) return reply({ ok: true, sent: 0 });
-  const season: Season | null = await fetch(`${SEASON}?t=${Date.now()}`).then(r => (r.ok ? r.json() : null)).catch(() => null);
+  const season = await loadSeason(admin);
   const client = mailer();
   let sent = 0;
   const failed: string[] = [];

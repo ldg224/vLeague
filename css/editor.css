@@ -172,3 +172,10 @@
 .fx-head h2 { margin: 0; }
 .fx-rname { flex: 1 1 180px; min-width: 0; padding: 6px 8px; }
 .fx-lock { margin: 4px 0 6px; color: var(--muted); font-size: .88rem; }
+.fx-score { margin-left: 6px; font-variant-numeric: tabular-nums; }
+.fx-sim { margin: 12px 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; }
+.fx-sim p { margin: 0 0 8px; }
+.fx-sim-what { font-weight: 600; }
+.fx-sim .vid-bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-bottom: 8px; }
+.fx-sim .vid-bar span { display: block; height: 100%; width: 0; background: var(--blue-600); transition: width .2s; }
+.fx-sim-skipped { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: .88rem; }
