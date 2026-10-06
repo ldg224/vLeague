@@ -3,6 +3,11 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.19.1 (2026-10-06)
+
+- **Fixed:** emails showed stray `=20` (and similar) through the text. They're now sent in a plainer encoding that every mail app reads
+  correctly. This covers news emails and the reminder emails (`send-news`, `send-reminders`).
+
 ## 0.19.0 (2026-10-06)
 
 News you can email, with pictures, and a tidier Editor News tab.

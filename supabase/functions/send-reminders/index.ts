@@ -162,14 +162,21 @@ function mailer() {
   });
 }
 
+// Message parts as base64, wrapped at 76 characters. denomailer's own quoted-printable output shows up as stray "=20"
+// in mail apps that don't decode it, so we send base64 instead.
+const b64 = (s: string) => btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/.{1,76}/g, '$&\r\n').trim();
+const parts = (text: string, html: string) => [
+  { mimeType: 'text/plain; charset="utf-8"', content: b64(text), transferEncoding: 'base64' },
+  { mimeType: 'text/html; charset="utf-8"', content: b64(html), transferEncoding: 'base64' },
+];
+
 async function send(client: SMTPClient, to: string, mail: Mail, unsub?: string) {
   const { html, text } = layout(mail, unsub);
   await client.send({
     from: `vLeague <${env('SMTP_USER')}>`,
     to,
     subject: mail.subject,
-    content: text,
-    html,
+    mimeContent: parts(text, html),
     headers: unsub ? { 'List-Unsubscribe': `<${unsub}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } : {},
   });
 }

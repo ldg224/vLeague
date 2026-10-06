@@ -47,6 +47,13 @@ function markdown(text: string, vars: Record<string, string>) {
     return `<p style="${p}">${inline(x).replace(/\n/g, '<br>')}</p>`;
   }).join('');
 }
+// Message parts as base64, wrapped at 76 characters. denomailer's own quoted-printable output shows up as stray "=20"
+// in mail apps that don't decode it, so we send base64 instead.
+const b64 = (s: string) => btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/.{1,76}/g, '$&\r\n').trim();
+const parts = (text: string, html: string) => [
+  { mimeType: 'text/plain; charset="utf-8"', content: b64(text), transferEncoding: 'base64' },
+  { mimeType: 'text/html; charset="utf-8"', content: b64(html), transferEncoding: 'base64' },
+];
 const plain = (html: string) => html.replace(/<\/(p|li|h2)>/g, '\n').replace(/<br>/g, '\n').replace(/<[^>]+>/g, '')
   .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
 
@@ -102,7 +109,7 @@ Deno.serve(async req => {
     const unsub = await unsubscribeUrl(user);
     const { html, text } = compose(post as Post, vars, unsub);
     await client.send({
-      from: `vLeague <${env('SMTP_USER')}>`, to, subject: post.title, content: text, html,
+      from: `vLeague <${env('SMTP_USER')}>`, to, subject: post.title, mimeContent: parts(text, html),
       headers: { 'List-Unsubscribe': `<${unsub}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
     });
   };
