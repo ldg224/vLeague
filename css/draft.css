@@ -1,5 +1,5 @@
 /* Draft (0.21): board, queue, auto-pick, team values. */
-.draft { width: min(1100px, 100%); margin: 0 auto; }
+.draft { width: 100%; margin: 0 auto; }
 .dr-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
 .dr-head .page-title { margin: 0; }
 .dr-clock { text-align: right; font: 700 1.8rem/1 var(--font-display); white-space: nowrap; }
@@ -67,3 +67,31 @@
 .dr-ar sup { font-size: .65rem; }
 .dr-auto h3 { margin: 10px 0 0; font-size: .95rem; }
 @media (max-width: 640px) { .dr-table .c-number { display: none; } .dr-table td, .dr-table th button { padding-inline: 8px; } }
+
+/* Wider page, budget bar, board and available players layout (0.25) */
+.member-main:has(.draft) { width: min(1360px, 100%); }
+.dr-budget { margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); }
+.dr-budget-text { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 14px; margin-bottom: 8px; font-size: .9rem; }
+.dr-budget-text span { color: var(--muted); }
+.dr-bar { height: 12px; border-radius: 999px; background: color-mix(in srgb, var(--text) 12%, transparent); overflow: hidden; }
+.dr-bar i { display: block; height: 100%; border-radius: inherit; background: var(--club); transition: width .3s; }
+.dr-budget.warn .dr-bar i { background: #f0a030; }
+.dr-budget.over .dr-bar i { background: #e05555; }
+.dr-budget.over .dr-budget-text span { color: #e05555; font-weight: 600; }
+.dr-avail { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 18px; align-items: start; }
+.dr-side { position: sticky; top: 76px; max-height: calc(100vh - 96px); overflow-y: auto; display: grid; gap: 14px; padding-right: 2px; }
+.dr-main, .dr-avail > * { min-width: 0; }
+.dr-queue h2 small { font: 600 .8rem var(--font); color: var(--muted); margin-left: 6px; }
+.dr-side .dr-list .dr-p { grid-template-columns: 34px minmax(0, 1fr) auto; }
+.dr-side .dr-list .dr-p .rt { display: none; }
+.dr-side .dr-list .dr-p .val { display: none; }
+.dr-autobox { border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); padding: 10px 12px; }
+.dr-autobox summary { cursor: pointer; font-weight: 700; }
+.dr-autobox .dr-auto { margin-top: 10px; gap: 6px; max-width: none; }
+.dr-autobox label { display: grid; gap: 4px; font-size: .85rem; font-weight: 600; color: var(--muted); }
+.dr-autobox select, .dr-autobox input { width: 100%; }
+.dr-autobox small { color: var(--faint); }
+.dr-table tr.me { background: color-mix(in srgb, var(--club) 12%, transparent); }
+.dr-table tr.skipped td { color: var(--faint); font-style: italic; }
+.dr-table .c-pick { color: var(--muted); }
+@media (max-width: 900px) { .dr-avail { grid-template-columns: 1fr; } .dr-side { position: static; max-height: none; } }

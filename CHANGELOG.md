@@ -3,6 +3,21 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.25.0 (2026-10-07)
+
+The managers' Draft page, reorganised.
+
+- **Added:** a **weekly budget bar** under the roster rules: how much of the $100,000 cap your squad uses, how much is left, and a
+  warning colour near and over the cap. It's a guide, not a block: a pick over the cap still goes through.
+- **Changed, Board:** the full spreadsheet of every **picked** player: pick number, club, position, name, number, offensive,
+  defensive and overall rating, value, and how it was picked (picked, queue, auto, office, skipped). Filter by club, position or
+  name, and sort by several levels.
+- **Changed, Available players:** a new tab with **My queue** and **Auto-pick** down the left side and the full sortable table of
+  free players beside it. Auto-pick is now two dropdowns (what to pick, when) and saves as you change them.
+- **Changed:** the page now uses the full width of the screen (it was squeezed into a narrow column). Team values shows each club's
+  total against the cap.
+- **Removed:** the separate My queue and Auto-pick tabs (old links to them open Available players).
+
 ## 0.24.0 (2026-10-07)
 
 Draft: smarter auto-pick and a sortable board. Needs `0027_draft_pick_how.sql` (run).
