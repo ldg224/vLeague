@@ -1,13 +1,13 @@
 // Settings (0.7). Two kinds:
 // - synced: what follows the account to every device (Supabase user_settings): spoiler-free results and the
-//   matches already revealed, Inbox posts read, clock, email choices. prefs() loads them once per page (cached).
+//   matches already revealed, Inbox posts read and cleared, clock, email choices. prefs() loads them once per page (cached).
 // - device: how the app looks on this screen (localStorage 'vleague-device'): theme, text size, reduced motion. Applied by
 //   a one-line script in each page's <head> before the page paints, and again by setDevice().
 import { db, currentUser } from './auth.js';
 import { status } from './dashboard-data.js';
 
 const DEFAULTS = {
-  spoilers: false, clock: '12', revealed: [], read: [],
+  spoilers: false, clock: '12', revealed: [], read: [], dismissed: [],
   email: { deadline: '24h', draft: 'both', sent_back: true, lineups_out: false, weekly: false, news: true, office_digest: true },
 };
 const CACHE = 'vleague-prefs';
@@ -18,7 +18,7 @@ const store = {
   get(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* storage blocked */ } },
 };
-const merge = p => ({ ...DEFAULTS, ...p, email: { ...DEFAULTS.email, ...(p?.email || {}) }, revealed: p?.revealed || [], read: p?.read || [] });
+const merge = p => ({ ...DEFAULTS, ...p, email: { ...DEFAULTS.email, ...(p?.email || {}) }, revealed: p?.revealed || [], read: p?.read || [], dismissed: p?.dismissed || [] });
 
 // Synchronous view for formatting and spoilers: the last loaded settings (or this device's cached copy).
 let current = merge(store.get(CACHE));
@@ -143,4 +143,23 @@ export async function rememberRead(ids) {
   current = { ...current, read: next };
   store.set(CACHE, current);
   try { await setPref('read', next); } catch { /* still read on this device */ }
+}
+
+// ---------------------------------------------------------------- Inbox posts cleared (0.30)
+
+// A manager's delete button: the post disappears from their own Inbox only (it stays for everyone else and is never
+// removed from the database). Follows the account. Kept to the last 300; news older than that has already scrolled out.
+export async function dismissPosts(ids) {
+  const list = ids.map(String);
+  const next = [...new Set([...current.dismissed, ...list])].slice(-300);
+  current = { ...current, dismissed: next };
+  store.set(CACHE, current);
+  try { await setPref('dismissed', next); } catch { /* cleared on this device anyway */ }
+}
+export async function restorePosts(ids) {
+  const drop = new Set(ids.map(String));
+  const next = current.dismissed.filter(id => !drop.has(id));
+  current = { ...current, dismissed: next };
+  store.set(CACHE, current);
+  try { await setPref('dismissed', next); } catch { /* restored on this device anyway */ }
 }
