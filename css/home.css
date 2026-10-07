@@ -1,7 +1,7 @@
 /* A manager's Home (0.5, js/home.js). Navy page; the club shows in the match card's glow, its crest
    and the position stat. The match card runs full width; Your season and Coming up sit side by side on wide screens. */
 
-.member-main.wide:has(.hm-club) { width: min(1040px, 100%); padding-top: 24px; }
+.member-main.wide:has(.hm-club) { padding-top: 24px; }
 
 .hm-club { display: flex; align-items: center; gap: 14px; margin: 0 0 20px; }
 .hm-club-crest { width: 52px; height: 52px; object-fit: contain; flex: none; filter: drop-shadow(0 8px 22px color-mix(in srgb, var(--club) 35%, transparent)); }
@@ -102,7 +102,10 @@
 
 /* Coming up */
 .hm-fix { list-style: none; margin: 0; padding: 0; }
-.hm-fix li { display: grid; grid-template-columns: 6.2em 22px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 10px 2px; font-size: .92rem; }
+.hm-fix li { font-size: .92rem; }
+.hm-fixlink { display: grid; grid-template-columns: 6.2em 22px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 10px 6px; margin: 0 -6px; border-radius: var(--r-sm); color: inherit; }
+.member-main a.hm-fixlink { color: var(--text); }
+.hm-fixlink:hover, .hm-fixlink:focus-visible { background: var(--surface-hover); }
 .hm-fix li + li { border-top: 1px solid var(--line); }
 .hm-fix .hm-wk { color: var(--faint); font-size: .8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hm-fix b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -111,7 +114,7 @@
 
 @media (max-width: 480px) {
   /* Coming up: the date gets its own line so club names have room (and at large text sizes). */
-  .hm-fix li { grid-template-columns: 22px minmax(0, 1fr) auto auto; row-gap: 2px; }
+  .hm-fixlink { grid-template-columns: 22px minmax(0, 1fr) auto auto; row-gap: 2px; }
   .hm-fix .hm-wk { grid-column: 1 / -1; }
   .hm-crest { width: 60px; height: 60px; }
   .hm-ko { font-size: 1.6rem; }

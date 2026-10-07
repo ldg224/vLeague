@@ -117,10 +117,12 @@ async function run() {
 
   // ---------------------------------------------------------------- the header
   const kitColour = code => clubsRows.find(c => c.code === code)?.colour || teamOf(season, code)?.colour;
+  const sameColour = (x, y) => !!x && !!y && String(x).toLowerCase() === String(y).toLowerCase();
+  const sides = () => { const h = kitColour(fx.home), a = kitColour(fx.away); return h ? ` style="--hc:${esc(h)};${a && !sameColour(h, a) ? `--ac:${esc(a)}` : ''}"` : ''; };
   function head() {
     const now = new Date(), k = kickoff(fx), s = st(), sc = shownScore(fx, season, now), h = home(), a = away(), sd = stadium();
     const state = s === 'live' ? `<span class="live"><span class="dot"></span>${liveMinute(fx, season, now)}'</span>` : { ft: 'Full time', upcoming: 'Upcoming', awaiting: 'Kicking off', postponed: 'Postponed', tba: 'Date to be confirmed' }[s];
-    const score = sc ? `<strong class="${s === 'live' ? 'is-live' : ''}">${sc.home}<i>–</i>${sc.away}</strong>` : `<strong>${k ? esc(fmtTime(k)) : 'TBA'}</strong>`;
+    const score = sc ? `<strong class="${s === 'live' ? 'is-live' : ''}">${sc.home}<i>–</i>${sc.away}</strong>` : `<strong class="ko">${k ? esc(fmtTime(k)) : 'TBA'}</strong>`;
     const goals = side => (data ? eventsTo(horizon()).filter(e => e.type === 'goal' && e.team === side) : (fx.result?.goals || []).filter(g => g.team === side && (s === 'ft' || g.t <= horizon())))
       .map(g => `<li>${esc(data ? data.byId[g.scorer]?.name || '' : g.scorer_name || '')}${g.own_goal ? ' (og)' : ''} <small>${esc(g.minute)}'</small></li>`).join('');
     return `<section class="gc-head">${fx.test ? '<div class="gc-test" role="note"><b>TEST MATCH</b><span>Made-up players. Not part of the season.</span></div>' : ''}${scoreboard({ fx, season, look: lookInfo(season, fx), h: fullNameOf(h), a: fullNameOf(a), hColour: kitColour(fx.home), aColour: kitColour(fx.away),
@@ -172,7 +174,7 @@ async function run() {
   }
   function timelineSection() {
     const list = eventsTo(horizon()).filter(e => KEY_EVENTS.has(e.type) || (e.type === 'shot' && e.on_target)).reverse();
-    return `<section class="gc-sec"><h2>Timeline</h2>${list.length ? `<ul class="gc-ev full">${list.map(eventLi).join('')}</ul>` : '<p class="quiet">Nothing has happened yet.</p>'}</section>`;
+    return `<section class="gc-sec" id="gc-timeline"><h2>Timeline</h2>${list.length ? `<ul class="gc-ev full">${list.map(eventLi).join('')}</ul>` : '<p class="quiet">Nothing has happened yet.</p>'}</section>`;
   }
 
   // ---------------------------------------------------------------- stats
@@ -186,7 +188,7 @@ async function run() {
       ['Offsides', h.offsides, a.offsides], ['Yellow cards', h.yellow, a.yellow], ['Red cards', h.red, a.red], ...(full && h.km != null ? [['Distance covered (km)', +h.km.toFixed(1), +a.km.toFixed(1)]] : [])];
     const row = ([l, x, y, u = '']) => { const s = x + y || 1; return `<div class="gc-stat"><span class="v">${x}${u}</span><div class="lbl">${esc(l)}<div class="bars"><i class="bh" style="width:${100 * x / s}%"></i><i class="ba" style="width:${100 * y / s}%"></i></div></div><span class="v">${y}${u}</span></div>`; };
     const motm = full && fx.result?.motm ? fx.result.players?.[fx.result.motm] : null;
-    return `<section class="gc-sec"><h2>Match statistics${full ? '' : ' so far'}</h2><div class="gc-statrow head"><b>${esc(nameOf(home()))}</b><b>${esc(nameOf(away()))}</b></div>${R.map(row).join('')}</section>
+    return `<section class="gc-sec" id="gc-stats"><h2>Match statistics${full ? '' : ' so far'}</h2><div class="gc-statrow head"><b>${esc(nameOf(home()))}</b><b>${esc(nameOf(away()))}</b></div>${R.map(row).join('')}</section>
       ${motm ? `<section class="gc-sec"><h2>Man of the match</h2><p class="gc-motm"><b>${esc(motm.name)}</b> <span>${esc(nameOf(teamOf(season, motm.team)))}</span> <span class="rating r-hi">${Number(motm.r).toFixed(1)}</span></p></section>` : ''}`;
   }
 
@@ -198,7 +200,7 @@ async function run() {
     const col = c => { const team = data.teams[c === fx.home ? 'home' : 'away']; return `<div><h3>${esc(fullNameOf(teamOf(season, c)))} <small>${esc(team.formation || '')}</small></h3><ol class="gc-lu">${team.lineup.map(x => {
       const r = full ? P[x.id]?.rating : null;
       return `<li><span class="pos">${esc(x.slot || x.position)}</span><span class="nm">${esc(x.name)}${team.captain === x.id ? ' <small>(c)</small>' : ''} ${'⚽'.repeat(goals(x.id))}${'🅰️'.repeat(assists(x.id))}${cards(x.id)}</span>${r ? `<span class="rating ${r >= 7 ? 'r-hi' : r < 6 ? 'r-lo' : 'r-mid'}">${r.toFixed(1)}</span>` : ''}</li>`; }).join('')}</ol></div>`; };
-    return `<section class="gc-sec"><h2>Line-ups</h2><div class="gc-two">${col(fx.home)}${col(fx.away)}</div>${full ? '' : '<p class="gc-note">Ratings appear at full time.</p>'}</section>`;
+    return `<section class="gc-sec" id="gc-lineups"><h2>Line-ups</h2><div class="gc-two">${col(fx.home)}${col(fx.away)}</div>${full ? '' : '<p class="gc-note">Ratings appear at full time.</p>'}</section>`;
   }
 
   // ---------------------------------------------------------------- page
@@ -207,7 +209,7 @@ async function run() {
   function draw() {
     unmount();
     const waiting = !data && ['live', 'ft'].includes(st());
-    main.innerHTML = `<div class="gc">${head()}${data ? `${playerCard(st())}<div id="gc-below">${below()}</div>`
+    main.innerHTML = `<div class="gc"${sides()}>${head()}${data ? `${playerCard(st())}<nav class="gc-jump" aria-label="Jump to a section"><a href="#gc-stats">Stats</a><a href="#gc-lineups">Line-ups</a><a href="#gc-timeline">Timeline</a></nav><div id="gc-below">${below()}</div>`
       : `${waiting ? `<p class="quiet">${esc(fileError || 'Loading the match…')}</p>` : ''}${previewSection()}`}</div>`;
     mount();
   }

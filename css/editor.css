@@ -386,3 +386,8 @@
 .fx-more { margin: 16px 0; }
 .fx-more > summary { cursor: pointer; color: var(--tint-text); font-weight: 600; margin-bottom: 12px; }
 #fx-import { width: 100%; font: inherit; }
+
+/* Editor form controls that were left as the browser's own grey boxes (0.40.1): same look as the other inputs. */
+.fx-row select, .fx-row input, .fx-test select, .fx-grid select, .fx-grid input:not([type="checkbox"]), #dr-root input[type="number"] {
+  min-height: 38px; padding: 6px 10px; border-radius: var(--r-sm); border: 1px solid rgba(var(--edge), .16); background: var(--bg); color: var(--text); font: 500 .92rem var(--font); }
+.fx-row select:focus-visible, .fx-row input:focus-visible, .fx-grid select:focus-visible, .fx-grid input:focus-visible, #dr-root input[type="number"]:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }

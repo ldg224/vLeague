@@ -160,9 +160,9 @@ export const finished = (s, now = new Date()) => s.fixtures.filter(f => status(f
 
 export const sameDay = (a, b) => a && b && a.toDateString() === b.toDateString();
 
-// The week to open on: a week with a match today, else the next to play, else the latest.
+// The week to open on: a week with a match today, else the next to play, else the latest. Test matches (week 99) never count.
 export function activeWeek(s, now = new Date()) {
-  const dated = s.fixtures.filter(f => kickoff(f)).sort(byKickoff);
+  const dated = s.fixtures.filter(f => kickoff(f) && !f.test).sort(byKickoff);
   const today = dated.find(f => sameDay(kickoff(f), now));
   if (today) return today.week;
   const next = dated.find(f => ['upcoming', 'live', 'awaiting'].includes(status(f, s, now)));

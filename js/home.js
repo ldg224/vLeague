@@ -81,7 +81,8 @@ function matchCard(s, code, now) {
     else {
       const saved = sheet && Object.keys(sheet.lineup || {}).length;
       foot = `<p class="hm-lock">${kick}${lock ? ` · line-up locks in <b data-until="${+lock}">${until(lock - now)}</b>` : ''}</p>
-        <a class="btn${saved ? ' ghost' : ''}" href="club.html">${saved ? 'Change your XI' : 'Pick your XI'}</a>`;
+        <a class="btn${saved ? ' ghost' : ''}" href="club.html">${saved ? 'Change your XI' : 'Pick your XI'}</a>
+        <a class="btn ghost" href="${esc(matchUrl(fx))}">Match preview</a>`;
     }
   }
   return `<section class="hm-card hm-match">
@@ -167,8 +168,8 @@ function comingUp(s, code, now) {
   return `<section class="hm-card hm-fix-card"><h2>Coming up <a href="league.html">All matches</a></h2>
       <ol class="hm-fix">${next.map(f => {
         const ko = kickoff(f), opp = f.home === code ? f.away : f.home;
-        return `<li><span class="hm-wk">${ko ? esc(day(ko, now)) : 'TBA'}</span>${crest(opp, 'hm-mini')}<b>${esc(nameOf(opp))}</b>
-          <small>${f.home === code ? 'H' : 'A'}</small><span class="hm-time">${ko ? time(ko) : ''}</span></li>`;
+        return `<li><a class="hm-fixlink" href="${esc(matchUrl(f))}" aria-label="Preview ${esc(nameOf(f.home))} against ${esc(nameOf(f.away))}"><span class="hm-wk">${ko ? esc(day(ko, now)) : 'TBA'}</span>${crest(opp, 'hm-mini')}<b>${esc(nameOf(opp))}</b>
+          <small>${f.home === code ? 'H' : 'A'}</small><span class="hm-time">${ko ? time(ko) : ''}</span></a></li>`;
       }).join('')}</ol>
     </section>`;
 }

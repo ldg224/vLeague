@@ -17,6 +17,7 @@ if (ctx) {
   useClubs(rows);
   await prefs().catch(() => null);
   const { main } = ctx, mine = ctx.club?.code;
+  let onlyMine = false; try { onlyMine = !!mine && localStorage.getItem('vleague-matches-mine') === '1'; } catch { /* storage blocked */ }
   let season = ctx.season, week = null, sheets = [], hidden = new Set(), seen = season;
   const stadium = code => rows.find(c => c.code === code)?.stadium || '';
   const loadSheets = async () => { try { const r = await (await db()).from('week_sheets').select('week, club, lineup').range(0, 999); sheets = r.data || []; } catch { /* the model falls back to squads */ } };
@@ -50,9 +51,10 @@ if (ctx) {
     const foot = `<div class="mc-foot"><span class="mc-venue">${sd ? `<b>Stadium</b> ${esc(sd)}` : `<b>Home</b> ${esc(fullNameOf(teamOf(season, fx.home)))}`}</span>
       <span><b>${esc(teamOf(season, fx.home).code)}</b> at home ${rec(hs.home)}</span><span><b>${esc(teamOf(season, fx.away).code)}</b> away ${rec(as.away)}</span></div>`;
     const label = `${fullNameOf(teamOf(season, fx.home))} against ${fullNameOf(teamOf(season, fx.away))}`;
-    return `<article class="mc is-${st}${fx.home === mine || fx.away === mine ? ' me' : ''}">
+    const hc = (rows.find(c => c.code === fx.home)?.colour || teamOf(season, fx.home)?.colour), ac = (rows.find(c => c.code === fx.away)?.colour || teamOf(season, fx.away)?.colour);
+    return `<article class="mc is-${st}${fx.home === mine || fx.away === mine ? ' me' : ''}"${hc ? ` style="--hc:${esc(hc)};${ac && ac.toLowerCase() !== hc.toLowerCase() ? `--ac:${esc(ac)}` : ''}"` : ''}>
       <a class="mc-open" href="${esc(matchUrl(fx))}" data-open="${esc(fx.id)}" aria-label="Open ${esc(label)} in the Game centre"></a>
-      <header><span class="mc-when">${k ? esc(day(k, now)) : ''}${fx.test ? ' <span class="mc-test">TEST MATCH</span>' : ''}</span><span class="mc-state">${badge}</span></header>
+      <header><span class="mc-when">${fx.test ? '<span class="mc-test">TEST MATCH</span>' : ''}</span><span class="mc-state">${badge}</span></header>
       <div class="mc-teams">${side(fx.home, fx, now, 'h')}<div class="mc-mid">${mid}</div>${side(fx.away, fx, now, 'a')}</div>
       ${chance}${foot}</article>`;
   }
@@ -65,15 +67,15 @@ if (ctx) {
     if (!weeks.includes(week)) week = activeWeek(season, now);
     const scroll = main.querySelector('.weektabs')?.scrollLeft;
     const groups = new Map();
-    for (const f of season.fixtures.filter(f => f.week === week).sort(byKickoff)) {
+    for (const f of season.fixtures.filter(f => f.week === week && (!onlyMine || f.home === mine || f.away === mine)).sort(byKickoff)) {
       const k = kickoff(f), key = k ? k.toDateString() : 'tba';
       if (!groups.has(key)) groups.set(key, { label: k ? day(k, now) : 'Date to be confirmed', items: [] });
       groups.get(key).items.push(f);
     }
-    main.innerHTML = `<div class="matches"><h1 class="page-title" tabindex="-1">Matches</h1>
+    main.innerHTML = `<div class="matches"><div class="mc-titlebar"><h1 class="page-title" tabindex="-1">Matches</h1>${mine ? `<button type="button" class="mc-filter" data-mine aria-pressed="${onlyMine}">My club only</button>` : ''}</div>
       <div class="weektabs" role="tablist" aria-label="Rounds">${weeks.map(w => `<button type="button" role="tab" data-week="${esc(w)}" aria-selected="${w === week}">${esc(season.rounds?.[w]?.short || w)}</button>`).join('')}</div>
       <p class="mc-round">${esc(season.rounds?.[week]?.label || `Week ${week}`)}</p>
-      ${[...groups.values()].map(g => `<h2 class="day">${esc(g.label)}</h2><div class="mcs">${g.items.map(f => card(f, now)).join('')}</div>`).join('')}</div>`;
+      ${groups.size ? '' : `<p class="empty">${onlyMine ? 'Your club isn’t playing this round. <button type="button" class="link-btn" data-mine>Show every match</button>' : 'No matches in this round yet.'}</p>`}${[...groups.values()].map(g => `<h2 class="day">${esc(g.label)}</h2><div class="mcs">${g.items.map(f => card(f, now)).join('')}</div>`).join('')}</div>`;
     const tabs = main.querySelector('.weektabs');
     if (tabs) {
       if (scroll != null) tabs.scrollLeft = scroll;
@@ -85,6 +87,7 @@ if (ctx) {
   main.addEventListener('click', async e => {
     const show = e.target.closest('[data-reveal]');
     if (show) { e.preventDefault(); await revealScore([show.dataset.reveal]); draw(); return; }
+    if (e.target.closest('[data-mine]')) { onlyMine = !onlyMine; try { localStorage.setItem('vleague-matches-mine', onlyMine ? '1' : '0'); } catch { /* storage blocked */ } draw(); return; }
     const b = e.target.closest('.weektabs button');
     if (!b) return;
     week = Number(b.dataset.week); draw();

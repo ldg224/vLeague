@@ -30,9 +30,10 @@
 .mc-chance { display: grid; gap: 6px; }
 .mc-bar { display: flex; height: 12px; border-radius: 999px; overflow: hidden; gap: 2px; background: var(--line); }
 .mc-bar i { display: block; min-width: 4px; }
-.mc-bar .bh { background: var(--club, var(--blue-500)); }
+.mc-bar .bh { background: var(--hc, var(--club, var(--blue-500))); }
 .mc-bar .bd { background: var(--faint); }
-.mc-bar .ba { background: var(--blue-300, #93c5fd); }
+.mc-bar .ba { background: var(--ac, var(--blue-300, #93c5fd)); }
+.mc.is-live { border-color: var(--hc, var(--line)); }
 .mc-pcts { display: flex; justify-content: space-between; gap: 8px; font-size: .85rem; color: var(--muted); }
 .mc-pcts b { color: var(--text); font-size: 1rem; font-variant-numeric: tabular-nums; }
 .mc-chance small { color: var(--faint); font-size: .74rem; line-height: 1.3; }
@@ -43,3 +44,10 @@
 @media (max-width: 520px) { .mc { padding: 14px; } .mc-pcts { font-size: .78rem; } }
 
 .mc-test { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 6px; background: #ffd43b; color: #1b1400; font: 800 .68rem var(--font); letter-spacing: .1em; }
+
+/* Title row with a "My club only" filter (0.40.1) */
+.mc-titlebar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.mc-titlebar .page-title { margin: 0 0 6px; }
+.mc-filter { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font: 600 .85rem var(--font); cursor: pointer; }
+.mc-filter[aria-pressed="true"] { background: var(--club, var(--blue-600)); border-color: transparent; color: var(--on-club, #fff); }
+.mc-filter:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }

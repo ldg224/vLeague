@@ -1,6 +1,5 @@
 /* League (0.5): table, matches by week, top players. The manager's own club is marked with its accent (--club). */
 
-.member-main.league-main { width: min(1140px, 100%); }
 .league { display: grid; grid-template-columns: minmax(0, 1fr); }
 @media (min-width: 980px) {
   .league { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); grid-template-areas: 'table fixtures' 'leaders fixtures'; gap: 0 16px; align-items: start; }
@@ -20,10 +19,10 @@
 .ladder .club { text-align: left; font-weight: 600; }
 .ladder .cl { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .ladder .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ladder th.club { max-width: 0; width: 100%; }
+.ladder th.club { max-width: 0; width: 100%; box-shadow: inset 3px 0 0 var(--tc, transparent); padding-left: 10px; }
 .ladder .pts { font-weight: 800; color: var(--text-strong); }
 .ladder .form { text-align: right; padding-right: 6px; }
-.ladder tr.me { box-shadow: inset 3px 0 0 var(--club); background: color-mix(in srgb, var(--club) 14%, transparent); }
+.ladder tr.me { background: color-mix(in srgb, var(--club) 14%, transparent); }
 .ladder tr.me .pos { color: var(--text); }
 
 /* Week tabs: one row that scrolls sideways on its own */
@@ -83,7 +82,7 @@ a.fx:hover { background: var(--surface); }
 @media (max-width: 640px) {
   .ladder .wide { display: none; }
   .ladder .chips abbr { width: 16px; height: 16px; font-size: .6rem; }
-  .fx { grid-template-columns: 3.4rem minmax(0, 1fr) 3.25rem minmax(0, 1fr); gap: 7px; padding: 10px 4px 10px 6px; font-size: .9rem; }
+  .fx { grid-template-columns: 4.2rem minmax(0, 1fr) 3.25rem minmax(0, 1fr); gap: 7px; padding: 10px 4px 10px 6px; font-size: .9rem; }
   .fx .team { gap: 6px; }
   .fx .when { font-size: .78rem; }
   .leads { grid-template-columns: minmax(0, 1fr); }
@@ -98,7 +97,7 @@ a.fx:hover { background: var(--surface); }
 /* …and on a narrow card, each match stacks home over away so the names have room. */
 .fixtures-sect { container-type: inline-size; }
 @container (max-width: 19rem) {
-  .fx { grid-template-columns: 3.6rem minmax(0, 1fr) 2.4rem; grid-template-areas: 'when h res' 'when a res'; row-gap: 4px; }
+  .fx { grid-template-columns: 4.2rem minmax(0, 1fr) 2.4rem; grid-template-areas: 'when h res' 'when a res'; row-gap: 4px; }
   .fx .when { grid-area: when; }
   .fx .team.h { grid-area: h; flex-direction: row-reverse; justify-content: flex-end; text-align: left; }
   .fx .team.a { grid-area: a; }

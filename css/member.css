@@ -20,7 +20,7 @@
 .member .account:hover { background: rgba(var(--ink),.08); }
 
 .member-main { width: min(560px, 100%); margin: 0 auto; padding: 48px 16px; align-self: center; }
-.member-main.wide { width: min(880px, 100%); align-self: start; }
+.member-main.wide { width: min(1080px, 100%); align-self: start; }   /* one page width, so every title starts at the same left edge (0.40.1) */
 .quiet { color: var(--muted); margin: 0; }
 .member-main a { color: var(--brand); }
 

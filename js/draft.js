@@ -47,7 +47,7 @@ if (ctx) {
   const nameOf = c => (c === code && club?.name) || clubName.get(c) || c;
   const draft0 = await openDraft();
   if (!draft0) {
-    main.innerHTML = '<h1 class="page-title" tabindex="-1">Draft</h1><p class="empty">The draft page isn’t open yet. It will appear here as soon as the league office makes it visible.</p>';
+    main.innerHTML = '<h1 class="page-title" tabindex="-1">Draft</h1><p class="empty">The draft page isn’t open yet. It will appear here as soon as the league office makes it visible.</p><p><a class="btn ghost" href="club.html">Set your team sheet meanwhile</a></p>';
     main.setAttribute('aria-busy', 'false');
   } else {
     let tab = (() => { const h = location.hash.slice(1); return h === 'queue' || h === 'auto' ? 'players' : TABS.some(t => t[0] === h) ? h : 'board'; })();

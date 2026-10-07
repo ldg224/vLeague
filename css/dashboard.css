@@ -214,3 +214,8 @@ a.fx:hover + .fx { box-shadow: none; }
 /* Looks (0.13): a round can carry its own scoreboard design. Classic is the plain board; other looks add their accent. */
 .board[data-look]:not([data-look="classic"]) { box-shadow: inset 0 3px 0 var(--look, transparent); }
 .board[data-look]:not([data-look="classic"]) .stage { color: var(--look, inherit); letter-spacing: .12em; }
+
+/* An empty page says what goes here and offers a way on (0.40.1) */
+.empty-state { display: grid; justify-items: start; gap: 12px; margin: 14px 0; color: var(--muted); max-width: 46ch; }
+.empty-state p { margin: 0; }
+.empty-state .btn { width: auto; text-decoration: none; }

@@ -1,6 +1,6 @@
 /* Settings (0.7): one column of Home-style cards; each row is a label and its control, saving on change. */
 
-.member-main.settings-main { width: min(640px, 100%); }
+.member-main.settings-main > * { max-width: 640px; }
 .settings-main .sect-head { align-items: baseline; }
 .sect-note { font-size: .82rem; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 

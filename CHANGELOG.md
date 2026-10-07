@@ -3,6 +3,24 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.41.0 (2026-10-08)
+
+Tidies the 0.40.0 clean-up and makes the pages easier to use. No database change.
+
+If anything goes wrong, `v0.40.0` is the version to go back to (`docs/RELEASING.md`).
+
+- **Added, Matches:** a **My club only** switch beside the title (remembered on the device).
+- **Added, Game centre:** a Stats, Line-ups and Timeline bar that stays at the top while you scroll.
+- **Added, Home:** a **Match preview** button on the next-match card, and each "Coming up" row opens its match.
+- **Fixed, test matches:** the yellow TEST MATCH banner above the Game centre's scoreboard is back. The 0.40.0 clean-up had removed its styles, so it showed as loose text.
+- **Fixed, League and Matches:** a test match played today no longer makes them open on the test round, and that round no longer lists every other club as on a bye.
+- **Fixed, League on a phone:** the kick-off time was cut off ("11:50 a…").
+- **Changed, team colours:** in the Game centre and Matches, the win-chance bar, stats bars, timeline and line-up headings use the home and away clubs' own colours (the home side used your club's colour and the away side a fixed blue). The League table shows each club's colour down its left edge.
+- **Changed, every page:** one page width, so the title starts in the same place on Home, My club, Inbox, Matches, League, Settings and Draft.
+- **Changed, Matches and the scoreboard:** a card no longer repeats the day shown above it, and the kick-off time on the scoreboard is smaller so it clears the "Upcoming" label.
+- **Changed, empty pages:** Inbox and Draft say what goes there and give a button on.
+- **Changed, Editor:** the club and time pickers in Fixtures and the number boxes in Draft are styled like the other inputs, not the browser's grey boxes.
+
 ## 0.40.0 (2026-10-07)
 
 The clean-up. Less on every screen, and nothing new. No database change. If anything goes wrong, `v0.39.2` is the version to go back to (`docs/RELEASING.md`).

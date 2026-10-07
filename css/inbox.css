@@ -1,6 +1,6 @@
 /* Inbox (0.5): one list of posts; unread ones carry a dot in the club accent and open in place. */
 
-.inbox { width: min(720px, 100%); margin: 0 auto; }
+.inbox { width: min(720px, 100%); margin: 0; }
 .inbox-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
 .inbox-head .page-title { margin: 0; }
 .mark-all { padding: 7px 14px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--club) 45%, transparent); background: transparent; color: var(--text); font: 600 .85rem var(--font); cursor: pointer; white-space: nowrap; }

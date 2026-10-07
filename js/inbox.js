@@ -119,7 +119,7 @@ if (ctx) {
             <span class="ib-meta">${isNew ? '<span class="sr-only">Unread. </span>' : ''}${i.pinned ? '<span class="pin">Pinned</span>' : ''}${[v.from !== 'vLeague' && esc(v.from), i.at && esc(ago(i.at))].filter(Boolean).join(' · ')}</span></summary>
           <div class="ib-body">${v.body}</div>
         </details></li>`;
-      }).join('')}</ul>` : '<p class="empty">Nothing here yet.</p>'}
+      }).join('')}</ul>` : '<div class="empty-state"><p>No messages yet. League news, club decisions and press questions land here.</p><a class="btn ghost" href="home.html">Back to Home</a></div>'}
     </div>`;
   }
 

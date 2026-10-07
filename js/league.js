@@ -26,7 +26,7 @@ if (ctx) {
     const label = { W: 'Won', D: 'Drew', L: 'Lost' };
     return `<table class="ladder">
       <thead><tr><th scope="col"><abbr title="Position">#</abbr></th><th scope="col" class="club">Club</th><th scope="col"><abbr title="Played">P</abbr></th><th scope="col" class="wide"><abbr title="Won">W</abbr></th><th scope="col" class="wide"><abbr title="Drawn">D</abbr></th><th scope="col" class="wide"><abbr title="Lost">L</abbr></th><th scope="col"><abbr title="Goal difference">GD</abbr></th><th scope="col"><abbr title="Points">Pts</abbr></th><th scope="col" class="form">Form</th></tr></thead>
-      <tbody>${rows.map(r => `<tr${r.team.code === mine ? ' class="me"' : ''}>
+      <tbody>${rows.map(r => `<tr${r.team.code === mine ? ' class="me"' : ''}${/^#[0-9a-f]{3,6}$/i.test(r.team.colour || '') ? ` style="--tc:${r.team.colour}"` : ''}>
         <td class="pos">${r.rank}</td>
         <th scope="row" class="club"><span class="cl">${crest(r.team, 22)}<span class="nm">${esc(fullNameOf(r.team))}</span></span></th>
         <td>${r.p}</td><td class="wide">${r.w}</td><td class="wide">${r.d}</td><td class="wide">${r.l}</td>
@@ -72,7 +72,7 @@ if (ctx) {
       groups.get(key).items.push(f);
     }
     const playing = new Set(season.fixtures.filter(f => f.week === week).flatMap(f => [f.home, f.away]));
-    const byes = season.teams.filter(t => !playing.has(t.code));
+    const byes = season.fixtures.some(f => f.week === week && f.test) ? [] : season.teams.filter(t => !playing.has(t.code));
     const byeHtml = byes.length ? `<h3 class="day">Bye</h3><div class="byes">${byes.map(t => `<span class="bye">${crest(t, 20)}<span class="nm">${esc(fullNameOf(t))}</span></span>`).join('')}</div>` : '';
     return `<div class="weektabs" role="tablist" aria-label="Weeks">${weeks.map(w => `<button type="button" role="tab" data-week="${esc(w)}" aria-selected="${w === week}"${season.rounds?.[w] ? ` aria-label="${esc(season.rounds[w].label)}" title="${esc(season.rounds[w].label)}"` : ''}>${esc(season.rounds?.[w]?.short ?? w)}</button>`).join('')}</div>
       <div role="tabpanel" aria-label="${esc(season.rounds?.[week]?.label || `Week ${week}`)}">${[...groups.values()].map(g => `<h3 class="day">${esc(g.label)}</h3><div class="fxs">${g.items.map(f => row(f, now)).join('')}</div>`).join('')}${byeHtml}</div>`;

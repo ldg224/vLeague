@@ -65,3 +65,6 @@
 @media (max-width: 640px) { .sb-board { padding: 14px 12px; gap: 8px; } .sb-plate { padding: 6px 12px; } }
 @media (prefers-reduced-motion: reduce) { .sb-board::after { animation: none !important; } }
 .reduce-motion .sb-board::after { animation: none !important; }
+
+/* A kick-off time (not a score) is smaller, so it clears the state label and any divider (0.40.1) */
+.sb .sb-mid strong.ko { font-size: clamp(1.7rem, 6vw, 2.5rem); }
