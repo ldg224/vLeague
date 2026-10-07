@@ -97,7 +97,11 @@ export async function mountFixtures(ctx) {
   function lockText(w, list) {
     const first = list.filter(f => f.starts_at && !f.postponed).map(f => f.starts_at).sort()[0], r = round(w), d = deadlines.get(w);
     if (d?.locked_at) return `Line-ups locked ${fullFmt.format(new Date(d.locks_at))} · ${sheets.filter(x => x.week === w).length} of ${active().length} team sheets`;
-    if (r.lock_at_override) return `Line-ups lock ${fullFmt.format(new Date(r.lock_at_override))} (picked by hand)`;
+    if (r.lock_at_override) {
+      // Line-ups always lock by the week's first kick-off (0.30), whatever time was picked by hand.
+      const late = first && new Date(r.lock_at_override) > new Date(first);
+      return late ? `Line-ups lock ${fullFmt.format(new Date(first))}, at the first kick-off (the time picked was later)` : `Line-ups lock ${fullFmt.format(new Date(r.lock_at_override))} (picked by hand)`;
+    }
     return first ? `Line-ups lock ${fullFmt.format(new Date(new Date(first).getTime() - r.lock_minutes_before * 60000))}` : 'No kick-off set yet';
   }
 
@@ -669,7 +673,8 @@ export async function mountFixtures(ctx) {
   function lockPasses(w, isoTimes) {
     if (isLocked(w)) return false;
     const r = round(w), first = isoTimes.filter(Boolean).sort()[0];
-    const at = r.lock_at_override ? new Date(r.lock_at_override) : first ? new Date(new Date(first).getTime() - r.lock_minutes_before * 60000) : null;
+    let at = r.lock_at_override ? new Date(r.lock_at_override) : first ? new Date(new Date(first).getTime() - r.lock_minutes_before * 60000) : null;
+    if (at && first && at > new Date(first)) at = new Date(first);   // never after the first kick-off (0.30)
     return !!at && at <= new Date();
   }
   async function confirmLock(w, isoTimes) {

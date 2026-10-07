@@ -3,6 +3,24 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.30.0 (2026-10-07)
+
+Inbox: delete buttons, press conferences and reactions. Needs `0032_press_reactions.sql` (run it once).
+
+- **Added, Inbox:** every post has a small **✕ delete** button, and **Clear all** removes the lot. It only clears *your* Inbox (everyone else
+  still has the post), it follows your account across devices, and an **Undo** link brings the posts back right away. The phone-number
+  post can't be deleted until a number is saved, and an open press conference can't be deleted.
+- **Added, press conferences:** from 24 hours before kick-off, a pinned Inbox item asks three questions with a few preset answers each
+  (confident, humble, deflecting). Pick one per question and change it any time until kick-off. Answers move four meters (fans, happiness,
+  team, opposition), each capped at 3%. After kick-off, both clubs' answers show as quotes. The match uses the **Team** and **Opposition**
+  meters: a club's players play at up to 3% better or worse, and so do its opponent's. Both clubs are asked the same three questions
+  (picked from a bank of eight by the match).
+- **Added, reactions:** 👍 🔥 😂 👏 😮 on news posts and on press quotes, one per person, press again to take it back.
+- **Changed:** a week's line-ups now always lock **at or before its first kick-off**. A lock time typed by hand that is later than the
+  first game is pulled back to the first kick-off, and the Editor says so.
+- **Database:** `0032_press_reactions.sql` adds `press_questions`, `press_answers` (written only through `save_press_answer()`, which
+  checks the window and the club) and `reactions`, and fixes the lock rule. Checked in `supabase/tests/rls_check.py`.
+
 ## 0.29.2 (2026-10-07)
 
 - **Fixed:** on the Draft page, the **Max value** box lost its cursor after every digit, so you had to click back in to type each number. It now keeps the cursor.

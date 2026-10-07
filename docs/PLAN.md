@@ -113,46 +113,17 @@ vLeague starts clean: no fixtures or results are carried over from s3 (decided 5
 - Free-plan care: a few small reads per page; 500 MB database and 5 GB monthly transfer are nowhere near. A weekly
   backup export and keep-alive are optional extras.
 
-### 0.12: Fixtures and results on Supabase (design agreed 5 October 2026; not started)
-vLeague starts clean: no fixtures or results are copied from the s3 test site. After this release nothing in the app
-reads s3 any more (the dashboard, Home, League, Editor, the club page and the reminder emails all read Supabase).
-- [ ] `fixtures` table: id (text like `w1-tur-sks`), week, home and away (club codes), kick-off as one `timestamptz`
-      (entered in Melbourne time), stage (null, SF, GF), postponed flag. Everyone reads; only the office writes.
-- [ ] `results` table, one row per fixture: score, goals, cards, team stats, player ratings and Man of the Match (the
-      compact summary the s3 engine already makes), plus `file` (the match file's name). **Hidden until kick-off, enforced
-      by the database** (row-level security compares kick-off to `now()`), so a result can't be read early even by
-      someone calling the API directly. The office reads it any time.
-- [ ] Editor → Fixtures: add one, add a whole week, "Generate a season" (round robin, home and away balanced, byes for an
-      odd number of clubs), set dates and times, postpone, restore, remove a result. Standings are worked out from these.
-- [ ] Replace the app's `loadSeason()` (dashboard-data.js) with reads from Supabase; keep the same shape so pages need
-      few changes. Logos come from the `crests` bucket. `send-reminders` reads fixtures from Supabase.
-- [ ] Match files (about 2 MB each) stay out of the database; 0.13 publishes them on this site's Pages.
-- Checks: security checks for who can read a hidden result; the table, top players and form leave hidden results out.
+### 0.12: Fixtures and results on Supabase (done in 0.12.0; checked 7 October 2026)
+Fixtures, results, standings, the dashboard, Home, League, the Editor, the club page and the reminder emails all read Supabase. The s3
+site is only read by a local `?src=` test copy. Line-ups lock at or before the week's first kick-off (0.30).
 
-### 0.13: Season planner (proposed 5 October 2026, awaiting the user's go-ahead on the order)
-The user wants lots of control over games and fixtures that is still simple and nice to use: lengths between games,
-scoreboard looks (Christmas, finals...), line-up deadlines worked out from kick-offs, and weeks split across several
-game settings. The idea: **Season, then Rounds, then Match windows, then Matches.**
-- **Round** = a week or a special round ("Round 4", "Christmas Round", "Semi-finals"). Has a name, a kind (regular, finals,
-  special) and a **look**.
-- **Match window** = a block of games with its own settings, e.g. "Saturday night: 3 games, 90 minutes apart" and "Sunday
-  arvo: 2 games". A round can have several, which is how a week is split across different settings.
-  Settings: first kick-off, gap between games, and a **lock rule** ("line-ups lock 3 hours before the window's first game").
-- **Look (scoreboard theme)** = a named preset stored as data (colours, ornament, banner text, label style): Classic,
-  Finals, Grand Final, Christmas, Derby... Chosen per round, window or match; unknown looks fall back to Classic, so a
-  new look is a new row, not a new release. Editor shows a live preview. The scoreboards in the app read it.
-- **Deadlines become calculated**: a window's lock time = first kick-off minus the lock rule. Shift a kick-off and the
-  lock moves with it. A manual override stays possible. The existing weekly lock job reads windows instead of a
-  hand-typed deadline (the `deadlines` table stays as the record of what locked).
-- **Rhythms** (saved patterns) make it quick: pick "Saturday night triple-header", set the first date, preview the
-  calendar, Create. Everything beyond date, time, gap and games per day sits under "More options".
-- **Fixtures tab** groups by round then window; team names in each club's colour (done in 0.12.2); "move this round by N
-  days"; click anything to edit.
-- Data (sketch): `rounds` (number, name, kind, look), `match_windows` (round, label, starts_at, gap_minutes,
-  lock_minutes_before, look), `fixtures` gain `window_id` and `slot` (kick-off = window start + slot x gap, still editable),
-  `looks` (key, name, settings jsonb).
-- Questions: build the planner before Simulate (this order) or after? Lock rule per window (proposed) or per match?
-  Do finals need a bracket view?
+### 0.13: Season planner (waits until after the Inbox and press work; may not be needed)
+Decided 7 October 2026: we already have a fixture generator and per-week lock rules, so the planner (rounds, match windows,
+scoreboard looks, rhythms) waits, and only the parts that turn out to be missing get built. Settled answers:
+- **Lock rule:** line-ups lock before the first match of the week. Done in 0.30 (never later than the first kick-off).
+- **Simulate came first** (0.14), the planner comes after.
+- **Finals bracket view:** after 1.0.
+Still possible later: scoreboard looks (Christmas, finals...) as data, and several game settings inside one week.
 
 ### 0.14: Simulate (done in 0.14.0), news and the old site retires
 - [x] Simulate in Editor → Fixtures (one match, a week or everything unplayed; play again; remove result); engine copied
@@ -164,13 +135,17 @@ game settings. The idea: **Season, then Rounds, then Match windows, then Matches
 
 ### 0.15.0: Simpler Editor (done): Requests, Clubs, Managers and Phones are one Clubs tab, with every registration kept in full
 
-### Inbox and press (next; 0.15 became the simpler Editor, 0.18 became news)
-- [ ] One inbox: news for this club, press conferences, deadlines; only things that need action or matter.
+### Draft (done, 0.21 to 0.29)
+Limited-time player draft: manager board, queue and auto-pick, office tools, quiet times, emails, live updates. See `docs/DRAFT.md`. The Draft tab is always visible (0.29.1), with a preview when no draft is open.
+
+### Inbox and press (done in 0.30.0)
+- [x] One inbox: news for this club, press conferences, deadlines. Every post has a delete button; "Clear all" and Undo (0.30).
 - [x] News audiences: one club, several, all clubs, everyone (0.18.0). Guests-only is not offered yet.
-- [ ] Press conference opening 24 hours before kick-off. **Preset answers, not typed text** (user's decision, 6 October 2026):
-      each question has a few answers with a tone (confident, humble, deflecting...), which moves the press-effect
-      meters (fans, happiness, team and opposition performance, capped at 3%). Chosen answers are quoted in the match preview.
-- [ ] Reactions on results, news and press answers.
+- [x] Press conference opening 24 hours before kick-off. **Preset answers, not typed text** (user's decision, 6 October 2026):
+      each question has a few answers with a tone (confident, humble, deflecting), moving four meters (fans, happiness, team and
+      opposition performance, capped at 3%). The Team and Opposition meters change the match; chosen answers are quoted in the Inbox.
+- [x] Reactions on news and press answers (0.30). Reactions on results are still to come with the Match centre.
+- [ ] Later: the office edits the question bank in the Editor; quotes also shown in a match preview on Home.
 
 ### 0.16: Match centre
 - [ ] The 3D broadcast view, live and after full time.

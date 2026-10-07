@@ -9,6 +9,8 @@
 // Each club plays its week's locked team sheet (formation, tactics, XI, set-piece takers); a club with no locked sheet
 // gets the engine's own picks. Players suspended by a red card are left out. Finals (no week) use the engine's picks.
 
+import { loadPress, pressFactors } from './press-data.js';
+
 const POSITIONS = ['GK', 'DEF', 'MID', 'FWD'];
 const BAN_MATCHES = 1;                       // games a red card or two yellows costs
 const FORMATIONS = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2'];
@@ -46,6 +48,9 @@ function checkSquad(season, code) {
   if (missing.length) throw new Error(`${team.name} has no ${missing.join(', ')} in its squad. Each club needs at least one GK, DEF, MID and FWD.`);
   return { team, squad };
 }
+
+// A club's press-conference effect (0.30): ratings times a factor within 3% of 1, then kept inside 1 to 10.
+const scale = (v, f = 1) => Math.min(10, Math.max(1, Math.round(v * f * 100) / 100));
 
 const stamp = f => `${f.date || ''}T${f.time || ''}`;
 
@@ -104,7 +109,7 @@ function sheetTactics(sheet, available) {
 }
 
 // The engine's league format, built from the two clubs and their players. Suspended players (`out`) are left out.
-function toLeague(season, codes, out = new Set(), sheets = {}) {
+function toLeague(season, codes, out = new Set(), sheets = {}, factor = {}) {
   const teams = {}, players = {}, tactics = {};
   for (const code of codes) {
     const { team, squad } = checkSquad(season, code);
@@ -115,11 +120,20 @@ function toLeague(season, codes, out = new Set(), sheets = {}) {
     for (const p of available) {
       players[p.id] = {
         id: String(p.id), name: p.name, team: code, position: (p.position || 'MID').toUpperCase(),
-        offense: Number(p.offense) || 5, defense: Number(p.defense) || 5,
+        offense: scale(Number(p.offense) || 5, factor[code]), defense: scale(Number(p.defense) || 5, factor[code]),
       };
     }
   }
   return { teams, players, attributes: {}, tactics, schedule: [] };
+}
+
+// { CODE: factor } from both clubs' press-conference answers; nothing is changed if the press tables aren't there yet.
+async function pressFor(c, fixture) {
+  if (!fixture.id) return {};
+  try {
+    const { bank, answers } = await loadPress([fixture.id]);
+    return bank.length ? pressFactors(bank, answers, fixture.home, fixture.away) : {};
+  } catch { return {}; }
 }
 
 export async function simulateFixture(c, season, fixture, { onProgress, seed } = {}) {
@@ -129,7 +143,8 @@ export async function simulateFixture(c, season, fixture, { onProgress, seed } =
   const out = new Set(suspended.map(s => s.player));
   toLeague(season, [fixture.home, fixture.away], out);   // validates both squads before loading anything
   const sheets = fixture.week != null && !fixture.stage ? await weekSheets(c, fixture.week) : {};
-  const league = toLeague(season, [fixture.home, fixture.away], out, sheets);
+  const factor = await pressFor(c, fixture);
+  const league = toLeague(season, [fixture.home, fixture.away], out, sheets, factor);
   await start();
   const job = ++jobSeq;
   return new Promise((resolve, reject) => {

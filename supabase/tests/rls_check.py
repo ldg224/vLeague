@@ -278,7 +278,7 @@ UNLOCK_PRE = "insert into public.rounds (week) values (92); insert into public.f
 UNLOCK_CHECKS = [
     ('anon', 'guest cannot unlock a week', UNLOCK_PRE, {'error': 'permission denied'}, "select public.office_unlock_week(92);"),
     ('manager', 'manager cannot unlock a week', UNLOCK_PRE, {'error': 'Only the league office'}, "select public.office_unlock_week(92);"),
-    ('office', 'office unlocks a week with no played matches', UNLOCK_PRE + " update public.rounds set lock_at_override = now() + interval '8 days' where week = 92;",
+    ('office', 'office unlocks a week with no played matches', UNLOCK_PRE + " update public.fixtures set starts_at = now() + interval '8 days' where id = 'w92-a';",
      "select public.office_unlock_week(92); select locked_at is null and locks_at > now() + interval '7 days' as ok from public.deadlines where week = 92;"),
     ('office', 'a week with a played match cannot be unlocked', UNLOCK_PRE + " insert into public.results (fixture, summary) values ('w92-a', '{}');", {'error': 'already been played'}, "select public.office_unlock_week(92);"),
     ('office', 'an unlocked week is refused', '', {'error': 'isn'}, "select public.office_unlock_week(93);"),
@@ -312,6 +312,43 @@ ROSTER_CHECKS = [
 ]
 
 
+# 0.30: press conferences, reactions, and the lock never after the first kick-off
+PRESS_FX = ("insert into public.fixtures (id, week, home, away, starts_at) values "
+            "('zz-open-1', 98, 'TUR', 'LAU', now() + interval '2 hours'), ('zz-far-1', 98, 'TUR', 'LAU', now() + interval '3 days'), "
+            "('zz-other-1', 98, 'SKS', 'LAU', now() + interval '2 hours'), ('zz-past-1', 98, 'TUR', 'LAU', now() - interval '1 hour');")
+PRESS_CHECKS = [
+    ('manager', 'manager answers an open press conference', PRESS_FX,
+     "select public.save_press_answer('zz-open-1', 'form', 'a'); select count(*) = 1 as ok from public.press_answers where club = 'TUR';"),
+    ('manager', 'manager can change an answer', PRESS_FX,
+     "select public.save_press_answer('zz-open-1', 'form', 'a'); select public.save_press_answer('zz-open-1', 'form', 'b'); select count(*) = 1 and min(answer) = 'b' as ok from public.press_answers;"),
+    ('manager', 'press conference is closed more than 24 hours out', PRESS_FX, {'error': "isn't open"} if False else {'error': 'open'},
+     "select public.save_press_answer('zz-far-1', 'form', 'a');"),
+    ('manager', 'press conference is closed after kick-off', PRESS_FX, {'error': 'open'},
+     "select public.save_press_answer('zz-past-1', 'form', 'a');"),
+    ('manager', "manager cannot answer for another club's match", PRESS_FX, {'error': 'your club'},
+     "select public.save_press_answer('zz-other-1', 'form', 'a');"),
+    ('manager', 'manager cannot pick an answer that is not offered', PRESS_FX, {'error': 'answers'},
+     "select public.save_press_answer('zz-open-1', 'form', 'zz');"),
+    ('manager', 'manager cannot write press answers directly', PRESS_FX, {'error': 'row-level security'},
+     "insert into public.press_answers (fixture, club, question, answer) values ('zz-open-1', 'TUR', 'form', 'a');"),
+    ('anon', 'guest cannot read press answers', '', {'error': 'permission denied'}, "select count(*) from public.press_answers;"),
+    ('anon', 'guest cannot call the press function', PRESS_FX, {'error': 'permission denied'}, "select public.save_press_answer('zz-open-1', 'form', 'a');"),
+    ('manager', 'manager reads the question bank', '', "select count(*) >= 3 as ok from public.press_questions;"),
+    ('manager', 'manager cannot edit the question bank', '', "with u as (update public.press_questions set text = 'zzzzzz' returning 1) select count(*) = 0 as ok from u;"),
+    ('manager', 'manager reacts once per post and can change it', '',
+     "insert into public.reactions (target, emoji) values ('news:1', '👍'); update public.reactions set emoji = '🔥' where target = 'news:1'; select count(*) = 1 and min(emoji) = '🔥' as ok from public.reactions;"),
+    ('manager', 'a second reaction row for the same post is refused', '', {'error': 'duplicate'},
+     "insert into public.reactions (target, emoji) values ('news:1', '👍'), ('news:1', '🔥');"),
+    ('manager', 'reaction must be one of the five', '', {'error': 'check'}, "insert into public.reactions (target, emoji) values ('news:1', '💩');"),
+    ('manager', 'manager cannot react as someone else', '', {'error': 'row-level security'},
+     f"insert into public.reactions (target, user_id, emoji) values ('news:1', '{FAKE_NOCLUB}', '👍');"),
+    ('anon', 'guest cannot react', '', {'error': 'permission denied'}, "insert into public.reactions (target, emoji) values ('news:1', '👍');"),
+    ('office', 'line-ups lock no later than the first kick-off even when set by hand',
+     PRESS_FX + " insert into public.rounds (week) values (98) on conflict do nothing; update public.rounds set lock_at_override = now() + interval '5 days' where week = 98; select public.sync_week_deadline(98);",
+     "select locks_at <= now() - interval '59 minutes' as ok from public.deadlines where week = 98;"),
+]
+
+
 def main():
     failed = 0
     for who, desc, body in CHECKS:
@@ -340,7 +377,7 @@ def main():
             ok = bool(rows_of(r) and r[-1].get('ok'))
         failed += not ok
         print(f"{'PASS' if ok else 'FAIL'}  [{who:7}] {desc}" + ('' if ok else f'  -> {r}'))
-    for who, desc, pre, *rest in UNLOCK_CHECKS + ROSTER_CHECKS:
+    for who, desc, pre, *rest in UNLOCK_CHECKS + ROSTER_CHECKS + PRESS_CHECKS:
         expect, body = (rest[0], rest[1]) if len(rest) == 2 else (None, rest[0])
         r = as_user(who, body, pre)
         if expect:
@@ -363,7 +400,7 @@ def main():
     clean = rows_of(left) and left[0]['n'] == 0
     print('PASS  test accounts cleaned up' if clean else f'FAIL  test accounts left behind: {left}')
     failed += not clean
-    total = len(CHECKS) + len(SETUP_CHECKS) + len(DEADLINE_CHECKS) + len(UNLOCK_CHECKS) + len(ROSTER_CHECKS) + len(SETTINGS_CHECKS) + 1
+    total = len(CHECKS) + len(SETUP_CHECKS) + len(DEADLINE_CHECKS) + len(UNLOCK_CHECKS) + len(ROSTER_CHECKS) + len(SETTINGS_CHECKS) + len(PRESS_CHECKS) + 1
     print(f'\n{total - failed}/{total} passed')
     sys.exit(1 if failed else 0)
 
