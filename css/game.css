@@ -6,7 +6,6 @@
 .gc { display: grid; gap: 14px; }
 
 .gc-head { padding: 4px 0 0; }
-.gc-tabs { margin: 0; }
 .gc-card { padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); min-width: 0; }
 .gc-card h2 { margin: 0 0 10px; font-size: 1.05rem; }
 .gc-card h3 { margin: 0 0 6px; font-size: .95rem; }

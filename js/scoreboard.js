@@ -7,7 +7,6 @@
 import { esc } from './member.js';
 
 const HEX = /^#[0-9a-f]{6}$/i;
-export const KNOWN_LOOKS = ['classic', 'finals', 'grand_final', 'christmas', 'derby'];
 
 export function lookInfo(season, fx) {
   const row = season?.looks?.[fx?.look], s = row?.settings || {};

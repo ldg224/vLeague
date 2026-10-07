@@ -64,18 +64,6 @@
 }
 
 /* Deadlines (0.6) */
-.ed-dls { list-style: none; margin: 0 0 28px; padding: 0; }
-.ed-dl { display: grid; grid-template-columns: 6em minmax(0, 1fr) auto auto auto; align-items: center; gap: 6px 14px; padding: 12px 4px; border-bottom: 1px solid var(--line); }
-.ed-dl small { color: var(--faint); font-size: .82rem; }
-.ed-dl input { min-height: 40px; padding: 6px 10px; border-radius: 10px; border: 1px solid rgba(var(--edge),.16); background: var(--surface); color: var(--text); font: 500 .92rem var(--font); }
-.ed-dl input.suggested { color: var(--muted); border-style: dashed; }
-.ed-dl .ed-msg { grid-column: 2 / -1; margin: 0; color: var(--muted); font-size: .82rem; }
-.ed-dl.locked { grid-template-columns: 6em minmax(0, 1fr) auto; }
-.ed-dl.locked .state { grid-column: 2 / -1; color: var(--muted); font-size: .85rem; }
-.ed-dl-add { max-width: 520px; }
-.ed-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 20px; }
-.ed-bulk .ed-msg { margin: 0; }
-.ed-dl .ed-pill { justify-self: start; }
 .ed-digest { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 0 0 20px; font-weight: 600; cursor: pointer; }
 .ed-digest input { width: 18px; height: 18px; accent-color: var(--brand); }
 .ed-digest .ed-msg { margin: 0; font-weight: 400; }
@@ -350,13 +338,6 @@
 .dr-switch button[aria-pressed="true"][data-v="0"] { background: #c0392b; color: #fff; }
 .dr-switch button:focus-visible { outline: 3px solid var(--text); outline-offset: -3px; }
 .dr-bigbar { padding: 20px 22px; border-radius: var(--r-md); border: 1px solid var(--line); border-left: 10px solid var(--muted); background: var(--surface, var(--card)); display: grid; gap: 14px; }
-.dr-bigbar.st-live { border-left-color: #3aa76d; }
-.dr-bigbar.st-paused { border-left-color: #e0a030; }
-.dr-bigbar.st-setup { border-left-color: var(--blue-500, #3b82f6); }
-.dr-state { display: inline-block; padding: 3px 12px; border-radius: 999px; background: var(--muted); color: var(--bg, #fff); font: 700 .75rem var(--font); letter-spacing: .06em; text-transform: uppercase; }
-.dr-bigbar.st-live .dr-state { background: #3aa76d; color: #fff; }
-.dr-bigbar.st-paused .dr-state { background: #e0a030; color: #1a1200; }
-.dr-bigbar.st-setup .dr-state { background: var(--blue-500, #3b82f6); color: #fff; }
 .dr-bigbar h2 { margin: 8px 0 4px; font: 700 clamp(1.5rem, 4.5vw, 2.2rem)/1.1 var(--font-display); }
 .dr-bigbar .dr-clock b { font-size: clamp(2rem, 6vw, 3rem); }
 .dr-main-act { align-items: center; }

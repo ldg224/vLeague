@@ -1,21 +1,15 @@
 /* The match viewer (0.36): broadcast, tactical and highlights views with their controls. Ported from the s3 site's match page. */
 .replay-card { padding: 16px; }
-.replay-wrap { position: relative; border-radius: 16px; overflow: hidden; background: var(--bg); box-shadow: inset 0 0 60px rgba(0,0,0,.8); }
-.replay-wrap canvas { width: 100%; height: auto; display: block; }
 .replay-caption {
   position: absolute; left: 50%; top: 8px; transform: translateX(-50%); max-width: calc(100% - 16px); overflow: hidden; text-overflow: ellipsis; padding: 5px 12px; border-radius: 999px;
   background: rgba(10,15,25,.88); border: 1px solid var(--line); font-weight: 800; font-size: .8rem; white-space: nowrap;
   opacity: 0; transition: opacity .3s; pointer-events: none;
 }
 .replay-caption.show { opacity: 1; }
-.replay-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
-.replay-controls input[type=range] { flex: 1 1 100%; min-width: 0; height: 28px; accent-color: var(--club, var(--blue-500)); }
 .ctl { padding: 8px 16px; min-height: 38px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,.06); font-weight: 800; font-size: .8rem; cursor: pointer; }
 .ctl:hover { border-color: var(--club, var(--blue-500)); }
 .ctl.live { color: var(--live-fg, #ff5252); border-color: var(--live-fg, #ff5252); }
 .replay-clock { font-variant-numeric: tabular-nums; font-weight: 900; min-width: 54px; }
-.replay-empty { min-height: 140px; display: grid; place-items: center; text-align: center; padding: 20px; color: var(--muted); background: linear-gradient(180deg, var(--surface-raised, #1b2638), var(--bg)); border-radius: 16px; }
-.replay-empty strong { display: block; color: var(--text); font-size: 1.1rem; margin-bottom: 6px; }
 .mp-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
 .mp-head .card-title { margin: 0; flex: 1 1 auto; }
 .mp-tabs { display: flex; gap: 4px; padding: 3px; border-radius: 12px; background: rgba(255,255,255,.05); overflow-x: auto; }
@@ -80,5 +74,4 @@ body.mp-fs-open { overflow: hidden; }
 .mp-live .mp-big { display: none !important; }
 .mp-live .mp-canvas { cursor: default; }
 .mp-live .mp-tabs { }
-.mp-card-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .gc-card.replay-card { padding: 14px; }

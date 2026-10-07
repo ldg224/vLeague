@@ -4,7 +4,6 @@ import { esc, crestUrl } from './member.js';
 import { logoUrl } from './dashboard-data.js';
 
 const hex = c => (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(c || '') ? c : '#475569');
-export const teamColour = hex;
 
 // Dark or white text, whichever reads on a club colour.
 function onColour(c) {

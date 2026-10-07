@@ -10,11 +10,11 @@
   --bg: #0a0f19;
   --surface: #111827;
   --surface-raised: #182133;
-  --surface-hover: var(--surface-hover);
+  --surface-hover: #1f2b44;
   --line: rgba(var(--edge),0.12);
   --text: var(--white);
   --text-strong: var(--white);
-  --text-soft: var(--text-soft);
+  --text-soft: #d3dbe8;
   --muted: #b0bac9;
   --faint: #808b9c;
   --brand: var(--blue-300);
@@ -26,14 +26,14 @@
   --tint-bg: rgba(30, 136, 229, 0.12);
   --tint-border: rgba(100, 181, 246, 0.3);
   --ring: rgba(66, 165, 245, 0.16);  /* focus glow */
-  --amber: var(--amber); --amber-text: var(--amber-text); --err-text: var(--err-text);
+  --amber: #f0a030; --amber-text: #ffcc80; --err-text: #ff8a80;
   --live-bg: #ffffff; --live-fg: var(--navy);   /* the LIVE badge */
   /* Tints that sit on the page: a colour at some opacity, so one name works on dark and light. */
   --ink: 255, 255, 255;        /* hovers and outlines */
   --edge: 160, 190, 230;       /* input and card borders */
   --card: rgba(17, 24, 39, 0.72); --card-strong: rgba(17, 24, 39, 0.85);
   --bar: rgba(10, 15, 25, 0.86); --bar-strong: rgba(10, 15, 25, 0.94);
-  --autofill: var(--autofill);
+  --autofill: #111827;
   --pitch-line: 144, 202, 249;
   --shadow: 0, 0, 0;
   /* Results (W/D/L form chips and result badges): status colours, deliberately outside the blue ramp. */
