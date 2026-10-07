@@ -163,11 +163,24 @@ async function run() {
     if (data && document.getElementById('mp')) player = new MatchPlayer({ S: season, FX: fx, st: st(), data, timeline: null });
   }
 
+  // The highest-rated player of the match (both teams): the man of the match.
+  const bestPlayer = () => Object.keys(data.stats.players).reduce((b, id) => (data.stats.players[id].rating > (b ? data.stats.players[b].rating : -1) ? id : b), null);
+
   // ---------------------------------------------------------------- timeline
-  const icon = e => ({ goal: '⚽', card: e.card === 'yellow' ? '🟨' : '🟥', woodwork: '🥅', shot: '🎯', penalty: '⚽' }[e.type] || '•');
+  // Icons drawn as small SVGs (not emoji, which look different on every phone and PC).
+  const svg = (label, body) => `<svg class="ico" viewBox="0 0 24 24" role="img" aria-label="${label}"><title>${label}</title>${body}</svg>`;
+  const ICONS = {
+    ball: svg('Goal', '<circle cx="12" cy="12" r="10" fill="#fff" stroke="#1b2333" stroke-width="1.5"/><path d="M12 7.2l4.2 3-1.6 4.9H9.4L7.8 10.2z" fill="#1b2333"/><path d="M12 7.2V2.8M16.2 10.2l4.3-1.4M14.6 15.1l2.7 3.7M9.4 15.1l-2.7 3.7M7.8 10.2L3.5 8.8" stroke="#1b2333" stroke-width="1.4" stroke-linecap="round"/>'),
+    yellow: svg('Yellow card', '<rect x="6" y="3" width="12" height="18" rx="2.2" fill="#f5c518" stroke="#b8920a" stroke-width="1"/>'),
+    red: svg('Red card', '<rect x="6" y="3" width="12" height="18" rx="2.2" fill="#e5392f" stroke="#a7231b" stroke-width="1"/>'),
+    assist: svg('Assist', '<path d="M3 4h7v7.5l9 2.6c1.2.4 2 1.4 2 2.7V20H3z" fill="#5aa7ff"/><path d="M7 20v2M11 20v2M15 20v2M19 20v2" stroke="#5aa7ff" stroke-width="2" stroke-linecap="round"/>'),
+    post: svg('Hit the woodwork', '<path d="M5 21V4h14v17" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>'),
+    shot: svg('Shot on target', '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>'),
+  };
+  const icon = e => ({ goal: ICONS.ball, card: e.card === 'yellow' ? ICONS.yellow : ICONS.red, woodwork: ICONS.post, shot: ICONS.shot, penalty: ICONS.ball }[e.type] || '•');
   function eventLi(e) {
     const nm = i => (i ? data.byId[i]?.name || '' : ''), who = nm(e.player || e.scorer);
-    const text = e.type === 'goal' ? `Goal! ${esc(nm(e.scorer))}${e.own_goal ? ' (own goal)' : ''}${e.assist ? `, assist ${esc(nm(e.assist))}` : ''} <b>${e.score?.[0] ?? ''}–${e.score?.[1] ?? ''}</b>`
+    const text = e.type === 'goal' ? `Goal! ${esc(nm(e.scorer))}${e.own_goal ? ' (own goal)' : ''}${e.assist ? ` ${ICONS.assist}${esc(nm(e.assist))}` : ''} <b>${e.score?.[0] ?? ''}–${e.score?.[1] ?? ''}</b>`
       : e.type === 'card' ? `${e.card === 'yellow' ? 'Yellow card' : e.card === 'red' ? 'Red card' : 'Second yellow'}, ${esc(who)}`
       : e.type === 'woodwork' ? `${esc(who)} hits the ${esc(e.part || 'frame')}` : e.type === 'penalty' ? `Penalty, ${esc(who)}` : `Shot on target, ${esc(who)} <small>xG ${(e.xg || 0).toFixed(2)}</small>`;
     return `<li class="tl-row ${e.team === fx.home ? 'h' : 'a'}" data-t="${e.t}"${live() ? '' : ' title="Watch this moment"'}><span class="min">${esc(e.minute)}'</span><span class="ic">${icon(e)}</span><span class="tx">${text} <small>${esc(nameOf(teamOf(season, e.team)))}</small></span></li>`;
@@ -187,19 +200,20 @@ async function run() {
       ['Interceptions', h.interceptions, a.interceptions], ['Clearances', h.clearances, a.clearances], ['Saves', h.saves, a.saves], ['Fouls', h.fouls, a.fouls],
       ['Offsides', h.offsides, a.offsides], ['Yellow cards', h.yellow, a.yellow], ['Red cards', h.red, a.red], ...(full && h.km != null ? [['Distance covered (km)', +h.km.toFixed(1), +a.km.toFixed(1)]] : [])];
     const row = ([l, x, y, u = '']) => { const s = x + y || 1; return `<div class="gc-stat"><span class="v">${x}${u}</span><div class="lbl">${esc(l)}<div class="bars"><i class="bh" style="width:${100 * x / s}%"></i><i class="ba" style="width:${100 * y / s}%"></i></div></div><span class="v">${y}${u}</span></div>`; };
-    const motm = full && fx.result?.motm ? fx.result.players?.[fx.result.motm] : null;
+    const bp = full ? bestPlayer() : null, bs = bp ? data.stats.players[bp] : null, bi = bp ? data.byId[bp] : null;
+    const motm = bp && bi ? { name: bi.name, team: bi.team, r: bs.rating } : null;
     return `<section class="gc-sec" id="gc-stats"><h2>Match statistics${full ? '' : ' so far'}</h2><div class="gc-statrow head"><b>${esc(nameOf(home()))}</b><b>${esc(nameOf(away()))}</b></div>${R.map(row).join('')}</section>
-      ${motm ? `<section class="gc-sec"><h2>Man of the match</h2><p class="gc-motm"><b>${esc(motm.name)}</b> <span>${esc(nameOf(teamOf(season, motm.team)))}</span> <span class="rating r-hi">${Number(motm.r).toFixed(1)}</span></p></section>` : ''}`;
+      ${motm ? `<section class="gc-sec"><h2>Man of the match</h2><p class="gc-motm"><b>${esc(motm.name)}</b> <span>${esc(nameOf(teamOf(season, motm.team)))}</span> <span class="rating r-motm">${Number(motm.r).toFixed(1)}</span></p></section>` : ''}`;
   }
 
   // ---------------------------------------------------------------- line-ups
   function lineupsSection() {
-    const t = horizon(), full = st() === 'ft', ev = eventsTo(t), P = data.stats.players;
+    const t = horizon(), full = st() === 'ft', ev = eventsTo(t), P = data.stats.players, bestId = full ? bestPlayer() : null;
     const goals = id => ev.filter(e => e.type === 'goal' && e.scorer === id && !e.own_goal).length, assists = id => ev.filter(e => e.type === 'goal' && e.assist === id).length;
-    const cards = id => ev.filter(e => e.type === 'card' && e.player === id).map(e => (e.card === 'yellow' ? '🟨' : '🟥')).join('');
+    const cards = id => ev.filter(e => e.type === 'card' && e.player === id).map(e => (e.card === 'yellow' ? ICONS.yellow : ICONS.red)).join('');
     const col = c => { const team = data.teams[c === fx.home ? 'home' : 'away']; return `<div><h3>${esc(fullNameOf(teamOf(season, c)))} <small>${esc(team.formation || '')}</small></h3><ol class="gc-lu">${team.lineup.map(x => {
       const r = full ? P[x.id]?.rating : null;
-      return `<li><span class="pos">${esc(x.slot || x.position)}</span><span class="nm">${esc(x.name)}${team.captain === x.id ? ' <small>(c)</small>' : ''} ${'⚽'.repeat(goals(x.id))}${'🅰️'.repeat(assists(x.id))}${cards(x.id)}</span>${r ? `<span class="rating ${r >= 7 ? 'r-hi' : r < 6 ? 'r-lo' : 'r-mid'}">${r.toFixed(1)}</span>` : ''}</li>`; }).join('')}</ol></div>`; };
+      return `<li><span class="pos">${esc(x.slot || x.position)}</span><span class="nm">${esc(x.name)}${team.captain === x.id ? ' <small>(c)</small>' : ''} <span class="evs">${ICONS.ball.repeat(goals(x.id))}${ICONS.assist.repeat(assists(x.id))}${cards(x.id)}</span></span>${r ? `<span class="rating ${x.id === bestId ? 'r-motm' : r >= 7 ? 'r-hi' : r < 6 ? 'r-lo' : 'r-mid'}"${x.id === bestId ? ' title="Man of the match"' : ''}>${r.toFixed(1)}</span>` : ''}</li>`; }).join('')}</ol></div>`; };
     return `<section class="gc-sec" id="gc-lineups"><h2>Line-ups</h2><div class="gc-two">${col(fx.home)}${col(fx.away)}</div>${full ? '' : '<p class="gc-note">Ratings appear at full time.</p>'}</section>`;
   }
 

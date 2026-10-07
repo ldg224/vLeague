@@ -75,3 +75,10 @@ html { scroll-behavior: smooth; }
 .gc-jump a { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font: 600 .85rem var(--font); text-decoration: none; }
 .gc-jump a:hover, .gc-jump a:focus-visible { color: var(--text); border-color: var(--hc, var(--blue-400)); }
 .gc-sec { scroll-margin-top: 56px; }
+
+/* Icons (0.41.1): drawn SVGs instead of emoji. The man of the match's rating is blue. */
+.ico { width: 1.15em; height: 1.15em; flex: none; vertical-align: -.22em; }
+.gc-ev .ic { display: grid; place-items: center; align-self: center; }
+.gc-lu .nm { display: flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
+.gc-lu .evs { display: inline-flex; gap: 2px; align-items: center; }
+.rating.r-motm { background: #2f6fe0; color: #fff; box-shadow: 0 0 0 2px color-mix(in srgb, #2f6fe0 35%, transparent); }

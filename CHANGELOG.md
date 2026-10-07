@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.41.1 (2026-10-08)
+
+The Game centre uses drawn icons, and the man of the match is clearer. No database change.
+
+- **Changed, Game centre:** the ball, yellow and red cards, assists, shots and woodwork are drawn icons, not emoji, so they look the same on every phone and computer. Assists show a boot icon, in the line-ups and in the timeline.
+- **Changed, man of the match:** the highest-rated player of the match (either team) is picked from the match file, and their rating is blue, in the Man of the match box and in the line-ups.
+
 ## 0.41.0 (2026-10-08)
 
 Tidies the 0.40.0 clean-up and makes the pages easier to use. No database change.
