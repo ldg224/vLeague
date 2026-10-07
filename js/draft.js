@@ -36,7 +36,7 @@ const COLS = [
   { key: 'value', label: 'Value', long: 'Value', first: -1, val: p => p.value },
 ];
 const TABS = [['board', 'Board'], ['players', 'Available players'], ['values', 'Team values']];
-const CAP = 100000;   // the weekly cap per team (supabase/migrations/0010_cap_100k_prices.sql)
+const CAP = 125000;   // the weekly cap per team: $125,000 from 0.39.1 (was $100,000, supabase/migrations/0010_cap_100k_prices.sql set the prices)
 const money = n => `$${Number(n || 0).toLocaleString('en-AU')}`;
 const fmt = ms => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); if (h >= 48) return `${Math.floor(h / 24)}d ${h % 24}h`; return h ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}:${String(s % 60).padStart(2, '0')}`; };
 

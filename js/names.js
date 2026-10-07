@@ -118,7 +118,7 @@ export const overall = ({ position, offense, defense }) => (position === 'GK' ? 
   : position === 'MID' ? 0.5 * offense + 0.5 * defense
   : 0.7 * offense + 0.3 * defense);
 
-// The price in dollars, $700 to about $16,900 (the weekly cap is $100,000). Same as the `value` column in the database.
+// The price in dollars, $700 to about $16,900 (the weekly cap is $125,000 since 0.39.1; prices are unchanged). Same as the `value` column in the database.
 export function playerValue(p) {
   return Math.round((700 + 17300 * ((overall(p) - 1) / 9) ** 2) / 100) * 100;
 }

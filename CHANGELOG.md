@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.39.1 (2026-10-07)
+
+No database change.
+
+- **Changed:** the weekly budget is now **$125,000** (was $100,000). The Draft page's budget bar, the "of $125,000 used" line, the pick confirmation, the orange and red warnings (at 90% and over the cap) and the Team values
+  page all use it. Player prices are unchanged, so every club simply has more room. The cap is a guide the Draft page shows; it doesn't block a pick.
+
 ## 0.39.0 (2026-10-07)
 
 A Test match button. No database change.
