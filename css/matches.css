@@ -41,3 +41,5 @@
 .mc-foot b { color: var(--text); font-weight: 700; margin-right: 3px; }
 .mc-venue { flex: 1 1 100%; }
 @media (max-width: 520px) { .mc { padding: 14px; } .mc-pcts { font-size: .78rem; } }
+
+.mc-test { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 6px; background: #ffd43b; color: #1b1400; font: 800 .68rem var(--font); letter-spacing: .1em; }

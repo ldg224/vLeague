@@ -12,6 +12,8 @@ A Test match button. No database change.
   the Editor shows a link to its Game centre; it is also in Matches. **Remove test matches** takes every test match away (its result, its match file, its fixture and its round).
 - **Nothing real changes.** The squads exist only inside the simulation, so no real player or club is touched and there is nothing to put back. A test match lives in week 99, a "Test match" round
   that doesn't count for the table or the top players, never shows on a manager's Home or Inbox (no press conference for it), and has no line-up deadline, so no reminder or lock ever fires for it.
+- **A test match says so:** a yellow **TEST MATCH** banner above the Game centre's scoreboard, a TEST MATCH tag on its card in Matches, and a TEST MATCH tag at the top of the broadcast
+  and the highlights video.
 
 ## 0.38.0 (2026-10-07)
 

@@ -1155,6 +1155,13 @@ export class HighlightsRenderer {
     const clockFill = key === 'finals' || key === 'grand_final' ? gold('#ffe08a', '#d4a900') : key === 'christmas' ? '#c62828' : key === 'derby' ? '#ff7043' : this.limeGrad(x + 428, y, x + 548, y);
     this.pill(x + 428, y + 12, 120, 40, clockFill, 10);
     this.text(clock, x + 488, y + 42, { size: 26, weight: 900, align: 'center', colour: key === 'finals' || key === 'grand_final' || key === 'derby' ? '#1b1400' : '#fff' });
+    // A test match (made-up players) says so on screen, in the broadcast and the highlights.
+    if (this.fx?.test) {
+      const tw = 330, tx = W / 2 - tw / 2, ty = 22;
+      c.save(); c.shadowColor = 'rgba(0,0,0,.45)'; c.shadowBlur = 16; this.pill(tx, ty, tw, 50, '#ffd43b', 12); c.restore();
+      c.fillStyle = '#1b1400'; for (let i = 0; i < 7; i++) c.fillRect(tx + 14 + i * 12, ty + 40, 7, 4);
+      this.text('TEST MATCH', W / 2, ty + 36, { size: 34, weight: 900, align: 'center', colour: '#1b1400', spacing: 5 });
+    }
   }
 
   drawBug() {

@@ -52,7 +52,7 @@ if (ctx) {
     const label = `${fullNameOf(teamOf(season, fx.home))} against ${fullNameOf(teamOf(season, fx.away))}`;
     return `<article class="mc is-${st}${fx.home === mine || fx.away === mine ? ' me' : ''}">
       <a class="mc-open" href="${esc(matchUrl(fx))}" data-open="${esc(fx.id)}" aria-label="Open ${esc(label)} in the Game centre"></a>
-      <header><span class="mc-when">${k ? esc(day(k, now)) : ''}</span><span class="mc-state">${badge}</span></header>
+      <header><span class="mc-when">${k ? esc(day(k, now)) : ''}${fx.test ? ' <span class="mc-test">TEST MATCH</span>' : ''}</span><span class="mc-state">${badge}</span></header>
       <div class="mc-teams">${side(fx.home, fx, now, 'h')}<div class="mc-mid">${mid}</div>${side(fx.away, fx, now, 'a')}</div>
       ${chance}${foot}</article>`;
   }
