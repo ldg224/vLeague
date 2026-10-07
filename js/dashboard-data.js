@@ -55,7 +55,7 @@ export async function loadSeason() {
   const labels = roundLabels(weekNumbers(fx.data, rd.data || []), rd.data || []);
   const lookOf = f => windowLook.get(f.window_id) || rounds.get(f.week)?.look || 'classic';
   return {
-    looks, rounds: Object.fromEntries([...labels].map(([w, l]) => [w, { label: l.label, short: l.short, numbered: l.numbered }])),
+    looks, rounds: Object.fromEntries([...labels].map(([w, l]) => [w, { label: l.label, short: l.short, numbered: l.numbered, no: l.no, name: l.name }])),
     season: 1, league: 'vLeague', live_minutes: 45, points: { win: 3, draw: 1, loss: 0 }, news: [], players,
     teams: cl.data.map(x => ({ code: x.code, name: x.name, short_name: x.short_name, colour: x.colour || '#475569', manager: x.manager_name || '',
       ...(x.status === 'withdrawn' || x.status === 'pending' ? { withdrawn: true } : {}) })),

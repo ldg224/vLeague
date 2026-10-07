@@ -1,7 +1,9 @@
 // Game centre (0.34): the page for one match, opened from Matches, League, Home or the guest dashboard (game.html?id=...).
 // Before kick-off it is a preview (win chance, form, records, line-ups once locked). From kick-off it is the watching spot:
-// a top-down replay of the match from the saved match file (live matches play at the live broadcast's pace and can be
-// scrubbed back, never ahead), a timeline, the full statistics and the line-ups with ratings.
+// a top-down broadcast of the match from the saved match file (live matches play at the live broadcast's pace and can be
+// scrubbed back, never ahead), a Highlights reel built from the match's key moments, a timeline, the full statistics and the
+// line-ups with ratings. The scoreboard, the score bug, the goal banner and the highlights captions are all drawn in the round's
+// look (Classic, Finals, Grand Final, Christmas, Derby...) and the two clubs' colours (0.35).
 // Everything shown is cut off at "now" in the match, so a live match never gives away what hasn't happened yet.
 // Works for guests too (the match file is readable by anyone once the match has kicked off).
 import { chrome, esc, clubs } from './member.js';
@@ -11,11 +13,14 @@ import { loadSeason, kickoff, status, shownScore, liveSimTime, liveMinute } from
 import { crest, teamOf, nameOf, fullNameOf, useClubs, day } from './places.js';
 import { prefs, fmtTime, spoilerHidden, revealScore } from './prefs.js';
 import { winChance, percents, clubSummary } from './match-model.js';
+import { lookInfo, roundPlate, scoreboard, bug } from './scoreboard.js';
+import { createView } from './game-view.js';
+import { buildHighlights } from './highlights.js';
 
 chrome();
 const main = document.getElementById('main');
 const id = new URLSearchParams(location.search).get('id');
-const TABS = [['watch', 'Watch'], ['timeline', 'Timeline'], ['stats', 'Stats'], ['lineups', 'Line-ups'], ['preview', 'Preview']];
+const TABS = [['watch', 'Watch'], ['highlights', 'Highlights'], ['timeline', 'Timeline'], ['stats', 'Stats'], ['lineups', 'Line-ups'], ['preview', 'Preview']];
 const KEY_EVENTS = new Set(['goal', 'card', 'woodwork', 'penalty']);
 const BROADCAST = [['1×', 1], ['2×', 2], ['4×', 4], ['8×', 8]];
 
@@ -43,7 +48,8 @@ try {
 async function run() {
   let tab = (() => { const h = location.hash.slice(1); return TABS.some(t => t[0] === h) ? h : null; })();
   let data = null, fileError = '', sheets = [], loadingFile = false;
-  let playing = false, speed = 1, at = null, last = 0, follow = true;   // `at` = the replay's moment, in match seconds
+  let playing = false, speed = 1, at = null, last = 0, follow = true;   // `at` = the replay's moment, in match seconds; follow = stay at the live edge
+  let view = null, viewCv = null, camFollow = false, reel = null, clips = [], lastBug = '', lastCap = '';   // the picture, its camera, the highlights reel
   const home = () => teamOf(season, fx.home), away = () => teamOf(season, fx.away);
   const stadium = () => clubsRows.find(c => c.code === fx.home)?.stadium || '';
 
@@ -115,17 +121,16 @@ async function run() {
   };
 
   // ---------------------------------------------------------------- the header
+  const kitColour = code => clubsRows.find(c => c.code === code)?.colour || teamOf(season, code)?.colour;
   function head() {
-    const now = new Date(), k = kickoff(fx), s = st(), sc = shownScore(fx, season, now), h = home(), a = away();
-    const sd = stadium();
+    const now = new Date(), k = kickoff(fx), s = st(), sc = shownScore(fx, season, now), h = home(), a = away(), sd = stadium();
     const state = s === 'live' ? `<span class="live"><span class="dot"></span>${liveMinute(fx, season, now)}'</span>` : { ft: 'Full time', upcoming: 'Upcoming', awaiting: 'Kicking off', postponed: 'Postponed', tba: 'Date to be confirmed' }[s];
-    const mid = sc ? `<strong class="gc-score${s === 'live' ? ' is-live' : ''}">${sc.home}<i>–</i>${sc.away}</strong>` : `<strong class="gc-ko">${k ? esc(fmtTime(k)) : 'TBA'}</strong>`;
-    const goals = (side) => (data ? eventsTo(horizon()).filter(e => e.type === 'goal' && e.team === side) : (fx.result?.goals || []).filter(g => g.team === side && (s === 'ft' || g.t <= horizon())).map(g => ({ ...g, scorer_name: g.scorer_name })))
+    const score = sc ? `<strong class="${s === 'live' ? 'is-live' : ''}">${sc.home}<i>–</i>${sc.away}</strong>` : `<strong>${k ? esc(fmtTime(k)) : 'TBA'}</strong>`;
+    const goals = side => (data ? eventsTo(horizon()).filter(e => e.type === 'goal' && e.team === side) : (fx.result?.goals || []).filter(g => g.team === side && (s === 'ft' || g.t <= horizon())))
       .map(g => `<li>${esc(data ? data.byId[g.scorer]?.name || '' : g.scorer_name || '')}${g.own_goal ? ' (og)' : ''} <small>${esc(g.minute)}'</small></li>`).join('');
-    return `<section class="gc-head"><p class="gc-meta">${esc(fx.round || `Week ${fx.week}`)}${k ? ` · ${esc(day(k, now))}, ${esc(fmtTime(k))}` : ''}${sd ? ` · ${esc(sd)}` : ''}</p>
-      <div class="gc-teams"><div class="gc-team">${crest(h, 56)}<b>${esc(fullNameOf(h))}</b><ul class="gc-goals">${goals(fx.home)}</ul></div>
-        <div class="gc-mid">${mid}<span class="gc-state">${state}</span></div>
-        <div class="gc-team">${crest(a, 56)}<b>${esc(fullNameOf(a))}</b><ul class="gc-goals">${goals(fx.away)}</ul></div></div></section>`;
+    return `<section class="gc-head">${scoreboard({ fx, season, look: lookInfo(season, fx), h: fullNameOf(h), a: fullNameOf(a), hColour: kitColour(fx.home), aColour: kitColour(fx.away),
+      crests: [crest(h, 64), crest(a, 64)], score, state, goals: [goals(fx.home), goals(fx.away)],
+      meta: `${k ? `${esc(day(k, now))}, ${esc(fmtTime(k))}` : ''}${sd ? ` · ${esc(sd)}` : ''}` })}</section>`;
   }
 
   // ---------------------------------------------------------------- preview
@@ -155,56 +160,84 @@ async function run() {
   }
 
   // ---------------------------------------------------------------- watch (the replay)
-  function frameAt(t) {
-    const fr = data.frames.data, tt = t * 10;
-    let lo = 0, hi = fr.length - 1;
-    while (lo < hi) { const m = (lo + hi + 1) >> 1; if (fr[m][0] <= tt) lo = m; else hi = m - 1; }
-    const a = fr[lo], b = fr[Math.min(lo + 1, fr.length - 1)], k = b[0] > a[0] ? Math.min(1, (tt - a[0]) / (b[0] - a[0])) : 0;
-    return { a, b, k };
+  const goalAt = t => (data?.goals || []).find(e => t >= e.t && t < e.t + 6.5 && e.t <= horizon());
+  const ICONS = { goal: '⚽', penalty: '🎯', red: '🟥', chance: '✨' };
+  // The lower third: a goal banner while watching, the clip's caption while the highlights play. Drawn in the look and the scoring club's colour.
+  function captionHtml() {
+    const look = lookInfo(season, fx);
+    let title = '', sub = '', code = '', kind = '';
+    const c = reel?.active ? reel.clips[reel.i] : null;
+    if (c && at >= c.t - 1.6) { title = c.title; sub = c.sub; code = c.team; kind = c.kind; }
+    else if (!reel?.active) { const g = goalAt(at); if (g) { title = g.own_goal ? 'Own goal' : 'Goal!'; sub = `${data.byId[g.scorer]?.name || ''}${g.assist ? `, assist ${data.byId[g.assist]?.name || ''}` : ''}`; code = g.team; kind = 'goal'; } }
+    if (!title) return '';
+    const col = view?.kit?.[code] || kitColour(code) || '#38bdf8';
+    return `<div class="gc-cap k-${esc(kind)}" data-look="${esc(look.key)}" style="--k:${esc(col)};${look.accent ? `--look:${esc(look.accent)}` : ''}"><span class="gc-cap-ic">${look.ornament && kind === 'goal' ? esc(look.ornament) : ICONS[kind] || ''}</span>
+      <span class="gc-cap-tx"><b>${esc(title)}</b><small>${esc(sub)}${code ? ` · ${esc(nameOf(teamOf(season, code)))}` : ''}</small></span></div>`;
   }
   function paint() {
     const cv = document.getElementById('pitch'); if (!cv || !data) return;
-    const ctx2 = cv.getContext('2d'), W = cv.width, H = cv.height, sx = W / 105, sy = H / 68, fi = data.fi, { a, b, k } = frameAt(at);
-    ctx2.clearRect(0, 0, W, H);
-    ctx2.fillStyle = '#1e6b3a'; ctx2.fillRect(0, 0, W, H);
-    for (let i = 0; i < 10; i++) { ctx2.fillStyle = i % 2 ? 'rgba(255,255,255,.035)' : 'rgba(0,0,0,.035)'; ctx2.fillRect(i * W / 10, 0, W / 10, H); }
-    ctx2.strokeStyle = 'rgba(255,255,255,.75)'; ctx2.lineWidth = 2;
-    ctx2.strokeRect(2, 2, W - 4, H - 4); ctx2.beginPath(); ctx2.moveTo(W / 2, 2); ctx2.lineTo(W / 2, H - 2); ctx2.stroke();
-    ctx2.beginPath(); ctx2.arc(W / 2, H / 2, 9.15 * sx, 0, 7); ctx2.stroke();
-    for (const [x, dir] of [[2, 1], [W - 2, -1]]) {
-      ctx2.strokeRect(dir > 0 ? x : x - 16.5 * sx, H / 2 - 20.15 * sy, 16.5 * sx, 40.3 * sy);
-      ctx2.strokeRect(dir > 0 ? x : x - 5.5 * sx, H / 2 - 9.16 * sy, 5.5 * sx, 18.32 * sy);
-    }
-    const lerp = (i) => (a[i] + (b[i] - a[i]) * k) / 10;
-    const col = { [data.teams.home.code]: data.teams.home.colour || '#38bdf8', [data.teams.away.code]: data.teams.away.colour || '#f43f5e' };
-    const holder = a[fi.holder];
-    for (const p of data.players) {
-      const x = lerp(fi[`p${p.idx}_x`]) * sx, y = lerp(fi[`p${p.idx}_y`]) * sy;
-      ctx2.beginPath(); ctx2.arc(x, y, p.idx === holder ? 9 : 7, 0, 7); ctx2.fillStyle = col[p.team]; ctx2.fill();
-      ctx2.lineWidth = p.idx === holder ? 3 : 1.5; ctx2.strokeStyle = p.idx === holder ? '#fff' : 'rgba(0,0,0,.45)'; ctx2.stroke();
-      if (p.position === 'GK') { ctx2.fillStyle = '#fff'; ctx2.font = 'bold 9px sans-serif'; ctx2.textAlign = 'center'; ctx2.fillText('GK', x, y + 3); }
-    }
-    if (a[fi.in_play]) { const bx = lerp(fi.ball_x) * sx, by = lerp(fi.ball_y) * sy - lerp(fi.ball_z) * 2; ctx2.beginPath(); ctx2.arc(bx, by, 4.5, 0, 7); ctx2.fillStyle = '#fff'; ctx2.fill(); ctx2.lineWidth = 1.5; ctx2.strokeStyle = '#111'; ctx2.stroke(); }
-    const sc = scoreAt(at), hp = holder >= 0 ? data.byIdx[holder] : null;
-    const bar = document.getElementById('gc-bar');
-    if (bar) bar.innerHTML = `<b>${esc(fx.home)} ${sc.home}–${sc.away} ${esc(fx.away)}</b><span>${esc(clockAt(at))}</span>${hp ? `<span class="gc-ball">${esc(hp.name)}</span>` : ''}`;
+    if (cv !== viewCv) { viewCv = cv; view = createView(cv, data, { colours: { [fx.home]: kitColour(fx.home), [fx.away]: kitColour(fx.away) } }); lastBug = lastCap = ''; }
+    const info = view.paint(at, { follow: camFollow || !!reel?.active });
+    const sc = scoreAt(at), look = lookInfo(season, fx), plate = roundPlate(season, fx);
+    const bugHtml = bug({ look, hCode: fx.home, aCode: fx.away, score: `${sc.home}–${sc.away}`, clock: clockAt(at), hColour: info.kit[fx.home], aColour: info.kit[fx.away], round: plate.big });
+    const bw = document.getElementById('gc-bug'); if (bw && bugHtml !== lastBug) { bw.innerHTML = bugHtml; lastBug = bugHtml; }
+    const cap = captionHtml(), cw = document.getElementById('gc-cap'); if (cw && cap !== lastCap) { cw.innerHTML = cap; lastCap = cap; }
     const sl = document.getElementById('gc-seek'); if (sl && document.activeElement !== sl) { sl.max = String(Math.floor(horizon())); sl.value = String(Math.floor(at)); }
     const lv = document.getElementById('gc-live'); if (lv) lv.hidden = !live() || follow;
+    const cut = document.getElementById('gc-cut'); if (cut) { const on = reel?.active && reel.hold > performance.now(); cut.classList.toggle('on', !!on); if (on && cut.dataset.k !== String(reel.holdKey)) { cut.dataset.k = String(reel.holdKey); cut.innerHTML = reel.card; } }
   }
+  const stageHtml = () => `<div class="gc-stage"><div id="gc-bug" class="gc-bugwrap"></div><canvas id="pitch" role="img" aria-label="Top-down view of the match"></canvas><div id="gc-cap" class="gc-capwrap" aria-live="polite"></div><div id="gc-cut" class="gc-cut" data-look="${esc(lookInfo(season, fx).key)}"></div></div>`;
+  const camButton = () => `<button type="button" class="btn ghost" id="gc-cam" aria-pressed="${camFollow}">${camFollow ? 'Camera: follow the ball' : 'Camera: whole pitch'}</button>`;
+  const speedButtons = () => `<span class="gc-speed" role="group" aria-label="Speed">${BROADCAST.map(([l, v]) => `<button type="button" data-speed="${v}" aria-pressed="${speed === v}">${l}</button>`).join('')}</span>`;
   function watchTab() {
     if (!data) return `<section class="gc-card"><p class="quiet">${esc(fileError || (loadingFile ? 'Loading the match…' : 'The match isn’t ready to watch yet.'))}</p></section>`;
-    return `<section class="gc-card gc-watch"><div class="gc-barwrap" id="gc-bar" aria-live="off"></div>
-      <canvas id="pitch" width="1050" height="680" role="img" aria-label="Top-down view of the match"></canvas>
+    return `<section class="gc-card gc-watch">${stageHtml()}
       <div class="gc-ctl"><button type="button" class="btn" id="gc-play">${playing ? 'Pause' : 'Play'}</button>
         <input id="gc-seek" type="range" min="0" max="${Math.floor(horizon())}" value="${Math.floor(at ?? 0)}" aria-label="Match time">
-        <span class="gc-speed" role="group" aria-label="Speed">${BROADCAST.map(([l, v]) => `<button type="button" data-speed="${v}" aria-pressed="${speed === v}">${l}</button>`).join('')}</span>
+        ${speedButtons()}${camButton()}
         <button type="button" class="btn ghost" id="gc-live"${live() && !follow ? '' : ' hidden'}>Back to live</button></div>
-      <p class="gc-note">${live() ? 'Live: the replay follows the broadcast. Drag back to rewatch; you can’t skip ahead of the live match.' : 'Full time: watch it again from any moment.'} Coloured dots are the players, the white ring is whoever has the ball.</p></section>
+      <p class="gc-note">${live() ? 'Live: the picture follows the broadcast. Drag back to rewatch; you can’t skip ahead of the live match.' : 'Full time: watch it again from any moment.'} The white ring is whoever has the ball. Goals get a banner in the round’s style.</p></section>
       ${recent()}`;
   }
   function recent() {
     const list = eventsTo(Math.min(at ?? 0, horizon())).filter(e => KEY_EVENTS.has(e.type) || (e.type === 'shot' && e.on_target)).slice(-6).reverse();
     return list.length ? `<section class="gc-card"><h2>Latest moments</h2><ul class="gc-ev">${list.map(eventLi).join('')}</ul></section>` : '';
+  }
+
+  // ---------------------------------------------------------------- highlights
+  const clipList = () => (clips.length ? clips.map((c, i) => `<li><button type="button" class="gc-clip${reel?.active && reel.i === i ? ' on' : ''}" data-clip="${i}" style="--k:${esc(view?.kit?.[c.team] || kitColour(c.team) || '#38bdf8')}">
+      <span class="min">${esc(c.minute)}'</span><span class="ic">${ICONS[c.kind]}</span><span class="tx"><b>${esc(c.title)}</b> ${esc(c.sub)} <small>${esc(nameOf(teamOf(season, c.team)))}</small></span>${c.score ? `<span class="sc">${c.score[0]}–${c.score[1]}</span>` : ''}</button></li>`).join('')
+    : '<li class="quiet">No highlights yet. They appear as goals, big chances and cards happen.</li>');
+  function highlightsTab() {
+    if (!data) return watchTab();
+    clips = buildHighlights(data, horizon());
+    return `<section class="gc-card gc-watch">${stageHtml()}
+      <div class="gc-ctl"><button type="button" class="btn" id="gc-reel"${clips.length ? '' : ' disabled'}>${reel?.active ? 'Stop highlights' : '▶ Play highlights'}</button>
+        <button type="button" class="btn ghost" id="gc-next"${reel?.active ? '' : ' hidden'}>Next clip ⏭</button>${speedButtons()}${camButton()}</div></section>
+      <section class="gc-card"><h2>Highlights <small class="gc-count">${clips.length} moment${clips.length === 1 ? '' : 's'}</small></h2><ul class="gc-clips" id="gc-clips">${clipList()}</ul>
+        <p class="gc-note">Every goal with its build-up, penalties, red cards and the best chances. Pick one to play from there.</p></section>`;
+  }
+  // Start the reel at clip i (a title card first when it begins from the top).
+  function startReel(i = 0) {
+    clips = buildHighlights(data, horizon()); if (!clips.length) return;
+    const look = lookInfo(season, fx), plate = roundPlate(season, fx), h = home(), a = away();
+    reel = { active: true, i, clips, hold: 0, holdKey: 0, card: '' };
+    if (i === 0) {
+      reel.card = `<div class="gc-card-title" style="--look:${esc(look.accent || 'var(--club,#3b82f6)')}"><small>${look.ornament ? esc(look.ornament) + ' ' : ''}${esc(plate.big)}${plate.small ? ` · ${esc(plate.small)}` : ''}</small>
+        <b>${esc(nameOf(h))} v ${esc(nameOf(a))}</b><span>Highlights</span></div>`;
+      reel.hold = performance.now() + 2200; reel.holdKey = performance.now();
+    }
+    at = clips[i].from; follow = false; playing = false; last = performance.now();
+    const b = document.getElementById('gc-reel'); if (b) b.textContent = 'Stop highlights';
+    document.getElementById('gc-next')?.removeAttribute('hidden');
+    main.querySelectorAll('.gc-clip').forEach((x, k) => x.classList.toggle('on', k === i));
+  }
+  function stopReel() { reel = null; viewCv = null; draw(); }
+  function nextClip() {
+    if (!reel) return;
+    if (reel.i + 1 >= reel.clips.length) { reel.active = false; clips = reel.clips; reel.card = ''; stopReel(); return; }
+    reel.i++; at = reel.clips[reel.i].from; reel.hold = performance.now() + 700; reel.holdKey = performance.now(); reel.card = '';
+    main.querySelectorAll('.gc-clip').forEach((x, k) => x.classList.toggle('on', k === reel.i));
   }
 
   // ---------------------------------------------------------------- timeline
@@ -255,16 +288,20 @@ async function run() {
   function draw() {
     const tabs = available();
     if (!tabs.some(t => t[0] === tab)) tab = data ? 'watch' : 'preview';
-    const body = { watch: watchTab, timeline: timelineTab, stats: statsTab, lineups: lineupsTab, preview: previewTab }[tab]();
+    const body = { watch: watchTab, highlights: highlightsTab, timeline: timelineTab, stats: statsTab, lineups: lineupsTab, preview: previewTab }[tab]();
     main.innerHTML = `<div class="gc">${head()}<nav class="dr-tabs gc-tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" data-tab="${k}" aria-selected="${tab === k}">${l}</button>`).join('')}</nav>
       ${!data && ['live', 'ft'].includes(st()) ? `<p class="quiet">${esc(fileError || 'Loading the match…')}</p>` : ''}${body}</div>`;
-    if (tab === 'watch' && data) paint();
+    if ((tab === 'watch' || tab === 'highlights') && data) paint();
   }
 
   // ---------------------------------------------------------------- events
   main.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
-    if (b.dataset.tab) { tab = b.dataset.tab; location.hash = tab; draw(); }
+    if (b.dataset.tab) { if (reel) reel = null; tab = b.dataset.tab; location.hash = tab; viewCv = null; draw(); }
+    else if (b.id === 'gc-cam') { camFollow = !camFollow; b.setAttribute('aria-pressed', String(camFollow)); b.textContent = camFollow ? 'Camera: follow the ball' : 'Camera: whole pitch'; }
+    else if (b.id === 'gc-reel') { if (reel?.active) stopReel(); else startReel(0); }
+    else if (b.id === 'gc-next') nextClip();
+    else if (b.dataset.clip !== undefined) { startReel(+b.dataset.clip); main.querySelectorAll('.gc-clip').forEach((x, k) => x.classList.toggle('on', k === +b.dataset.clip)); document.getElementById('pitch')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
     else if (b.id === 'gc-play') { playing = !playing; if (playing && at >= horizon() - 0.5 && !live()) at = 0; if (playing) follow = false; last = performance.now(); b.textContent = playing ? 'Pause' : 'Play'; }
     else if (b.dataset.speed) { speed = +b.dataset.speed; main.querySelectorAll('[data-speed]').forEach(x => x.setAttribute('aria-pressed', String(+x.dataset.speed === speed))); }
     else if (b.id === 'gc-live') { follow = true; at = horizon(); playing = true; paint(); }
@@ -276,12 +313,14 @@ async function run() {
 
   function frameTick(now) {
     requestAnimationFrame(frameTick);
-    if (!data || tab !== 'watch' || document.hidden) { last = now; return; }
+    if (!data || (tab !== 'watch' && tab !== 'highlights') || document.hidden) { last = now; return; }
     const dt = Math.min(0.25, (now - last) / 1000); last = now;
-    if (live() && follow) at = horizon();
+    if (reel?.active) {
+      if (performance.now() >= reel.hold) { at += dt * pace() * speed; if (at >= reel.clips[reel.i].to) nextClip(); }
+    } else if (live() && follow) at = horizon();
     else if (playing) { at += dt * pace() * speed; if (at >= horizon()) { at = horizon(); if (!live()) playing = false; else follow = true; } }
     paint();
-    const pb = document.getElementById('gc-play'); if (pb && pb.textContent !== (playing || follow && live() ? 'Pause' : 'Play')) pb.textContent = playing || follow && live() ? 'Pause' : 'Play';
+    const pb = document.getElementById('gc-play'); if (pb && !reel && pb.textContent !== (playing || follow && live() ? 'Pause' : 'Play')) pb.textContent = playing || follow && live() ? 'Pause' : 'Play';
   }
 
   // Poll: a match that kicks off or finishes changes what the page can show.
@@ -293,8 +332,10 @@ async function run() {
       was = now;
       if (['live', 'ft'].includes(now)) { await loadFile(); if (data && at == null) { at = live() ? horizon() : 0; follow = live(); playing = false; } if (data && !tab) tab = 'watch'; }
       draw();
-    } else if (tab !== 'watch') draw();
-    else { const h = document.querySelector('.gc-head'); if (h) h.outerHTML = head(); }
+    } else if (tab === 'watch' || tab === 'highlights') {
+      const h = document.querySelector('.gc-head'); if (h) h.outerHTML = head();
+      if (tab === 'highlights' && data && !reel?.active) { const n = buildHighlights(data, horizon()); if (n.length !== clips.length) { clips = n; const ul = document.getElementById('gc-clips'); if (ul) ul.innerHTML = clipList(); } }
+    } else draw();
   }
 
   await loadSheets();
@@ -304,6 +345,7 @@ async function run() {
   main.setAttribute('aria-busy', 'false');
   document.title = `${nameOf(home())} v ${nameOf(away())} | vLeague`;
   requestAnimationFrame(frameTick);
+  window.addEventListener('resize', () => view?.resize());
   setInterval(() => poll(false), 5000);
   setInterval(() => poll(true), 30000);
 }

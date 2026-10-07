@@ -1,0 +1,79 @@
+/* Scoreboards (0.35). One structure, a design per look: classic, finals, grand_final, christmas, derby. A look the office adds as data
+   gets the generic accent design. --h and --a are the two clubs' colours, --look is the look's accent. */
+.sb { --look: var(--club, #3b82f6); display: grid; gap: 0; width: 100%; }
+.sb-plate { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; padding: 8px 18px; text-align: center; position: relative; z-index: 1; width: fit-content; max-width: 100%; margin: 0 auto -1px; border-radius: 12px 12px 0 0; }
+.sb-roundbox { display: grid; gap: 1px; }
+.sb-round { font: 700 clamp(1.05rem, 3.4vw, 1.5rem)/1.05 var(--font-display); letter-spacing: .08em; text-transform: uppercase; }
+.sb-sub { font: 600 .68rem var(--font); letter-spacing: .14em; text-transform: uppercase; opacity: .75; }
+.sb-banner { font: 700 .72rem var(--font); letter-spacing: .16em; padding: 3px 10px; border-radius: 999px; }
+.sb-orn { font-size: 1.4rem; line-height: 1; }
+.sb-board { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: start; padding: 18px 20px 16px; border-radius: 16px; position: relative; overflow: hidden; }
+.sb-team { display: grid; justify-items: center; gap: 6px; text-align: center; min-width: 0; position: relative; z-index: 1; }
+.sb-team > b { font: 700 clamp(1rem, 3vw, 1.3rem)/1.1 var(--font-display); text-transform: uppercase; letter-spacing: .03em; overflow-wrap: anywhere; }
+.sb-team.h::after, .sb-team.a::after { content: ''; display: block; width: 56%; height: 4px; border-radius: 3px; }
+.sb-team.h::after { background: var(--h); } .sb-team.a::after { background: var(--a); }
+.sb-goals { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: .8rem; opacity: .8; }
+.sb-goals small { opacity: .7; }
+.sb-mid { display: grid; justify-items: center; gap: 8px; align-self: center; min-width: 5.5rem; position: relative; z-index: 1; }
+.sb-mid strong { font: 700 clamp(2.4rem, 9vw, 3.8rem)/1 var(--font-display); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.sb-mid strong i { font-style: normal; opacity: .45; margin: 0 6px; }
+.sb-mid strong.is-live { text-shadow: 0 0 22px color-mix(in srgb, var(--look) 55%, transparent); }
+.sb-state { font: 700 .74rem var(--font); letter-spacing: .08em; text-transform: uppercase; opacity: .85; }
+.sb-meta { margin: 10px 0 0; text-align: center; font-size: .82rem; opacity: .7; }
+
+/* Classic: clean and dark, a stripe of each club's colour. */
+.sb[data-look="classic"] .sb-plate { background: var(--surface-raised, #1b2638); color: var(--text); border: 1px solid var(--line); border-bottom: 0; }
+.sb[data-look="classic"] .sb-board { background: var(--card); border: 1px solid var(--line); }
+.sb[data-look="classic"] .sb-board::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 5px; background: linear-gradient(90deg, var(--h) 50%, var(--a) 50%); }
+
+/* Finals: gold trim and a gold plate. */
+.sb[data-look="finals"] .sb-plate { background: linear-gradient(180deg, #ffe08a, #f5c542); color: #2a1d00; box-shadow: 0 0 0 1px #8a6a12 inset; }
+.sb[data-look="finals"] .sb-banner { background: #2a1d00; color: #ffd86b; }
+.sb[data-look="finals"] .sb-board { background: linear-gradient(180deg, color-mix(in srgb, #f5c542 12%, var(--card)), var(--card)); border: 2px solid #f5c542; box-shadow: 0 0 0 1px #8a6a12, 0 10px 34px rgba(245, 197, 66, .15); }
+.sb[data-look="finals"] .sb-mid strong { color: #ffd86b; }
+
+/* Grand Final: a double gold frame, a trophy plate and a slow shine. */
+.sb[data-look="grand_final"] .sb-plate { background: linear-gradient(180deg, #fff3b0, #ffd700 55%, #c9a000); color: #2a1d00; padding: 10px 28px; box-shadow: 0 0 0 1px #6b5200 inset, 0 -6px 22px rgba(255, 215, 0, .35); }
+.sb[data-look="grand_final"] .sb-plate::before, .sb[data-look="grand_final"] .sb-plate::after { content: '\2605'; font-size: 1.1rem; color: #6b5200; }
+.sb[data-look="grand_final"] .sb-banner { background: #2a1d00; color: #ffe566; }
+.sb[data-look="grand_final"] .sb-board { background: radial-gradient(120% 140% at 50% 0%, color-mix(in srgb, #ffd700 22%, #0e1420), #0b101a 70%); border: 3px double #ffd700; box-shadow: 0 0 0 1px #6b5200, 0 14px 44px rgba(255, 215, 0, .22); color: #fff; padding-block: 22px 20px; }
+.sb[data-look="grand_final"] .sb-mid strong { color: #ffe566; text-shadow: 0 0 24px rgba(255, 215, 0, .55); font-size: clamp(2.8rem, 10vw, 4.4rem); }
+.sb[data-look="grand_final"] .sb-board::after { content: ''; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, .13) 50%, transparent 60%); transform: translateX(-100%); animation: sb-shine 6s ease-in-out infinite; pointer-events: none; }
+@keyframes sb-shine { 0%, 60% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+/* Christmas: candy-stripe edge, a red plate and falling-snow dots. */
+.sb[data-look="christmas"] .sb-plate { background: #c62828; color: #fff; box-shadow: 0 0 0 2px #fff inset, 0 0 0 4px #2e7d32 inset; padding-inline: 26px; }
+.sb[data-look="christmas"] .sb-banner { background: #fff; color: #c62828; }
+.sb[data-look="christmas"] .sb-board { background: linear-gradient(180deg, #11261a, #0d1a14); color: #fff; border: 4px solid transparent; border-image: repeating-linear-gradient(45deg, #c62828 0 12px, #fff 12px 24px, #2e7d32 24px 36px) 4; border-radius: 0; }
+.sb[data-look="christmas"] .sb-board::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .55;
+  background-image: radial-gradient(circle, #fff 1.4px, transparent 2px), radial-gradient(circle, #fff 1px, transparent 1.6px); background-size: 46px 52px, 31px 37px; background-position: 0 0, 14px 20px; animation: sb-snow 14s linear infinite; }
+@keyframes sb-snow { to { background-position: 0 104px, 14px 94px; } }
+.sb[data-look="christmas"] .sb-mid strong { color: #fff; text-shadow: 0 0 18px rgba(198, 40, 40, .7); }
+
+/* Derby: the board splits in the two clubs' colours, with an orange plate. */
+.sb[data-look="derby"] .sb-plate { background: linear-gradient(90deg, #ff7043, #ff8a50); color: #1b0a00; clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 100%, 0 100%); padding-inline: 30px; border-radius: 0; }
+.sb[data-look="derby"] .sb-banner { background: #1b0a00; color: #ffb59a; }
+.sb[data-look="derby"] .sb-board { background: linear-gradient(115deg, color-mix(in srgb, var(--h) 48%, #0b0f17) 0 49.2%, #ff7043 49.2% 50.8%, color-mix(in srgb, var(--a) 48%, #0b0f17) 50.8% 100%); color: #fff; border: 0; }
+.sb[data-look="derby"] .sb-board::before { content: ''; position: absolute; inset: auto 0 0 0; height: 5px; background: linear-gradient(90deg, #ff7043, #ffb347, #ff7043); }
+.sb[data-look="derby"] .sb-team.h::after, .sb[data-look="derby"] .sb-team.a::after { background: #fff; }
+
+/* Any other look (added as data): the board takes the look's accent. */
+.sb:not([data-look="classic"]):not([data-look="finals"]):not([data-look="grand_final"]):not([data-look="christmas"]):not([data-look="derby"]) .sb-plate { background: var(--look); color: #fff; }
+.sb:not([data-look="classic"]):not([data-look="finals"]):not([data-look="grand_final"]):not([data-look="christmas"]):not([data-look="derby"]) .sb-banner { background: rgba(0, 0, 0, .3); color: #fff; }
+.sb:not([data-look="classic"]):not([data-look="finals"]):not([data-look="grand_final"]):not([data-look="christmas"]):not([data-look="derby"]) .sb-board { background: var(--card); border: 2px solid var(--look); }
+
+@media (max-width: 640px) { .sb-board { padding: 14px 12px; gap: 8px; } .sb-plate { padding: 6px 12px; } }
+@media (prefers-reduced-motion: reduce) { .sb-board::after { animation: none !important; } }
+.reduce-motion .sb-board::after { animation: none !important; }
+
+/* The score bug on the pitch */
+.sb-bug { position: absolute; top: 10px; left: 10px; z-index: 3; display: grid; gap: 3px; pointer-events: none; font-family: var(--font-display); color: #fff; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .5)); }
+.sb-bug-round { justify-self: start; padding: 2px 10px; border-radius: 6px 6px 0 0; background: var(--look, #1f2a3c); font: 700 .68rem var(--font); letter-spacing: .12em; text-transform: uppercase; color: #fff; }
+.sb-bug[data-look="finals"] .sb-bug-round, .sb-bug[data-look="grand_final"] .sb-bug-round { color: #2a1d00; background: linear-gradient(90deg, #ffe08a, #f5c542); }
+.sb-bug-row { display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 0 8px 8px 8px; background: rgba(8, 12, 20, .88); border-left: 4px solid var(--look, #3b82f6); }
+.sb-bug-row i { width: 6px; height: 22px; border-radius: 2px; } .sb-bug-row .hc { background: var(--h); } .sb-bug-row .ac { background: var(--a); }
+.sb-bug-row b { font-size: 1rem; letter-spacing: .05em; }
+.sb-bug-row strong { font-size: 1.3rem; min-width: 3.2rem; text-align: center; font-variant-numeric: tabular-nums; background: rgba(255, 255, 255, .1); border-radius: 5px; padding: 0 6px; }
+.sb-bug-row em { font: 600 .85rem var(--font); font-style: normal; color: #cbd5e1; margin-left: 4px; font-variant-numeric: tabular-nums; }
+.sb-bug[data-look="derby"] .sb-bug-row { border-left-color: #ff7043; }
+.sb-bug[data-look="christmas"] .sb-bug-row { border-left-color: #c62828; }

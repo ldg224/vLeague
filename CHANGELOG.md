@@ -3,6 +3,23 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.35.0 (2026-10-07)
+
+Match viewer, highlights and scoreboard designs. No database change.
+
+- **Added, scoreboards:** the Game centre's scoreboard now has a design for each round look: **Classic** (a stripe of each club's colour), **Finals**
+  (gold trim and plate), **Grand Final** (a double gold frame, a trophy plate and a slow shine), **Christmas** (candy-stripe edge, snow and a red
+  plate) and **Derby** (the board splits in the two clubs' colours under an orange plate). A look the office adds later gets an accent-coloured design
+  automatically. The round's own name ("Opening Week") sits on a plate above the board, with "Round 1" under it and the look's banner (FINALS, DERBY...)
+  beside it.
+- **Added, Watch:** a much better picture: mown-stripe pitch with markings and nets, kit-coloured players (two near-identical kits are told apart), a pulsing
+  ring and a name on whoever has the ball, a ball with a shadow and a trail, a **score bug** in the corner in the round's look, a **goal banner** in the
+  scoring club's colour and the look's style, and a **camera** button to follow the ball.
+- **Added, Highlights:** a new tab. It finds the goals (with their build-up), penalties, red cards and the best chances, lists them, and **Play highlights**
+  runs them as a reel with a title card, a cut between clips and a caption for each, all in the round's look and the clubs' colours. Pick any clip to start
+  from it. A live match only shows what has already happened.
+- **Fixed:** the Game centre's tabs had no styling.
+
 ## 0.34.2 (2026-10-07)
 
 No database change.
