@@ -3,7 +3,24 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
-## 0.33.2 (2026-10-08)
+## 0.34.0 (2026-10-07)
+
+Matches and the Game centre. No database change.
+
+- **Added, managers:** a **Matches** tab: a card for every game of the round (Home, **Matches**, League, ...). Each card shows both clubs with league
+  position and form, the score or kick-off time, the **win chance**, the stadium, and each club's home or away record. Tap a card to open the
+  Game centre. Scores follow the same spoiler-free rules as League.
+- **Added:** the **Game centre** (`game.html`), the page for one match. Open to guests too. Before kick-off: a preview (win chance, side-by-side
+  comparison, this season's meetings, line-ups once locked). From kick-off: **Watch** (a top-down replay of the match; live games follow the
+  broadcast and can be scrubbed back but never ahead), **Timeline**, **Stats** (possession, xG, shots, passes and more, counted only up to now
+  while live) and **Line-ups** with ratings and Man of the Match at full time. The 3D view is still to come.
+- **Changed:** every match link (League, Home, the guest dashboard) now opens the Game centre. Before this they went nowhere.
+- **Win chance:** worked out from the starting XI's attack and defence ratings (the locked line-ups, else each club's best 4-3-3), goals scored
+  and conceded so far (counting for more as the season goes on), recent form, the league's home advantage and this season's meetings. Each side
+  gets an expected number of goals and the win, draw and loss chances come from every possible scoreline. League keeps its plain match rows with
+  no win chance on them.
+
+## 0.33.2 (2026-10-07)
 
 - **Fixed:** every page failed to load after 0.33.1, because the version file had been emptied by mistake. The version file is back.
 

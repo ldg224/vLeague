@@ -22,8 +22,8 @@ const NO_LOGO = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAA
 let crests = {};
 export const logoUrl = code => (FROM_FILE ? `${SOURCE}assets/teams/${String(code).toLowerCase()}.png`
   : crests[code] ? `${SUPABASE_URL}/storage/v1/object/public/crests/${crests[code]}` : NO_LOGO);
-// Full match pages arrive in 0.13; until then a match has no page to open.
-export const matchUrl = fx => (FROM_FILE ? `${LIVE_SITE}match.html?id=${encodeURIComponent(fx.id)}` : '');
+// A match opens in the Game centre (game.html, 0.34). A local ?src= test copy still points at the s3 site's match page.
+export const matchUrl = fx => (FROM_FILE ? `${LIVE_SITE}match.html?id=${encodeURIComponent(fx.id)}` : `game.html?id=${encodeURIComponent(fx.id)}`);
 
 // Melbourne wall-clock date and time from an instant (kickoff() reads them back as the viewer's local time, as before).
 const melb = new Intl.DateTimeFormat('en-CA', { timeZone: 'Australia/Melbourne', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
@@ -86,7 +86,7 @@ export function status(fx, s, now = new Date()) {
   return 'ft';
 }
 
-function liveSimTime(fx, s, now) {
+export function liveSimTime(fx, s, now) {
   const frac = Math.min(1, Math.max(0, (now - kickoff(fx)) / liveMs(s)));
   const periods = fx.result.periods || [];
   const t0 = periods.length ? periods[0].start_t : 0;

@@ -13,6 +13,7 @@ const ICON = {
   club: '<path d="M12 3 5 6v5c0 4.4 3 8.3 7 10 4-1.7 7-5.6 7-10V6z"/>',
   inbox: '<path d="M4 13 6.5 5h11L20 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M4 13h4.5l1.5 2.5h4l1.5-2.5H20"/>',
   league: '<path d="M5 6h14M5 12h14M5 18h14"/><path d="M5 6h.01M5 12h.01M5 18h.01" stroke-width="3"/>',
+  matches: '<rect x="4" y="5" width="16" height="14" rx="2"/><path d="M4 10h16M9 5v14"/>',
   draft: '<path d="M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M12 14v5M8 20h8"/>',
   settings: '<circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/>',
 };
@@ -20,6 +21,7 @@ export const PLACES = [
   { id: 'home', label: 'Home', href: 'home.html' },
   { id: 'club', label: 'My club', href: 'club.html' },
   { id: 'inbox', label: 'Inbox', href: 'inbox.html' },
+  { id: 'matches', label: 'Matches', href: 'matches.html' },
   { id: 'league', label: 'League', href: 'league.html' },
   { id: 'draft', label: 'Draft', href: 'draft.html' },
   { id: 'settings', label: 'Settings', href: 'settings.html' },
@@ -54,7 +56,7 @@ export function paintClub(club) {
 }
 
 // ctx = { me: { user, profile }, club, season, team, prefs, main } or null if the visitor was sent elsewhere.
-// place is 'home' | 'club' | 'inbox' | 'league' | 'settings'.
+// place is 'home' | 'club' | 'inbox' | 'matches' | 'league' | 'draft' | 'settings'.
 // club: the Supabase clubs row (null if the account has none). season: the league's season.json (null if it didn't
 // load). team: the season's entry for this club (matched on code; the two stay in step until fixtures move to
 // Supabase in 0.11).

@@ -136,7 +136,7 @@ Still possible later: scoreboard looks (Christmas, finals...) as data, and sever
 ### 0.15.0: Simpler Editor (done): Requests, Clubs, Managers and Phones are one Clubs tab, with every registration kept in full
 
 ### Draft (done, 0.21 to 0.29)
-Limited-time player draft: manager board, queue and auto-pick, office tools, quiet times, emails, live updates. See `docs/DRAFT.md`. The Draft tab is always visible (0.29.1), with a preview when no draft is open.
+Limited-time player draft: manager board, queue and auto-pick, office tools, quiet times, emails, live updates. See `docs/DRAFT.md`. The office switches the Draft page on with Make page visible (0.32); managers can queue before it starts.
 
 ### Inbox and press (done in 0.30.0)
 - [x] One inbox: news for this club, press conferences, deadlines. Every post has a delete button; "Clear all" and Undo (0.30).
@@ -147,7 +147,13 @@ Limited-time player draft: manager board, queue and auto-pick, office tools, qui
 - [x] Reactions on news and press answers (0.30). Reactions on results are still to come with the Match centre.
 - [ ] Later: the office edits the question bank in the Editor; quotes also shown in a match preview on Home.
 
-### 0.16: Match centre
+### Matches and Game centre (0.34, first version done)
+- [x] **Matches** tab: a card per game with win chance, form, stadium and home or away records (`js/match-model.js` works out the chance).
+- [x] **Game centre** (`game.html`): preview, top-down replay (live follows the broadcast), timeline, stats, line-ups and ratings. Guests can open it.
+- [ ] Tune the win chance against real results once there are a few rounds (`RATING_POWER` and friends in `js/match-model.js`).
+- [ ] Club pages: not needed for now; League's short codes cover it (decided 7 October 2026).
+
+### 0.16: Match centre (what is left)
 - [ ] The 3D broadcast view, live and after full time.
 - [ ] Momentum graph and shot map from the engine; ratings on coloured chips; match report; Man of the Match.
 - [ ] Team and Player of the Week after each round.

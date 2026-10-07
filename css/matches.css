@@ -1,0 +1,43 @@
+/* Matches (0.34): a card for every game of the round. Built on League's round tabs. */
+.matches { display: grid; gap: 4px; }
+.matches .page-title { margin: 0 0 6px; }
+.mc-round { margin: 6px 0 0; color: var(--muted); font-size: .9rem; }
+.mcs { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) { .mcs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.mc { position: relative; display: grid; gap: 14px; padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); }
+.mc:hover { border-color: var(--blue-400); }
+.mc.me { border-left: 5px solid var(--club); background: color-mix(in srgb, var(--club) 9%, var(--card)); }
+.mc-open { position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
+.mc-open:focus-visible { outline: 3px solid var(--text); outline-offset: 2px; }
+.mc .show-score { position: relative; z-index: 2; }
+.mc header { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: .82rem; font-weight: 700; color: var(--muted); letter-spacing: .02em; }
+.mc-state { text-transform: uppercase; font-size: .72rem; letter-spacing: .06em; }
+.mc.is-live .mc-state { color: var(--text); }
+
+.mc-teams { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: 10px; }
+.mc-team { display: grid; justify-items: center; gap: 5px; text-align: center; min-width: 0; }
+.mc-team .nm { font: 700 1.05rem/1.1 var(--font-display); text-transform: uppercase; letter-spacing: .02em; overflow-wrap: anywhere; }
+.mc-team small { color: var(--muted); font-size: .8rem; }
+.mc-team.me .nm { color: var(--club-text, var(--text)); }
+.mc-none { color: var(--faint); font-size: .75rem; font-style: normal; }
+.mc-mid { align-self: center; min-width: 4.5rem; text-align: center; }
+.mc-score, .mc-ko { display: block; font: 700 1.9rem/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.mc-score i { font-style: normal; color: var(--faint); margin: 0 4px; }
+.mc-score.is-live { color: var(--live-fg, var(--text)); }
+.mc-ko { font-size: 1.4rem; }
+
+.mc-chance { display: grid; gap: 6px; }
+.mc-bar { display: flex; height: 12px; border-radius: 999px; overflow: hidden; gap: 2px; background: var(--line); }
+.mc-bar i { display: block; min-width: 4px; }
+.mc-bar .bh { background: var(--club, var(--blue-500)); }
+.mc-bar .bd { background: var(--faint); }
+.mc-bar .ba { background: var(--blue-300, #93c5fd); }
+.mc-pcts { display: flex; justify-content: space-between; gap: 8px; font-size: .85rem; color: var(--muted); }
+.mc-pcts b { color: var(--text); font-size: 1rem; font-variant-numeric: tabular-nums; }
+.mc-chance small { color: var(--faint); font-size: .74rem; line-height: 1.3; }
+
+.mc-foot { display: flex; flex-wrap: wrap; gap: 4px 16px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: .82rem; }
+.mc-foot b { color: var(--text); font-weight: 700; margin-right: 3px; }
+.mc-venue { flex: 1 1 100%; }
+@media (max-width: 520px) { .mc { padding: 14px; } .mc-pcts { font-size: .78rem; } }

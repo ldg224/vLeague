@@ -1,0 +1,79 @@
+/* Game centre (0.34): one match. Header, tabs, the top-down replay, timeline, stats, line-ups, preview. */
+.member-main.wide:has(.gc) { width: min(980px, 100%); padding-top: 18px; }
+.gc-back { color: var(--muted); font-weight: 600; text-decoration: none; font-size: .9rem; }
+.gc-back:hover { color: var(--text); }
+.member-top .gc-back { margin-left: auto; }
+.gc { display: grid; gap: 14px; }
+
+.gc-head { padding: 18px 20px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); border-top: 5px solid var(--club, var(--blue-500)); }
+.gc-meta { margin: 0 0 14px; color: var(--muted); font-size: .85rem; text-align: center; }
+.gc-teams { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: start; }
+.gc-team { display: grid; justify-items: center; gap: 6px; text-align: center; min-width: 0; }
+.gc-team > b { font: 700 1.15rem/1.1 var(--font-display); text-transform: uppercase; letter-spacing: .02em; overflow-wrap: anywhere; }
+.gc-goals { list-style: none; margin: 0; padding: 0; color: var(--muted); font-size: .82rem; display: grid; gap: 2px; }
+.gc-goals small { color: var(--faint); }
+.gc-mid { display: grid; justify-items: center; gap: 8px; align-self: center; min-width: 5.5rem; }
+.gc-score, .gc-ko { font: 700 clamp(2.2rem, 8vw, 3.4rem)/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.gc-score i { font-style: normal; color: var(--faint); margin: 0 6px; }
+.gc-score.is-live { color: var(--live-fg, var(--text)); }
+.gc-ko { font-size: clamp(1.6rem, 6vw, 2.2rem); }
+.gc-state { font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+
+.gc-tabs { margin: 0; }
+.gc-card { padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); min-width: 0; }
+.gc-card h2 { margin: 0 0 10px; font-size: 1.05rem; }
+.gc-card h3 { margin: 0 0 6px; font-size: .95rem; }
+.gc-card h3 small { color: var(--faint); font-weight: 500; }
+.gc-note { margin: 10px 0 0; color: var(--faint); font-size: .8rem; line-height: 1.4; }
+.gc-two { display: grid; gap: 18px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 640px) { .gc-two { grid-template-columns: 1fr; } .gc-head { padding: 14px; } }
+
+/* Watch */
+.gc-watch { padding: 12px; }
+.gc-watch canvas { display: block; width: 100%; height: auto; aspect-ratio: 105 / 68; border-radius: var(--r-sm); background: #1e6b3a; }
+.gc-barwrap { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 4px 4px 10px; font-size: .95rem; }
+.gc-barwrap b { font: 700 1.1rem var(--font-display); letter-spacing: .02em; }
+.gc-barwrap span { color: var(--muted); font-variant-numeric: tabular-nums; }
+.gc-barwrap .gc-ball { margin-left: auto; color: var(--text); font-weight: 600; }
+.gc-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 4px 0; }
+.gc-ctl input[type=range] { flex: 1 1 200px; min-width: 0; accent-color: var(--club, var(--blue-500)); }
+.gc-speed { display: inline-flex; gap: 4px; }
+.gc-speed button { padding: 6px 10px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); font: 700 .8rem var(--font); cursor: pointer; }
+.gc-speed button[aria-pressed="true"] { background: var(--club, var(--blue-600)); color: var(--on-club, #fff); border-color: transparent; }
+
+/* Timeline */
+.gc-ev { list-style: none; margin: 0; padding: 0; display: grid; }
+.gc-ev li { display: grid; grid-template-columns: 3.2rem 1.6rem minmax(0, 1fr); gap: 6px; align-items: baseline; padding: 9px 4px; border-bottom: 1px solid var(--line); font-size: .92rem; }
+.gc-ev li:last-child { border-bottom: 0; }
+.gc-ev .min { color: var(--muted); font-weight: 700; font-variant-numeric: tabular-nums; }
+.gc-ev .tx small { color: var(--faint); margin-left: 6px; }
+.gc-ev li.h { box-shadow: inset 3px 0 0 var(--club, var(--blue-500)); padding-left: 10px; }
+.gc-ev li.a { box-shadow: inset 3px 0 0 var(--blue-300, #93c5fd); padding-left: 10px; }
+
+/* Stats */
+.gc-statrow.head { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: .85rem; color: var(--muted); }
+.gc-stat { display: grid; grid-template-columns: 3.6rem minmax(0, 1fr) 3.6rem; gap: 10px; align-items: center; padding: 6px 0; }
+.gc-stat .v { font: 700 1.05rem var(--font); font-variant-numeric: tabular-nums; }
+.gc-stat .v:last-child { text-align: right; }
+.gc-stat .lbl { text-align: center; font-size: .8rem; color: var(--muted); display: grid; gap: 4px; }
+.gc-stat .bars { display: flex; gap: 3px; height: 6px; border-radius: 999px; overflow: hidden; background: var(--line); }
+.gc-stat .bars i { display: block; }
+.gc-stat .bh, .mc-bar.big .bh { background: var(--club, var(--blue-500)); }
+.gc-stat .ba, .mc-bar.big .ba { background: var(--blue-300, #93c5fd); }
+.mc-bar.big { height: 16px; }
+.gc-motm { margin: 0; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 1.05rem; }
+.gc-motm span:not(.rating) { color: var(--muted); }
+
+/* Line-ups and preview */
+.gc-lu { list-style: none; margin: 0; padding: 0; display: grid; }
+.gc-lu li { display: grid; grid-template-columns: 3rem minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: .92rem; }
+.gc-lu li:last-child { border-bottom: 0; }
+.gc-lu .pos { color: var(--faint); font-size: .75rem; font-weight: 700; }
+.gc-lu small { color: var(--faint); }
+.rating { display: inline-block; min-width: 2.4rem; padding: 2px 6px; border-radius: 6px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; background: var(--surface-raised, var(--line)); }
+.rating.r-hi { background: #2e8b57; color: #fff; } .rating.r-mid { background: #c79a2b; color: #1a1200; } .rating.r-lo { background: #b84a4a; color: #fff; }
+.gc-vs { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.gc-vs th, .gc-vs td { padding: 8px 4px; border-bottom: 1px solid var(--line); text-align: center; }
+.gc-vs thead th { color: var(--text); font-weight: 700; }
+.gc-vs tbody th { text-align: left; color: var(--muted); font-weight: 600; }
+.gc-vs tr:last-child th, .gc-vs tr:last-child td { border-bottom: 0; }
