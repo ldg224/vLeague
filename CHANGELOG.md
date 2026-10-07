@@ -3,6 +3,23 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.36.0 (2026-10-07)
+
+The real match viewer is in vLeague. No database change, and nothing loads from the s3 site any more.
+
+- **Added, Game centre → Watch:** the broadcast view of the whole match (multi-angle cameras, referee, goal banners, half-time and full-time panels), the
+  **Tactical** top-down view, and after full time a **Highlights** video. Each can go full screen. After full time there is also a **Download** menu: the
+  highlights as an MP4, the whole match sped up as an MP4, or the raw match file. The code was moved over from the s3 site into `js/viewer/`; crests,
+  names and the stadium photo are vLeague's own.
+- **Added:** **no video controls while a match is live.** A live match is a broadcast held to the live clock (the quiet stretches wound through, the goals and
+  cards at normal speed). Only the Broadcast and Tactical views and full screen are offered. Controls and the seek bar appear at full time.
+- **Added:** the in-video **score bug** (broadcast and highlights) is drawn in the round's look: Classic, Finals, Grand Final (gold double frame and glow),
+  Christmas (candy-stripe frame) and Derby (split in the two clubs' colours), with the round's own name ("Opening Week") on a plate above it. The highlights
+  title card names the round too. Looks added later get an accent-coloured design.
+- **Changed:** a live match's clock and score now follow the same live-broadcast timing the picture uses, so the page never shows a goal before the video does.
+- **Changed:** a timeline row opens that moment in the viewer (not while live).
+- **Removed:** the simpler viewer and highlights list from 0.35, which this replaces.
+
 ## 0.35.0 (2026-10-07)
 
 Match viewer, highlights and scoreboard designs. No database change.

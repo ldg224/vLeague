@@ -17,7 +17,7 @@ Virtual football. The home of vLeague from Season 1: sign in, manage your club, 
 | `set-password.html` | Where invite and password-reset emails land: choose a password, then on to your page. |
 | `dashboard.html` | The guest profile: live/next match board with line-ups (from 10 min before kick-off), the week's matches, table, league news for guests, leaders. Signs out anyone who arrives signed in. Reads the s3 site's public data for now. |
 | `matches.html` | Matches: a card for every game of a round with win chance, form, stadium and home or away records. Opens the Game centre. |
-| `game.html` | Game centre: one match. Preview before kick-off; watch, highlights, timeline, stats and line-ups after, with the scoreboard drawn in the round's look. Open to guests. |
+| `game.html` | Game centre: one match. Preview before kick-off; the match viewer (broadcast, tactical, highlights video, downloads) with the scoreboard drawn in the round's look, then timeline, stats and line-ups. Open to guests. |
 | `home.html` | A manager's Home (placeholder until 0.5: shows their club). |
 | `editor.html` | The league office's Editor (placeholder until 0.8: lists the clubs and which have a manager account). |
 
@@ -28,6 +28,7 @@ Virtual football. The home of vLeague from Season 1: sign in, manage your club, 
 - `js/signin.js`, `js/set-password.js`: the sign-in pages. `js/member.js` + `js/home.js` + `js/editor.js` + `css/member.css`: the signed-in pages.
 - `js/dashboard.js` + `js/dashboard-data.js` + `css/dashboard.css`: the dashboard (`?src=` loads other data, on localhost only).
 - `js/editor-fixtures.js` + `js/roster.js`: the Editor's Fixtures tab and its roster logic (pairing, moving weeks, round labels, checks); `roster.js` has no page or database code.
+- `js/viewer/`: the match viewer (ported from the s3 site in 0.36): `player.js` (the player, controls, full screen, downloads), `broadcast.js` (the broadcast view), `highlights.js` (the highlights video and the shared graphics), `replay.js` (the tactical view). `ui.js` and `data.js` there are small links to vLeague's own helpers.
 - `js/version.js`: the version shown in footers.
 - `css/site.css`: brand tokens, buttons, messages and the sign-in pages.
 - `supabase/migrations/`: the database setup, in order. `supabase/tests/rls_check.py`: checks the security rules as guest, manager and office.

@@ -65,15 +65,3 @@
 @media (max-width: 640px) { .sb-board { padding: 14px 12px; gap: 8px; } .sb-plate { padding: 6px 12px; } }
 @media (prefers-reduced-motion: reduce) { .sb-board::after { animation: none !important; } }
 .reduce-motion .sb-board::after { animation: none !important; }
-
-/* The score bug on the pitch */
-.sb-bug { position: absolute; top: 10px; left: 10px; z-index: 3; display: grid; gap: 3px; pointer-events: none; font-family: var(--font-display); color: #fff; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .5)); }
-.sb-bug-round { justify-self: start; padding: 2px 10px; border-radius: 6px 6px 0 0; background: var(--look, #1f2a3c); font: 700 .68rem var(--font); letter-spacing: .12em; text-transform: uppercase; color: #fff; }
-.sb-bug[data-look="finals"] .sb-bug-round, .sb-bug[data-look="grand_final"] .sb-bug-round { color: #2a1d00; background: linear-gradient(90deg, #ffe08a, #f5c542); }
-.sb-bug-row { display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 0 8px 8px 8px; background: rgba(8, 12, 20, .88); border-left: 4px solid var(--look, #3b82f6); }
-.sb-bug-row i { width: 6px; height: 22px; border-radius: 2px; } .sb-bug-row .hc { background: var(--h); } .sb-bug-row .ac { background: var(--a); }
-.sb-bug-row b { font-size: 1rem; letter-spacing: .05em; }
-.sb-bug-row strong { font-size: 1.3rem; min-width: 3.2rem; text-align: center; font-variant-numeric: tabular-nums; background: rgba(255, 255, 255, .1); border-radius: 5px; padding: 0 6px; }
-.sb-bug-row em { font: 600 .85rem var(--font); font-style: normal; color: #cbd5e1; margin-left: 4px; font-variant-numeric: tabular-nums; }
-.sb-bug[data-look="derby"] .sb-bug-row { border-left-color: #ff7043; }
-.sb-bug[data-look="christmas"] .sb-bug-row { border-left-color: #c62828; }

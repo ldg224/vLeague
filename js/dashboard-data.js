@@ -86,11 +86,46 @@ export function status(fx, s, now = new Date()) {
   return 'ft';
 }
 
-export function liveSimTime(fx, s, now) {
-  const frac = Math.min(1, Math.max(0, (now - kickoff(fx)) / liveMs(s)));
-  const periods = fx.result.periods || [];
-  const t0 = periods.length ? periods[0].start_t : 0;
-  return t0 + frac * (fx.result.duration_t - t0);
+// While live, the match plays out over live_minutes. The moments that matter (the build-up to and aftermath of goals and cards)
+// play at true 1x; the quiet stretches between them are wound through quickly (ported from the s3 broadcast, 0.36). If the window
+// is as long as the match, it is one steady rate. Cached per fixture and window.
+const LEAD = 18, TAIL = 8;
+function warp(fx, s) {
+  const key = (s.live_minutes || 10) + ':' + fx.result.duration_t;
+  if (fx._warp?.key === key) return fx._warp;
+  const periods = fx.result.periods || [], t0 = periods.length ? periods[0].start_t : 0, t1 = fx.result.duration_t, B = (s.live_minutes || 10) * 60, D = t1 - t0;
+  const win = [...(fx.result.goals || []), ...(fx.result.cards || [])].map(e => [Math.max(t0, e.t - LEAD), Math.min(t1, e.t + TAIL)]).sort((x, y) => x[0] - y[0]);
+  const merged = [];
+  for (const w of win) { const l = merged[merged.length - 1]; if (l && w[0] <= l[1]) l[1] = Math.max(l[1], w[1]); else merged.push([...w]); }
+  const A = merged.reduce((n, w) => n + w[1] - w[0], 0);
+  if (B >= D || A > 0.6 * B || !merged.length) return fx._warp = { key, B, segs: [{ s0: t0, s1: t1, w0: 0, w1: B, r: D / B }] };
+  const rest = (D - A) / (B - A), segs = []; let cur = t0, w = 0;
+  const add = (s0, s1, r) => { if (s1 - s0 > 1e-6) { segs.push({ s0, s1, w0: w, w1: w + (s1 - s0) / r, r }); w += (s1 - s0) / r; } };
+  for (const m of merged) { add(cur, m[0], rest); add(m[0], m[1], 1); cur = m[1]; }
+  add(cur, t1, rest);
+  return fx._warp = { key, B, segs };
+}
+// Seconds into the live window -> match-file time.
+export function liveSimTime(fx, s, now = new Date()) {
+  const W = warp(fx, s), w = Math.min(W.B, Math.max(0, (now - kickoff(fx)) / 1000));
+  const g = W.segs.find(g => w <= g.w1) || W.segs[W.segs.length - 1];
+  return g.s0 + (w - g.w0) * g.r;
+}
+// How fast the picture must run at match-file time t to stay on the live clock (1 in the key moments).
+export function liveSpeed(fx, s, t) {
+  const W = warp(fx, s);
+  if (t == null) t = liveSimTime(fx, s);
+  return (W.segs.find(g => t <= g.s1) || W.segs[W.segs.length - 1]).r;
+}
+// The match clock at match-file time t ("37:12"), and the added time announced once the 45 minutes are up (else 0).
+export function clockAt(periods, t) {
+  const p = [...periods].reverse().find(p => p.start_t <= t + 1e-6) || periods[0];
+  const el = Math.max(0, t - p.start_t) + (p.period === 2 ? 2700 : 0);
+  return `${String(Math.floor(el / 60)).padStart(2, '0')}:${String(Math.floor(el % 60)).padStart(2, '0')}`;
+}
+export function addedAt(periods, t) {
+  const p = [...periods].reverse().find(p => p.start_t <= t + 1e-6) || periods[0];
+  return p && t - p.start_t >= 2700 && p.added_minutes ? p.added_minutes : 0;
 }
 
 // The score as a viewer should see it right now (goals appear as the live broadcast reaches them).

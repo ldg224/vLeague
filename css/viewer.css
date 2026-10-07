@@ -1,0 +1,99 @@
+/* The match viewer (0.36): broadcast, tactical and highlights views with their controls. Ported from the s3 site's match page. */
+.replay-card { padding: 16px; }
+.replay-wrap { position: relative; border-radius: 16px; overflow: hidden; background: var(--bg); box-shadow: inset 0 0 60px rgba(0,0,0,.8); }
+.replay-wrap canvas { width: 100%; height: auto; display: block; }
+.replay-caption {
+  position: absolute; left: 50%; top: 8px; transform: translateX(-50%); max-width: calc(100% - 16px); overflow: hidden; text-overflow: ellipsis; padding: 5px 12px; border-radius: 999px;
+  background: rgba(10,15,25,.88); border: 1px solid var(--line); font-weight: 800; font-size: .8rem; white-space: nowrap;
+  opacity: 0; transition: opacity .3s; pointer-events: none;
+}
+.replay-caption.show { opacity: 1; }
+.replay-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+.replay-controls input[type=range] { flex: 1 1 100%; min-width: 0; height: 28px; accent-color: var(--club, var(--blue-500)); }
+.ctl { padding: 8px 16px; min-height: 38px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,.06); font-weight: 800; font-size: .8rem; cursor: pointer; }
+.ctl:hover { border-color: var(--club, var(--blue-500)); }
+.ctl.live { color: var(--live-fg, #ff5252); border-color: var(--live-fg, #ff5252); }
+.replay-clock { font-variant-numeric: tabular-nums; font-weight: 900; min-width: 54px; }
+.replay-empty { min-height: 140px; display: grid; place-items: center; text-align: center; padding: 20px; color: var(--muted); background: linear-gradient(180deg, var(--surface-raised, #1b2638), var(--bg)); border-radius: 16px; }
+.replay-empty strong { display: block; color: var(--text); font-size: 1.1rem; margin-bottom: 6px; }
+.mp-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.mp-head .card-title { margin: 0; flex: 1 1 auto; }
+.mp-tabs { display: flex; gap: 4px; padding: 3px; border-radius: 12px; background: rgba(255,255,255,.05); overflow-x: auto; }
+.mp-tabs button { padding: 7px 12px; border-radius: 9px; border: 0; background: transparent; font: inherit; font-weight: 800; font-size: .8rem; color: var(--muted); white-space: nowrap; cursor: pointer; }
+.mp-tabs button[aria-selected="true"] { background: var(--club, var(--blue-600)); color: #fff; }
+.mp-tabs button[hidden] { display: none; }
+.mp-stage { position: relative; border-radius: 16px; overflow: hidden; background: var(--bg); box-shadow: inset 0 0 60px rgba(0,0,0,.8); }
+.mp-stage canvas { width: 100%; height: auto; display: block; }
+.mp-stage canvas[hidden] { display: none; }
+.mp-canvas { aspect-ratio: 16 / 9; cursor: pointer; background: var(--bg); }
+/* ---------- Full screen ----------
+   .mp-screen (picture + controls) goes full screen; .mp-fs is set both for the real Fullscreen API
+   and for the fallback used where it isn't available (iPhone Safari): a fixed layer over the page. */
+.mp-screen.mp-fs { position: fixed; inset: 0; z-index: 1000; width: 100vw; height: 100vh; height: 100dvh; background: #000; margin: 0; }
+.mp-screen.mp-fs .mp-stage { position: absolute; inset: 0; border-radius: 0; background: #000; box-shadow: none; }
+/* The canvas draws at a capped (sometimes reduced) resolution, so its own pixel size is usually
+   smaller than the screen: stretch it to fill and keep the picture's shape. */
+.mp-screen.mp-fs .mp-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; aspect-ratio: auto; object-fit: contain; }
+/* A transform, filter or animation on any ancestor (the card fades in) would pin the fixed
+   layer to that ancestor instead of the screen, so drop them while full screen. */
+body.mp-fs-open :has(.mp-screen.mp-fs) { transform: none !important; filter: none !important; backdrop-filter: none !important; contain: none !important; animation: none !important; }
+.mp-screen.mp-fs .mp-controls {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; margin: 0;
+  padding: 28px max(14px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  background: linear-gradient(transparent, rgba(0,0,0,.85)); transition: opacity .25s;
+}
+/* While playing, the controls fade out after a few seconds without a touch or mouse move. */
+.mp-screen.mp-fs.mp-idle .mp-controls { opacity: 0; pointer-events: none; }
+.mp-screen.mp-fs.mp-idle { cursor: none; }
+body.mp-fs-open { overflow: hidden; }
+@media (prefers-reduced-motion: reduce) { .mp-screen.mp-fs .mp-controls { transition: none; } }
+.mp-big { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 76px; height: 76px; border-radius: 50%; border: 0; background: rgba(10,15,25,.72); color: #fff; font-size: 2rem; cursor: pointer; box-shadow: 0 0 0 3px rgba(255,255,255,.85), 0 10px 30px rgba(0,0,0,.5); backdrop-filter: blur(4px); }
+.mp-big:hover { background: rgba(10,15,25,.9); }
+.mp-big[hidden] { display: none; }
+.mp-msg { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-weight: 700; background: var(--surface); }
+.mp-msg.err { color: #fff; } .mp-msg.err::before { content: "⚠ "; }
+.mp-msg[hidden] { display: none; }
+.mp-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+.mp-extra { display: contents; }
+.mp-seek { position: relative; flex: 1 1 100%; order: 5; }
+.mp-seek input[type=range] { width: 100%; height: 28px; accent-color: var(--club, var(--blue-500)); display: block; }
+.mp-marks { position: absolute; left: 8px; right: 8px; top: 0; height: 6px; pointer-events: none; }
+.mp-marks .mk { position: absolute; top: 0; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: rgba(255,255,255,.55); }
+.mp-marks .mk-goal { background: #ffffff; box-shadow: 0 0 0 2px rgba(0,0,0,.6); }
+.mp-marks .mk-card { background: #facc15; border-radius: 2px; width: 6px; margin-left: -3px; }
+.mp-marks .mk-card.mk-red { background: #e53935; }
+.mp-marks .mk-card.mk-second_yellow { background: #e53935; isolation: isolate; }
+.mp-marks .mk-card.mk-second_yellow::before { content: ''; position: absolute; left: -3px; top: -2px; width: 6px; height: 8px; background: #facc15; border-radius: 2px; z-index: -1; }
+.mp-marks .mk-ht, .mp-marks .mk-ft { background: rgba(255,255,255,.3); border-radius: 1px; width: 2px; margin-left: -1px; height: 10px; }
+#mp-full { margin-left: auto; }
+.ctl.live.behind { opacity: .6; }
+.mp-dl { margin-bottom: 12px; padding: 12px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); }
+.mp-dl[hidden] { display: none; }
+.mp-dl-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.mp-dl-item { display: grid; gap: 6px; align-content: start; padding: 10px; border-radius: 12px; background: rgba(255,255,255,.03); }
+.mp-dl-item span { color: var(--muted); font-size: .8rem; }
+.mp-dl-item .ctl { justify-self: start; text-decoration: none; }
+.mp-dl-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.mp-dl-row select { max-width: 100%; }
+.mp-dl-note { margin: 10px 0 0; color: var(--muted); font-size: .8rem; }
+.mp-dl-progress { margin-top: 12px; display: grid; gap: 6px; }
+.mp-dl-progress[hidden] { display: none; }
+.mp-dl-status { margin: 0; font-size: .82rem; }
+.mp-bar { height: 8px; border-radius: 99px; background: rgba(255,255,255,.08); overflow: hidden; }
+.mp-bar span { display: block; height: 100%; width: 0; background: var(--club, var(--blue-600)); transition: width .3s; }
+.mp-dl-progress .ctl { justify-self: start; }
+
+
+/* vLeague additions */
+.mp-pill { display: inline-flex; align-items: center; gap: 6px; margin-left: 10px; padding: 2px 10px; border-radius: 999px; background: var(--live-bg, #3a1010); color: var(--live-fg, #ff5252); font: 700 .72rem var(--font); letter-spacing: .08em; text-transform: uppercase; vertical-align: middle; }
+.mp-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: pulse 1.6s ease-in-out infinite; }
+.reduce-motion .mp-pill .dot { animation: none; }
+.mp-head .card-title { font-size: 1.05rem; }
+/* A live match is a broadcast: no play, pause, seek or speed. Only full screen stays. */
+.mp-live .mp-controls { margin-top: 8px; justify-content: flex-end; }
+.mp-live .mp-controls > :not(#mp-full) { display: none !important; }
+.mp-live .mp-big { display: none !important; }
+.mp-live .mp-canvas { cursor: default; }
+.mp-live .mp-tabs { }
+.mp-card-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.gc-card.replay-card { padding: 14px; }

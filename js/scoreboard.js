@@ -4,7 +4,6 @@
 //
 //   lookInfo(season, fx)  -> { key, name, accent, banner, ornament }
 //   scoreboard({ fx, season, look, h, a, hColour, aColour, crests: [homeHtml, awayHtml], score, state, goals: [homeHtml, awayHtml], meta })
-//   bug({ look, hCode, aCode, score, clock, hColour, aColour }) -> the small score bug shown on the pitch
 import { esc } from './member.js';
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -40,7 +39,3 @@ export function scoreboard(o) {
       <div class="sb-team a">${crests[1]}<b>${esc(a)}</b><ul class="sb-goals">${goals[1]}</ul></div>
     </div>${meta ? `<p class="sb-meta">${meta}</p>` : ''}</div>`;
 }
-
-export const bug = ({ look, hCode, aCode, score, clock, hColour, aColour, round }) => `<div class="sb-bug" data-look="${esc(look.key)}" style="${look.accent ? `--look:${esc(look.accent)};` : ''}${colourVars(hColour, aColour)}">
-  ${round ? `<span class="sb-bug-round">${look.ornament ? `${esc(look.ornament)} ` : ''}${esc(round)}</span>` : ''}
-  <span class="sb-bug-row"><i class="hc"></i><b>${esc(hCode)}</b><strong>${score}</strong><b>${esc(aCode)}</b><i class="ac"></i><em>${esc(clock)}</em></span></div>`;
