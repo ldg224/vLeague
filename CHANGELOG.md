@@ -16,7 +16,12 @@ The clean-up. Less on every screen, and nothing new. No database change. If anyt
   the Clubs-by-week and Meetings tables and the separate Checks view (a round now warns on its own when a club plays twice or a match has no time).
 - **Fixed:** the dark theme had six colours that were defined in terms of themselves, so they were never set: error and warning messages in the Editor were not red or amber in dark mode, and a few hover and autofill colours were missing. They have real values now.
 - **Fixed:** a test match (week 99) counted as the "last week", so "Add the next round" would have failed after one. Test matches are now left out of the season when working out what comes next.
-- **Tidied:** about 1,400 lines of code and 60 style rules nothing used any more.
+- **Changed, Editor → Clubs, Players and News:** each tab keeps what you actually do and loses what repeated it.
+  - **Clubs:** one "Copy phone numbers" (the separate Phones CSV did the same), no Registrations CSV (every registration is still readable per club), and the repeated status rows and hint paragraphs are gone.
+  - **Players:** Generate now takes just a number of players (typical quality, mostly Australian names); the Options block, per-row re-roll and leave-out in the preview, the ID column and ID search, and the long hints are gone.
+  - **News:** one Pin (the button in the list; a new post is pinned after it is published), and the "Also email managers" checkbox is the only email control (an email that failed is retried by editing the post and ticking it again). The B / I / List / Link toolbar is gone (Markdown still works if typed),
+    and "Send me a test email" only shows when editing a saved post.
+- **Tidied:** about 60 style rules and some code that nothing used any more. In all, the clean-up removes about 1,150 lines net.
 
 ## 0.39.2 (2026-10-07)
 
