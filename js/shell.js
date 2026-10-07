@@ -6,7 +6,6 @@ import { onColour } from './club-colour.js';
 import { enter, chrome, safeColour, esc } from './member.js';
 import { prefs } from './prefs.js';
 import { db } from './auth.js';
-import { openDraft } from './draft-data.js';
 import { loadSeason } from './dashboard-data.js';
 
 const ICON = {
@@ -30,7 +29,7 @@ function drawNav(current) {
   const nav = document.getElementById('places');
   if (!nav) return;
   nav.setAttribute('aria-label', 'Main');
-  nav.innerHTML = PLACES.map(p => `<a href="${p.href}" data-place="${p.id}"${p.id === current ? ' aria-current="page"' : ''}${p.id === 'draft' && current !== 'draft' ? ' hidden' : ''}>
+  nav.innerHTML = PLACES.map(p => `<a href="${p.href}" data-place="${p.id}"${p.id === current ? ' aria-current="page"' : ''}>
       <svg viewBox="0 0 24 24" aria-hidden="true">${ICON[p.id]}</svg><span>${esc(p.label)}</span><b class="dot" hidden></b></a>`).join('');
   document.body.classList.add('has-places');
 }
@@ -65,8 +64,6 @@ export async function enterPlace(place) {
   const me = await enter(`${place}.html`);
   if (!me) return null;
   if (!me.profile?.club) document.querySelector('#places [data-place="settings"]')?.remove();
-  // The Draft tab only exists while a draft is open (0.21): live or paused, inside its window.
-  if (place !== 'draft') openDraft().then(d => { if (d) document.querySelector('#places [data-place="draft"]')?.removeAttribute('hidden'); });
   const code = me.profile?.club;
   const [club, season, settings] = await Promise.all([
     code ? db().then(c => c.from('clubs').select('*').eq('code', code).maybeSingle()).then(r => r.data || null).catch(() => null) : null,

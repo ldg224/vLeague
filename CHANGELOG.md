@@ -3,6 +3,10 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.29.1 (2026-10-07)
+
+- **Changed:** the **Draft** tab is always there for managers. When no draft is open it shows a small preview: the draft's name, when it opens and closes, and the pick order.
+
 ## 0.29.0 (2026-10-07)
 
 Draft: emails, instant updates, a better phone page. Needs `0031_draft_notifications.sql` (run it once) and the two email functions

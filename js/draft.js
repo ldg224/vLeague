@@ -4,7 +4,7 @@
 // made (realtime), with a 15 s poll as backup. Tap a player's name for their card; picks are confirmed in a small dialog.
 import { enterPlace } from './shell.js';
 import { esc } from './member.js';
-import { openDraft, loadDraft, saveQueue, savePrefs, makePick, quietState, describeQuiet } from './draft-data.js';
+import { openDraft, latestDraft, loadDraft, saveQueue, savePrefs, makePick, quietState, describeQuiet } from './draft-data.js';
 import { loadPlayers, forgetPlayers } from './players-data.js';
 import { ago } from './places.js';
 import { overall } from './names.js';
@@ -51,8 +51,10 @@ if (ctx) {
   const nameOf = c => (c === code && club?.name) || clubName.get(c) || c;
   const draft0 = await openDraft();
   if (!draft0) {
-    main.innerHTML = '<h1 class="page-title" tabindex="-1">Draft</h1><p class="empty">There’s no draft open right now.</p>';
-    document.querySelector('#places [data-place="draft"]')?.remove();
+    const p = await latestDraft(), fmt = d => new Date(d).toLocaleString('en-AU', { timeZone: 'Australia/Melbourne', weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+    const state = !p ? '' : p.draft.status === 'done' ? 'Finished.' : ['live', 'paused'].includes(p.draft.status) && p.draft.opens_at && new Date(p.draft.opens_at) > new Date() ? `Opens ${fmt(p.draft.opens_at)}.` : p.draft.status === 'live' || p.draft.status === 'paused' ? 'Closed.' : 'Not started yet.';
+    main.innerHTML = `<h1 class="page-title" tabindex="-1">Draft</h1><p class="empty">There’s no draft open right now.</p>${p ? `<section class="dr-preview"><h2>${esc(p.draft.name)}</h2><p>${esc(state)}${p.draft.opens_at && !/^Opens/.test(state) ? ` Opens ${esc(fmt(p.draft.opens_at))}.` : ''}${p.draft.closes_at ? ` Closes ${esc(fmt(p.draft.closes_at))}.` : ''}</p>
+      ${p.order.length ? `<p><b>Pick order:</b> ${p.order.slice(0, 40).map(o => `${o.pick_no}. ${esc(nameOf(o.club))}`).join(' · ')}${p.order.length > 40 ? ' …' : ''}</p>` : ''}</section>` : ''}`;
     main.setAttribute('aria-busy', 'false');
   } else {
     let tab = (() => { const h = location.hash.slice(1); return h === 'queue' || h === 'auto' ? 'players' : TABS.some(t => t[0] === h) ? h : 'board'; })();

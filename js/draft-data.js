@@ -10,6 +10,18 @@ export async function openDraft(now = new Date()) {
   } catch { return null; }
 }
 
+// The newest draft whatever its state, for the preview managers see when none is open (0.30).
+export async function latestDraft() {
+  try {
+    const c = await db();
+    const { data } = await c.from('drafts').select('*').order('id', { ascending: false }).limit(1);
+    const d = data?.[0];
+    if (!d) return null;
+    const { data: order } = await c.from('draft_order').select('pick_no, club').eq('draft', d.id).order('pick_no');
+    return { draft: d, order: order || [] };
+  } catch { return null; }
+}
+
 // Quiet times (0.28): when the pick timer doesn't run. quiet = [{ days: [0..6], from: 'HH:MM', to: 'HH:MM' }], Melbourne time.
 // A manager can still pick in them; only the clock stops. The database works out the deadline (supabase/migrations/0029).
 export const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
