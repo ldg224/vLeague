@@ -59,7 +59,7 @@ export async function loadSeason() {
     season: 1, league: 'vLeague', live_minutes: 45, points: { win: 3, draw: 1, loss: 0 }, news: [], players,
     teams: cl.data.map(x => ({ code: x.code, name: x.name, short_name: x.short_name, colour: x.colour || '#475569', manager: x.manager_name || '',
       ...(x.status === 'withdrawn' || x.status === 'pending' ? { withdrawn: true } : {}) })),
-    fixtures: fx.data.map(f => ({ id: f.id, week: f.week, look: lookOf(f), round: labels.get(f.week).label, ...(rounds.get(f.week)?.counts_for_ladder === false ? { exhibition: true } : {}), ...(labels.get(f.week).name ? { round_name: labels.get(f.week).name } : {}), home: f.home, away: f.away, ...(f.starts_at ? melbParts(f.starts_at) : {}),
+    fixtures: fx.data.map(f => ({ id: f.id, week: f.week, ...(f.week === 99 ? { test: true } : {}), look: lookOf(f), round: labels.get(f.week).label, ...(rounds.get(f.week)?.counts_for_ladder === false ? { exhibition: true } : {}), ...(labels.get(f.week).name ? { round_name: labels.get(f.week).name } : {}), home: f.home, away: f.away, ...(f.starts_at ? melbParts(f.starts_at) : {}),
       ...(f.stage ? { stage: f.stage } : {}), ...(f.postponed ? { postponed: true } : {}), ...(result.has(f.id) ? { result: result.get(f.id) } : {}) })),
   };
 }
@@ -210,6 +210,7 @@ export function ladder(s, now = new Date()) {
 export function leaders(s, now = new Date()) {
   const tot = {};
   for (const f of finished(s, now)) {
+    if (f.test) continue;   // a test match (week 99) has made-up players
     for (const [id, p] of Object.entries(f.result.players || {})) {
       const t = tot[id] ??= { id, name: p.name, team: p.team, apps: 0, g: 0, a: 0, rsum: 0 };
       t.apps++; t.g += p.g || 0; t.a += p.a || 0; t.rsum += p.r || 0;

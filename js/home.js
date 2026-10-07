@@ -38,7 +38,7 @@ function until(ms) {
 const day = (d, now) => sameDay(d, now) ? 'Today' : sameDay(d, new Date(+now + 864e5)) ? 'Tomorrow' : fmtDay(d);
 const time = d => fmtTime(d);
 
-const mine = (s, code) => s.fixtures.filter(f => f.home === code || f.away === code).sort(byKickoff);
+const mine = (s, code) => s.fixtures.filter(f => !f.test && (f.home === code || f.away === code)).sort(byKickoff);
 
 // The match the card shows: ours live now, else our next, else null.
 function current(s, code, now) {

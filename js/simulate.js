@@ -58,11 +58,11 @@ const stamp = f => `${f.date || ''}T${f.time || ''}`;
 // kick-off order, skipping postponed ones. Returns Map(fixture id -> [{ player, name, reason }]).
 export function suspensions(season) {
   const out = new Map();
-  const played = season.fixtures.filter(f => f.date && !f.postponed);
+  const played = season.fixtures.filter(f => f.date && !f.postponed && !f.test);
   const clubGames = code => played.filter(f => f.home === code || f.away === code).sort((a, b) => stamp(a).localeCompare(stamp(b)));
   const owner = id => season.players.find(p => String(p.id) === String(id))?.team;
   for (const f of season.fixtures) {
-    if (!f.result || !f.date) continue;
+    if (!f.result || !f.date || f.test) continue;
     for (const c of f.result.cards || []) {
       if (c.card !== 'red' && c.card !== 'second_yellow') continue;
       const team = c.team || owner(c.player);
@@ -145,16 +145,85 @@ export async function simulateFixture(c, season, fixture, { onProgress, seed } =
   const sheets = fixture.week != null && !fixture.stage ? await weekSheets(c, fixture.week) : {};
   const factor = await pressFor(c, fixture);
   const league = toLeague(season, [fixture.home, fixture.away], out, sheets, factor);
+  return runEngine(league, fixture.home, fixture.away, seed, { fixture_id: fixture.id || null, week: fixture.week ?? null, date: fixture.date || null, time: fixture.time || null, stage: fixture.stage || null, suspended }, onProgress);
+}
+
+// Hands a league (two clubs and their players) to the engine in its worker and waits for the match file.
+async function runEngine(league, home, away, seed, info, onProgress) {
   await start();
   const job = ++jobSeq;
   return new Promise((resolve, reject) => {
     pending.set(job, { resolve, reject, onProgress });
-    worker.postMessage({
-      job, league: JSON.stringify(league), home: fixture.home, away: fixture.away,
-      seed: seed ?? null,
-      info: { fixture_id: fixture.id || null, week: fixture.week ?? null, date: fixture.date || null, time: fixture.time || null, stage: fixture.stage || null, suspended },
-    });
+    worker.postMessage({ job, league: JSON.stringify(league), home, away, seed: seed ?? null, info });
   });
+}
+
+// ---------------------------------------------------------------- test match (0.39)
+// A made-up match for trying the broadcast, Game centre and highlights without touching the season: two random active clubs get
+// random made-up squads (in memory only; no real player or club is changed), the match is played by the engine, saved as a
+// fixture in week 99 (a "Test match" round that doesn't count for the table, the top players or any manager's page), and set to
+// kick off right now so it plays out live. The deadline row the database makes for the week is removed, so no reminder or
+// line-up lock ever fires for it. `removeTestMatches` takes it all away again.
+export const TEST_WEEK = 99;
+const melb = d => {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'Australia/Melbourne', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(d).map(x => [x.type, x.value]));
+  return { date: `${p.year}-${p.month}-${p.day}`, time: `${p.hour}:${p.minute}` };
+};
+const throwOn = (r, what) => { if (r.error) throw new Error(`${what} (${r.error.message})`); return r; };
+
+export async function startTestMatch(c, clubs, { look = 'random', looks = [], onProgress, onStatus = () => {} } = {}) {
+  const active = clubs.filter(x => x.status === 'active');
+  if (active.length < 2) throw new Error('A test match needs at least two active clubs.');
+  const [home, away] = [...active].sort(() => Math.random() - 0.5);
+  const pickLook = look === 'random' ? (looks.length ? looks[Math.floor(Math.random() * looks.length)].key : 'classic') : look;
+
+  // Two random squads of 16: made-up names and ratings, with a different overall strength each so the match isn't a coin flip.
+  onStatus('Making up the squads…');
+  const { generate } = await import('./names.js');
+  const mean = () => 4.8 + Math.random() * 1.5;
+  const sqA = generate(16, [], { mean: mean(), spread: 1.3 }), sqB = generate(16, sqA.map(p => p.name), { mean: mean(), spread: 1.3 });
+  const players = {}, tag = (list, base) => list.forEach((p, i) => { const id = String(base + i + 1); players[id] = { id, name: p.name, team: base === 9000 ? home.code : away.code, position: p.position, offense: p.offense, defense: p.defense }; });
+  tag(sqA, 9000); tag(sqB, 9100);   // ids 9001 to 9016 and 9101 to 9116: the shirt number is the last two digits
+  const team = x => ({ code: x.code, name: x.name, manager: '', colour: x.colour || '#888888' });
+  const league = { teams: { [home.code]: team(home), [away.code]: team(away) }, players, attributes: {}, tactics: { [home.code]: {}, [away.code]: {} }, schedule: [] };
+
+  // The test round and fixture (kick-off set last, once the match exists).
+  onStatus('Setting up the test round…');
+  const round = { week: TEST_WEEK, name: 'Test match', kind: 'special', look: pickLook, lock_minutes_before: 0, numbered: false, counts_for_ladder: false };
+  let r = await c.from('rounds').upsert(round, { onConflict: 'week' });
+  if (r.error) r = await c.from('rounds').upsert({ week: TEST_WEEK, name: 'Test match', kind: 'special', look: pickLook, lock_minutes_before: 0 }, { onConflict: 'week' });   // older databases without the newer columns
+  throwOn(r, 'The test round couldn’t be made');
+  const id = `test-${home.code}-${away.code}-${Date.now().toString(36)}`.toLowerCase();
+  throwOn(await c.from('fixtures').insert({ id, week: TEST_WEEK, home: home.code, away: away.code, starts_at: null }), 'The test match couldn’t be made');
+  try {
+    const now = melb(new Date());
+    const data = await runEngine(league, home.code, away.code, Math.floor(Math.random() * 2 ** 31), { fixture_id: id, week: TEST_WEEK, date: now.date, time: now.time, stage: null, suspended: [], test: true }, onProgress);
+    onStatus('Saving…');
+    const summary = await saveResult(c, { id }, data);
+    // Kick off now (a few seconds ago, so the clocks of a computer and the server can't make it start "later").
+    throwOn(await c.from('fixtures').update({ starts_at: new Date(Date.now() - 3000).toISOString() }).eq('id', id), 'The kick-off time couldn’t be set');
+    await c.from('deadlines').delete().eq('week', TEST_WEEK);   // the database made a line-up deadline for the week; there is nothing to lock
+    return { id, home, away, look: pickLook, score: [summary.home, summary.away] };
+  } catch (e) {
+    await c.from('fixtures').delete().eq('id', id);
+    await c.storage.from('matches').remove([`${id}.json.gz`]);
+    throw e;
+  }
+}
+
+// Takes every test match away: its result, its match file, the fixtures, the week's deadline and the test round.
+export async function removeTestMatches(c) {
+  const { data, error } = await c.from('fixtures').select('id').eq('week', TEST_WEEK);
+  if (error) throw new Error(`The test matches couldn’t be listed (${error.message}).`);
+  const ids = (data || []).map(f => f.id);
+  if (ids.length) {
+    await c.storage.from('matches').remove(ids.map(i => `${i}.json.gz`));
+    throwOn(await c.from('results').delete().in('fixture', ids), 'The test results couldn’t be removed');
+    throwOn(await c.from('fixtures').delete().in('id', ids), 'The test fixtures couldn’t be removed');
+  }
+  await c.from('deadlines').delete().eq('week', TEST_WEEK);
+  await c.from('rounds').delete().eq('week', TEST_WEEK);
+  return ids.length;
 }
 
 // The compact result kept in the `results` table: score, goals, cards, team stats, player ratings, Man of the Match.

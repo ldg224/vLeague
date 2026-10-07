@@ -493,6 +493,10 @@ export async function mountFixtures(ctx) {
     root.innerHTML = `<div class="fx-top"><p class="pl-sum"><b>${fixtures.length}</b> fixture${fixtures.length === 1 ? '' : 's'} over ${m.weeks.length} week${m.weeks.length === 1 ? '' : 's'}.
         <button class="btn small" type="button" data-act="sim-all" ${todo().length ? '' : 'disabled'}>Simulate all unplayed (${todo().length})</button>
         <button class="btn ghost small" type="button" data-act="clear-all" ${m.weeks.length ? '' : 'disabled'}>Clear everything</button></p>
+      <p class="fx-test"><b>Test match</b> <select id="fx-test-look" aria-label="Scoreboard look for the test match"><option value="random">Random look</option>${looks.map(l => `<option value="${esc(l.key)}">${esc(l.name)}</option>`).join('')}</select>
+        <button class="btn small" type="button" data-act="test-match" ${busy || codes().length < 2 ? 'disabled' : ''}>Play a test match now</button>
+        ${fixtures.some(f => f.week === 99) ? `<button class="btn ghost small" type="button" data-act="test-clean" ${busy ? 'disabled' : ''}>Remove test matches (${fixtures.filter(f => f.week === 99).length})</button>` : ''}
+        <span class="ed-hint">Two random clubs with made-up squads play a match that starts live right now. Nothing real changes.</span></p>
       <div class="fx-undo"><button class="btn ghost small" type="button" data-act="undo" ${undoStack.length && !busy ? '' : 'disabled'}>↶ Undo${undoStack.length ? `: ${esc(undoStack.at(-1).label)}` : ''}</button>
         <button class="btn ghost small" type="button" data-act="redo" ${redoStack.length && !busy ? '' : 'disabled'}>↷ Redo${redoStack.length ? `: ${esc(redoStack.at(-1).label)}` : ''}</button></div></div>
       ${hasRoster ? '' : '<p class="fx-warnbar">Week numbering and the safe week mover need the database update <b>0021_roster_tools.sql</b>. Everything else works now.</p>'}
@@ -548,6 +552,43 @@ export async function mountFixtures(ctx) {
     }
     cancel.textContent = 'Close'; cancel.disabled = false; cancel.onclick = () => { panel.hidden = true; };
     busy = false;
+    draw();
+  }
+
+  // ---------------------------------------------------------------- test match (0.39)
+  async function testMatch() {
+    if (busy) return;
+    if ((await ask('Play a made-up test match? Two random clubs get random made-up players, the match is played by the engine and it goes live right now, for anyone watching. No real player, club or table changes, and “Remove test matches” takes it away again.', ['Play it'])) !== 0) return;
+    busy = true;
+    const panel = document.getElementById('fx-sim'), look = document.getElementById('fx-test-look')?.value || 'random';
+    panel.hidden = false;
+    panel.innerHTML = `<p class="fx-sim-what">Test match</p><div class="vid-bar"><span></span></div><p class="fx-sim-status"></p><button class="btn ghost small" type="button" disabled>Close</button>`;
+    const bar = panel.querySelector('.vid-bar span'), status = panel.querySelector('.fx-sim-status'), close = panel.querySelector('button');
+    try {
+      const [sim, c] = await Promise.all([import('./simulate.js'), ctx.db()]);
+      const r = await sim.startTestMatch(c, ctx.clubs, { look, looks, onStatus: t => { status.textContent = t; }, onProgress: frac => {
+        bar.style.width = `${Math.round(Math.min(1, frac) * 100)}%`;
+        status.textContent = frac < 0.02 ? 'Loading the simulator (the first time takes a moment)…' : `Playing the match… ${Math.round(frac * 100)}%`;
+      } });
+      bar.style.width = '100%';
+      const link = `game.html?id=${encodeURIComponent(r.id)}`;
+      status.innerHTML = `${esc(name(r.home.code))} v ${esc(name(r.away.code))} (${esc(looks.find(l => l.key === r.look)?.name || r.look)} look) is live now. <a href="${esc(link)}" target="_blank" rel="noopener">Open the Game centre</a> · it also shows in Matches.`;
+    } catch (e) {
+      status.textContent = e.message;
+    }
+    close.disabled = false; close.onclick = () => { panel.hidden = true; };
+    busy = false;
+    try { await load(); } catch { /* shown below */ }
+    draw();
+  }
+  async function testClean() {
+    const n = fixtures.filter(f => f.week === 99).length;
+    if (!n || (await ask(`Remove ${n} test match${n === 1 ? '' : 'es'}? They disappear for everyone.`, ['Remove'])) !== 0) return;
+    busy = true; draw();
+    try { const removed = await (await import('./simulate.js')).removeTestMatches(await ctx.db()); notify(`${removed} test match${removed === 1 ? '' : 'es'} removed.`); }
+    catch (e) { notify(e.message, 'bad'); }
+    busy = false;
+    try { await load(); } catch { /* shown below */ }
     draw();
   }
 
@@ -783,6 +824,8 @@ export async function mountFixtures(ctx) {
     if (act === 'undo') return undo();
     if (act === 'redo') return redo();
     if (act === 'quick-create') return quickCreate();
+    if (act === 'test-match') return testMatch();
+    if (act === 'test-clean') return testClean();
     if (act === 'sim-all') return simulate(todo());
     if (act === 'clear-all') {
       if ((await ask(`Delete all ${fixtures.length} fixtures, their ${plural(results.size, 'result')} and every round?`, ['Yes, clear everything'])) !== 0) return;

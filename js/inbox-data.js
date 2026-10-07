@@ -17,7 +17,7 @@ const forClub = (post, code) => {
 
 const DAY = 864e5;
 function pressItems(season, code, now) {
-  return (season?.fixtures || []).filter(f => (f.home === code || f.away === code) && !f.postponed).flatMap(f => {
+  return (season?.fixtures || []).filter(f => (f.home === code || f.away === code) && !f.postponed && !f.test).flatMap(f => {
     const w = pressWindow(f, now), ko = kickoff(f);
     if (w === 'open') return [{ id: `press-${f.id}`, src: 'press', fx: f, at: new Date(+ko - DAY), pinned: true, open: true }];
     if (w === 'closed' && now - ko < 2 * DAY) return [{ id: `press-${f.id}`, src: 'press', fx: f, at: new Date(+ko - DAY), pinned: false, open: false }];

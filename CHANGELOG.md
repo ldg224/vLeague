@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.39.0 (2026-10-07)
+
+A Test match button. No database change.
+
+- **Added, Editor → Fixtures:** **Play a test match now**. It picks two random active clubs, gives each a random made-up squad of 16 (names and ratings generated on the spot, never saved
+  as players), plays the match with the engine, and sets it to kick off right now so it runs live for anyone watching. Pick a scoreboard look for it, or leave it on Random. When it is done,
+  the Editor shows a link to its Game centre; it is also in Matches. **Remove test matches** takes every test match away (its result, its match file, its fixture and its round).
+- **Nothing real changes.** The squads exist only inside the simulation, so no real player or club is touched and there is nothing to put back. A test match lives in week 99, a "Test match" round
+  that doesn't count for the table or the top players, never shows on a manager's Home or Inbox (no press conference for it), and has no line-up deadline, so no reminder or lock ever fires for it.
+
 ## 0.38.0 (2026-10-07)
 
 A livelier broadcast. No database change. Applies to the broadcast view and the highlights video, for matches already played as well as new ones.
