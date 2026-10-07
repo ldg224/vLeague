@@ -3,6 +3,10 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.33.2 (2026-10-08)
+
+- **Fixed:** every page failed to load after 0.33.1, because the version file had been emptied by mistake. The version file is back.
+
 ## 0.33.1 (2026-10-07)
 
 No database change.
