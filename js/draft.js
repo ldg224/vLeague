@@ -218,11 +218,30 @@ if (ctx) {
         <ul class="dr-list">${ps.map(p => playerRow(p)).join('')}</ul></details>`).join('') || '<p class="empty">No club has a player yet.</p>'}</div></section>`;
     }
 
+    const pageHtml = autoOpen => `<div class="draft">${head()}<nav class="dr-tabs" role="tablist">${TABS.map(([id, l]) => `<button role="tab" data-tab="${id}" aria-selected="${tab === id}">${l}</button>`).join('')}<button class="dr-help" data-tour title="A step-by-step guide to this page"><b>?</b> How it works</button></nav>
+        <p class="dr-msg" role="status">${esc(msg)}</p>${tab === 'players' ? playersTab(autoOpen) : { board: boardTab, values: valuesTab }[tab]()}</div>`;
+
+    // Typing in a search or filter box: update everything around the box but never the box itself, so it keeps the cursor
+    // (and a phone keeps its keyboard open). Falls back to a full redraw if the page's shape changed.
+    function softDraw() {
+      const active = document.activeElement, wraps = [...main.querySelectorAll('.dr-tablewrap')].map(w => w.scrollTop);
+      const tmp = document.createElement('div');
+      tmp.innerHTML = pageHtml(main.querySelector('.dr-autobox')?.open ?? true);
+      const sync = (cur, next) => {
+        if (cur === active) return true;
+        if (!cur.contains(active)) { cur.replaceWith(next); return true; }
+        if (cur.children.length !== next.children.length) return false;
+        const nk = [...next.children];
+        return [...cur.children].every((c, i) => sync(c, nk[i]));
+      };
+      if (!active || !main.contains(active) || !sync(main, tmp)) return draw();
+      main.querySelectorAll('.dr-tablewrap').forEach((w, i) => { w.scrollTop = wraps[i] || 0; });
+    }
+
     function draw() {
       const y = window.scrollY, wraps = [...main.querySelectorAll('.dr-tablewrap')].map(w => w.scrollTop), side = main.querySelector('.dr-side')?.scrollTop || 0;
       const open = [...main.querySelectorAll('details.dr-team')].map(d => d.open), autoOpen = main.querySelector('.dr-autobox')?.open ?? true;
-      main.innerHTML = `<div class="draft">${head()}<nav class="dr-tabs" role="tablist">${TABS.map(([id, l]) => `<button role="tab" data-tab="${id}" aria-selected="${tab === id}">${l}</button>`).join('')}<button class="dr-help" data-tour title="A step-by-step guide to this page"><b>?</b> How it works</button></nav>
-        <p class="dr-msg" role="status">${esc(msg)}</p>${tab === 'players' ? playersTab(autoOpen) : { board: boardTab, values: valuesTab }[tab]()}</div>`;
+      main.innerHTML = pageHtml(autoOpen);
       if (tab === 'values') main.querySelectorAll('details.dr-team').forEach((d, i) => { if (i in open) d.open = open[i]; });
       // A redraw (a refresh, a pick, a sort) must not throw you back to the top of a long table.
       main.querySelectorAll('.dr-tablewrap').forEach((w, i) => { w.scrollTop = wraps[i] || 0; });
@@ -324,8 +343,7 @@ if (ctx) {
     main.addEventListener('input', e => {
       const t = e.target;
       if (t.dataset.f === 'q' || t.dataset.f === 'max') {
-        F[t.dataset.t].q = t.value; const s = t.selectionStart; draw();
-        const i = main.querySelector(`[data-f="${t.dataset.f}"][data-t="${t.dataset.t}"]`); i?.focus(); try { i?.setSelectionRange(s, s); } catch { /* number boxes have no caret to restore */ }
+        F[t.dataset.t][t.dataset.f] = t.value; softDraw();
       }
     });
     // Auto-pick saves as it changes. "After a few minutes" waits for a valid number of minutes.

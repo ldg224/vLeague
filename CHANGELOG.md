@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.31.1 (2026-10-07)
+
+- **Fixed:** typing in the Draft page's **Search** and **Max value** boxes. The boxes were being rebuilt after every keystroke, which dropped
+  the cursor (and closed a phone's keyboard) so you could only type one character at a time. The page now updates the table around the
+  box and leaves the box itself alone. The **Max value** box was also being written into the search text by mistake; it now filters by
+  value as intended.
+
 ## 0.31.0 (2026-10-07)
 
 Draft as a grid, and drag-and-drop draft order. No database change.
