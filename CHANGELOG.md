@@ -3,6 +3,20 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.37.0 (2026-10-07)
+
+Match engine 0.2.0: less waiting. No database change. Matches simulated from now on use it; matches already played are unchanged.
+
+- **Changed:** restarts take less time. Throw-ins 4 to 9 s (was 8 to 17), goal kicks 8 to 16 (14 to 28), corners 14 to 24 (24 to 40), free kicks 12 to 26
+  (18 to 40), offside free kicks 8 to 15 (12 to 24), penalties 30 to 50 (60 to 100), the kick-off after a goal 35 to 55 (50 to 80). The ball is now in play
+  about 74% of the time (61% before), so a watched or live match has fewer dull stretches.
+- **Fixed:** a player could keep the ball for 15 to 20 seconds, dribbling around instead of passing or shooting. After 2 seconds on the ball, holding or
+  dribbling now loses appeal every extra second. Spells of more than 8 seconds fell from about 27 a match to about 2.
+- **Fixed:** too many offsides (about 9 a match, mostly the intended receiver of a long or through ball). A passer who sees his receiver is already offside
+  now holds the ball and looks again, and players misjudge the line less often. About 5 a match now.
+- **Changed:** tackles are attempted a little less often, so the busier match doesn't pile them up.
+- Engine tests (16) and the physics checks all pass. Before and after numbers are in `js/sim/docs/CALIBRATION.md`.
+
 ## 0.36.0 (2026-10-07)
 
 The real match viewer is in vLeague. No database change, and nothing loads from the s3 site any more.

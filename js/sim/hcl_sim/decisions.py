@@ -203,7 +203,7 @@ def _pass_option(c, r, loft_angle=0.0, subtype=None, z0=0.0, max_speed=None):
     # hold the pass (or release it earlier); poor vision misses it.
     rx_kick = rx + max(rvx, 0.0) * (windup + 0.15)
     if subtype not in ('throw', 'goal_kick', 'corner') and rx_kick > c.off_line + 0.1 and rx_kick > c.ax and rx_kick > PITCH_LENGTH / 2:
-        ps *= 0.05 + 0.5 * (1 - p.a('vision'))
+        ps *= 0.03 + 0.3 * (1 - p.a('vision'))
 
     # A tightly marked receiver (usually the striker between two centre-backs) is worth less
     # than the pitch position alone suggests: he'll have little time to do anything with it.
@@ -253,6 +253,11 @@ def _shot_option(c, penalty=False, header=False):
             'target': c.to_pitch(PITCH_LENGTH, 34), 'receiver': None, 'p': xg, 'subtype': 'penalty' if penalty else 'open'}
 
 
+def _urgency(c):
+    """The longer a player has had the ball, the less attractive it is to keep it (a carrier who has had it for 8 s is ready to give it up)."""
+    return TUNING['carry_urgency'] * max(0.0, getattr(c.p, 'held_for', 0.0) - TUNING['carry_free_seconds'])
+
+
 def _dribble_options(c):
     out = []
     gx, gy, _ = unit(PITCH_LENGTH - c.ax, 34 - c.ay)
@@ -269,7 +274,7 @@ def _dribble_options(c):
         value = threat(ex, ey)
         danger = threat(PITCH_LENGTH - c.ax, PITCH_WIDTH - c.ay)
         utility = p_keep * value - (1 - p_keep) * danger * TUNING['risk_aversion']
-        utility -= 0.0015 * c.team.tactic('tempo')
+        utility -= 0.0015 * c.team.tactic('tempo') + _urgency(c)
         out.append({'kind': 'dribble', 'target': c.to_pitch(ex, ey), 'utility': utility, 'p': p_keep,
                     'receiver': None, 'windup': 0.0})
     return out
@@ -387,7 +392,7 @@ def options_for(m, p):
         cl = _clear_option(c)
         if cl:
             opts.append(cl)
-        opts.append({'kind': 'hold', 'utility': threat(c.ax, c.ay) * 0.96 - 0.006 * c.pressure - 0.002 * c.team.tactic('tempo'),
+        opts.append({'kind': 'hold', 'utility': threat(c.ax, c.ay) * 0.96 - 0.006 * c.pressure - 0.002 * c.team.tactic('tempo') - _urgency(c),
                      'receiver': None, 'target': (p.x, p.y), 'p': 1.0, 'windup': 0.0})
     return c, [o for o in opts if o]
 

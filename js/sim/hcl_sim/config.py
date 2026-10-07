@@ -49,6 +49,11 @@ TUNING = {
     'shot_error_pressure': 7.0,
     'header_error_extra': 4.0,
 
+    # Time on the ball: after this many seconds a carrier starts to feel the need to release it, and holding or dribbling
+    # scores lower by this much per extra second (threat values run 0.01 to 0.3).
+    'carry_free_seconds': 2.0,
+    'carry_urgency': 0.006,
+
     # Decisions
     'decision_temperature': 0.006,   # softmax temperature for a 100-rated decision maker
     'decision_temperature_poor': 0.020,
@@ -56,7 +61,7 @@ TUNING = {
     'shot_appetite': 0.68,
 
     # Duels
-    'tackle_rate': 0.09,          # tackle attempts per second when in range
+    'tackle_rate': 0.075,          # tackle attempts per second when in range
     'tackle_base_success': 0.42,
     'foul_base': 0.10,
     'yellow_on_foul': 0.16,

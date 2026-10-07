@@ -18,7 +18,7 @@ times a second.
 {
   "format": "hcl-match",
   "format_version": 1,
-  "engine":  { "name": "hcl_sim", "version": "0.1.0", "seed": 42, "tick_seconds": 0.1, "generated_at": "..." },
+  "engine":  { "name": "hcl_sim", "version": "0.2.0", "seed": 42, "tick_seconds": 0.1, "generated_at": "..." },
   "pitch":   { "length": 105, "width": 68, "goal_width": 7.32, "goal_height": 2.44, "origin": "top-left", "units": "metres" },
   "match":   { "home": "TUR", "away": "SKS", "week": "1", "date": "15/9/2026", "time": "12:00 PM" },
   "teams":   { "home": Team, "away": Team },

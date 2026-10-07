@@ -55,6 +55,7 @@ class Match:
         self.pending_pass = None
         self.pending_shot = None
         self.offside_flags = set()
+        self._held = {}                 # player id -> [spell start, last seen carrying]
         self.last_pass_to = {}          # player id -> (passer, poss_id) of the last completed pass they received
         self.next_chaser_update = 0.0
         self.stoppages = 0.0            # seconds of stoppage accumulated this half
@@ -213,6 +214,12 @@ class Match:
 
     def _carrier_update(self, p):
         t = self.t
+        # How long this player has had the ball (a spell ends when he hasn't been the carrier for half a second).
+        spell = self._held.get(p.id)
+        if spell is None or t - spell[1] > 0.5:
+            spell = self._held[p.id] = [t, t]
+        spell[1] = t
+        p.held_for = t - spell[0]
         act = p.action
         if act and act['kind'] in KICK_TYPES:
             if t >= p.kick_at:
@@ -255,6 +262,18 @@ class Match:
         if restart in ('corner', 'goal_kick', 'free_kick', 'kickoff') and kind != 'shoot':
             subtype = restart
         e = None
+
+        # A passer who sees his receiver is offside as he is about to strike the ball holds it and looks again (vision decides
+        # how often he notices). Without this the intended receiver was flagged offside far more often than in real matches.
+        rcv = opt.get('receiver')
+        if rcv is not None and kind != 'shoot' and not header and subtype not in OFFSIDE_EXEMPT:
+            line = self.offside_x(T)
+            bax, _ = T.to_att(b.x, b.y)
+            qax, _ = T.to_att(rcv.x, rcv.y)
+            if qax > line + 0.1 and qax > bax and qax > PITCH_LENGTH / 2 and rng.random() < 0.45 + 0.5 * p.a('vision'):
+                p.action = None
+                p.decide_at = self.t + 0.3
+                return
 
         if kind == 'shoot':
             e = self._shoot(p, opt, header=header, z0=z_start, pressure=min(ctx_pressure, 1.5))
@@ -486,7 +505,7 @@ class Match:
             self.ev('offside', q)
             self._resolve_pass('offside')
             other = self.other(self.team_of(q))
-            self._start_restart('free_kick', other, (clamp(q.x, 1, PITCH_LENGTH - 1), clamp(q.y, 1, PITCH_WIDTH - 1)), (12, 24), offside=True)
+            self._start_restart('free_kick', other, (clamp(q.x, 1, PITCH_LENGTH - 1), clamp(q.y, 1, PITCH_WIDTH - 1)), (8, 15), offside=True)
             return
 
         # Shots
@@ -786,9 +805,9 @@ class Match:
         in_box = vax > PITCH_LENGTH - BOX_DEPTH and BOX_Y1 < vay < BOX_Y2
         if in_box:
             spot = victim_team.from_att(PITCH_LENGTH - PENALTY_SPOT, 34)
-            self._start_restart('penalty', victim_team, spot, (60, 100))
+            self._start_restart('penalty', victim_team, spot, (30, 50))
         else:
-            self._start_restart('free_kick', victim_team, (clamp(p.x, 0.5, PITCH_LENGTH - 0.5), clamp(p.y, 0.5, PITCH_WIDTH - 0.5)), (18, 40))
+            self._start_restart('free_kick', victim_team, (clamp(p.x, 0.5, PITCH_LENGTH - 0.5), clamp(p.y, 0.5, PITCH_WIDTH - 0.5)), (12, 26))
 
     def _emergency_keeper(self, team):
         """No substitutes: when the keeper is sent off, a defender goes in goal."""
@@ -841,10 +860,10 @@ class Match:
             if b.last_touch is not None and b.last_touch.side == defending.side:
                 attacking = self.other(defending)
                 spot = (0.3 if line_x == 0 else PITCH_LENGTH - 0.3, 0.3 if yc < 34 else PITCH_WIDTH - 0.3)
-                self._start_restart('corner', attacking, spot, (24, 40))
+                self._start_restart('corner', attacking, spot, (14, 24))
             else:
                 spot = (SIX_DEPTH if line_x == 0 else PITCH_LENGTH - SIX_DEPTH, 34 + (-4 if yc < 34 else 4))
-                self._start_restart('goal_kick', defending, spot, (14, 28))
+                self._start_restart('goal_kick', defending, spot, (8, 16))
             return
         # Touchline: throw-in to the other team.
         line_y = 0.0 if b.y < 0 else PITCH_WIDTH
@@ -854,7 +873,7 @@ class Match:
         self._resolve_shot('off_target')
         self.ev('out', team=None, x=xc, y=line_y, last_touch=b.last_touch.id if b.last_touch else None)
         taker_team = self.away if (b.last_touch is None or b.last_touch.side == 0) else self.home
-        self._start_restart('throw_in', taker_team, (xc, line_y), (8, 17))
+        self._start_restart('throw_in', taker_team, (xc, line_y), (4, 9))
 
     def _goal(self, line_x, yc):
         b = self.ball
@@ -877,7 +896,7 @@ class Match:
         self.ev('goal', team=scoring, x=line_x, y=yc, scorer=scorer.id if scorer else None, own_goal=own_goal,
                 assist=assist, score=list(self.score), shot=shot['id'] if shot else None)
         conceding = self.other(scoring)
-        self._start_restart('kickoff', conceding, (52.5, 34), (50, 80), taker=self._kickoff_taker(conceding))
+        self._start_restart('kickoff', conceding, (52.5, 34), (35, 55), taker=self._kickoff_taker(conceding))
 
     def _choose_taker(self, kind, team, spot):
         act = [p for p in team.active()]
@@ -923,7 +942,7 @@ class Match:
         taker = taker or self._choose_taker(kind, team, spot)
         ready = self.t + self.rng.uniform(delay[0], delay[1])
         self.restart = {'kind': kind, 'team': team, 'spot': spot, 'taker': taker,
-                        'ready_at': ready, 'max_at': ready + 12}
+                        'ready_at': ready, 'max_at': ready + 8}
         self.restart_targets = tactics.setpiece_targets(kind, team, self.other(team), spot, taker, self.offside_x(team))
         for p in self.players:
             p.action = None
@@ -1047,7 +1066,7 @@ class Match:
         # Offside awareness: most players hold the line; less aware ones drift offside sometimes.
         # The misjudgement persists for a few seconds, like a player who has lost track of the line.
         if t >= p.oe_until:
-            p.oe = rng.gauss(1.0, 1.4 * (1.15 - p.a('positioning')))
+            p.oe = rng.gauss(1.6, 1.0 * (1.15 - p.a('positioning')))
             p.oe_until = t + rng.uniform(4, 8)
         line = off_line - p.oe
         ax, ay = tactics.shape_target(p, team, bx, by, in_poss, line)
