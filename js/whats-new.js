@@ -1,5 +1,5 @@
 // "What's new" (0.33): a small note on a manager's Home about the latest app update, read from CHANGELOG.md (so there is nothing
-// extra to write at release time). Shows the version, its one-line summary and the changes that aren't Editor-only.
+// extra to write at release time). Shows the version, its one-line summary and the changes that aren't Editor-only, always open.
 // No page code beyond building the HTML; returns '' if the changelog can't be read.
 const clean = t => t.replace(/\*\*/g, '').replace(/`([^`]+)`/g, '$1').replace(/\s+/g, ' ').trim();
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -24,8 +24,8 @@ export async function whatsNew(esc) {
       .map(t => (t.length > 170 ? t.slice(0, t.lastIndexOf(' ', 167)) + '…' : t));
     if (!ver || (!summary && !bullets.length)) return '';
     const date = y ? `${+d} ${MONTHS[m - 1]}` : '';
-    return `<details class="hm-new"><summary><span class="hm-new-tag">What’s new</span> <b>v${esc(ver)}</b>${date ? ` <small>${esc(date)}</small>` : ''}${summary ? ` · ${esc(summary)}` : ''}</summary>
+    return `<section class="hm-new"><p class="hm-new-head"><span class="hm-new-tag">What’s new</span> <b>v${esc(ver)}</b>${date ? ` <small>${esc(date)}</small>` : ''}${summary ? ` · ${esc(summary)}` : ''}</p>
       ${bullets.length ? `<ul>${bullets.map(b => `<li>${esc(b)}</li>`).join('')}</ul>` : ''}
-      <a href="https://github.com/ldg224/vLeague/releases" target="_blank" rel="noopener">All updates</a></details>`;
+      <a href="https://github.com/ldg224/vLeague/releases" target="_blank" rel="noopener">All updates</a></section>`;
   } catch { return ''; }
 }

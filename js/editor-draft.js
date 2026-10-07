@@ -7,7 +7,6 @@
 const MODES = { always: 'Always (the moment it’s their turn)', on_miss: 'If they miss their turn', after_minutes: 'After a number of minutes', never: 'Never (they pick themselves)' };
 const HOWS = { queue: 'From their queue', random: 'A random player' };
 const TIMEOUTS = { queue: 'Take the next player in their queue, else a random player who fits', best_value: 'Take the best-value player who fits', skip: 'Pick a random player who fits their open positions' };
-const STATUS = { setup: 'Setting up', live: 'Live', paused: 'Paused', done: 'Finished' };
 const money = n => `$${Number(n || 0).toLocaleString('en-AU')}`;
 const localInput = iso => { if (!iso) return ''; const d = new Date(iso), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
 const isoOf = v => (v ? new Date(v).toISOString() : null);
@@ -130,14 +129,10 @@ export async function mountDraft(ctx) {
   // The big status bar: state, whose pick it is and the clock, then the main button. The rest sits under "More actions".
   const bar = () => {
     const d = S.d, t = turn(), live = ['live', 'paused'].includes(d.status);
-    const clock = d.status === 'live' && t ? `<div class="dr-clock"><small>${esc(cname(t.club))} on the clock</small><b class="dr-count" data-deadline="${esc(d.pick_deadline || '')}"></b><small>Pick ${d.current_pick} of ${S.order.length}</small></div>`
-      : d.status === 'paused' && t ? `<div class="dr-clock"><small>${esc(cname(t.club))} is up</small><b>Paused</b><small>Pick ${d.current_pick} of ${S.order.length}</small></div>`
-      : d.status === 'done' ? `<div class="dr-clock"><b>Done</b><small>${S.picks.length} picks made</small></div>`
-      : `<div class="dr-clock"><b>${S.order.length}</b><small>picks in ${d.rounds} round${d.rounds === 1 ? '' : 's'}</small></div>`;
-    return `<section class="dr-bigbar st-${d.status}"><div class="dr-top">
-      <div><span class="dr-state">${STATUS[d.status]}</span><h2>${esc(d.name)}</h2>
+    return `<section class="dr-bigbar"><div class="dr-top">
+      <div><h2>${esc(d.name)}</h2>
         <p class="ed-hint">Opens ${esc(when(d.opens_at))} · closes ${esc(when(d.closes_at))} · ${esc(minutesText(d.pick_minutes))} a pick<br>Roster rules: ${esc(rulesLine(d))} · when time runs out: ${esc(TIMEOUTS[d.on_timeout].toLowerCase())}</p></div>
-      ${clock}</div>
+      </div>
       <div class="ed-actions dr-main-act">
         ${d.status === 'setup' ? '<button class="btn" data-act="start">Start the draft</button>' : ''}
         ${d.status === 'live' ? '<button class="btn" data-act="pause">Pause</button>' : ''}
@@ -282,7 +277,7 @@ export async function mountDraft(ctx) {
       <div class="ed-actions"><button class="btn" type="submit">Create draft</button></div>
       <p class="ed-hint">It starts in set-up and hidden: managers see nothing until you switch MAKE PAGE VISIBLE on. Players are drawn from the free agents (${S ? free().length : '…'} now).</p></form>`;
 
-  const picker = () => (S.drafts.length > 1 ? `<label class="dr-sel">Draft <select data-select>${S.drafts.map(x => `<option value="${x.id}"${x.id === selected ? ' selected' : ''}>${esc(x.name)} (${STATUS[x.status]})</option>`).join('')}</select></label>` : '');
+  const picker = () => (S.drafts.length > 1 ? `<label class="dr-sel">Draft <select data-select>${S.drafts.map(x => `<option value="${x.id}"${x.id === selected ? ' selected' : ''}>${esc(x.name)} </option>`).join('')}</select></label>` : '');
 
   function draw() {
     const qb = root.querySelector('.dr-quietbox'); if (qb) qOpen = qb.open;

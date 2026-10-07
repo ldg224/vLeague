@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.33.1 (2026-10-07)
+
+No database change.
+
+- **Changed, managers:** the Home "What's new" note is always open (no tap needed).
+- **Removed, Editor → Draft:** the draft status label and clock from the top of the page. The Start, Pause and Resume buttons stay.
+
 ## 0.33.0 (2026-10-07)
 
 No database change.
