@@ -692,7 +692,6 @@ export class HighlightsRenderer {
   drawClip(s, local) {
     const c = this.c;
     const { cam, tSim, cut, angle, plan } = this.camFor(s, local);
-    this._tn = tSim;
     const st = this.fr.at(tSim);
     this.drawPitch(cam);
     this.drawGoal(cam, 0); this.drawGoal(cam, 105);
@@ -890,21 +889,6 @@ export class HighlightsRenderer {
       g.addColorStop(0, 'rgba(5,7,10,0.75)'); g.addColorStop(1, 'rgba(5,7,10,0.15)');
       c.fillStyle = g; c.fill();
     }
-    // The crowd is alive: camera flashes now and then, and a burst of them after a goal.
-    const tn = this._tn ?? 0;
-    let boost = 0; for (const gl of this.goals) if (tn >= gl.t) boost = Math.max(boost, Math.exp(-(tn - gl.t) / 5));
-    const slot = Math.floor(tn * 6), hash = (a, b) => { const v = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return v - Math.floor(v); };
-    c.save();
-    faces.forEach((f, fi2) => {
-      for (let k = 0; k < 34; k++) {
-        if (hash(fi2 * 53 + k, slot) > 0.045 + 0.4 * boost) continue;
-        const u = hash(k, fi2 + 3), v = hash(k + 9, fi2 + 7), w = [0, 1, 2].map(j => f[0][j] * (1 - u) * (1 - v) + f[1][j] * u * (1 - v) + f[2][j] * u * v + f[3][j] * (1 - u) * v);
-        const q = cam.p(w[0], w[1], w[2]); if (!q) continue;
-        const rad = Math.max(1.4, q[2] * 0.035), life = 1 - ((tn * 6) % 1);
-        c.globalAlpha = 0.35 + 0.65 * life; c.fillStyle = '#ffffff'; c.beginPath(); c.arc(q[0], q[1], rad * (0.6 + life), 0, Math.PI * 2); c.fill();
-      }
-    });
-    c.restore();
   }
 
   drawGoal(cam, gx) {
@@ -959,17 +943,6 @@ export class HighlightsRenderer {
     const bg = c.createRadialGradient(b[0] - r / 3, b[1] - r / 3, 1, b[0], b[1], r);
     bg.addColorStop(0, '#ffffff'); bg.addColorStop(1, '#c9ced6');
     c.fillStyle = bg; c.beginPath(); c.arc(b[0], b[1] - r * 0.2, r, 0, Math.PI * 2); c.fill();
-    // Panels that turn with the ball's travel, so a rolling or flying ball visibly spins.
-    if (r > 6) {
-      const cx = b[0], cy = b[1] - r * 0.2, spin = (x * 0.8 + y * 0.6 + z * 0.5) * 1.7;
-      c.save(); c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.clip(); c.fillStyle = 'rgba(30,36,48,0.78)';
-      for (let k = 0; k < 5; k++) {
-        const a = spin + k * Math.PI * 0.4, depth = Math.cos(a * 0.7 + k);
-        if (depth < -0.2) continue;
-        c.beginPath(); c.ellipse(cx + Math.cos(a) * r * 0.62, cy + Math.sin(a) * r * 0.5, r * (0.2 + 0.08 * depth), r * (0.18 + 0.06 * depth), a, 0, Math.PI * 2); c.fill();
-      }
-      c.restore();
-    }
     c.strokeStyle = 'rgba(0,0,0,.5)'; c.lineWidth = 1; c.beginPath(); c.arc(b[0], b[1] - r * 0.2, r, 0, Math.PI * 2); c.stroke();
     c.restore();
   }
@@ -1182,71 +1155,7 @@ function shade(hex, k) {
   return `rgb(${((n >> 16) & 255) * k | 0},${((n >> 8) & 255) * k | 0},${(n & 255) * k | 0})`;
 }
 
-// ---------------------------------------------------------------- thumbnail and text
-
-export async function makeThumbnail(r) {
-  const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 720;
-  const c = cv.getContext('2d');
-  // Re-use the renderer's drawing helpers on a scaled context.
-  const saved = r.c; r.c = c;
-  c.save(); c.scale(1280 / W, 720 / H);
-  r.bg(0.55);
-  for (const [side, col] of [[0, r.hc], [1, r.ac]]) {
-    c.save(); c.beginPath();
-    if (side === 0) { c.moveTo(0, 0); c.lineTo(W * 0.56, 0); c.lineTo(W * 0.44, H); c.lineTo(0, H); } else { c.moveTo(W, 0); c.lineTo(W * 0.56 + 8, 0); c.lineTo(W * 0.44 + 8, H); c.lineTo(W, H); }
-    c.closePath(); c.clip();
-    const g = c.createLinearGradient(side ? W : 0, 0, W / 2, H); g.addColorStop(0, col); g.addColorStop(1, 'rgba(6,26,56,0.2)');
-    c.globalAlpha = 0.8; c.fillStyle = g; c.fillRect(0, 0, W, H); c.globalAlpha = 1;
-    r.stripes(0, 0.8);
-    c.restore();
-  }
-  for (const [side, team] of [[0, r.home], [1, r.away]]) {
-    c.save(); c.shadowColor = 'rgba(0,0,0,.7)'; c.shadowBlur = 50;
-    r.logoAt(team, side ? W * 0.78 : W * 0.22, H * 0.48, 480); c.restore();
-  }
-  r.pill(W / 2 - 280, H * 0.5 - 150, 560, 250, 'rgba(255,255,255,0.97)', 36);
-  r.text(`${r.d.result.home}-${r.d.result.away}`, W / 2, H * 0.5 + 60, { size: 220, weight: 900, align: 'center', colour: DARK });
-  r.pill(W / 2 - 420, 60, 840, 110, r.limeGrad(W / 2 - 420, 0, W / 2 + 420, 0), 24);
-  r.text(`WEEK ${r.fx?.week ?? ''} HIGHLIGHTS`, W / 2, 140, { size: 66, weight: 900, align: 'center', colour: '#fff', italic: true });
-  r.text(`${r.home.code}  v  ${r.away.code}`, W / 2, H - 90, { size: 86, weight: 900, align: 'center', shadow: 24, italic: true });
-  if (r.A.league) r.leagueFit((60) + (150) / 2, (H - 210) + (150) / 2, 150, 150);
-  c.restore();
-  r.c = saved;
-  return new Promise(res => cv.toBlob(res, 'image/png'));
-}
-
-export function youtubeText(r) {
-  const d = r.d, h = r.home, a = r.away, wk = r.fx?.week ?? d.match.week ?? '';
-  const k = kickoff(r.fx || {});
-  const title = `${h.name} ${d.result.home}-${d.result.away} ${a.name} | Week ${wk} Highlights | vLeague S1`;
-  const goals = r.goals.map(g => `${g.minute}' ${r.names[g.scorer]}${g.own_goal ? ' (OG)' : ''} (${g.team})${g.assist ? `, assist ${r.names[g.assist]}` : ''}`);
-  const st = d.stats.teams;
-  const ps = d.stats.players, motm = Object.keys(ps).reduce((b, x) => (!b || ps[x].rating > ps[b].rating ? x : b), null);
-  const desc = [
-    `${h.name} ${d.result.home}-${d.result.away} ${a.name}. vLeague Season ${r.season?.season ?? 1}, Week ${wk}${k ? `, ${k.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}` : ''}.`,
-    '',
-    'GOALS',
-    ...(goals.length ? goals : ['No goals']),
-    '',
-    'MATCH STATS',
-    `Possession: ${st.home.possession}% - ${st.away.possession}%`,
-    `xG: ${st.home.xg} - ${st.away.xg}`,
-    `Shots (on target): ${st.home.shots} (${st.home.shots_on_target}) - ${st.away.shots} (${st.away.shots_on_target})`,
-    '',
-    `Player of the match: ${r.names[motm]} (${ps[motm].rating.toFixed(1)})`,
-    '',
-    'Full match replay, table and stats: https://ldg224.github.io/vLeague/',
-    '',
-    `#vLeague #VirtualFootball #${h.code} #${a.code}`,
-  ].join('\n');
-  return { title, description: desc, text: `TITLE\n${title}\n\nDESCRIPTION\n${desc}\n` };
-}
-
-// ---------------------------------------------------------------- export
-
-export function supported() {
-  return typeof VideoEncoder !== 'undefined' && typeof VideoFrame !== 'undefined';
-}
+// ---------------------------------------------------------------- assets
 
 export async function loadAssets(teams) {
   const logos = {}, logosAlt = {};
@@ -1259,52 +1168,4 @@ export async function loadAssets(teams) {
   return { logos, logosAlt, league, title };
 }
 
-// Renders and encodes the video. `renderer` is anything with `duration` (seconds) and
-// `frame(T)` returning a canvas; the video takes its size from that canvas (odd sizes lose
-// their last pixel row/column). `fileHandle` (optional) streams straight to disk.
-// `bitrate` defaults to 8 Mbit/s at 1080p, scaled by pixel count; `fps` defaults to 30.
-export async function exportVideo(renderer, { fileHandle, onProgress, onPreview, isCancelled, bitrate, fps = FPS }) {
-  const total = Math.round(renderer.duration * fps);
-  const first = renderer.frame(0);
-  const width = first.width & ~1, height = first.height & ~1;
-  bitrate = bitrate || Math.max(1_500_000, Math.round(8_000_000 * (width * height) / (W * H)));
-  // H.264 High, then Main, then Baseline, at a level big enough for this size and frame rate.
-  let vcfg = null;
-  for (const codec of ['avc1.640028', 'avc1.64002a', 'avc1.640033', 'avc1.4d0028', 'avc1.4d002a', 'avc1.42e028']) {
-    const cfg = { codec, width, height, bitrate, framerate: fps, avc: { format: 'avc' } };
-    if ((await VideoEncoder.isConfigSupported(cfg)).supported) { vcfg = cfg; break; }
-  }
-  if (!vcfg) throw new Error("This browser can't encode H.264 video. Use Chrome or Edge.");
-
-  // The MP4 writer is only loaded when a video is actually made, so watching never depends on it.
-  const { Muxer, ArrayBufferTarget, FileSystemWritableFileStreamTarget } = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.1/+esm');
-  // Video only: the MP4 has no audio track.
-  let writable = null;
-  const target = fileHandle ? new FileSystemWritableFileStreamTarget(writable = await fileHandle.createWritable()) : new ArrayBufferTarget();
-  const muxer = new Muxer({
-    target, fastStart: fileHandle ? false : 'in-memory',
-    video: { codec: 'avc', width, height, frameRate: fps },
-  });
-  let encErr = null;
-  const venc = new VideoEncoder({ output: (ch, meta) => muxer.addVideoChunk(ch, meta), error: e => { encErr = e; } });
-  venc.configure(vcfg);
-
-  for (let i = 0; i < total; i++) {
-    if (isCancelled?.()) { venc.close(); if (writable) await writable.abort(); throw new Error('Cancelled'); }
-    if (encErr) throw encErr;
-    const cv = renderer.frame(i / fps);
-    const vf = new VideoFrame(cv, { timestamp: Math.round(i * 1e6 / fps), duration: Math.round(1e6 / fps), visibleRect: { x: 0, y: 0, width, height } });
-    venc.encode(vf, { keyFrame: i % (fps * 2) === 0 });
-    vf.close();
-    while (venc.encodeQueueSize > 8) await new Promise(r => setTimeout(r, 2));
-    if (i % 15 === 0) { onProgress?.('Rendering video…', i / total); onPreview?.(cv); await new Promise(r => setTimeout(r, 0)); }
-  }
-  await venc.flush(); venc.close();
-  if (encErr) throw encErr;
-  muxer.finalize();
-  if (writable) { await writable.close(); return null; }
-  return new Blob([target.buffer], { type: 'video/mp4' });
-}
-
-// Shared with the full-match broadcast view (js/broadcast.js).
 export { Frames, makeCam, makeCamAt, shade, clamp, lerp, easeOut, easeInOut, seg01, lastName, LIME, LIME2, YEL, DARK, FONT };

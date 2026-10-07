@@ -1,7 +1,7 @@
 // Game centre (0.34): the page for one match, opened from Matches, League, Home or the guest dashboard (game.html?id=...).
 // Before kick-off it is a preview (win chance, form, records, line-ups once locked). From kick-off it is the watching spot:
 // the match viewer (js/viewer/): the broadcast view of the whole match, the tactical top-down view and, after full time, a
-// highlights video, with a download for each (0.36). A live match is a broadcast: no play, pause or seek controls, and the picture
+// highlights video (0.36). A live match is a broadcast: no play, pause or seek controls, and the picture
 // is held to the live clock. Then a timeline, the full statistics and the line-ups with ratings. The scoreboard above is drawn in
 // the round's look (Classic, Finals, Grand Final, Christmas, Derby...) and the two clubs' colours (0.35).
 // Everything shown is cut off at "now" in the match, so a live match never gives away what hasn't happened yet.
@@ -19,7 +19,6 @@ import { playerCard, MatchPlayer } from './viewer/player.js';
 chrome();
 const main = document.getElementById('main');
 const id = new URLSearchParams(location.search).get('id');
-const TABS = [['watch', 'Watch'], ['timeline', 'Timeline'], ['stats', 'Stats'], ['lineups', 'Line-ups'], ['preview', 'Preview']];
 const KEY_EVENTS = new Set(['goal', 'card', 'woodwork', 'penalty']);
 
 let season = null, fx = null, clubsRows = [];
@@ -44,9 +43,8 @@ try {
 }
 
 async function run() {
-  let tab = (() => { const h = location.hash.slice(1); return TABS.some(t => t[0] === h) ? h : null; })();
   let data = null, fileError = '', sheets = [], loadingFile = false;
-  let player = null, fileUrl = '';   // the match viewer, and a link to download the match file
+  let player = null;   // the match viewer
   const home = () => teamOf(season, fx.home), away = () => teamOf(season, fx.away);
   const stadium = () => clubsRows.find(c => c.code === fx.home)?.stadium || '';
 
@@ -70,7 +68,6 @@ async function run() {
       if (error || !blob) throw new Error(error?.message || 'no file');
       const text = await new Response(blob.stream().pipeThrough(new DecompressionStream('gzip'))).text();
       data = JSON.parse(text);
-      fileUrl = URL.createObjectURL(blob);
       data.fi = Object.fromEntries(data.frames.fields.map((f, i) => [f, i]));
       data.byId = Object.fromEntries(data.players.map(p => [p.id, p]));
       data.byIdx = Object.fromEntries(data.players.map(p => [p.idx, p]));
@@ -133,18 +130,18 @@ async function run() {
 
   // ---------------------------------------------------------------- preview
   const chips = form => `<span class="chips">${form.map(o => `<abbr class="res-${o}">${o}</abbr>`).join('') || '<i class="mc-none">No games yet</i>'}</span>`;
-  function previewTab() {
+  function previewSection() {
     const w = winChance(season, fx, { sheets }), [ph, pd, pa] = percents(w), now = new Date();
     const sum = c => clubSummary(season, c, now), hs = sum(fx.home), as = sum(fx.away), R = w.factors.ratings;
     const meets = season.fixtures.filter(f => f.result && f.id !== fx.id && ((f.home === fx.home && f.away === fx.away) || (f.home === fx.away && f.away === fx.home)));
     const rec = r => `${r.w}-${r.d}-${r.l}`, rate = v => (v == null ? '–' : v.toFixed(1));
     const lineup = c => { const sh = sheets.find(s => s.club === c); const ids = Object.values(sh?.lineup || {}).filter(Boolean); const by = Object.fromEntries((season.players || []).map(p => [p.id, p])); return ids.map(i => by[i]).filter(Boolean); };
     const lu = c => { const l = lineup(c); return l.length ? `<ol class="gc-lu">${l.map(p => `<li><span class="pos">${esc(p.position)}</span>${esc(p.name)}</li>`).join('')}</ol>` : '<p class="quiet">Line-up not locked yet.</p>'; };
-    return `<section class="gc-card"><h2>Win chance</h2>
+    return `<section class="gc-sec"><h2>Win chance</h2>
         <div class="mc-bar big"><i class="bh" style="flex:${ph}"></i><i class="bd" style="flex:${pd}"></i><i class="ba" style="flex:${pa}"></i></div>
         <div class="mc-pcts"><span><b>${ph}%</b> ${esc(nameOf(home()))}</span><span><b>${pd}%</b> Draw</span><span><b>${pa}%</b> ${esc(nameOf(away()))}</span></div>
         <p class="gc-note">Expected goals ${w.xg[0].toFixed(1)} to ${w.xg[1].toFixed(1)}. ${w.basis === 'results' ? 'Neither club has a full squad yet, so this leans on the league’s averages and will sharpen as squads and results come in. ' : `Worked out from ${w.basis === 'line-ups' ? 'the locked line-ups' : 'each club’s best eleven'}, `}${w.games} game${w.games === 1 ? '' : 's'} played so far (the more games, the more the results count), recent form, and how much the home side scores in this league (${w.factors.homeBonus.toFixed(2)}× the away side)${meets.length ? ', plus this season’s meetings' : ''}.</p></section>
-      <section class="gc-card"><h2>Head to head, side by side</h2>
+      <section class="gc-sec"><h2>How they compare</h2>
         <table class="gc-vs"><thead><tr><th></th><th>${esc(nameOf(home()))}</th><th>${esc(nameOf(away()))}</th></tr></thead><tbody>
           <tr><th>League position</th><td>${hs.rank ?? '–'}</td><td>${as.rank ?? '–'}</td></tr>
           <tr><th>Points</th><td>${hs.pts}</td><td>${as.pts}</td></tr>
@@ -154,22 +151,14 @@ async function run() {
           <tr><th>Attack rating</th><td>${rate(R.home.att)}</td><td>${rate(R.away.att)}</td></tr>
           <tr><th>Defence rating</th><td>${rate(R.home.def)}</td><td>${rate(R.away.def)}</td></tr></tbody></table>
         ${meets.length ? `<p class="gc-note">Met this season: ${meets.map(f => `${esc(f.home)} ${f.result.home}–${f.result.away} ${esc(f.away)}`).join(', ')}</p>` : ''}</section>
-      <section class="gc-card"><h2>Line-ups</h2><div class="gc-two"><div><h3>${esc(nameOf(home()))}</h3>${lu(fx.home)}</div><div><h3>${esc(nameOf(away()))}</h3>${lu(fx.away)}</div></div></section>`;
+      <section class="gc-sec"><h2>Line-ups</h2><div class="gc-two"><div><h3>${esc(nameOf(home()))}</h3>${lu(fx.home)}</div><div><h3>${esc(nameOf(away()))}</h3>${lu(fx.away)}</div></div></section>`;
   }
 
-  // ---------------------------------------------------------------- watch (the match viewer)
-  function watchTab() {
-    if (!data) return `<section class="gc-card"><p class="quiet">${esc(fileError || (loadingFile ? 'Loading the match…' : 'The match isn’t ready to watch yet.'))}</p></section>`;
-    return `${playerCard(st())}${recent()}`;
-  }
-  function recent() {
-    const list = eventsTo(horizon()).filter(e => KEY_EVENTS.has(e.type) || (e.type === 'shot' && e.on_target)).slice(-6).reverse();
-    return list.length ? `<section class="gc-card"><h2>Latest moments</h2><ul class="gc-ev">${list.map(eventLi).join('')}</ul></section>` : '';
-  }
+  // ---------------------------------------------------------------- the match viewer
   const unmount = () => { player?.destroy(); player = null; };
   function mount() {
     unmount();
-    if (tab === 'watch' && data && document.getElementById('mp')) player = new MatchPlayer({ S: season, FX: fx, st: st(), data, timeline: null, fileUrl });
+    if (data && document.getElementById('mp')) player = new MatchPlayer({ S: season, FX: fx, st: st(), data, timeline: null });
   }
 
   // ---------------------------------------------------------------- timeline
@@ -181,15 +170,13 @@ async function run() {
       : e.type === 'woodwork' ? `${esc(who)} hits the ${esc(e.part || 'frame')}` : e.type === 'penalty' ? `Penalty, ${esc(who)}` : `Shot on target, ${esc(who)} <small>xG ${(e.xg || 0).toFixed(2)}</small>`;
     return `<li class="tl-row ${e.team === fx.home ? 'h' : 'a'}" data-t="${e.t}"${live() ? '' : ' title="Watch this moment"'}><span class="min">${esc(e.minute)}'</span><span class="ic">${icon(e)}</span><span class="tx">${text} <small>${esc(nameOf(teamOf(season, e.team)))}</small></span></li>`;
   }
-  function timelineTab() {
-    if (!data) return watchTab();
+  function timelineSection() {
     const list = eventsTo(horizon()).filter(e => KEY_EVENTS.has(e.type) || (e.type === 'shot' && e.on_target)).reverse();
-    return `<section class="gc-card"><h2>Timeline</h2>${list.length ? `<ul class="gc-ev full">${list.map(eventLi).join('')}</ul>` : '<p class="quiet">Nothing has happened yet.</p>'}</section>`;
+    return `<section class="gc-sec"><h2>Timeline</h2>${list.length ? `<ul class="gc-ev full">${list.map(eventLi).join('')}</ul>` : '<p class="quiet">Nothing has happened yet.</p>'}</section>`;
   }
 
   // ---------------------------------------------------------------- stats
-  function statsTab() {
-    if (!data) return watchTab();
+  function statsSection() {
     const t = horizon(), full = st() === 'ft', S = full ? finalStats() : statsAt(t), h = S[fx.home], a = S[fx.away];
     const tot = (h.hold || 0) + (a.hold || 0), ph = full ? h.poss : tot ? Math.round(100 * h.hold / tot) : 50, pa = full ? a.poss : 100 - ph;
     const pct = (d, n) => (n ? Math.round(100 * d / n) : 0);
@@ -199,64 +186,59 @@ async function run() {
       ['Offsides', h.offsides, a.offsides], ['Yellow cards', h.yellow, a.yellow], ['Red cards', h.red, a.red], ...(full && h.km != null ? [['Distance covered (km)', +h.km.toFixed(1), +a.km.toFixed(1)]] : [])];
     const row = ([l, x, y, u = '']) => { const s = x + y || 1; return `<div class="gc-stat"><span class="v">${x}${u}</span><div class="lbl">${esc(l)}<div class="bars"><i class="bh" style="width:${100 * x / s}%"></i><i class="ba" style="width:${100 * y / s}%"></i></div></div><span class="v">${y}${u}</span></div>`; };
     const motm = full && fx.result?.motm ? fx.result.players?.[fx.result.motm] : null;
-    return `<section class="gc-card"><h2>Match statistics${full ? '' : ' so far'}</h2><div class="gc-statrow head"><b>${esc(nameOf(home()))}</b><b>${esc(nameOf(away()))}</b></div>${R.map(row).join('')}</section>
-      ${motm ? `<section class="gc-card"><h2>Man of the match</h2><p class="gc-motm"><b>${esc(motm.name)}</b> <span>${esc(nameOf(teamOf(season, motm.team)))}</span> <span class="rating r-hi">${Number(motm.r).toFixed(1)}</span></p></section>` : ''}`;
+    return `<section class="gc-sec"><h2>Match statistics${full ? '' : ' so far'}</h2><div class="gc-statrow head"><b>${esc(nameOf(home()))}</b><b>${esc(nameOf(away()))}</b></div>${R.map(row).join('')}</section>
+      ${motm ? `<section class="gc-sec"><h2>Man of the match</h2><p class="gc-motm"><b>${esc(motm.name)}</b> <span>${esc(nameOf(teamOf(season, motm.team)))}</span> <span class="rating r-hi">${Number(motm.r).toFixed(1)}</span></p></section>` : ''}`;
   }
 
   // ---------------------------------------------------------------- line-ups
-  function lineupsTab() {
-    if (!data) return watchTab();
+  function lineupsSection() {
     const t = horizon(), full = st() === 'ft', ev = eventsTo(t), P = data.stats.players;
     const goals = id => ev.filter(e => e.type === 'goal' && e.scorer === id && !e.own_goal).length, assists = id => ev.filter(e => e.type === 'goal' && e.assist === id).length;
     const cards = id => ev.filter(e => e.type === 'card' && e.player === id).map(e => (e.card === 'yellow' ? '🟨' : '🟥')).join('');
     const col = c => { const team = data.teams[c === fx.home ? 'home' : 'away']; return `<div><h3>${esc(fullNameOf(teamOf(season, c)))} <small>${esc(team.formation || '')}</small></h3><ol class="gc-lu">${team.lineup.map(x => {
       const r = full ? P[x.id]?.rating : null;
       return `<li><span class="pos">${esc(x.slot || x.position)}</span><span class="nm">${esc(x.name)}${team.captain === x.id ? ' <small>(c)</small>' : ''} ${'⚽'.repeat(goals(x.id))}${'🅰️'.repeat(assists(x.id))}${cards(x.id)}</span>${r ? `<span class="rating ${r >= 7 ? 'r-hi' : r < 6 ? 'r-lo' : 'r-mid'}">${r.toFixed(1)}</span>` : ''}</li>`; }).join('')}</ol></div>`; };
-    return `<section class="gc-card"><h2>Line-ups</h2><div class="gc-two">${col(fx.home)}${col(fx.away)}</div>${full ? '' : '<p class="gc-note">Ratings appear at full time.</p>'}</section>`;
+    return `<section class="gc-sec"><h2>Line-ups</h2><div class="gc-two">${col(fx.home)}${col(fx.away)}</div>${full ? '' : '<p class="gc-note">Ratings appear at full time.</p>'}</section>`;
   }
 
   // ---------------------------------------------------------------- page
-  const available = () => (data ? TABS : TABS.filter(t => t[0] === 'preview'));
+  // One scrolling page: the scoreboard, then the viewer, then what happened (stats, line-ups, timeline). Before kick-off, the preview.
+  const below = () => `${statsSection()}${lineupsSection()}${timelineSection()}`;
   function draw() {
-    const tabs = available();
-    if (!tabs.some(t => t[0] === tab)) tab = data ? 'watch' : 'preview';
-    const body = { watch: watchTab, timeline: timelineTab, stats: statsTab, lineups: lineupsTab, preview: previewTab }[tab]();
     unmount();
-    main.innerHTML = `<div class="gc">${head()}<nav class="dr-tabs gc-tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" data-tab="${k}" aria-selected="${tab === k}">${l}</button>`).join('')}</nav>
-      ${!data && ['live', 'ft'].includes(st()) ? `<p class="quiet">${esc(fileError || 'Loading the match…')}</p>` : ''}${body}</div>`;
+    const waiting = !data && ['live', 'ft'].includes(st());
+    main.innerHTML = `<div class="gc">${head()}${data ? `${playerCard(st())}<div id="gc-below">${below()}</div>`
+      : `${waiting ? `<p class="quiet">${esc(fileError || 'Loading the match…')}</p>` : ''}${previewSection()}`}</div>`;
     mount();
   }
 
   // ---------------------------------------------------------------- events
   main.addEventListener('click', e => {
     const row = e.target.closest('.tl-row');
-    if (row && !live() && data) {   // a timeline row: watch that moment
-      tab = 'watch'; location.hash = tab; draw();
-      const t = +row.dataset.t; player?.ready?.then(() => player?.jump(t));
-      main.querySelector('#mp')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
-      return;
-    }
-    const b = e.target.closest('button');
-    if (b?.dataset.tab) { tab = b.dataset.tab; location.hash = tab; draw(); }
+    if (!row || live() || !data) return;   // a timeline row: watch that moment
+    const t = +row.dataset.t;
+    player?.ready?.then(() => player?.jump(t));
+    main.querySelector('#mp')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   });
 
-  // Poll: a match that kicks off or finishes changes what the page can show.
+  // Poll: a match that kicks off or finishes changes what the page can show. While it plays, the scoreboard and everything under the
+  // viewer keep up; the viewer itself runs on its own and is never redrawn.
   let was = st();
   async function poll(reload) {
     if (reload) { try { season = await loadSeason(); fx = fxOf(season) || fx; } catch { /* keep the last copy */ } }
     const now = st();
     if (now !== was || (['live', 'ft'].includes(now) && !data)) {
       was = now;
-      if (['live', 'ft'].includes(now)) { await loadFile(); if (data && !tab) tab = 'watch'; }
+      if (['live', 'ft'].includes(now)) await loadFile();
       draw();
-    } else if (tab === 'watch') {
-      const h = document.querySelector('.gc-head'); if (h) h.outerHTML = head();   // the scoreboard keeps up; the picture runs itself
-    } else draw();
+    } else if (data) {
+      const h = document.querySelector('.gc-head'); if (h) h.outerHTML = head();
+      const b = document.getElementById('gc-below'); if (b && live()) b.innerHTML = below();
+    } else if (reload) draw();
   }
 
   await loadSheets();
   if (['live', 'ft'].includes(st())) await loadFile();
-  if (!tab) tab = data ? 'watch' : 'preview';
   draw();
   main.setAttribute('aria-busy', 'false');
   document.title = `${nameOf(home())} v ${nameOf(away())} | vLeague`;

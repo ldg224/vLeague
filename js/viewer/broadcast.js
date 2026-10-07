@@ -36,7 +36,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
     this.buildReferee();
     this.buildCamera();
     this.buildDirector();
-    this.buildStats();
+    this.buildPossession();
     this.markers = [
       ...this.goals.map(g => ({ t: g.t, type: 'goal', team: g.team, label: `${g.minute}' ${this.names[g.scorer] || ''}${g.own_goal ? ' (OG)' : ''}` })),
       ...this.cards.map(k => ({ t: k.e.t, type: 'card', team: k.e.team, card: k.second ? 'second_yellow' : k.colour, label: `${k.e.minute}' ${k.second ? 'Second yellow, red' : k.colour === 'yellow' ? 'Yellow' : 'Red'} card: ${this.names[k.e.player] || ''}` })),
@@ -207,7 +207,6 @@ export class BroadcastRenderer extends HighlightsRenderer {
 
   frame(tSim) {
     const t = clamp(+tSim || 0, this.t0, this.t1), c = this.c, sh = this.shotAt(t);
-    this._tn = t;
     c.setTransform(this.scale, 0, 0, this.scale, 0, 0);
     c.clearRect(0, 0, W, H);
     let cam, ts = t;   // ts = the moment of the match being shown (differs during replays)
@@ -268,57 +267,19 @@ export class BroadcastRenderer extends HighlightsRenderer {
   }
 
 
-  // ------------------------------------------------ stats so far (for the drop-downs under the scoreboard)
-  // Everything is counted up to the moment shown, so a live match never gives away what hasn't happened yet.
-  buildStats() {
-    const d = this.d, H0 = this.home.code, A0 = this.away.code, mk = () => ({ [H0]: [], [A0]: [] });
-    const T = { shot: mk(), sot: mk(), xg: mk(), pass: mk(), passOk: mk(), corner: mk(), foul: mk(), yellow: mk(), red: mk(), tackle: mk(), offside: mk(), save: mk(), clear: mk(), icpt: mk(), block: mk() };
-    const xgSum = { [H0]: [0], [A0]: [0] };   // running total, one entry per xg time
-    for (const e of d.events) {
-      const k = e.team; if (!(k in T.shot)) continue;
-      const add = key => T[key][k].push(e.t);
-      if (e.type === 'shot') { add('shot'); if (e.on_target) add('sot'); T.xg[k].push(e.t); xgSum[k].push(xgSum[k][xgSum[k].length - 1] + (e.xg || 0)); }
-      else if (e.type === 'pass') { add('pass'); if (e.outcome === 'complete') add('passOk'); }
-      else if (e.type === 'corner') add('corner');
-      else if (e.type === 'foul') add('foul');
-      else if (e.type === 'card') add(e.card === 'yellow' ? 'yellow' : 'red');
-      else if (e.type === 'tackle' && e.won) add('tackle');
-      else if (e.type === 'offside') add('offside');
-      else if (e.type === 'save') add('save');
-      else if (e.type === 'clearance') add('clear');
-      else if (e.type === 'block') add('block');
-      else if (e.type === 'control' && e.how === 'interception') add('icpt');
-    }
-    this.stT = T; this.stXg = xgSum;
-    // Possession: frames with the ball held (in play), counted for each side, as running totals.
-    const f = d.frames.data, n = f.length, nh = this.nHome, ch = new Uint32Array(n + 1), ca = new Uint32Array(n + 1);
+  // ------------------------------------------------ possession so far
+  // Frames with the ball held (in play) for each side, as running totals, so the share at any moment is a lookup.
+  buildPossession() {
+    const f = this.d.frames.data, n = f.length, nh = this.nHome, ch = new Uint32Array(n + 1), ca = new Uint32Array(n + 1);
     for (let i = 0; i < n; i++) {
       const h = f[i][4], on = f[i][5] && h >= 0;
       ch[i + 1] = ch[i] + (on && h < nh ? 1 : 0); ca[i + 1] = ca[i] + (on && h >= nh ? 1 : 0);
     }
     this.posH = ch; this.posA = ca;
   }
-  count(key, team, t) {
-    const a = this.stT[key][team]; let lo = 0, hi = a.length;
-    while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] <= t) lo = m + 1; else hi = m; }
-    return lo;
-  }
-  xgAt(team, t) { return this.stXg[team][this.count('xg', team, t)]; }
   possAt(t) {
     const i = this.fr.idx(t) + 1, h = this.posH[i], a = this.posA[i], tot = h + a;
     return tot < 50 ? [50, 50] : [Math.round(100 * h / tot), 100 - Math.round(100 * h / tot)];
-  }
-  // The four panels that drop down in turn: [title, [label, home, away, format]].
-  panelsAt(t) {
-    const H0 = this.home.code, A0 = this.away.code, c = (k, team) => this.count(k, team, t), pc = (a, b) => (b ? Math.round(100 * a / b) : 0);
-    const both = (fn) => [fn(H0), fn(A0)];
-    const [ph, pa] = this.possAt(t);
-    return [
-      ['POSSESSION & SHOTS', [['Possession', ph, pa, '%'], ['Shots', ...both(x => c('shot', x))], ['On target', ...both(x => c('sot', x))], ['Expected goals', ...both(x => +this.xgAt(x, t).toFixed(1)), 'dec']]],
-      ['PASSING', [['Passes', ...both(x => c('pass', x))], ['Pass accuracy', ...both(x => pc(c('passOk', x), c('pass', x))), '%'], ['Corners', ...both(x => c('corner', x))], ['Offsides', ...both(x => c('offside', x))]]],
-      ['DUELS & DISCIPLINE', [['Tackles won', ...both(x => c('tackle', x))], ['Interceptions', ...both(x => c('icpt', x))], ['Fouls', ...both(x => c('foul', x))], ['Cards', ...both(x => c('yellow', x) + c('red', x))]]],
-      ['GOALKEEPING & DEFENCE', [['Saves', ...both(x => c('save', x))], ['Clearances', ...both(x => c('clear', x))], ['Blocks', ...both(x => c('block', x))], ['Shots faced', ...both(x => c('shot', x === H0 ? A0 : H0))]]],
-    ];
   }
 
   // A possession panel under the scoreboard: the numbers sit on dark glass (so they read on any club colours), the bar below them.
@@ -331,49 +292,6 @@ export class BroadcastRenderer extends HighlightsRenderer {
     c.save(); c.beginPath(); c.roundRect(x + 14, y + 35, w - 28, 8, 4); c.clip();
     c.fillStyle = this.hc; c.fillRect(x + 14, y + 35, (w - 28) * h / 100, 8);
     c.fillStyle = this.ac; c.fillRect(x + 14 + (w - 28) * h / 100, y + 35, (w - 28) * a / 100, 8);
-    c.restore();
-  }
-
-  // When a stat panel is due: every 8 minutes of match time from minute 5, for 9 seconds, in rotation. It never opens over a
-  // goal banner, a card, a replay, a kick-off tag or the half-time and full-time scorelines.
-  statPanel(t, sh) {
-    const PERIOD = 480, FIRST = 300, HOLD = 9;
-    const rel = t - this.t0 - FIRST; if (rel < 0) return;
-    const m = Math.floor(rel / PERIOD), local = rel - m * PERIOD; if (local >= HOLD) return;
-    if (sh?.kind === 'replay' || t > this.t1 - 14) return;
-    const P = this.d.periods; if (P.length > 1 && Math.abs(t - P[0].end_t) < 9) return;
-    for (const g of this.goals) if (t >= g.t - 1 && t < g.t + BANNER_HOLD + 1.2) return;
-    for (const k of this.cards) if (t >= k.t - 0.5 && t < k.t + CARD_SHOW + 0.5) return;
-    for (const ps of this.kickoffs) if (t >= ps.t - 0.5 && t < ps.t + 5) return;
-    const [title, rows] = this.panelsAt(t)[m % 4], c = this.c, L = this.look();
-    const x = 60, y0 = 218, w = 560, head = 50, rowH = 52, h = head + rows.length * rowH + 14;
-    const p = easeOut(seg01(local, 0, 0.6)) * (1 - easeInOut(seg01(local, HOLD - 0.6, HOLD)));
-    if (p <= 0.001) return;
-    c.save();
-    c.beginPath(); c.rect(x - 14, y0 - 4, w + 28, h * p + 8); c.clip();   // it drops down out of the scoreboard
-    c.translate(0, -(1 - p) * h);
-    c.globalAlpha = Math.min(1, p * 1.6);
-    const accent = L.accent || (L.key === 'finals' || L.key === 'grand_final' ? '#f5c542' : LIME);
-    c.shadowColor = 'rgba(0,0,0,.45)'; c.shadowBlur = 24;
-    this.pill(x, y0, w, h, L.key === 'christmas' ? 'rgba(15,38,26,0.95)' : L.key === 'grand_final' ? 'rgba(14,20,32,0.96)' : 'rgba(6,26,56,0.93)', 14);
-    c.shadowBlur = 0;
-    c.fillStyle = accent; c.beginPath(); c.roundRect(x, y0, w, 5, [14, 14, 0, 0]); c.fill();
-    this.text(title, x + 22, y0 + 36, { size: 24, weight: 900, colour: accent, spacing: 3 });
-    this.text(this.home.code, x + w - 150, y0 + 34, { size: 22, weight: 900, colour: this.hc === '#ffffff' ? '#fff' : '#fff' });
-    c.fillStyle = this.hc; c.fillRect(x + w - 188, y0 + 14, 6, 26);
-    this.text(this.away.code, x + w - 24, y0 + 34, { size: 22, weight: 900, align: 'right' });
-    c.fillStyle = this.ac; c.fillRect(x + w - 16, y0 + 14, 6, 26);
-    rows.forEach(([label, hv, av, fmt], i) => {
-      const y = y0 + head + i * rowH, tot = hv + av, share = fmt === '%' && label === 'Possession' ? hv / 100 : tot > 0 ? hv / tot : 0.5, lead = hv > av ? 1 : av > hv ? -1 : 0;
-      const show = v => (fmt === 'dec' ? v.toFixed(1) : fmt === '%' ? `${v}%` : String(v));
-      this.text(show(hv), x + 22, y + 24, { size: 30, weight: 900, colour: lead > 0 ? '#fff' : 'rgba(255,255,255,.6)' });
-      this.text(label.toUpperCase(), x + w / 2, y + 22, { size: 19, weight: 800, align: 'center', colour: 'rgba(255,255,255,.72)', spacing: 2 });
-      this.text(show(av), x + w - 22, y + 24, { size: 30, weight: 900, align: 'right', colour: lead < 0 ? '#fff' : 'rgba(255,255,255,.6)' });
-      const bx = x + 22, bw = w - 44, by = y + 32, grow = easeOut(seg01(local, 0.2 + i * 0.12, 0.9 + i * 0.12));
-      c.fillStyle = 'rgba(255,255,255,.12)'; c.fillRect(bx, by, bw, 7);
-      c.fillStyle = this.hc; c.fillRect(bx, by, bw * share * grow, 7);
-      c.fillStyle = this.ac; c.fillRect(bx + bw * share * grow, by, bw * (1 - share) * grow, 7);
-    });
     c.restore();
   }
 
@@ -395,7 +313,6 @@ export class BroadcastRenderer extends HighlightsRenderer {
     if (ft > 0) this.momentPanel('FULL-TIME', [this.d.result.home, this.d.result.away], ft, true);
     this.bug(t);
     this.possessionBar(t);
-    this.statPanel(t, sh);
     // Branded wipe into and out of replays.
     for (const s of this.shots) {
       if (s.kind !== 'replay') continue;

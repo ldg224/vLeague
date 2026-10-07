@@ -23,8 +23,7 @@ export function playerCard(st) {
   return `<section class="gc-card replay-card mp" id="mp">
     <div class="mp-head"><h2 class="card-title mp-title">${st === 'live' ? `Live match${statusPill('live')}` : 'Match centre'}</h2>
       <div class="mp-tabs" role="tablist">${tabs.map(([k, l], i) => `<button role="tab" data-view="${k}" aria-selected="${i === 0}">${l}</button>`).join('')}</div>
-      ${st === 'ft' ? '<button class="ctl mp-dl-btn" data-dl aria-expanded="false">⬇ Download</button>' : ''}</div>
-    <div class="mp-dl" hidden></div>
+</div>
     <div class="mp-screen" id="mp-screen">
     <div class="mp-stage" id="mp-stage">
       <canvas class="mp-canvas" id="mp-canvas" width="1280" height="720" aria-label="Match video"></canvas>
@@ -217,7 +216,6 @@ export class MatchPlayer {
       if (e.target.closest('#mp-full')) return this.fullscreen();
       // Full screen with the controls hidden: the first tap only brings them back.
       if (this._tapWoke && e.target.closest('.mp-stage')) { this._tapWoke = false; return; }
-      if (e.target.closest('[data-dl]')) return this.toggleDownloads();
       if (e.target.closest('.mp-canvas') && this.view !== 'tactical') return this.playing ? this.pause() : this.play();
     });
     this.el.addEventListener('input', e => { if (e.target.id === 'mp-seek' && this.st !== 'live') this.seek(+e.target.value); });
@@ -330,94 +328,5 @@ export class MatchPlayer {
     this.scale = s; this.slow = this.fast = 0; this.holdUntil = performance.now() + 4000;
     for (const r of Object.values(this.r)) r.setScale?.(s);
     this.resize(); this.dirty = true;
-  }
-
-  // ---------- downloads ----------
-
-  toggleDownloads() {
-    const box = this.$('.mp-dl'), btn = this.$('[data-dl]');
-    if (!box.hidden && !this.exporting) { box.hidden = true; btn.setAttribute('aria-expanded', 'false'); return; }
-    box.hidden = false; btn.setAttribute('aria-expanded', 'true');
-    if (this.exporting) return;
-    const can = this.hl?.supported?.(), fx = this.FX, dur = this.data.periods.length ? this.fullMatchSeconds() : 5400;
-    const est = sp => `${mmss(dur / sp)} long · about ${Math.round(dur / sp * 3.2 / 8)} MB`;
-    box.innerHTML = `<div class="mp-dl-grid">
-      <div class="mp-dl-item"><b>🎬 Highlights video</b><span>MP4, 1080p, about 3 minutes. Made in your browser: takes 2–3 minutes.</span>
-        <button class="ctl" data-export="highlights"${can ? '' : ' disabled'}>Download highlights</button></div>
-      <div class="mp-dl-item"><b>📺 Full match video</b><span>The whole match, sped up, 720p. Made in your browser: allow 5–15 minutes.</span>
-        <span class="mp-dl-row"><select class="ctl" id="mp-dl-speed">${[4, 8, 16].map(v => `<option value="${v}"${v === 8 ? ' selected' : ''}>${v}x speed · ${est(v)}</option>`).join('')}</select>
-        <button class="ctl" data-export="full"${can ? '' : ' disabled'}>Download</button></span></div>
-      <div class="mp-dl-item"><b>📄 Match file</b><span>The raw match data (.json.gz). Tiny and instant.</span>
-        <a class="ctl" href="${esc(this.fileUrl || '#')}" download="${esc(this.fileBase())}.json.gz">Download match file</a></div>
-    </div>
-    ${can ? '' : '<p class="mp-dl-note">Videos need Chrome or Edge on a computer. On this device you can still watch everything above.</p>'}
-    <div class="mp-dl-progress" hidden><div class="mp-bar"><span></span></div><p class="mp-dl-status"></p><button class="ctl" data-cancel>Cancel</button></div>`;
-    box.querySelectorAll('[data-export]').forEach(b => { b.onclick = () => this.exportVideo(b.dataset.export); });
-    box.querySelector('[data-cancel]').onclick = () => { this.cancelled = true; };
-  }
-  fullMatchSeconds() { const fr = this.data.frames.data; return (fr[fr.length - 1][0] - fr[0][0]) / 10; }
-  fileBase() {
-    const f = this.FX, r = f.result || {};
-    return `${f.stage ? f.stage : `Week ${f.week}`} - ${f.home} ${r.home ?? ''}-${r.away ?? ''} ${f.away}`.replace(/[\\/:*?"<>|]/g, '-');
-  }
-
-  async exportVideo(kind) {
-    const box = this.$('.mp-dl'), prog = box.querySelector('.mp-dl-progress'), bar = prog.querySelector('.mp-bar span'), status = prog.querySelector('.mp-dl-status');
-    const speed = +(box.querySelector('#mp-dl-speed')?.value || 8);
-    const name = `${this.fileBase()} ${kind === 'highlights' ? 'Highlights' : `Full match ${speed}x`}.mp4`;
-    let handle = null;
-    if (window.showSaveFilePicker) {   // stream straight to disk (needed for the long full-match file)
-      try { handle = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: 'MP4 video', accept: { 'video/mp4': ['.mp4'] } }] }); }
-      catch { return; }   // picker cancelled
-    }
-    this.exporting = true; this.cancelled = false;
-    box.querySelectorAll('[data-export], #mp-dl-speed').forEach(b => { b.disabled = true; });
-    prog.hidden = false; status.textContent = 'Preparing…'; bar.style.width = '0%';
-    const guard = e => { e.preventDefault(); e.returnValue = ''; };
-    addEventListener('beforeunload', guard);
-    const started = performance.now();
-    try {
-      let source, opts = {};
-      if (kind === 'highlights') {
-        source = new this.hl.HighlightsRenderer(this.data, { season: this.S, fixture: this.FX, assets: this.assets, scale: 1 });
-      } else {
-        source = this.fullMatchSource(speed);
-        opts = { fps: 30 };
-      }
-      const blob = await this.hl.exportVideo(source, {
-        ...opts, fileHandle: handle, isCancelled: () => this.cancelled,
-        onProgress: (phase, frac) => {
-          bar.style.width = `${Math.round(frac * 100)}%`;
-          const secs = (performance.now() - started) / 1000, left = frac > 0.03 ? secs / frac - secs : null;
-          status.textContent = `${phase} ${Math.round(frac * 100)}%${left ? ` · about ${Math.max(1, Math.round(left / 60))} min left` : ''}`;
-        },
-      });
-      source.destroy?.();
-      if (blob) {
-        const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: name });
-        document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 20000);
-      }
-      bar.style.width = '100%';
-      status.textContent = `✓ Saved “${name}” (${Math.round((performance.now() - started) / 1000)} s).`;
-    } catch (e) {
-      status.textContent = e.message === 'Cancelled' ? 'Cancelled.' : `Couldn’t make the video: ${e.message}`;
-    } finally {
-      removeEventListener('beforeunload', guard);
-      this.exporting = false;
-      box.querySelectorAll('[data-export], #mp-dl-speed').forEach(b => { b.disabled = false; });
-    }
-  }
-
-  // The full match as a video source for exportVideo: output time T -> match time t0 + T * speed, at 720p.
-  fullMatchSource(speed) {
-    if (this.bc?.BroadcastRenderer) {
-      const r = new this.bc.BroadcastRenderer(this.data, { season: this.S, fixture: this.FX, assets: this.assets, scale: 1280 / 1920 });
-      return { duration: (r.t1 - r.t0) / speed, frame: T => r.frame(r.t0 + T * speed) };
-    }
-    // Fallback: the tactical view drawn on its own canvas.
-    const cv = document.createElement('canvas'); cv.width = 1110; cv.height = 740;
-    const rp = new Replay(cv, this.data);
-    rp.pause();
-    return { duration: (rp.t1 - rp.t0) / speed, frame: T => { rp.seek(rp.t0 + T * speed); return cv; }, destroy: () => rp.destroy() };
   }
 }

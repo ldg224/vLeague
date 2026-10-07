@@ -67,21 +67,6 @@ body.mp-fs-open { overflow: hidden; }
 .mp-marks .mk-ht, .mp-marks .mk-ft { background: rgba(255,255,255,.3); border-radius: 1px; width: 2px; margin-left: -1px; height: 10px; }
 #mp-full { margin-left: auto; }
 .ctl.live.behind { opacity: .6; }
-.mp-dl { margin-bottom: 12px; padding: 12px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); }
-.mp-dl[hidden] { display: none; }
-.mp-dl-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-.mp-dl-item { display: grid; gap: 6px; align-content: start; padding: 10px; border-radius: 12px; background: rgba(255,255,255,.03); }
-.mp-dl-item span { color: var(--muted); font-size: .8rem; }
-.mp-dl-item .ctl { justify-self: start; text-decoration: none; }
-.mp-dl-row { display: flex; gap: 6px; flex-wrap: wrap; }
-.mp-dl-row select { max-width: 100%; }
-.mp-dl-note { margin: 10px 0 0; color: var(--muted); font-size: .8rem; }
-.mp-dl-progress { margin-top: 12px; display: grid; gap: 6px; }
-.mp-dl-progress[hidden] { display: none; }
-.mp-dl-status { margin: 0; font-size: .82rem; }
-.mp-bar { height: 8px; border-radius: 99px; background: rgba(255,255,255,.08); overflow: hidden; }
-.mp-bar span { display: block; height: 100%; width: 0; background: var(--club, var(--blue-600)); transition: width .3s; }
-.mp-dl-progress .ctl { justify-self: start; }
 
 
 /* vLeague additions */
