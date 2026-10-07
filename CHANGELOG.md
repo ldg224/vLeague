@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.37.1 (2026-10-07)
+
+No database change.
+
+- **Fixed:** the match picture went blurry after a stutter and stayed blurry. After one slow stretch the viewer dropped its drawing resolution to half or a third and never raised it again. It also rebuilt the whole broadcast (camera and director plans) each time it dropped, which was a stutter of its own. Now:
+  - the quality starts at what your screen can actually show (phones no longer start at half size);
+  - a single hiccup, a jump along the seek bar, a switch of view or a hidden tab doesn't count;
+  - it takes two slow seconds in a row to step down, and three fast seconds to step back up (never above the starting quality);
+  - changing quality just resizes the picture, so there is no rebuild and no second stutter.
+
 ## 0.37.0 (2026-10-07)
 
 Match engine 0.2.0: less waiting. No database change. Matches simulated from now on use it; matches already played are unchanged.

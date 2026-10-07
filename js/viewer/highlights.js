@@ -204,6 +204,14 @@ export class HighlightsRenderer {
     this.gkIdx = new Set(data.players.filter(p => p.slot === 'GK').map(p => p.idx));
   }
 
+  // Change the drawing resolution without rebuilding anything (the camera and director plans don't depend on it).
+  setScale(s) {
+    s = clamp(+s || 1, 0.1, 2);
+    if (s === this.scale) return;
+    this.scale = s;
+    this.cv.width = Math.round(W * s); this.cv.height = Math.round(H * s);
+  }
+
   segAt(T) { return this.segs.find(s => T >= s.start && T < s.end) || this.segs[this.segs.length - 1]; }
 
   scoreAt(t) {

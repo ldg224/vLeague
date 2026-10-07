@@ -9,8 +9,14 @@ import { Replay } from './replay.js';
 
 const W = 1920, H = 1080;
 const mmss = s => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
-// Starting resolution: phones draw at half size, which keeps the frame rate up.
-const startScale = () => (innerWidth < 600 ? 0.5 : innerWidth < 1000 ? 0.67 : 1);
+// Picture quality steps. It starts at what the screen can show (a phone doesn't need 1920 pixels across), then moves down a step
+// only if frames really are slow, and back up when they are fast again, so a hiccup never leaves the picture blurry.
+const LADDER = [1, 0.85, 0.7, 0.58, 0.46, 0.36];
+function startScale() {
+  const box = document.getElementById('mp-stage')?.getBoundingClientRect();
+  const need = ((box?.width || innerWidth) * Math.min(devicePixelRatio || 1, 2)) / W;
+  return LADDER.filter(s => s >= Math.min(1, need)).pop() ?? 1;
+}
 
 export function playerCard(st) {
   const tabs = st === 'ft' ? [['highlights', 'Highlights'], ['broadcast', 'Full match'], ['tactical', 'Tactical']] : [['broadcast', 'Broadcast'], ['tactical', 'Tactical']];
@@ -47,7 +53,7 @@ export class MatchPlayer {
     this.el.classList.toggle('mp-live', this.st === 'live');   // a live match is a broadcast: no play, pause, seek or speed
     this.cv = this.$('#mp-canvas'); this.g = this.cv.getContext('2d');
     this.view = null; this.r = {}; this.playing = false; this.t = 0; this.speed = 1;
-    this.scale = startScale(); this.cost = []; this.dirty = true; this.exporting = false;
+    this.scale = this.bestScale = startScale(); this.cost = []; this.slow = this.fast = 0; this.holdUntil = performance.now() + 3000; this.dirty = true; this.exporting = false;
     this.names = Object.fromEntries(this.data.players.map(p => [p.id, p.name]));
     this.wire();
     this.ready = this.load();
@@ -75,11 +81,10 @@ export class MatchPlayer {
   // ---------- renderers ----------
 
   renderer(view) {
-    if (this.r[view] && this.r[view]._scale === this.scale) return this.r[view];
+    const have = this.r[view];
+    if (have) { have.setScale(this.scale); return have; }   // a quality change only resizes the picture, it never rebuilds the camera plans
     const opts = { season: this.S, fixture: this.FX, assets: this.assets, scale: this.scale };
-    const r = view === 'highlights' ? new this.hl.HighlightsRenderer(this.data, opts) : new this.bc.BroadcastRenderer(this.data, opts);
-    r._scale = this.scale;
-    return (this.r[view] = r);
+    return (this.r[view] = view === 'highlights' ? new this.hl.HighlightsRenderer(this.data, opts) : new this.bc.BroadcastRenderer(this.data, opts));
   }
   range() {   // [min, max] of the current view's time
     if (this.view === 'highlights') return [0, this.renderer('highlights').duration];
@@ -90,7 +95,7 @@ export class MatchPlayer {
 
   show(view) {
     const prevT = this.view && this.view !== 'highlights' ? this.t : null;
-    this.view = view;
+    this.view = view; this.holdUntil = performance.now() + 2500; this.cost = [];   // a new view's first frames are slow; don't judge by them
     this.el.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-selected', b.dataset.view === view));
     const tac = view === 'tactical';
     this.cv.hidden = tac; this.$('#pitch').hidden = !tac; this.$('#caption').hidden = !tac;
@@ -190,6 +195,7 @@ export class MatchPlayer {
   seek(t) {
     if (this.view === 'tactical') { this.tactical.seek(t); this.t = this.tactical.t; return this.syncUi(); }
     const [a, b] = this.range();
+    this.holdUntil = performance.now() + 1500; this.cost = [];   // the first frames after a jump are slow; don't judge by them
     this.t = Math.max(a, Math.min(t, b)); this.dirty = true;
     this.follow = this.st === 'live' && this.view !== 'highlights' && this.t >= liveSimTime(this.FX, this.S) - 2;   // seeking back stops following live
     this.syncUi();
@@ -305,14 +311,25 @@ export class MatchPlayer {
     this.adapt(performance.now() - t0);
     this.syncUi();
   }
-  // If frames take too long, drop the drawing resolution (and remember it for this visit).
+  // Quality follows how the frames are really coping. One hiccup (a garbage collection, a seek, a switch of view, a hidden tab) never
+  // counts: it takes two slow stretches of about a second each to step down, three fast ones to step back up, and never above
+  // what the screen needs.
   adapt(ms) {
-    if (!this.playing) return;
+    if (!this.playing || document.hidden) { this.cost = []; return; }
+    if (performance.now() < this.holdUntil) return;
     this.cost.push(ms);
-    if (this.cost.length < 45) return;
-    const avg = this.cost.reduce((x, y) => x + y, 0) / this.cost.length;
+    if (this.cost.length < 60) return;
+    const s = [...this.cost].sort((a, b) => a - b), p75 = s[Math.floor(s.length * 0.75)];
     this.cost = [];
-    if (avg > 26 && this.scale > 0.34) { this.scale = this.scale > 0.6 ? 0.5 : 0.34; this.dirty = true; }
+    const i = Math.max(0, LADDER.findIndex(q => Math.abs(q - this.scale) < 1e-6));
+    if (p75 > 24 && i < LADDER.length - 1) { this.slow++; this.fast = 0; if (this.slow >= 2) this.setQuality(LADDER[i + 1]); }
+    else if (p75 < 11 && i > 0 && LADDER[i - 1] <= this.bestScale + 1e-6) { this.fast++; this.slow = 0; if (this.fast >= 3) this.setQuality(LADDER[i - 1]); }
+    else this.slow = this.fast = 0;
+  }
+  setQuality(s) {
+    this.scale = s; this.slow = this.fast = 0; this.holdUntil = performance.now() + 4000;
+    for (const r of Object.values(this.r)) r.setScale?.(s);
+    this.resize(); this.dirty = true;
   }
 
   // ---------- downloads ----------
