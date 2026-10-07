@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.34.1 (2026-10-07)
+
+No database change in the app (one data fix, below).
+
+- **Fixed:** three clubs (NEE, PRF, SSF) showed coloured initials instead of their crest everywhere. Their saved crest paths pointed at old
+  folder names, but the pictures were stored under the new club codes. The paths now point at the real files.
+- **Fixed:** a crest that failed to load once (easy on a weak phone connection, the pictures are 250 to 400 KB) stayed as initials until the
+  page was reloaded. It is now tried a second time before the initials stand in.
+
 ## 0.34.0 (2026-10-07)
 
 Matches and the Game centre. No database change.

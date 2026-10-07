@@ -22,12 +22,13 @@ export const useClubs = list => { rows = new Map((list || []).map(r => [r.code, 
 export const nameOf = team => { const r = rows.get(team.code); return r ? r.short_name || r.name : team.name; };
 export const fullNameOf = team => rows.get(team.code)?.name || team.name;
 
-// A club's crest, with coloured initials if it has none.
+// A club's crest, with coloured initials if it has none. A crest that fails to load (a weak phone connection) is tried once
+// more before the initials stand in.
 export function crest(team, size) {
   const r = rows.get(team.code), colour = r?.colour || team.colour;
   const src = r?.crest_path ? crestUrl(r.crest_path) : logoUrl(team.code);
   return `<span class="crest" style="--s:${size}px;--c:${esc(hex(colour))};--on:${onColour(colour)}">`
-    + `<img src="${esc(src)}" alt="" loading="lazy" onerror="this.parentNode.classList.add('none');this.remove()">`
+    + `<img src="${esc(src)}" alt="" loading="lazy" onerror="if(!this.dataset.r){this.dataset.r=1;var u=this.src;setTimeout(function(){this.src=u+'?r=1'}.bind(this),1500)}else{this.parentNode.classList.add('none');this.remove()}">`
     + `<i>${esc(String(team.code || '?').slice(0, 3))}</i></span>`;
 }
 
