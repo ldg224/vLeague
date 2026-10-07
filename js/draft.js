@@ -8,6 +8,7 @@ import { openDraft, latestDraft, loadDraft, saveQueue, savePrefs, makePick, quie
 import { loadPlayers, forgetPlayers } from './players-data.js';
 import { ago } from './places.js';
 import { overall } from './names.js';
+import { gridOf, renderGrid } from './draft-grid.js';
 import { startTour, tourSeen } from './tour.js';
 import { db } from './auth.js';
 
@@ -168,7 +169,12 @@ if (ctx) {
       const rows = st.picks.map(k => { const p = map.get(k.player);
         return { ...(p || { name: '— skipped —', position: '', number: null, offense: 0, defense: 0, value: 0 }), pick_no: k.pick_no, club: k.club, clubName: nameOf(k.club), how: k.how, skipped: !p }; });
       const shown = sorted('board', rows.filter(r => passes('board', r)));
-      return `<section><h2>Picked players (${st.picks.length} of ${st.order.length} picks made) <button class="dr-b dr-export" data-export title="Download every pick so far as a spreadsheet">Download CSV</button></h2>${toolbar('board')}
+      // The draft at a glance: a row per round, a column per club, the pick number and who was taken.
+      const grid = renderGrid(gridOf(st.order, st.picks), {
+        esc, clubName: nameOf, me: code, current: st.draft.status === 'done' ? null : st.draft.current_pick, made: st.picks.length,
+        who: x => { const p = map.get(x.pick?.player); return p ? `${esc(p.name)} <small>${esc(p.position)}</small>` : '<i>skipped</i>'; },
+      });
+      return `<section><h2>Draft board</h2>${grid}</section><section><h2>Picked players (${st.picks.length} of ${st.order.length} picks made) <button class="dr-b dr-export" data-export title="Download every pick so far as a spreadsheet">Download CSV</button></h2>${toolbar('board')}
         ${table('board', shown, r => `<tr class="${r.club === code ? 'me' : ''}${r.skipped ? ' skipped' : ''}"><td class="c-pick">${r.pick_no}</td><td class="c-club">${esc(r.clubName)}</td><td class="c-position">${esc(r.position)}</td><td class="c-name">${r.skipped ? esc(r.name) : `<button class="dr-name" data-player="${esc(r.id)}">${esc(r.name)}</button>`}</td><td class="c-number">${esc(r.number ?? '')}</td>${r.skipped ? '<td class="c-offense"></td><td class="c-defense"></td><td class="c-overall"></td><td class="c-value"></td>' : ratings(r)}<td class="c-how">${esc(HOWS[r.how] || r.how)}</td></tr>`,
           st.picks.length ? 'No picks match.' : 'No picks yet.')}</section>`;
     }

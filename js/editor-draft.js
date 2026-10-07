@@ -21,6 +21,8 @@ let selected = null, undoFrom = null, timer = null;
 const QDAYS = [[1, 'Mon'], [2, 'Tue'], [3, 'Wed'], [4, 'Thu'], [5, 'Fri'], [6, 'Sat'], [0, 'Sun']];
 const OVERNIGHT = { days: [0, 1, 2, 3, 4, 5, 6], from: '22:00', to: '07:00' };
 
+import { gridOf, renderGrid, moveColumn } from './draft-grid.js';
+
 export const draftView = () => '<h1>Draft</h1><div id="dr-root"><p class="quiet">Loading…</p></div>';
 
 // ctx: { db, esc, explain, clubs (the Editor's clubs) }
@@ -145,10 +147,21 @@ export async function mountDraft(ctx) {
 
   const clubSelect = (attrs, sel) => `<select ${attrs}>${active.map(c => `<option value="${esc(c.code)}"${c.code === sel ? ' selected' : ''}>${esc(c.short_name || c.name)}</option>`).join('')}</select>`;
 
+  // The order as a grid: drag an unmade pick onto another to swap them (or press one, then press the other). Before
+  // any pick is made the club columns can be dragged too, which moves a club's place in every round.
+  let gridSel = null;
+  const orderGrid = () => {
+    const m = made(), map = new Map(S.players.map(p => [p.id, p]));
+    return `<p class="dg-hint">${m ? 'Made picks are fixed.' : 'Drag a column heading to change a club’s draft position.'} Drag any unmade pick onto another to swap them, or press one and then the other.</p>${renderGrid(gridOf(S.order, S.picks), {
+      esc, clubName: cname, editable: true, made: m, current: S.d.status === 'done' ? null : S.d.current_pick, selected: gridSel,
+      who: x => { const p = map.get(x.pick?.player); return p ? `${esc(p.name)} <small>${esc(p.position)}</small>` : '<i>skipped</i>'; },
+    })}`;
+  };
+
   const orderPanel = () => {
     const d = S.d, m = made(), rest = S.order.filter(o => o.pick_no > m);
     const last = rest.length ? rest[rest.length - 1].pick_no : m;
-    return `<section class="ed-invite"><h2>Draft order</h2>
+    return `<section class="ed-invite"><h2>Draft order</h2>${orderGrid()}
       <form class="dr-build" novalidate>
         <div class="ed-fields"><label>Rounds<input name="rounds" type="number" min="1" max="50" value="${d.rounds}"></label>
           <label>Order<select name="snake"><option value="1">Snake (reverses each round)</option><option value="0">Same order every round</option></select></label>
@@ -351,9 +364,56 @@ export async function mountDraft(ctx) {
     }
   });
 
+  async function swapPicks(a, b) {
+    const m = made();
+    if (a === b || a <= m || b <= m) return;
+    const arr = restClubs(), i = a - m - 1, j = b - m - 1;
+    if (!(i in arr) || !(j in arr)) return;
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+    gridSel = null;
+    await run(() => saveRest(arr), `Picks ${a} and ${b} swapped.`);
+  }
+  async function moveCol(from, to) {
+    const cols = gridOf(S.order, S.picks).cols;
+    if (made() || from === to || !(from in cols) || !(to in cols)) return;
+    const map = moveColumn(cols, from, to);
+    await run(() => saveRest(restClubs().map(c => map[c] ?? c)), `${cname(cols[from])} moved to position ${to + 1}.`);
+  }
+  let dragged = null;
+  root.addEventListener('dragstart', e => {
+    const p = e.target.closest?.('.dg-pick[data-no]'), c = e.target.closest?.('.dg-col[data-col]');
+    dragged = p ? { pick: +p.dataset.no } : c ? { col: +c.dataset.i } : null;
+    if (dragged) { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', JSON.stringify(dragged)); }
+  });
+  root.addEventListener('dragover', e => {
+    const over = dragged?.pick != null ? e.target.closest?.('.dg-pick.drag') : dragged?.col != null ? e.target.closest?.('.dg-col[data-col]') : null;
+    root.querySelectorAll('.over').forEach(x => { if (x !== over) x.classList.remove('over'); });
+    if (over) { e.preventDefault(); over.classList.add('over'); }
+  });
+  root.addEventListener('dragend', () => { dragged = null; root.querySelectorAll('.over').forEach(x => x.classList.remove('over')); });
+  root.addEventListener('drop', e => {
+    const d = dragged; dragged = null;
+    if (!d) return;
+    if (d.pick != null) { const t = e.target.closest?.('.dg-pick.drag'); if (t) { e.preventDefault(); swapPicks(d.pick, +t.dataset.no); } }
+    else { const t = e.target.closest?.('.dg-col[data-col]'); if (t) { e.preventDefault(); moveCol(d.col, +t.dataset.i); } }
+  });
+  // Without a mouse (phones, keyboards): press a pick to select it, press another to swap.
+  root.addEventListener('click', e => {
+    const p = e.target.closest?.('.dg-pick.drag');
+    if (!p || !S) return;
+    const no = +p.dataset.no;
+    if (gridSel == null) { gridSel = no; return draw(); }
+    if (gridSel === no) { gridSel = null; return draw(); }
+    swapPicks(gridSel, no);
+  });
+  root.addEventListener('keydown', e => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('.dg-pick.drag')) { e.preventDefault(); e.target.click(); }
+  });
+
   root.addEventListener('click', e => {
     const b = e.target.closest('[data-act]');
     if (!b || !S) return;
+    if (b.dataset.act === 'colleft' || b.dataset.act === 'colright') { const i = +b.dataset.i; return moveCol(i, b.dataset.act === 'colleft' ? i - 1 : i + 1); }
     const d = S.d, act = b.dataset.act;
     if (act === 'q-add' || act === 'q-night' || act === 'q-del' || act === 'q-clear') {
       const cur = readQuiet(); qOpen = true;

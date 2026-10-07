@@ -3,6 +3,18 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.31.0 (2026-10-07)
+
+Draft as a grid, and drag-and-drop draft order. No database change.
+
+- **Added, managers:** the Draft **Board** now starts with the draft as a grid: a row for each round, a column for each club, and in each
+  cell the pick number and who was taken (the pick on the clock is outlined, your club's column is tinted). It updates live like the rest
+  of the page.
+- **Added, Editor → Draft → Draft order:** the same grid, where you **drag an unmade pick onto another to swap them**. Before any pick is
+  made you can also **drag a club's column heading** to change its draft position in every round (snake order carries over). On a phone
+  or with a keyboard: press a pick, then press the pick to swap it with, and use the ◀ ▶ buttons on the headings. Made picks stay fixed.
+  The earlier tools (swap, move, add, reverse, shuffle, rotate) are all still there.
+
 ## 0.30.0 (2026-10-07)
 
 Inbox: delete buttons, press conferences and reactions. Needs `0032_press_reactions.sql` (run it once).

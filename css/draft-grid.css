@@ -1,0 +1,30 @@
+/* The draft as a grid (0.31): rounds down the side, clubs across the top. */
+.dg-wrap { overflow: auto; max-height: 75vh; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); margin: 0 0 18px; }
+.dg { border-collapse: separate; border-spacing: 0; width: 100%; min-width: max-content; font-size: .88rem; }
+.dg th, .dg td { border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); padding: 0; vertical-align: top; }
+.dg th:last-child, .dg td:last-child { border-right: 0; }
+.dg tr:last-child th, .dg tr:last-child td { border-bottom: 0; }
+.dg thead th { position: sticky; top: 0; z-index: 2; background: var(--surface); padding: 8px 10px; font-weight: 700; text-align: center; white-space: nowrap; }
+.dg .dg-r { position: sticky; left: 0; z-index: 1; background: var(--surface); width: 3.4em; min-width: 3.4em; text-align: center; padding: 8px 6px; color: var(--muted); font-weight: 700; }
+.dg thead .dg-r { z-index: 3; }
+.dg .dg-col.me, .dg .dg-cell.me { background: color-mix(in srgb, var(--club, var(--blue-500)) 10%, transparent); }
+.dg .dg-col.me { background: color-mix(in srgb, var(--club, var(--blue-500)) 18%, var(--surface)); }
+.dg-cell { min-width: 150px; }
+.dg-pick { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 8px; padding: 8px 10px; min-height: 42px; align-items: baseline; }
+.dg-pick + .dg-pick { border-top: 1px dashed var(--line); }
+.dg-no { font: 700 .75rem var(--font-display); color: var(--faint); letter-spacing: .02em; }
+.dg-who { color: var(--text); font-weight: 600; overflow-wrap: anywhere; }
+.dg-who i { font-style: normal; color: var(--muted); font-weight: 500; }
+.dg-who small { color: var(--faint); font-weight: 500; margin-left: 4px; }
+.dg-pick.now { box-shadow: inset 0 0 0 2px var(--club, var(--blue-400)); border-radius: 4px; }
+.dg-pick.done .dg-no { color: var(--muted); }
+.dg-pick.skip .dg-who { color: var(--faint); font-weight: 500; font-style: italic; }
+/* The Editor: unmade picks can be dragged (or pressed, then pressed again) to swap places. */
+.dg-pick.drag { cursor: grab; }
+.dg-pick.drag:hover { background: color-mix(in srgb, var(--blue-400) 12%, transparent); }
+.dg-pick.sel { background: color-mix(in srgb, var(--blue-400) 22%, transparent); outline: 2px solid var(--blue-400); outline-offset: -2px; }
+.dg-pick.over, .dg-col.over { background: color-mix(in srgb, var(--blue-400) 28%, transparent); }
+.dg-col[draggable="true"] { cursor: grab; }
+.dg-col .dg-mv { border: 0; background: transparent; color: var(--muted); cursor: pointer; padding: 2px 4px; font-size: .75rem; }
+.dg-col .dg-mv:disabled { opacity: .25; cursor: default; }
+.dg-hint { margin: 0 0 8px; color: var(--muted); font-size: .85rem; }
