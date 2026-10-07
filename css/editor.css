@@ -77,9 +77,7 @@
 /* ---------- players (0.11) ---------- */
 .pl-sum { margin: 0 0 18px; }
 .pl-sum span { display: block; color: var(--muted); font-size: .88rem; }
-.pl-gen details { margin: 0 0 12px; }
-.pl-gen summary, .pl-paste summary { cursor: pointer; color: var(--tint-text); font-weight: 600; }
-.pl-gen details label { margin-top: 10px; }
+.pl-paste summary { cursor: pointer; color: var(--tint-text); font-weight: 600; }
 .pl-paste { margin: 18px 0; }
 .pl-scroll { overflow-x: auto; margin: 0 0 14px; }
 .pl-table { border-collapse: collapse; width: 100%; font-size: .92rem; }
@@ -99,7 +97,6 @@
 .pl-edit select[data-f="club"] { min-width: 7.5em; max-width: 11em; }
 .pl-edit select.rt { min-width: 4.4em; text-align: center; font-weight: 700; }
 .pl-table td .rt { font-size: .92rem; }
-.pl-id { color: var(--muted); font-variant-numeric: tabular-nums; font-size: .82rem; white-space: nowrap; }
 .pl-edit .pl-num { width: 4.2em; min-width: 0; text-align: center; }
 /* The Editor is one width on every tab (0.12.1), so the tabs and headings never jump sideways when you switch. Ordinary
    tab content keeps its comfortable reading width; the Players and Fixtures lists use the full width. */
@@ -198,9 +195,7 @@
 .nw-label { font-weight: 600; font-size: .9rem; }
 .nw-field input:not([type]), .nw-field input[type="url"], .nw-field textarea { width: 100%; box-sizing: border-box; font: inherit; font-weight: 400; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-raised); color: var(--text); }
 .nw-field textarea { resize: vertical; min-height: 9rem; line-height: 1.5; }
-.nw-tools { display: flex; gap: 6px; }
-.nw-tools button { padding: 5px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-raised); color: var(--text); font: inherit; font-size: .85rem; cursor: pointer; }
-.nw-tools button:hover, .nw-chip:hover { background: var(--surface-hover); }
+.nw-chip:hover { background: var(--surface-hover); }
 .nw-starters { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; }
 .nw-starters > span { color: var(--muted); font-size: .85rem; margin-right: 4px; }
 .nw-chip { padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-raised); color: var(--text); font: inherit; font-size: .85rem; cursor: pointer; }

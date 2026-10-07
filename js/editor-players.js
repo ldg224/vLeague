@@ -1,12 +1,10 @@
-// Editor → Players (0.11). The league's players: generate a pool in one press, paste a list, edit in place.
-// Generated players are free agents (no club); the office deals them to clubs later (a draft).
+// Editor → Players. The league's players: generate a pool, paste a list, edit in place.
+// Generated players are free agents (no club); the office deals them to clubs in the Draft.
 // The database checks everything again (supabase/migrations/0008_players.sql); this page only asks.
-import { generate, reroll, namer, rate, playerValue, numbersFor, POSITIONS, MAX_TOTAL } from './names.js';
+import { generate, namer, rate, playerValue, numbersFor, POSITIONS, MAX_TOTAL } from './names.js';
 import { forgetPlayers } from './players-data.js';
 
 const POS_NAME = { GK: 'Goalkeeper', DEF: 'Defender', MID: 'Midfielder', FWD: 'Forward' };
-const QUALITY = { weak: ['Weaker', 4.5], typical: ['Typical', 5.5], strong: ['Stronger', 6.5] };
-const MIX = { even: ['Even', 1.0], varied: ['Varied', 1.6] };
 const chip = n => `<span class="rt rt-${n}">${n}</span>`;
 const money = n => `$${Number(n).toLocaleString('en-AU')}`;
 
@@ -39,9 +37,7 @@ export async function mountPlayers(ctx) {
 
   function summary() {
     const free = players.filter(p => !p.club).length;
-    const by = Object.fromEntries(POSITIONS.map(p => [p, players.filter(x => x.position === p).length]));
-    return `<p class="pl-sum"><b>${players.length}</b> player${players.length === 1 ? '' : 's'}: ${free} free agent${free === 1 ? '' : 's'}, ${players.length - free} at clubs.
-      <span>${POSITIONS.map(p => `${by[p]} ${p}`).join(' · ')}</span></p>`;
+    return `<p class="pl-sum"><b>${players.length}</b> player${players.length === 1 ? '' : 's'}: ${free} free agent${free === 1 ? '' : 's'}, ${players.length - free} at clubs.</p>`;
   }
 
   function generatePanel() {
@@ -49,15 +45,8 @@ export async function mountPlayers(ctx) {
     const def = Math.max(24, clubsN * 16 + 24);
     return `<form class="ed-invite pl-gen" id="pl-gen">
       <h2>Generate players</h2>
-      <p class="ed-hint">Makes new players with mostly Australian names (no first or last name is repeated anywhere in the league), a singlet number and
-        offense and defense ratings that suit their position (nobody is a perfect 10/10). They all start as free agents, so there are no teams yet.</p>
-      <label>How many <i>${clubsN} club${clubsN === 1 ? '' : 's'} × 16 plus 24 spare = ${clubsN * 16 + 24}</i>
+      <label>How many <i>${clubsN} club${clubsN === 1 ? '' : 's'} × 16 plus 24 spare</i>
         <input type="number" name="count" min="1" max="400" value="${def}" required></label>
-      <details><summary>Options</summary>
-        <label>Quality <select name="quality">${opts(Object.entries(QUALITY).map(([k, v]) => [k, v[0]]), 'typical')}</select></label>
-        <label>Names <select name="names">${opts([['local', 'Mostly Australian'], ['mixed', 'Mixed cultures']], 'local')}</select></label>
-        <label>Mix <select name="mix">${opts(Object.entries(MIX).map(([k, v]) => [k, v[0]]), 'even')}</select></label>
-      </details>
       <div class="ed-actions"><button class="btn">Generate</button></div>
       <p class="ed-msg" role="status"></p>
     </form>`;
@@ -65,14 +54,12 @@ export async function mountPlayers(ctx) {
 
   function previewPanel() {
     if (!preview) return '';
-    const rows = preview.list.map((p, i) => `<tr data-i="${i}">
+    const rows = preview.list.map(p => `<tr>
       <td>${esc(p.name)}</td><td>${esc(p.position)}</td><td>${p.number}</td><td>${chip(p.offense)}</td><td>${chip(p.defense)}</td><td>${money(playerValue(p))}</td>
-      <td class="pl-row-act"><button class="btn ghost small" type="button" data-act="reroll" aria-label="New name and ratings for ${esc(p.name)}">↻</button>
-      <button class="btn ghost small" type="button" data-act="drop" aria-label="Leave out ${esc(p.name)}">✕</button></td></tr>`).join('');
+</tr>`).join('');
     return `<section class="pl-preview" aria-label="Preview">
-      <h2>Preview: ${preview.list.length} new free agents</h2>
-      <p class="ed-hint">Nothing is saved yet. Re-roll or leave out any player, then add them.</p>
-      <div class="pl-scroll"><table class="pl-table"><thead><tr><th>Name</th><th>Pos</th><th>No.</th><th>Off</th><th>Def</th><th>Value</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+      <h2>${preview.list.length} new free agents</h2>
+      <div class="pl-scroll"><table class="pl-table"><thead><tr><th>Name</th><th>Pos</th><th>No.</th><th>Off</th><th>Def</th><th>Value</th></tr></thead><tbody>${rows}</tbody></table></div>
       <div class="ed-actions"><button class="btn" type="button" data-act="accept" ${preview.list.length ? '' : 'disabled'}>Add ${preview.list.length} players</button>
         <button class="btn ghost" type="button" data-act="discard">Discard</button></div>
       <p class="ed-msg" role="status"></p></section>`;
@@ -81,9 +68,8 @@ export async function mountPlayers(ctx) {
   function pastePanel() {
     return `<details class="pl-paste"><summary>Paste a list</summary>
       <form class="ed-invite" id="pl-paste">
-        <label>One player per line <i>Name, FWD, 8, 3 (position, offense, defense)</i>
+        <label>One player per line <i>Name, FWD, 8, 3 (position, offense, defense). Leave out anything you like.</i>
           <textarea name="lines" rows="5" required placeholder="Jace Callister, FWD, 8, 3&#10;Nate Sterling, GK&#10;MID"></textarea></label>
-        <p class="ed-hint">Anything left out is made up for you: a line with just a position (like <b>MID</b>) is a brand-new player, a name alone gets a position and ratings.</p>
         <div class="ed-actions"><button class="btn">Add players</button></div>
         <p class="ed-msg" role="status"></p>
       </form></details>`;
@@ -92,9 +78,8 @@ export async function mountPlayers(ctx) {
   function listPanel() {
     const q = filter.q.trim().toLowerCase();
     const shown = players.filter(p => (filter.club === '' || (filter.club === '-' ? !p.club : p.club === filter.club))
-      && (!filter.pos || p.position === filter.pos) && (!q || p.name.toLowerCase().includes(q) || p.id.includes(q) || String(p.number) === q));
+      && (!filter.pos || p.position === filter.pos) && (!q || p.name.toLowerCase().includes(q) || String(p.number) === q));
     const rows = shown.map(p => `<tr data-id="${esc(p.id)}">
-      <td class="pl-id" title="Player ID">${esc(p.id)}</td>
       <td><input class="pl-name" value="${esc(p.name)}" maxlength="40" aria-label="Name"></td>
       <td><select data-f="position" aria-label="Position">${opts(POSITIONS.map(x => [x, x]), p.position)}</select></td>
       <td><input class="pl-num" type="number" min="1" max="99" value="${p.number}" data-f="number" aria-label="Singlet number"></td>
@@ -108,13 +93,13 @@ export async function mountPlayers(ctx) {
     return `<section class="pl-list">
       <h2>All players</h2>
       <div class="pl-filters">
-        <input type="search" id="pl-q" placeholder="Search by name, ID or number" value="${esc(filter.q)}" aria-label="Search by name, ID or number">
+        <input type="search" id="pl-q" placeholder="Search by name or number" value="${esc(filter.q)}" aria-label="Search by name or number">
         <select id="pl-fclub" aria-label="Club"><option value="">All players</option><option value="-" ${filter.club === '-' ? 'selected' : ''}>Free agents</option>${active().map(c => `<option value="${esc(c.code)}" ${filter.club === c.code ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>
         <select id="pl-fpos" aria-label="Position"><option value="">Any position</option>${posOpts(filter.pos)}</select>
       </div>
-      ${players.length ? `<div class="pl-scroll"><table class="pl-table pl-edit"><thead><tr><th>ID</th><th>Name</th><th>Pos</th><th>No.</th><th>Off</th><th>Def</th><th>Value</th><th>Club</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+      ${players.length ? `<div class="pl-scroll"><table class="pl-table pl-edit"><thead><tr><th>Name</th><th>Pos</th><th>No.</th><th>Off</th><th>Def</th><th>Value</th><th>Club</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
         ${shown.length ? '' : '<p class="quiet">No players match.</p>'}`
-        : '<p class="quiet">No players yet. Press Generate above.</p>'}
+        : '<p class="quiet">No players yet.</p>'}
       <p class="ed-msg" role="status" id="pl-msg"></p>
       ${players.length ? `<div class="pl-danger"><button class="btn ghost small" type="button" data-act="wipe">Remove all players…</button>
         <span class="ed-confirm" hidden>Remove all ${players.length} players? Team sheets that use them will need picking again.
@@ -150,9 +135,8 @@ export async function mountPlayers(ctx) {
     const form = e.target, msg = form.querySelector('.ed-msg'), btn = form.querySelector('button');
     if (form.id === 'pl-gen') {
       const n = Math.max(1, Math.min(400, Number(form.elements.count.value) || 0));
-      const opt = { mean: QUALITY[form.elements.quality.value][1], spread: MIX[form.elements.mix.value][1], names: form.elements.names.value };
       try {
-        preview = { opt, list: generate(n, names(), opt) };
+        preview = { list: generate(n, names(), { mean: 5.5, spread: 1.0, names: 'local' }) };
         draw();
         root.querySelector('.pl-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } catch (err) { say(msg, err.message); }
@@ -195,14 +179,7 @@ export async function mountPlayers(ctx) {
     const b = e.target.closest('[data-act]');
     if (!b) return;
     const act = b.dataset.act, row = b.closest('tr');
-    if (act === 'reroll') {
-      const i = Number(row.dataset.i);
-      try {
-        preview.list[i] = reroll(preview.list[i], [...names(), ...preview.list.filter((_, k) => k !== i).map(p => p.name)], preview.opt);
-        draw();
-      } catch (err) { say(root.querySelector('.pl-preview .ed-msg'), err.message); }
-    } else if (act === 'drop') { preview.list.splice(Number(row.dataset.i), 1); draw(); }
-    else if (act === 'discard') { preview = null; draw(); }
+    if (act === 'discard') { preview = null; draw(); }
     else if (act === 'accept') {
       const msg = root.querySelector('.pl-preview .ed-msg');
       root.querySelectorAll('.pl-preview button').forEach(x => { x.disabled = true; });

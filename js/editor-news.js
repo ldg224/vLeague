@@ -1,5 +1,5 @@
-// Editor -> News (0.18, redesigned in 0.19): write a post, give it a look (accent colour, picture, button), choose who it's
-// for, optionally email it to managers, and see exactly what they'll see while you type. Below: everything posted so far.
+// Editor -> News: write a post, give it a look (accent colour, picture, button), choose who it's for, optionally email it
+// to managers, and see what they'll see while you type. Below: everything posted so far.
 // Audience: Everyone (guests too), Every manager, or chosen clubs. The database enforces it (0019_news_posts.sql).
 // Starters fill the form from the season, so a round preview or a deadline reminder is one click.
 import { kickoff } from './dashboard-data.js';
@@ -68,9 +68,6 @@ export async function mountNews(ctx) {
         ${picks.length ? `<p class="nw-starters"><span>Start from</span>${picks.map((s, i) => `<button class="nw-chip" type="button" data-start="${i}">${esc(s.key)}</button>`).join('')}</p>` : ''}
         <label class="nw-field">Title<input name="title" maxlength="120" required value="${esc(cur?.title || '')}" placeholder="What's the headline?"></label>
         <div class="nw-field"><span class="nw-label">Message</span>
-          <div class="nw-tools" role="toolbar" aria-label="Formatting">
-            <button type="button" data-fmt="**" title="Bold"><b>B</b></button><button type="button" data-fmt="*" title="Italic"><i>I</i></button>
-            <button type="button" data-fmt="list" title="List">• List</button><button type="button" data-fmt="link" title="Link">Link</button></div>
           <textarea name="body" rows="8" maxlength="4000" aria-label="Message" placeholder="Write the news. {team} and {manager} fill in for each manager.">${esc(cur?.body || '')}</textarea></div>
       </section>
 
@@ -86,18 +83,16 @@ export async function mountNews(ctx) {
       </section>
 
       <section class="nw-card"><h2>Who is it for?</h2>
-        <div class="nw-seg" role="radiogroup" aria-label="Audience">${[['all', 'Everyone', 'Guests and managers'], ['managers', 'Every manager', 'Signed in only'], ['clubs', 'Chosen clubs', 'Tick below']]
-          .map(([v, l, h]) => `<label><input type="radio" name="aud" value="${v}"${v === aud ? ' checked' : ''}><span><b>${l}</b><small>${h}</small></span></label>`).join('')}</div>
+        <div class="nw-seg" role="radiogroup" aria-label="Audience">${[['all', 'Everyone'], ['managers', 'Every manager'], ['clubs', 'Chosen clubs']]
+          .map(([v, l]) => `<label><input type="radio" name="aud" value="${v}"${v === aud ? ' checked' : ''}><span><b>${l}</b></span></label>`).join('')}</div>
         <div class="nw-clubs" ${aud === 'clubs' ? '' : 'hidden'}>${clubs.map(c => `<label class="nw-chip"><input type="checkbox" name="club" value="${esc(c.code)}"${chosen.has(c.code) ? ' checked' : ''}><span>${esc(c.short_name || c.name)}</span></label>`).join('')}</div>
       </section>
 
       <section class="nw-card"><h2>Send</h2>
-        <label class="nw-toggle"><input type="checkbox" name="pinned"${cur?.pinned ? ' checked' : ''}><span><b>Pin to the top</b><small>It stays above newer posts.</small></span></label>
         ${cur?.emailed_at ? `<p class="nw-note">Emailed to ${cur.emailed_count ?? 0} manager${cur.emailed_count === 1 ? '' : 's'} ${esc(ago(new Date(cur.emailed_at)))}.</p>`
           : `<label class="nw-toggle"><input type="checkbox" name="email"><span><b>Also email managers</b><small class="nw-count">Everyone with a club gets it.</small></span></label>`}
         <div class="nw-actions"><button class="btn" type="submit">${cur ? 'Save changes' : 'Publish'}</button>
-          <button class="btn ghost" type="button" data-act="test">Send me a test email</button>
-          ${cur ? '<button class="btn ghost" type="button" data-act="cancel">Cancel</button>' : ''}</div>
+          ${cur ? '<button class="btn ghost" type="button" data-act="test">Send me a test email</button><button class="btn ghost" type="button" data-act="cancel">Cancel</button>' : ''}</div>
         <p class="nw-msg" role="status"></p>
       </section>
     </form>
@@ -111,7 +106,6 @@ export async function mountNews(ctx) {
       <small>${esc(audienceText(r, names))} · ${esc(ago(new Date(r.created_at)))}</small>
       <span class="nw-pills">${r.pinned ? '<span class="ed-pill">Pinned</span>' : ''}${r.emailed_at ? `<span class="ed-pill approved">Emailed ${r.emailed_count ?? 0}</span>` : ''}</span></div>
     <span class="nw-btns"><button class="btn ghost small" data-act="edit">Edit</button>
-      ${r.emailed_at ? '' : '<button class="btn ghost small" data-act="mail">Email</button>'}
       <button class="btn ghost small" data-act="pin">${r.pinned ? 'Unpin' : 'Pin'}</button>
       <button class="btn ghost small" data-act="del">Delete</button></span></li>`).join('')}</ul>` : '<p class="quiet">Nothing posted yet.</p>'}`;
 
@@ -148,18 +142,12 @@ export async function mountNews(ctx) {
   });
 
   form.addEventListener('click', async e => {
-    const start = e.target.closest('[data-start]'), fm = e.target.closest('[data-fmt]'), act = e.target.closest('[data-act]')?.dataset.act;
+    const start = e.target.closest('[data-start]'), act = e.target.closest('[data-act]')?.dataset.act;
     if (start) {
       const s = picks[+start.dataset.start];
       form.title.value = s.title; form.body.value = s.body;
       form.blabel.value = s.button?.label || ''; form.burl.value = s.button?.url || '';
       update(); form.title.focus();
-    }
-    if (fm) {
-      const t = form.body, a = t.selectionStart, b = t.selectionEnd, sel = t.value.slice(a, b), k = fm.dataset.fmt;
-      const out = k === 'list' ? (sel || 'Item').split('\n').map(l => `- ${l.replace(/^[-*] /, '')}`).join('\n')
-        : k === 'link' ? `[${sel || 'link text'}](https://)` : `${k}${sel || 'text'}${k}`;
-      t.setRangeText(out, a, b, 'select'); t.focus(); update();
     }
     if (act === 'nopic') {
       draftImage = ''; form.querySelector('.nw-thumb').hidden = true; e.target.hidden = true;
@@ -167,8 +155,7 @@ export async function mountNews(ctx) {
     }
     if (act === 'cancel') { editing = null; draftImage = ''; await redraw(); }
     if (act === 'test') {
-      const id = cur?.id;
-      if (!id) { msg.textContent = 'Publish it first, then you can email yourself a test.'; return; }
+      const id = cur.id;
       e.target.disabled = true; msg.textContent = 'Sending a test…';
       const { data, error } = await client.functions.invoke('send-news', { body: { id, test: true } });
       e.target.disabled = false;
@@ -182,7 +169,7 @@ export async function mountNews(ctx) {
     if (!p.title) { msg.textContent = 'Give the post a title.'; form.title.focus(); return; }
     if (mode === 'clubs' && !codes.length) { msg.textContent = 'Tick at least one club.'; return; }
     const wantMail = form.email?.checked;
-    const row = { kind: 'post', title: p.title, body: p.body || null, pinned: form.pinned.checked, data: p.data,
+    const row = { kind: 'post', title: p.title, body: p.body || null, data: p.data,
       public: mode === 'all', audience: mode === 'clubs' ? codes : null };
     const btn = form.querySelector('[type=submit]'); btn.disabled = true; msg.textContent = 'Saving…';
     const q = cur ? client.from('news').update(row).eq('id', cur.id).select('id').single() : client.from('news').insert(row).select('id').single();
@@ -192,7 +179,7 @@ export async function mountNews(ctx) {
     if (wantMail) {
       msg.textContent = 'Emailing managers…';
       const r = await client.functions.invoke('send-news', { body: { id: saved.id } });
-      note += r.error || r.data?.error ? ` The email didn’t send: ${r.data?.error || 'try the Email button below.'}`
+      note += r.error || r.data?.error ? ` The email didn’t send: ${r.data?.error || 'edit the post to try again.'}`
         : ` Emailed ${r.data.sent} manager${r.data.sent === 1 ? '' : 's'}.`;
     }
     editing = null; draftImage = '';
@@ -204,15 +191,9 @@ export async function mountNews(ctx) {
     if (!b) return;
     const id = +b.closest('li').dataset.id, r = rows.find(x => x.id === id), act = b.dataset.act;
     if (act === 'edit') { editing = id; draftImage = ''; await mountNews(ctx); scrollTo(0, 0); return; }
-    if ((act === 'del' || act === 'mail') && b.dataset.sure !== '1') {
-      const was = b.textContent; b.dataset.sure = '1'; b.textContent = act === 'del' ? 'Sure?' : 'Send now?';
+    if (act === 'del' && b.dataset.sure !== '1') {
+      const was = b.textContent; b.dataset.sure = '1'; b.textContent = 'Sure?';
       setTimeout(() => { b.dataset.sure = ''; b.textContent = was; }, 4000); return;
-    }
-    if (act === 'mail') {
-      b.disabled = true; b.textContent = 'Sending…';
-      const res = await client.functions.invoke('send-news', { body: { id } });
-      await redraw(res.error || res.data?.error ? `The email didn’t send: ${res.data?.error || 'try again later.'}` : `Emailed ${res.data.sent} manager${res.data.sent === 1 ? '' : 's'}.`);
-      return;
     }
     const { error } = act === 'del' ? await client.from('news').delete().eq('id', id) : await client.from('news').update({ pinned: !r.pinned }).eq('id', id);
     await redraw(error ? explain(error) : '');

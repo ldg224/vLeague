@@ -1,6 +1,5 @@
-// The league office's Editor. Clubs (0.15) is one place per club: its manager account and phone, its details, requests
-// to approve or send back, and a full copy of every registration it sent. Then Players (0.11), Fixtures with Simulate
-// (0.12 to 0.14) and the office's "clubs without a team" email (0.7.1; its checkbox is on Clubs).
+// The league office's Editor. Clubs is one place per club: its manager account and phone, its details, requests to
+// approve or send back, and every registration it sent. The other tabs live in their own files.
 // The database checks everything again (supabase/migrations/0003_club_setup.sql); this page only asks.
 import { enter, clubs, chrome, esc, safeColour, crestUrl } from './member.js';
 import { db, sendPasswordReset } from './auth.js';
@@ -126,12 +125,8 @@ function clubsView() {
   const loose = state.accounts.filter(a => !a.club);
   return `<h1>Clubs</h1>
     <div class="ed-bar">
-      <p class="ed-hint"><b>${live.length}</b> club${live.length === 1 ? '' : 's'}${waiting ? ` · <b>${waiting}</b> waiting for you` : ''}${state.phones ? ` · <b>${phones}</b> of ${live.length} phone numbers` : ''}</p>
-      <div class="ed-actions">
-        <button class="btn ghost small" type="button" data-act="phones-copy"${phones ? '' : ' disabled'}>Copy phone numbers</button>
-        <button class="btn ghost small" type="button" data-act="phones-csv"${phones ? '' : ' disabled'}>Phones CSV</button>
-        <button class="btn ghost small" type="button" data-act="regs-csv"${state.requests.length ? '' : ' disabled'}>Registrations CSV</button>
-      </div>
+      <p class="ed-hint"><b>${live.length}</b> club${live.length === 1 ? '' : 's'}${waiting ? ` · <b>${waiting}</b> waiting for you` : ''}</p>
+      <div class="ed-actions"><button class="btn ghost small" type="button" data-act="phones-copy"${phones ? '' : ' disabled'}>Copy phone numbers</button></div>
     </div>
     <p class="ed-msg" id="bar-msg" role="status"></p>
     <label class="ed-digest"><input type="checkbox" data-act="digest"${state.digest ? ' checked' : ''}> Email me about clubs without a team<span class="ed-msg" role="status"></span></label>
@@ -140,9 +135,8 @@ function clubsView() {
     <p class="quiet ed-none" hidden>No club matches that.</p>
     <details class="ed-more"${state.open.has('add') ? ' open' : ''} data-key="add"><summary>Add clubs</summary>
       <form class="ed-invite" id="add-clubs">
-        <label>One club per line <i>Name, or CODE, Name, or CODE, Name, Manager</i>
+        <label>One club per line <i>Name, or CODE, Name, or CODE, Name, Manager. Codes and colours are picked if left out.</i>
           <textarea name="lines" rows="5" required placeholder="Northside FC&#10;WST, Westgate United&#10;HRB, Harbour Town, Sam"></textarea></label>
-        <p class="ed-hint">Codes (2 to 4 letters or numbers) and colours are picked for you if left out. Open the club afterwards to invite its manager; it sets itself up.</p>
         <div class="ed-actions"><button class="btn">Add clubs</button></div>
         <p class="ed-msg" role="status"></p>
       </form></details>
@@ -170,7 +164,6 @@ function clubItem(c, accts) {
         <section class="ed-sec"><h3>Club details</h3>
           <table class="ed-diff">
             ${FIELDS.map(f => `<tr data-field="${f.key}"><th>${f.label}</th><td><span class="ed-val">${f.show(c)}</span>${pen(f.key, f.label.toLowerCase())}<span class="ed-editor" hidden></span></td></tr>`).join('')}
-            <tr><th>Set-up</th><td>${c.setup_at ? `Sent ${esc(when(c.setup_at))}` : 'Not sent yet'}</td></tr>
           </table>
           ${c.setup_at ? `<div class="ed-actions"><button class="btn ghost small" type="button" data-act="reopen">Set up again</button></div>
           <p class="ed-confirm" hidden>Show ${esc(c.name)} the setup wizard again?
@@ -244,13 +237,12 @@ const clubOf = el => state.clubs.find(c => c.code === el.closest('.ed-club').dat
 
 function startClubEdit(btn) {
   const host = btn.closest('[data-field]'), c = clubOf(btn), key = btn.dataset.edit;
-  if (key === 'phone') return openEditor(host, { kind: 'phone', field: 'phone', type: 'text', max: 20, optional: true, label: 'Phone number', value: phoneOf(c.code), hint: 'Leave empty to remove it.' });
+  if (key === 'phone') return openEditor(host, { kind: 'phone', field: 'phone', type: 'text', max: 20, optional: true, label: 'Phone number', value: phoneOf(c.code) });
   const f = FIELDS.find(x => x.key === key);
   openEditor(host, {
     kind: 'club', field: key, type: f.type, max: f.max, optional: f.optional, label: f.label,
     value: c[key] || '',
-    hint: key === 'code' ? 'Changes everywhere (fixtures, players, line-ups). Not possible once the club has results.'
-      : key === 'colour' ? 'The whole page of this club is this colour.' : '',
+    hint: key === 'code' ? 'Changes everywhere (fixtures, players, line-ups). Not possible once the club has results.' : '',
   });
 }
 
@@ -365,7 +357,6 @@ function accountRow(a, loose) {
 
 function inviteForm(c) {
   return `<form class="ed-invite ed-invite-club" data-club="${esc(c.code)}">
-    <p class="ed-hint">No manager yet. They get an email to set a password, then set the club up themselves.</p>
     <div class="ed-fields">
       <label>Email<input name="email" type="email" required autocomplete="off"></label>
       <label>Name <i>Optional</i><input name="name" maxlength="40" autocomplete="off"></label>
@@ -404,7 +395,6 @@ function submission(r, c) {
       ${f.notes ? `<tr><th>Notes</th><td><blockquote>${esc(f.notes)}</blockquote></td></tr>` : ''}
       ${r.reviewed_at ? row('Answered', `${esc(when(r.reviewed_at))}${r.office_note ? `: “${esc(r.office_note)}”` : ''}`) : ''}
     </table>
-    ${f.full ? '' : '<p class="ed-hint">Colours, manager, stadium and motto weren’t kept for submissions sent before 0.15.</p>'}
   </details>`;
 }
 
@@ -503,42 +493,13 @@ async function reopen(sec) {
 
 // ---------------------------------------------------------------- exports
 
-function download(name, text, type) {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([text], { type }));
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-}
-const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-
-// Phones: one row per club still in the league, with who to call.
-function phoneRows() {
-  const email = new Map(state.accounts.filter(a => a.club && a.role === 'manager').map(a => [a.club, a.email]));
-  return state.clubs.filter(c => c.status !== 'withdrawn' && phoneOf(c.code))
-    .map(c => ({ name: c.name, code: c.code, manager: c.manager_name || '', email: email.get(c.code) || '', phone: phoneOf(c.code) }));
-}
-
-async function exportData(kind) {
+// Phones: one line per club still in the league, with who to call.
+async function copyPhones() {
   const msg = document.getElementById('bar-msg');
-  if (kind === 'phones-copy') {
-    const rows = phoneRows();
-    const text = rows.map(r => `${r.name}${r.manager ? ` (${r.manager})` : ''}: ${r.phone}`).join('\n');
-    try { await navigator.clipboard.writeText(text); msg.textContent = `Copied ${rows.length} number${rows.length === 1 ? '' : 's'}.`; }
-    catch { msg.textContent = 'Couldn’t copy here. Use Phones CSV instead.'; }
-  } else if (kind === 'phones-csv') {
-    const rows = phoneRows();
-    download('vleague-manager-phones.csv', ['Club,Code,Manager,Email,Phone', ...rows.map(r => [r.name, r.code, r.manager, r.email, r.phone].map(cell).join(','))].join('\r\n'), 'text/csv');
-    msg.textContent = `Downloaded ${rows.length} number${rows.length === 1 ? '' : 's'}.`;
-  } else {
-    const head = ['Club', 'Code now', 'Kind', 'Sent', 'Outcome', 'Answered', 'Office note', 'Name', 'Short name', 'Code', 'Primary', 'Secondary', 'Manager', 'Stadium', 'Motto', 'Notes', 'Account'];
-    const rows = state.requests.map(r => {
-      const f = submissionFields(r), c = state.clubs.find(x => x.code === r.club);
-      return [c?.name || r.club, r.club, r.kind, r.created_at, r.status, r.reviewed_at || '', r.office_note || '', f.name, f.short_name, f.code, f.colour, f.colour2, f.manager_name, f.stadium, f.motto, f.notes, f.email].map(cell).join(',');
-    });
-    download('vleague-registrations.csv', [head.join(','), ...rows].join('\r\n'), 'text/csv');
-    msg.textContent = `Downloaded ${rows.length} submission${rows.length === 1 ? '' : 's'}.`;
-  }
+  const rows = state.clubs.filter(c => c.status !== 'withdrawn' && phoneOf(c.code));
+  const text = rows.map(c => `${c.name}${c.manager_name ? ` (${c.manager_name})` : ''}: ${phoneOf(c.code)}`).join('\n');
+  try { await navigator.clipboard.writeText(text); msg.textContent = `Copied ${rows.length} number${rows.length === 1 ? '' : 's'}.`; }
+  catch { msg.textContent = 'Couldn’t copy here.'; }
 }
 
 // ---------------------------------------------------------------- managers
@@ -602,7 +563,7 @@ main.addEventListener('click', e => {
   if (act === 'reopen') b.closest('.ed-sec').querySelector('.ed-confirm').hidden = false;
   if (act === 'reopen-no') b.closest('.ed-confirm').hidden = true;
   if (act === 'reopen-yes') reopen(b.closest('.ed-sec'));
-  if (act === 'phones-copy' || act === 'phones-csv' || act === 'regs-csv') exportData(act);
+  if (act === 'phones-copy') copyPhones();
   if (act === 'edit-cancel') closeEditor(b.closest('[data-field], [data-acct-field]'));
   if (act === 'unlink') askLink(b.closest('.ed-acct'), '');
   if (act === 'link-yes') link(b.closest('.ed-acct'), true);
