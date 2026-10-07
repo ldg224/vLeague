@@ -1,10 +1,24 @@
 /* Draft (0.21): board, queue, auto-pick, team values. */
 .draft { width: 100%; margin: 0 auto; }
-.dr-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
-.dr-head .page-title { margin: 0; }
-.dr-clock { text-align: right; font: 700 1.8rem/1 var(--font-display); white-space: nowrap; }
-.dr-clock small { display: block; font: 600 .75rem var(--font); color: var(--club); text-transform: uppercase; margin-bottom: 4px; }
-.dr-clock.mine { color: var(--club); }
+/* The big status bar (0.32): where the draft stands, whose turn it is and the clock. */
+.dr-status { margin: 0 0 14px; padding: 18px 20px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--card); border-left: 8px solid var(--muted); }
+.dr-st-main { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+.dr-st-tag { display: inline-block; padding: 3px 10px; border-radius: 999px; background: var(--muted); color: var(--bg, #fff); font: 700 .72rem var(--font); letter-spacing: .06em; text-transform: uppercase; }
+.dr-st-name { margin: 8px 0 0; color: var(--muted); font-size: .9rem; }
+.dr-st-big { margin: 2px 0 4px; font-size: clamp(1.7rem, 5vw, 2.6rem); line-height: 1.1; }
+.dr-st-sub { margin: 0; font-size: 1rem; }
+.dr-st-small { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: .85rem; }
+.dr-clock { text-align: right; font: 700 clamp(2.2rem, 7vw, 3.4rem)/1 var(--font-display); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dr-clock small { display: block; font: 600 .75rem var(--font); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+.dr-status.ph-soon, .dr-status.ph-opens { border-left-color: var(--blue-500, #3b82f6); }
+.dr-status.ph-soon .dr-st-tag, .dr-status.ph-opens .dr-st-tag { background: var(--blue-500, #3b82f6); color: #fff; }
+.dr-status.ph-live { border-left-color: var(--club); }
+.dr-status.ph-live .dr-st-tag { background: var(--club); color: var(--on-club); }
+.dr-status.mine { background: color-mix(in srgb, var(--club) 16%, var(--card)); border-color: var(--club); }
+.dr-status.mine .dr-clock { color: var(--club); }
+.dr-status.ph-paused { border-left-color: #f0a030; }
+.dr-status.ph-paused .dr-st-tag { background: #f0a030; color: #1a1200; }
+.dr-status.quiet .dr-clock { color: var(--muted); }
 .dr-tabs { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 14px; }
 .dr-tabs button { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); font: 600 .88rem var(--font); cursor: pointer; white-space: nowrap; }
 .dr-tabs button[aria-selected="true"] { background: var(--club); color: var(--on-club); border-color: var(--club); }
@@ -40,7 +54,8 @@
   .dr-cols { grid-template-columns: 1fr; }
   .dr-p { grid-template-columns: 38px minmax(0, 1fr) auto; }
   .dr-p .rts { display: none; }
-  .dr-clock { font-size: 1.4rem; }
+  .dr-status { padding: 14px 16px; }
+  .dr-clock { text-align: left; }
 }
 
 /* Board table and multi-level sorting (0.24) */
@@ -127,8 +142,6 @@
 
 /* Quiet times (0.28): the pick timer is paused. */
 .dr-quiet { color: var(--muted); }
-.dr-clock.quiet { color: var(--muted); }
-.dr-clock .dr-qs { color: var(--muted); }
 
 /* 0.29: player cards and the pick dialog, value filter, phone sub-tabs, download button */
 .dr-name { border: 0; background: none; padding: 0; margin: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--text) 25%, transparent); text-underline-offset: 3px; }

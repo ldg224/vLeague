@@ -23,7 +23,7 @@ timers the office can pause and extend, and commissioner overrides. Managers pic
    - `after_minutes`: pick from my queue after N minutes of my turn (N set by the manager, not above the pick timer).
    - `never`: the queue is only a reference; a missed turn is skipped or auto-picked by the office's choice.
 5. **Active team value page**: each club's roster with every player's value and the club total, live as picks are made.
-6. A **limited-time Draft section** for managers (only visible while a draft is open).
+6. A **Draft section** for managers, shown once the office switches **Make page visible** on (0.32).
 
 ## Data (shared contract between the manager side and the admin side)
 
@@ -32,7 +32,7 @@ All tables: readable by everyone signed in; written only as noted. Pick-making g
 
 | Table | Columns | Who writes |
 |---|---|---|
-| `drafts` | `id`, `name`, `status` (`setup`/`live`/`paused`/`done`), `opens_at`, `closes_at`, `pick_minutes`, `on_timeout` (`skip`/`queue`/`best_value`), `rounds`, `current_pick`, `pick_deadline` | office |
+| `drafts` | `id`, `name`, `status` (`setup`/`live`/`paused`/`done`), `opens_at`, `closes_at`, `pick_minutes`, `on_timeout` (`skip`/`queue`/`best_value`), `rounds`, `current_pick`, `pick_deadline`, `visible` (0.32, the Make page visible switch) | office |
 | `draft_order` | `draft`, `pick_no`, `club` | office (editable until the pick is made) |
 | `draft_picks` | `draft`, `pick_no`, `club`, `player`, `made_at`, `how` (`manual`/`queue`/`auto`/`office`) | only `make_pick()` / `office_set_pick()` |
 | `draft_queue` | `draft`, `club`, `rank`, `player` | that club's manager |
@@ -57,7 +57,8 @@ A pick sets `players.club` (and so each club's value). **Active team value** = s
 
 ## Build order (manager side, other session)
 
-1. A **Draft** page/section, shown only while a draft is `live` or `paused` and inside `opens_at`..`closes_at`.
+1. A **Draft** page/section, shown when `drafts.visible` is true (0.32), in any status. Managers can read it and build queues before the
+   draft starts; picking needs `live` and inside `opens_at`..`closes_at`. (Before 0.32: live or paused inside the window.)
 2. Board: whose turn, countdown to `pick_deadline`, recent picks, available players (search + position filter).
 3. **My queue**: add/remove/reorder players (`draft_queue`), with a "Pick now" button when it's my turn (`make_pick`).
 4. **Auto-pick settings** (`draft_prefs`): the four modes above, with the minutes box for `after_minutes`.

@@ -1,6 +1,8 @@
 // Editor -> Draft (0.22): the office's side of the limited-time draft (docs/DRAFT.md, migrations 0023 and 0024).
 // Create a draft, set the order, start/pause/resume/extend it, make or skip the pick on the clock, auto-assign the rest
 // (with a preview and Undo) and see or change every club's queue and auto-pick rule. The database checks everything again.
+// 0.32: a big MAKE PAGE VISIBLE switch at the top decides when managers can see the Draft page (migration 0033), separate from
+// starting the draft, so managers can read it and build queues first. Less-used panels fold away to keep the page short.
 
 const MODES = { always: 'Always (the moment it’s their turn)', on_miss: 'If they miss their turn', after_minutes: 'After a number of minutes', never: 'Never (they pick themselves)' };
 const HOWS = { queue: 'From their queue', random: 'A random player' };
@@ -114,35 +116,54 @@ export async function mountDraft(ctx) {
     return needed <= picksAfter;
   }
 
+  // One big switch: can managers see the Draft page? Separate from starting the draft.
+  const visibleBar = () => {
+    const d = S.d;
+    if (!('visible' in d)) return '<section class="ed-invite dr-vis off"><div><h2>MAKE PAGE VISIBLE</h2><p class="ed-hint">This switch needs the database update <b>0033_draft_visible.sql</b>. Run it once, then reload.</p></div></section>';
+    const v = !!d.visible;
+    return `<section class="dr-vis ${v ? 'on' : 'off'}"><div><h2>MAKE PAGE VISIBLE</h2>
+      <p>${v ? 'YES: managers can see the Draft page now. They can read everything and build their queues, even before the draft starts.'
+        : 'NO: managers can’t see the Draft page yet. Switch it on when you’re ready for them to look around and build their queues.'}${S.drafts.length > 1 && !v ? ' Only one draft is shown to managers, so this turns the others off.' : ''}</p></div>
+      <div class="dr-switch" role="group" aria-label="Make page visible"><button type="button" data-act="vis" data-v="0" aria-pressed="${!v}">NO</button><button type="button" data-act="vis" data-v="1" aria-pressed="${v}">YES</button></div></section>`;
+  };
+
+  // The big status bar: state, whose pick it is and the clock, then the main button. The rest sits under "More actions".
   const bar = () => {
-    const d = S.d, t = turn();
-    return `<section class="ed-invite dr-live"><div class="dr-top">
-      <div><h2>${esc(d.name)} <span class="ed-pill ${d.status === 'live' ? 'approved' : d.status === 'paused' ? 'warn' : ''}">${STATUS[d.status]}</span></h2>
-        <p class="ed-hint">Open ${esc(when(d.opens_at))} to ${esc(when(d.closes_at))} · ${esc(minutesText(d.pick_minutes))} a pick · ${d.rounds} round${d.rounds === 1 ? '' : 's'} · ${S.order.length} picks · when time runs out: ${esc(TIMEOUTS[d.on_timeout].toLowerCase())}<br>Roster rules: ${esc(rulesLine(d))}</p></div>
-      ${d.status === 'live' && t ? `<div class="dr-clock">${esc(cname(t.club))} on the clock<b class="dr-count" data-deadline="${esc(d.pick_deadline || '')}"></b><small>Pick ${d.current_pick} of ${S.order.length}</small></div>`
-        : d.status === 'paused' && t ? `<div class="dr-clock">Paused<small>${esc(cname(t.club))} is up, pick ${d.current_pick} of ${S.order.length}</small></div>` : ''}</div>
-      <div class="ed-actions">
+    const d = S.d, t = turn(), live = ['live', 'paused'].includes(d.status);
+    const clock = d.status === 'live' && t ? `<div class="dr-clock"><small>${esc(cname(t.club))} on the clock</small><b class="dr-count" data-deadline="${esc(d.pick_deadline || '')}"></b><small>Pick ${d.current_pick} of ${S.order.length}</small></div>`
+      : d.status === 'paused' && t ? `<div class="dr-clock"><small>${esc(cname(t.club))} is up</small><b>Paused</b><small>Pick ${d.current_pick} of ${S.order.length}</small></div>`
+      : d.status === 'done' ? `<div class="dr-clock"><b>Done</b><small>${S.picks.length} picks made</small></div>`
+      : `<div class="dr-clock"><b>${S.order.length}</b><small>picks in ${d.rounds} round${d.rounds === 1 ? '' : 's'}</small></div>`;
+    return `<section class="dr-bigbar st-${d.status}"><div class="dr-top">
+      <div><span class="dr-state">${STATUS[d.status]}</span><h2>${esc(d.name)}</h2>
+        <p class="ed-hint">Opens ${esc(when(d.opens_at))} · closes ${esc(when(d.closes_at))} · ${esc(minutesText(d.pick_minutes))} a pick<br>Roster rules: ${esc(rulesLine(d))} · when time runs out: ${esc(TIMEOUTS[d.on_timeout].toLowerCase())}</p></div>
+      ${clock}</div>
+      <div class="ed-actions dr-main-act">
         ${d.status === 'setup' ? '<button class="btn" data-act="start">Start the draft</button>' : ''}
-        ${d.status === 'live' ? '<button class="btn ghost" data-act="pause">Pause</button>' : ''}
+        ${d.status === 'live' ? '<button class="btn" data-act="pause">Pause</button>' : ''}
         ${d.status === 'paused' ? '<button class="btn" data-act="resume">Resume</button>' : ''}
-        ${d.status === 'live' ? `<button class="btn ghost" data-act="extend">Extend by</button><input class="dr-ext" type="number" min="1" value="60" aria-label="Minutes to add"> minutes` : ''}
-        ${['live', 'paused'].includes(d.status) ? '<button class="btn ghost" data-act="skip" title="Picks a random free player who fits the club’s open positions">Random pick for them</button>' : ''}
+        ${d.status === 'live' ? `<span class="dr-extend"><button class="btn ghost" data-act="extend">Extend by</button><input class="dr-ext" type="number" min="1" value="60" aria-label="Minutes to add"> minutes</span>` : ''}</div>
+      <details class="dr-more"><summary>More actions</summary><div class="ed-actions">
+        ${live ? '<button class="btn ghost" data-act="skip" title="Picks a random free player who fits the club’s open positions">Random pick for them</button>' : ''}
         ${S.picks.length ? '<button class="btn ghost" data-act="undo">Undo last pick</button>' : ''}
         ${d.status !== 'setup' ? '<button class="btn ghost" data-act="reset">Reset to set-up</button>' : ''}
-        ${['live', 'paused'].includes(d.status) ? '<button class="btn ghost" data-act="finish">Finish now</button>' : ''}
+        ${live ? '<button class="btn ghost" data-act="finish">Finish now</button>' : ''}
         <button class="btn ghost" data-act="duplicate">Duplicate</button>
-        <button class="btn ghost danger" data-act="delete">Delete draft</button></div>
+        <button class="btn ghost danger" data-act="delete">Delete draft</button></div></details>
       <p class="ed-msg" role="status">${esc(msg)}</p></section>`;
   };
+
+  // A panel that starts folded. Its open or closed state survives a redraw.
+  const folded = new Set();
+  const fold = (key, title, hint, body) => `<details class="ed-invite dr-settings dr-fold" data-k="${key}"${folded.has(key) ? ' open' : ''}><summary><b>${title}</b> <small>${hint}</small></summary>${body}</details>`;
 
   const onClock = () => {
     const d = S.d, t = turn();
     if (!t || !['live', 'paused'].includes(d.status)) return '';
     const list = free().sort((a, b) => b.value - a.value).slice(0, 400);
-    return `<section class="ed-invite"><h2>Pick for ${esc(cname(t.club))} <small>(override: ignores the roster rules)</small></h2>
-      <p class="ed-hint">Use this to make or override the pick on the clock. The player joins ${esc(cname(t.club))} straight away.</p>
+    return fold('pick', `Pick for ${esc(cname(t.club))}`, 'override: ignores the roster rules', `<p class="ed-hint">Make or override the pick on the clock. The player joins ${esc(cname(t.club))} straight away.</p>
       <div class="ed-actions"><select class="dr-pl" aria-label="Player">${list.map(p => `<option value="${esc(p.id)}">${esc(p.name)} · ${esc(p.position)} · ${money(p.value)}</option>`).join('')}</select>
-        <button class="btn" data-act="makepick">Pick this player</button></div></section>`;
+        <button class="btn" data-act="makepick">Pick this player</button></div>`);
   };
 
   const clubSelect = (attrs, sel) => `<select ${attrs}>${active.map(c => `<option value="${esc(c.code)}"${c.code === sel ? ' selected' : ''}>${esc(c.short_name || c.name)}</option>`).join('')}</select>`;
@@ -226,20 +247,18 @@ export async function mountDraft(ctx) {
       <div class="pl-scroll"><table class="pl-table"><thead><tr><th>Pick</th><th>Club</th><th>Player</th><th>Value</th></tr></thead><tbody>${preview.map(r =>
         `<tr><td>${r.pick_no}</td><td>${esc(cname(r.club))}</td><td>${r.p ? esc(r.p.name) + ' · ' + esc(r.p.position) : '<i>skipped (nobody left who fits the rules)</i>'}</td><td>${r.p ? money(r.p.value) : ''}</td></tr>`).join('')}</tbody></table></div>
       <div class="ed-actions"><button class="btn" data-act="autofill">Assign ${preview.length} pick${preview.length === 1 ? '' : 's'}</button><button class="btn ghost" data-act="nopreview">Cancel</button></div></section>`;
-    return `<section class="ed-invite"><h2>Auto-assign the rest</h2>
-      <p class="ed-hint">Fills the ${rest.length} remaining pick${rest.length === 1 ? '' : 's'} with the best-value free players. ${free().length} free player${free().length === 1 ? '' : 's'} left.</p>
+    return fold('auto', 'Auto-assign the rest', `${rest.length} pick${rest.length === 1 ? '' : 's'} left`, `<p class="ed-hint">Fills the ${rest.length} remaining pick${rest.length === 1 ? '' : 's'} with the best-value free players. ${free().length} free player${free().length === 1 ? '' : 's'} left.</p>
       <div class="ed-actions"><button class="btn ghost" data-act="preview"${rest.length ? '' : ' disabled'}>Preview</button>
-        ${undoFrom && undoFrom < d.current_pick ? `<button class="btn ghost" data-act="undoauto">Undo auto-assign (back to pick ${undoFrom})</button>` : ''}</div></section>`;
+        ${undoFrom && undoFrom < d.current_pick ? `<button class="btn ghost" data-act="undoauto">Undo auto-assign (back to pick ${undoFrom})</button>` : ''}</div>`);
   };
 
   const boardPanel = () => {
     const recent = [...S.picks].reverse().slice(0, 12);
-    return `<section class="ed-invite"><h2>Recent picks</h2>${recent.length ? `<ul class="dr-recent">${recent.map(k =>
-      `<li><b>${k.pick_no}.</b> ${esc(cname(k.club))}: ${k.player ? esc(nameOf(k.player)) : '<i>skipped</i>'} <small>${esc(k.how)} · ${esc(when(k.made_at))}</small></li>`).join('')}</ul>` : '<p class="quiet">No picks yet.</p>'}</section>`;
+    return fold('recent', 'Recent picks', `${S.picks.length} made`, recent.length ? `<ul class="dr-recent">${recent.map(k =>
+      `<li><b>${k.pick_no}.</b> ${esc(cname(k.club))}: ${k.player ? esc(nameOf(k.player)) : '<i>skipped</i>'} <small>${esc(k.how)} · ${esc(when(k.made_at))}</small></li>`).join('')}</ul>` : '<p class="quiet">No picks yet.</p>');
   };
 
-  const clubsPanel = () => `<section class="ed-invite"><h2>Clubs’ queues and auto-pick</h2>
-    <p class="ed-hint">What each manager has set. You can change a club’s rule, or take a player out of its queue.</p>
+  const clubsPanel = () => fold('clubs', 'Clubs’ queues and auto-pick', 'what each manager has set', `<p class="ed-hint">You can change a club’s rule, or take a player out of its queue.</p>
     ${active.map(c => {
       const pr = S.prefs.find(p => p.club === c.code) || { mode: 'on_miss', minutes: null, pick_how: 'queue' }, how = pr.pick_how || 'queue';
       const q = S.queue.filter(x => x.club === c.code).sort((a, b) => a.rank - b.rank);
@@ -248,10 +267,10 @@ export async function mountDraft(ctx) {
           <label>When<select data-pref="${esc(c.code)}">${Object.entries(MODES).map(([k, v]) => `<option value="${k}"${k === pr.mode ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select></label>
           <label ${pr.mode === 'after_minutes' ? '' : 'hidden'}>Minutes<input type="number" min="1" max="20160" value="${pr.minutes || ''}" data-prefmin="${esc(c.code)}"></label>
           ${q.length ? `<ol class="dr-q">${q.map(x => `<li>${esc(nameOf(x.player))}${S.players.find(p => p.id === x.player)?.club ? ' <i>(taken)</i>' : ''} <button class="dr-b" data-act="unqueue" data-club="${esc(c.code)}" data-player="${esc(x.player)}">Remove</button></li>`).join('')}</ol>` : '<p class="quiet">Nothing queued.</p>'}</div></details>`;
-    }).join('')}</section>`;
+    }).join('')}`);
 
-  const newForm = () => `<section class="ed-invite"><h2>${S?.d ? 'Start another draft' : 'Create a draft'}</h2>
-    <form class="dr-new" novalidate>
+  const newForm = () => (S?.d ? fold('new', 'Start another draft', '', newFormBody()) : `<section class="ed-invite"><h2>Create a draft</h2>${newFormBody()}</section>`);
+  const newFormBody = () => `<form class="dr-new" novalidate>
       <div class="ed-fields"><label>Name<input name="name" maxlength="60" required placeholder="Season 1 draft" value="${S?.d ? '' : 'Season 1 draft'}"></label>
         <label>Opens <i>optional</i><input name="opens" type="datetime-local"></label>
         <label>Closes <i>optional</i><input name="closes" type="datetime-local"></label></div>
@@ -261,14 +280,15 @@ export async function mountDraft(ctx) {
       <label class="dr-check"><input type="checkbox" name="snake" checked> Snake order (reverses every round)</label>
       ${rulesFields(null)}
       <div class="ed-actions"><button class="btn" type="submit">Create draft</button></div>
-      <p class="ed-hint">It starts in set-up: nothing is visible to managers until you press Start. Players are drawn from the free agents (${S ? free().length : '…'} now).</p></form></section>`;
+      <p class="ed-hint">It starts in set-up and hidden: managers see nothing until you switch MAKE PAGE VISIBLE on. Players are drawn from the free agents (${S ? free().length : '…'} now).</p></form>`;
 
   const picker = () => (S.drafts.length > 1 ? `<label class="dr-sel">Draft <select data-select>${S.drafts.map(x => `<option value="${x.id}"${x.id === selected ? ' selected' : ''}>${esc(x.name)} (${STATUS[x.status]})</option>`).join('')}</select></label>` : '');
 
   function draw() {
     const qb = root.querySelector('.dr-quietbox'); if (qb) qOpen = qb.open;
+    root.querySelectorAll('details.dr-fold').forEach(x => (x.open ? folded.add(x.dataset.k) : folded.delete(x.dataset.k)));
     S.players.forEach(p => pname.set(p.id, p.name));
-    root.innerHTML = `<div class="dr-ed">${picker()}${S.d ? bar() + onClock() + autoPanel() + orderPanel() + settingsPanel() + quietPanel() + boardPanel() + clubsPanel() : ''}${newForm()}</div>`;
+    root.innerHTML = `<div class="dr-ed">${picker()}${S.d ? visibleBar() + bar() + onClock() + autoPanel() + orderPanel() + settingsPanel() + quietPanel() + boardPanel() + clubsPanel() : ''}${newForm()}</div>`;
     tick();
   }
   function tick() {
@@ -431,7 +451,14 @@ export async function mountDraft(ctx) {
       await rpc('office_set_quiet', { p_draft: d.id, p_quiet: q });
       qWork = null;
     }, 'Active times saved.');
-    if (act === 'start') run(() => rpc('office_draft_control', { p_draft: d.id, p_action: 'start' }), 'The draft is live. Managers can see the Draft tab now.');
+    if (act === 'vis') {
+      const on = b.dataset.v === '1';
+      return run(async () => {
+        if (on) await write(client.from('drafts').update({ visible: false }).neq('id', d.id));
+        await write(client.from('drafts').update({ visible: on }).eq('id', d.id));
+      }, on ? 'The Draft page is now visible to managers.' : 'The Draft page is hidden from managers.');
+    }
+    if (act === 'start') run(() => rpc('office_draft_control', { p_draft: d.id, p_action: 'start' }), d.visible === false ? 'The draft is live. Managers can’t see the page yet: switch MAKE PAGE VISIBLE on.' : 'The draft is live.');
     if (act === 'pause') run(() => rpc('office_draft_control', { p_draft: d.id, p_action: 'pause' }), 'Paused.');
     if (act === 'resume') run(() => rpc('office_draft_control', { p_draft: d.id, p_action: 'resume' }), 'Resumed with a fresh timer.');
     if (act === 'extend') run(() => rpc('office_draft_control', { p_draft: d.id, p_action: 'extend', p_minutes: Math.max(1, Math.round(+root.querySelector('.dr-ext').value) || 1) }), 'Time added.');

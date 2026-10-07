@@ -1,10 +1,11 @@
-// Draft (0.21): the manager's side of the limited-time draft. Three tabs: Board (every pick so far), Available players (with
-// My queue and Auto-pick beside them) and Team values. A budget bar under the roster rules shows the weekly cap used.
-// Only reachable while a draft is live/paused inside its window; otherwise a short "no draft" note. Updates the moment a pick is
-// made (realtime), with a 15 s poll as backup. Tap a player's name for their card; picks are confirmed in a small dialog.
+// Draft (0.21): the manager's side of the limited-time draft. Three tabs: Board (the draft as a grid), Available players (with
+// My queue and Auto-pick beside them) and Team values. A big status bar on top says where the draft stands; a budget bar under
+// it shows the weekly cap used. The page shows once the office switches "Make page visible" on (0.32), even before the draft
+// starts: managers can read everything and build their queues, and only picking waits for a live draft. Updates the moment a
+// pick is made (realtime), with a 15 s poll as backup. Tap a player's name for their card; picks are confirmed in a small dialog.
 import { enterPlace } from './shell.js';
 import { esc } from './member.js';
-import { openDraft, latestDraft, loadDraft, saveQueue, savePrefs, makePick, quietState, describeQuiet } from './draft-data.js';
+import { openDraft, phase, loadDraft, saveQueue, savePrefs, makePick, quietState, describeQuiet } from './draft-data.js';
 import { loadPlayers, forgetPlayers } from './players-data.js';
 import { ago } from './places.js';
 import { overall } from './names.js';
@@ -34,16 +35,10 @@ const COLS = [
   { key: 'overall', label: 'OVR', long: 'Overall rating', first: -1, val: p => overall(p) },
   { key: 'value', label: 'Value', long: 'Value', first: -1, val: p => p.value },
 ];
-// Extra columns the Board's table has over the Available table.
-const EXTRA = {
-  pick: { key: 'pick', label: '#', long: 'Pick', first: 1, val: r => r.pick_no },
-  club: { key: 'club', label: 'Club', long: 'Club', first: 1, val: r => r.clubName.toLowerCase() },
-  how: { key: 'how', label: 'How', long: 'How picked', first: 1, val: r => r.how },
-};
 const TABS = [['board', 'Board'], ['players', 'Available players'], ['values', 'Team values']];
 const CAP = 100000;   // the weekly cap per team (supabase/migrations/0010_cap_100k_prices.sql)
 const money = n => `$${Number(n || 0).toLocaleString('en-AU')}`;
-const fmt = ms => { const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}:${String(s % 60).padStart(2, '0')}`; };
+const fmt = ms => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); if (h >= 48) return `${Math.floor(h / 24)}d ${h % 24}h`; return h ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}:${String(s % 60).padStart(2, '0')}`; };
 
 const ctx = await enterPlace('draft');
 if (ctx) {
@@ -52,10 +47,7 @@ if (ctx) {
   const nameOf = c => (c === code && club?.name) || clubName.get(c) || c;
   const draft0 = await openDraft();
   if (!draft0) {
-    const p = await latestDraft(), fmt = d => new Date(d).toLocaleString('en-AU', { timeZone: 'Australia/Melbourne', weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
-    const state = !p ? '' : p.draft.status === 'done' ? 'Finished.' : ['live', 'paused'].includes(p.draft.status) && p.draft.opens_at && new Date(p.draft.opens_at) > new Date() ? `Opens ${fmt(p.draft.opens_at)}.` : p.draft.status === 'live' || p.draft.status === 'paused' ? 'Closed.' : 'Not started yet.';
-    main.innerHTML = `<h1 class="page-title" tabindex="-1">Draft</h1><p class="empty">There’s no draft open right now.</p>${p ? `<section class="dr-preview"><h2>${esc(p.draft.name)}</h2><p>${esc(state)}${p.draft.opens_at && !/^Opens/.test(state) ? ` Opens ${esc(fmt(p.draft.opens_at))}.` : ''}${p.draft.closes_at ? ` Closes ${esc(fmt(p.draft.closes_at))}.` : ''}</p>
-      ${p.order.length ? `<p><b>Pick order:</b> ${p.order.slice(0, 40).map(o => `${o.pick_no}. ${esc(nameOf(o.club))}`).join(' · ')}${p.order.length > 40 ? ' …' : ''}</p>` : ''}</section>` : ''}`;
+    main.innerHTML = '<h1 class="page-title" tabindex="-1">Draft</h1><p class="empty">The draft page isn’t open yet. It will appear here as soon as the league office makes it visible.</p>';
     main.setAttribute('aria-busy', 'false');
   } else {
     let tab = (() => { const h = location.hash.slice(1); return h === 'queue' || h === 'auto' ? 'players' : TABS.some(t => t[0] === h) ? h : 'board'; })();
@@ -66,7 +58,7 @@ if (ctx) {
     const byId = () => new Map(players.map(p => [p.id, p]));
 
     const turn = () => st.order.find(o => o.pick_no === st.draft.current_pick) || null;
-    const myTurn = () => st.draft.status === 'live' && turn()?.club === code;
+    const myTurn = () => phase(st.draft) === 'live' && turn()?.club === code;
     const free = () => players.filter(p => !p.team);
     // My queue only keeps players who are still free.
     const queue = () => st.queue.filter(id => free().some(p => p.id === id));
@@ -104,26 +96,34 @@ if (ctx) {
       const q = st.qs; if (!q || q.active_left == null) return Math.max(0, new Date(d.pick_deadline) - Date.now());
       return inQuiet() ? q.active_left * 1000 : Math.max(0, q.active_left * 1000 - (Date.now() - q.at));
     };
-    const quietNote = () => {
-      const q = st.draft.quiet;
-      if (!q?.length) return '';
-      return `<p class="quiet dr-quiet">${inQuiet() ? `⏸ Quiet time: the pick timer is paused until ${esc(new Date(st.qs.quiet_until).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' }))}. You can still pick.`
-        : `Pick timers pause ${esc(describeQuiet(q))}. You can still pick then.`}</p>`;
-    };
-
+    // The big status bar: where the draft stands, whose turn it is and the clock, in one glance. Rules and quiet times sit
+    // underneath in small print.
+    const whenAt = iso => new Date(iso).toLocaleString('en-AU', { timeZone: 'Australia/Melbourne', weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
     function head() {
-      const d = st.draft, t = turn();
-      const clock = d.status === 'paused' ? 'Paused' : d.status !== 'live' ? '' : `<span id="clock">${fmt(clockMs())}</span>`;
-      return `<div class="dr-head"><div><h1 class="page-title" tabindex="-1">${esc(d.name || 'Draft')}</h1>
-        <p class="quiet">${t ? `Pick ${t.pick_no} of ${st.order.length}: <b>${esc(nameOf(t.club))}</b>${t.club === code ? ' (you)' : ''}` : 'Draft complete'}</p>${rulesText() ? `<p class="quiet">Roster rules: ${esc(rulesText())}</p>` : ''}${quietNote()}</div>
-        <div class="dr-clock${myTurn() ? ' mine' : ''}${d.status === 'live' && inQuiet() ? ' quiet' : ''}">${myTurn() ? '<small>Your pick</small>' : ''}${d.status === 'live' && inQuiet() ? '<small class="dr-qs">⏸ Timer paused</small>' : ''}${clock}</div></div>${budget()}`;
+      const d = st.draft, t = turn(), ph = phase(d), mine = myTurn(), n = st.order.length;
+      const who = t ? `${esc(nameOf(t.club))}${t.club === code ? ' (you)' : ''}` : '';
+      const B = {
+        soon: ['Not started yet', 'Get ready', 'Read the rules, look through the players and build your queue. You can pick as soon as the draft starts.', ''],
+        opens: ['Opens soon', 'Get ready', `Opens ${esc(whenAt(d.opens_at))}. Build your queue and set auto-pick now.`, `<small>Opens in</small><span id="clock" data-until="${esc(d.opens_at)}">${fmt(new Date(d.opens_at) - Date.now())}</span>`],
+        live: ['Live', mine ? 'It’s your pick' : t ? `${who} is picking` : 'Draft complete', t ? `Pick ${t.pick_no} of ${n}${mine ? '. Choose any player before the clock runs out.' : '.'}` : '',
+          `${mine ? '<small>Your time</small>' : '<small>Time left</small>'}<span id="clock">${fmt(clockMs())}</span>`],
+        paused: ['Paused', 'The draft is paused', `${t ? `Pick ${t.pick_no} of ${n}, ${who} is up. ` : ''}It carries on when the office resumes it. You can still change your queue.`, ''],
+        closed: ['Closed', 'The draft has closed', 'Picks can’t be made now.', ''],
+        done: ['Finished', 'The draft is finished', `All ${n} picks are done.`, ''],
+      }[ph];
+      const quiet = d.quiet?.length ? (inQuiet() && ph === 'live' ? `⏸ Quiet time: the timer is paused until ${new Date(st.qs.quiet_until).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' })}. You can still pick.` : `Timers pause ${describeQuiet(d.quiet)}. You can still pick then.`) : '';
+      const small = [rulesText() && `Roster rules: ${rulesText()}`, quiet].filter(Boolean);
+      return `<section class="dr-status ph-${ph}${mine ? ' mine' : ''}${ph === 'live' && inQuiet() ? ' quiet' : ''}"><div class="dr-st-main"><div><span class="dr-st-tag">${B[0]}</span><p class="dr-st-name">${esc(d.name || 'Draft')}</p>
+        <h1 class="page-title dr-st-big" tabindex="-1">${B[1]}</h1><p class="dr-st-sub">${B[2]}</p></div>
+        ${B[3] ? `<div class="dr-clock">${B[3]}</div>` : ''}</div>
+        ${small.length ? `<p class="dr-st-small">${small.map(esc).join(' · ')}</p>` : ''}</section>${budget()}`;
     }
 
-    // ---- tables. Two of them (picked players, available players), each with its own filters and sort levels.
-    const F = { avail: { q: '', pos: '', max: '', fit: false }, board: { q: '', pos: '', club: '' } };
-    const DEFAULT = { avail: [{ key: 'value', dir: -1 }], board: [{ key: 'pick', dir: 1 }] };
-    const SORTS = { avail: DEFAULT.avail.map(s => ({ ...s })), board: DEFAULT.board.map(s => ({ ...s })) };
-    const colsOf = t => (t === 'board' ? [EXTRA.pick, EXTRA.club, ...COLS, EXTRA.how] : COLS);
+    // ---- the table of available players, with its filters and sort levels.
+    const F = { avail: { q: '', pos: '', max: '', fit: false } };
+    const DEFAULT = { avail: [{ key: 'value', dir: -1 }] };
+    const SORTS = { avail: DEFAULT.avail.map(s => ({ ...s })) };
+    const colsOf = () => COLS;
     const col = (t, k) => colsOf(t).find(c => c.key === k);
     const arrow = d => (d > 0 ? '▲' : '▼');
     const sorted = (t, list) => [...list].sort((a, b) => {
@@ -136,17 +136,14 @@ if (ctx) {
       else if (i === 0 && s.length === 1) s[0].dir *= -1;
       else SORTS[t] = [{ key, dir: i === 0 ? s[0].dir * -1 : col(t, key).first }];
     }
-    const passes = (t, r) => { const f = F[t]; return (!f.pos || r.position === f.pos) && (!f.club || r.club === f.club)
-      && (!f.q || `${r.name} ${r.clubName || ''}`.toLowerCase().includes(f.q.toLowerCase()))
-      && (t !== 'avail' || ((!+f.max || r.value <= +f.max) && (!f.fit || !blocked(r)))); };
+    const passes = (t, r) => { const f = F[t]; return (!f.pos || r.position === f.pos) && (!f.q || r.name.toLowerCase().includes(f.q.toLowerCase()))
+      && (!+f.max || r.value <= +f.max) && (!f.fit || !blocked(r)); };
 
     function toolbar(t) {
       const f = F[t], s = SORTS[t], unused = colsOf(t).filter(c => !s.some(x => x.key === c.key));
-      const clubs = [...new Set(st.order.map(o => o.club))].sort((a, b) => (a === code ? -1 : b === code ? 1 : nameOf(a) < nameOf(b) ? -1 : 1));
-      return `<div class="dr-filter"><input type="search" data-f="q" data-t="${t}" placeholder="${t === 'board' ? 'Search players or clubs' : 'Search players'}" value="${esc(f.q)}">
+      return `<div class="dr-filter"><input type="search" data-f="q" data-t="${t}" placeholder="Search players" value="${esc(f.q)}">
         <select data-f="pos" data-t="${t}" aria-label="Position"><option value="">All positions</option>${['GK', 'DEF', 'MID', 'FWD'].map(p => `<option${f.pos === p ? ' selected' : ''}>${p}</option>`).join('')}</select>
-        ${t === 'avail' ? `<input type="number" inputmode="numeric" min="0" step="1000" data-f="max" data-t="avail" placeholder="Max value $" aria-label="Maximum value" value="${esc(f.max)}">${code ? `<label class="dr-fit"><input type="checkbox" data-f="fit" data-t="avail"${f.fit ? ' checked' : ''}> Fits my squad</label>` : ''}` : ''}
-        ${t === 'board' ? `<select data-f="club" data-t="board" aria-label="Club"><option value="">All clubs</option>${clubs.map(c => `<option value="${esc(c)}"${f.club === c ? ' selected' : ''}>${esc(nameOf(c))}${c === code ? ' (you)' : ''}</option>`).join('')}</select>` : ''}</div>
+        <input type="number" inputmode="numeric" min="0" step="1000" data-f="max" data-t="avail" placeholder="Max value $" aria-label="Maximum value" value="${esc(f.max)}">${code ? `<label class="dr-fit"><input type="checkbox" data-f="fit" data-t="avail"${f.fit ? ' checked' : ''}> Fits my squad</label>` : ''}</div>
         <div class="dr-sortbar"><span>Sort by</span>${s.map((x, i) => `<span class="dr-chip"><b>${i + 1}</b><button data-t="${t}" data-sflip="${i}" title="Flip direction">${esc(col(t, x.key).long)} ${arrow(x.dir)}</button><button data-t="${t}" data-sdel="${i}" aria-label="Stop sorting by ${esc(col(t, x.key).long)}"${s.length > 1 ? '' : ' disabled'}>✕</button></span>`).join('')}
           ${unused.length ? `<select data-sadd="${t}" aria-label="Add a sort"><option value="">+ Then by…</option>${unused.map(c => `<option value="${c.key}">${esc(c.long)}</option>`).join('')}</select>` : ''}
           <button class="dr-b" data-t="${t}" data-sreset>Reset</button></div>
@@ -163,20 +160,14 @@ if (ctx) {
     const ratings = p => `<td class="c-offense">${chip(p.offense)}</td><td class="c-defense">${chip(p.defense)}</td><td class="c-overall">${chip(overall(p), 1)}</td><td class="c-value">${money(p.value)}</td>`;
     const HOWS = { manual: 'Picked', queue: 'Queue', auto: 'Auto', office: 'Office', skip: 'Skipped' };
 
-    // Board: every pick made so far, as a spreadsheet.
+    // Board: the draft as a grid, a row per round and a column per club. The only thing on it.
     function boardTab() {
       const map = byId();
-      const rows = st.picks.map(k => { const p = map.get(k.player);
-        return { ...(p || { name: '— skipped —', position: '', number: null, offense: 0, defense: 0, value: 0 }), pick_no: k.pick_no, club: k.club, clubName: nameOf(k.club), how: k.how, skipped: !p }; });
-      const shown = sorted('board', rows.filter(r => passes('board', r)));
-      // The draft at a glance: a row per round, a column per club, the pick number and who was taken.
       const grid = renderGrid(gridOf(st.order, st.picks), {
-        esc, clubName: nameOf, me: code, current: st.draft.status === 'done' ? null : st.draft.current_pick, made: st.picks.length,
-        who: x => { const p = map.get(x.pick?.player); return p ? `${esc(p.name)} <small>${esc(p.position)}</small>` : '<i>skipped</i>'; },
+        esc, clubName: nameOf, me: code, current: phase(st.draft) === 'live' ? st.draft.current_pick : null, made: st.picks.length,
+        who: x => { const p = map.get(x.pick?.player); return p ? `<button class="dr-name" data-player="${esc(p.id)}">${esc(p.name)}</button> <small>${esc(p.position)}</small>` : '<i>skipped</i>'; },
       });
-      return `<section><h2>Draft board</h2>${grid}</section><section><h2>Picked players (${st.picks.length} of ${st.order.length} picks made) <button class="dr-b dr-export" data-export title="Download every pick so far as a spreadsheet">Download CSV</button></h2>${toolbar('board')}
-        ${table('board', shown, r => `<tr class="${r.club === code ? 'me' : ''}${r.skipped ? ' skipped' : ''}"><td class="c-pick">${r.pick_no}</td><td class="c-club">${esc(r.clubName)}</td><td class="c-position">${esc(r.position)}</td><td class="c-name">${r.skipped ? esc(r.name) : `<button class="dr-name" data-player="${esc(r.id)}">${esc(r.name)}</button>`}</td><td class="c-number">${esc(r.number ?? '')}</td>${r.skipped ? '<td class="c-offense"></td><td class="c-defense"></td><td class="c-overall"></td><td class="c-value"></td>' : ratings(r)}<td class="c-how">${esc(HOWS[r.how] || r.how)}</td></tr>`,
-          st.picks.length ? 'No picks match.' : 'No picks yet.')}</section>`;
+      return `<section><h2>Draft board <small class="dr-count">${st.picks.length} of ${st.order.length} picks made</small>${st.picks.length ? ' <button class="dr-b dr-export" data-export title="Download every pick so far as a spreadsheet">Download CSV</button>' : ''}</h2>${grid || '<p class="empty">The pick order hasn’t been set yet.</p>'}</section>`;
     }
 
     // Players: the queue and auto-pick on the left, every available player on the right.
@@ -250,7 +241,7 @@ if (ctx) {
     }
 
     // What the page shows, boiled down, so a refresh that found nothing new doesn't redraw (and disturb) the page.
-    const sig = () => JSON.stringify([st.draft.status, st.draft.current_pick, st.draft.pick_deadline, st.draft.quiet, st.picks.length, st.queue, st.prefs,
+    const sig = () => JSON.stringify([phase(st.draft), st.draft.status, st.draft.current_pick, st.draft.pick_deadline, st.draft.quiet, st.picks.length, st.queue, st.prefs,
       st.qs?.quiet_until, st.qs?.next_quiet, players.length, players.filter(p => p.team).length, players.reduce((n, p) => n + (p.value || 0), 0)]);
     async function refresh() {
       try {
@@ -375,16 +366,22 @@ if (ctx) {
     // ---- the guided tour (js/tour.js). Each step may switch tab first; what it says depends on whether it's your turn.
     const STEPS = () => [
       { title: 'Welcome to the draft', text: 'This is where you pick the players for your club. This quick tour shows you every part of the page, one bit at a time. It takes about a minute.', tip: 'Use the Next button or your arrow keys. Press Esc to leave at any time.' },
-      { target: '.dr-head', tab: 'board', title: 'Whose turn is it?', text: () => myTurn()
-          ? 'Right now it’s <b>your pick</b>. The clock counts down how long you have. You can pick any time before it hits zero.'
-          : 'This shows which club is picking and how far through the draft we are. The clock counts down that club’s time. When it says <b>Your pick</b>, it’s you.',
+      { target: '.dr-status', tab: 'board', title: 'The status bar', text: () => ({
+          soon: 'This bar tells you where the draft is. Right now it <b>hasn’t started</b>, but you can already look around and <b>build your queue</b>, so you’re ready the moment it begins.',
+          opens: 'This bar tells you where the draft is. It <b>opens soon</b>, and the clock counts down to it. Until then you can look around and <b>build your queue</b>.',
+          live: myTurn() ? 'This bar tells you where the draft is. Right now it’s <b>your pick</b>. The clock counts down how long you have, and you can pick any time before it hits zero.'
+            : 'This bar tells you where the draft is: whose pick it is, how far through we are, and the clock. When it says <b>It’s your pick</b>, it’s you.',
+          paused: 'This bar tells you where the draft is. It’s <b>paused</b> for now. You can still change your queue.',
+          closed: 'This bar tells you where the draft is. It has <b>closed</b>, so picks can’t be made.',
+          done: 'This bar tells you where the draft is. It’s <b>finished</b>. Have a look at the board to see who went where.',
+        })[phase(st.draft)],
         tip: 'Picks happen slowly over days, not all at once. Come back whenever you like.' },
-      { target: '.dr-quiet', optional: true, tab: 'board', title: 'Quiet times', text: 'To give everyone a rest, the pick timer pauses at set times, like overnight. Your clock stops counting then. <b>You can still make a pick</b> if you’re online.' },
+      { target: '.dr-st-small', optional: true, tab: 'board', title: 'Rules and quiet times', text: 'The small print in the bar shows the <b>roster rules</b> (how many of each position you can have) and any <b>quiet times</b>, when the pick timer pauses, like overnight. <b>You can still make a pick</b> in a quiet time if you’re online.' },
       { target: '.dr-budget', title: 'Your weekly budget', text: 'Every player has a value. Your squad’s values add up against a weekly cap. The bar fills as you pick, turns <b>orange</b> when you’re close and <b>red</b> if you go over.', tip: 'It’s a guide only. It won’t stop you making a pick.' },
       { target: '.dr-tabs', title: 'Three tabs', text: '<b>Board</b> shows every pick so far. <b>Available players</b> is where you choose. <b>Team values</b> shows what every club has spent.' },
-      { target: '.dr-tablewrap', tab: 'board', title: 'The board', text: 'A live list of every player already picked: who took them, which club, their ratings and value. Your own club’s picks are <b>highlighted</b>.', tip: 'It updates the moment someone picks. “Download CSV” saves it as a spreadsheet.' },
-      { target: ['.dr-filter', '.dr-sortbar'], tab: 'board', title: 'Search, filter and sort', text: 'Type a name, or choose a position or club to narrow the list. <b>Tap any column heading</b> to sort by it, and tap again to flip it.', tip: 'Want the best defenders? Sort by Position, then add “Then by… Defensive rating”.' },
-      { target: '.dr-main .dr-tablewrap', tab: 'players', sub: 'players', title: 'Available players', text: 'Everyone who hasn’t been taken yet. <b>OFF</b> is attack, <b>DEF</b> is defence, <b>OVR</b> is the overall rating, and <b>Value</b> is what they cost against your cap. The colours run from red (weak) to green (outstanding).', tip: 'Tap a player’s name for their card. Use “Fits my squad” and “Max value” to narrow the list.' },
+      { target: '.dg-wrap', tab: 'board', title: 'The board', text: 'The whole draft at a glance: a row for each round and a column for each club. Each box shows the pick number and who was taken. The pick on the clock is <b>outlined</b> and your own club’s column is <b>tinted</b>.', tip: 'It updates the moment someone picks. Tap a name for the player’s card. “Download CSV” saves it as a spreadsheet.' },
+      { target: ['.dr-filter', '.dr-sortbar'], tab: 'players', sub: 'players', title: 'Search, filter and sort', text: 'Type a name, or choose a position to narrow the list. <b>Tap any column heading</b> to sort by it, and tap again to flip it.', tip: 'Want the best defenders? Sort by Position, then add “Then by… Defensive rating”.' },
+      { target: '.dr-main .dr-tablewrap', tab: 'players', sub: 'players', title: 'Available players', text: 'Everyone who hasn’t been taken yet. <b>OFF</b> is attack, <b>DEF</b> is defence, <b>OVR</b> is the overall rating, and <b>Value</b> is what they cost against your cap. The colours run from red (weak) to green (outstanding).', tip: 'Tap a player’s name for their card. “Fits my squad” and “Max value” narrow the list further.' },
       { target: '[data-add]', optional: true, tab: 'players', sub: 'players', title: 'Add to your queue', text: 'Press <b>+ Queue</b> next to any player you like. It adds them to your queue so you don’t have to hunt for them later.' },
       { target: '.dr-queue', tab: 'players', sub: 'queue', title: 'My queue', text: 'Your wish list, best player first. Drag players or use the <b>▲ ▼</b> arrows to rank them, and <b>✕</b> to remove one. If someone else takes a player, they drop off by themselves.', tip: 'Fill it with plenty of players so you’re never stuck.' },
       { target: '.dr-autobox', optional: true, tab: 'players', sub: 'auto', title: 'Auto-pick', text: 'Can’t be online? Let the draft pick <b>for you</b>. Choose <b>what</b> to pick (from your queue, or at random) and <b>when</b> (straight away, after a few minutes, or only if you miss your turn).', tip: 'It saves as you change it. Nothing to press.' },
@@ -410,9 +407,12 @@ if (ctx) {
     main.setAttribute('aria-busy', 'false');
     if (!tourSeen('draft') && code) setTimeout(tour, 600);
     else if (!tourSeen('draft')) main.querySelector('.dr-help')?.classList.add('glow');
-    let flipping = false;
+    let flipping = false, shown = phase(st.draft);
     setInterval(() => {
-      const c = document.getElementById('clock'); if (c && st.draft.pick_deadline) c.textContent = fmt(clockMs());
+      const c = document.getElementById('clock');
+      if (c?.dataset.until) c.textContent = fmt(new Date(c.dataset.until) - Date.now()); else if (c && st.draft.pick_deadline) c.textContent = fmt(clockMs());
+      // The open or close time has just passed: redraw so the bar and the Pick buttons change over.
+      if (phase(st.draft) !== shown) { shown = phase(st.draft); if (!document.activeElement?.matches?.('input,select')) draw(); }
       // Quiet time has just started or ended: look again so the clock and the note change over.
       const q = st.qs, edge = q && [q.quiet_until, q.next_quiet].filter(Boolean).map(x => new Date(x).getTime()).find(x => x > q.at && x <= Date.now());
       if (edge && !flipping) { flipping = true; refresh().finally(() => { flipping = false; }); }

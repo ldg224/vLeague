@@ -3,6 +3,22 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.32.0 (2026-10-07)
+
+Draft: a visibility switch, a big status bar, and a simpler page. Needs `0033_draft_visible.sql` (run it once).
+
+- **Added, Editor → Draft:** a big **MAKE PAGE VISIBLE: NO / YES** switch at the very top. It is separate from starting the draft, so you can
+  open the page to managers early. A draft that is already live, paused or finished stays visible. Only one draft is shown to managers, so
+  switching one on turns the others off. New drafts start hidden.
+- **Added, managers:** once the page is visible, managers can read everything about the upcoming draft and **build their queues and
+  auto-pick settings before it starts**, or while its open time is still later. Picking waits until the draft is live and open.
+- **Added, managers:** a big **status bar** at the top: Not started yet, Opens soon (with a countdown), Live (whose pick it is, and the clock),
+  Paused, Closed or Finished. It is tinted when it is your pick. Roster rules and quiet times are its small print.
+- **Removed, managers:** the Picked players table (and its filters) under the draft grid on the Board. The grid is the board now; Download
+  CSV sits next to it. The tour is updated to match.
+- **Changed, Editor → Draft:** a bigger status bar with the main button (Start, Pause or Resume) and the rarer actions under **More
+  actions**. Pick for a club, Auto-assign, Recent picks, Clubs' queues and Start another draft now fold away until you open them.
+
 ## 0.31.1 (2026-10-07)
 
 - **Fixed:** typing in the Draft page's **Search** and **Max value** boxes. The boxes were being rebuilt after every keystroke, which dropped

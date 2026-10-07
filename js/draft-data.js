@@ -2,24 +2,26 @@
 // Tables and functions are the shared contract in docs/DRAFT.md.
 import { db } from './auth.js';
 
-// The draft managers can see: status live or paused and now inside opens_at..closes_at (a missing bound is open). Newest first.
+// The draft managers can see (0.32): the newest one the office has switched "Make page visible" on for, in any status, so
+// managers can read it and build their queues before it starts. If that column isn't there yet (0033 not run), fall back to the
+// old rule: live or paused and inside opens_at..closes_at.
 export async function openDraft(now = new Date()) {
   try {
-    const { data } = await (await db()).from('drafts').select('*').in('status', ['live', 'paused']).order('opens_at', { ascending: false });
-    return (data || []).find(d => (!d.opens_at || new Date(d.opens_at) <= now) && (!d.closes_at || now < new Date(d.closes_at))) || null;
+    const { data } = await (await db()).from('drafts').select('*').order('id', { ascending: false });
+    const all = data || [];
+    if (all.length && !('visible' in all[0])) return all.find(d => ['live', 'paused'].includes(d.status) && (!d.opens_at || new Date(d.opens_at) <= now) && (!d.closes_at || now < new Date(d.closes_at))) || null;
+    return all.find(d => d.visible) || null;
   } catch { return null; }
 }
 
-// The newest draft whatever its state, for the preview managers see when none is open (0.30).
-export async function latestDraft() {
-  try {
-    const c = await db();
-    const { data } = await c.from('drafts').select('*').order('id', { ascending: false }).limit(1);
-    const d = data?.[0];
-    if (!d) return null;
-    const { data: order } = await c.from('draft_order').select('pick_no, club').eq('draft', d.id).order('pick_no');
-    return { draft: d, order: order || [] };
-  } catch { return null; }
+// Where a draft stands for a manager: 'soon' (visible, not started), 'opens' (started, but its open time is later), 'live',
+// 'paused', 'closed' (its close time has passed) or 'done'. Picks can only be made in 'live'.
+export function phase(d, now = new Date()) {
+  if (d.status === 'done') return 'done';
+  if (d.status === 'setup') return 'soon';
+  if (d.opens_at && new Date(d.opens_at) > now) return 'opens';
+  if (d.closes_at && now >= new Date(d.closes_at)) return 'closed';
+  return d.status === 'paused' ? 'paused' : 'live';
 }
 
 // Quiet times (0.28): when the pick timer doesn't run. quiet = [{ days: [0..6], from: 'HH:MM', to: 'HH:MM' }], Melbourne time.
