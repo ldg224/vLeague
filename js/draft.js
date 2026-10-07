@@ -105,7 +105,7 @@ if (ctx) {
       const B = {
         soon: ['Not started yet', 'Get ready', 'Read the rules, look through the players and build your queue. You can pick as soon as the draft starts.', ''],
         opens: ['Opens soon', 'Get ready', `Opens ${esc(whenAt(d.opens_at))}. Build your queue and set auto-pick now.`, `<small>Opens in</small><span id="clock" data-until="${esc(d.opens_at)}">${fmt(new Date(d.opens_at) - Date.now())}</span>`],
-        live: ['Live', mine ? 'It’s your pick' : t ? `${who} is picking` : 'Draft complete', t ? `Pick ${t.pick_no} of ${n}${mine ? '. Choose any player before the clock runs out.' : '.'}` : '',
+        live: ['Live', mine ? 'It’s your pick' : t ? `${who} is picking` : 'Draft complete', t ? `Pick ${t.pick_no} of ${n}${mine ? '. Choose any player before the clock runs out.' : '.'}${d.pick_deadline ? ` The pick ends <b>${esc(whenAt(d.pick_deadline))}</b>${d.quiet?.length ? ', not counting quiet times' : ''}. The clock runs even when nobody has the page open.` : ''}` : '',
           `${mine ? '<small>Your time</small>' : '<small>Time left</small>'}<span id="clock">${fmt(clockMs())}</span>`],
         paused: ['Paused', 'The draft is paused', `${t ? `Pick ${t.pick_no} of ${n}, ${who} is up. ` : ''}It carries on when the office resumes it. You can still change your queue.`, ''],
         closed: ['Closed', 'The draft has closed', 'Picks can’t be made now.', ''],

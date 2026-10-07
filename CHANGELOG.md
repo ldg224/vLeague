@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.34.2 (2026-10-07)
+
+No database change.
+
+- **Added, Draft:** the status bar now says **when the current pick ends** (for example "Wed 7:02 pm"), not counting quiet times, and that the clock runs
+  even when nobody has the page open. The Editor's Draft page shows the same line, with the time left, while a draft is live, and a short note while
+  it is paused.
+
 ## 0.34.1 (2026-10-07)
 
 No database change in the app (one data fix, below).

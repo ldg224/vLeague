@@ -129,10 +129,13 @@ export async function mountDraft(ctx) {
   // The big status bar: state, whose pick it is and the clock, then the main button. The rest sits under "More actions".
   const bar = () => {
     const d = S.d, t = turn(), live = ['live', 'paused'].includes(d.status);
+    const ends = d.status === 'live' && t && d.pick_deadline ? `<p class="dr-ends"><b>${esc(cname(t.club))}</b> is on the clock (pick ${d.current_pick} of ${S.order.length}). The pick ends <b>${esc(when(d.pick_deadline))}</b>${d.quiet?.length ? ', not counting quiet times' : ''}. <span class="dr-count" data-deadline="${esc(d.pick_deadline)}"></span> left. It runs on the server, so it keeps going when nobody has this page open.</p>`
+      : d.status === 'paused' ? '<p class="dr-ends">Paused: no clock is running. Resume starts a fresh pick time.</p>' : '';
     return `<section class="dr-bigbar"><div class="dr-top">
       <div><h2>${esc(d.name)}</h2>
         <p class="ed-hint">Opens ${esc(when(d.opens_at))} · closes ${esc(when(d.closes_at))} · ${esc(minutesText(d.pick_minutes))} a pick<br>Roster rules: ${esc(rulesLine(d))} · when time runs out: ${esc(TIMEOUTS[d.on_timeout].toLowerCase())}</p></div>
       </div>
+      ${ends}
       <div class="ed-actions dr-main-act">
         ${d.status === 'setup' ? '<button class="btn" data-act="start">Start the draft</button>' : ''}
         ${d.status === 'live' ? '<button class="btn" data-act="pause">Pause</button>' : ''}

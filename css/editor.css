@@ -472,3 +472,6 @@
   .dr-switch button { flex: 1; }
   .dr-bigbar .dr-clock { text-align: left; }
 }
+
+.dr-ends { margin: 0; font-size: 1.05rem; }
+.dr-ends .dr-count { font: 700 1.05rem var(--font-display); font-variant-numeric: tabular-nums; }
