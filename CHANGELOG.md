@@ -3,6 +3,21 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.40.0 (2026-10-07)
+
+The clean-up. Less on every screen, and nothing new. No database change. If anything goes wrong, `v0.39.2` is the version to go back to (`docs/RELEASING.md`).
+
+- **Changed, Game centre:** one scrolling page, like a match page in a football app. The scoreboard, then the viewer, then Stats, Line-ups and a Timeline of the key moments. The tab row is gone, and so is the "Latest moments" box.
+  Before kick-off it shows the win chance, how the two clubs compare, and the line-ups. While a match is live, the scoreboard and everything under the viewer keep up and the viewer is never redrawn. The scoreboard designs and the round name above them stay.
+- **Removed, viewer:** the download menu (the MP4 videos and the match file) and the code that made them, the spinning ball, the crowd flashes and the stat panels that dropped from the scoreboard. The possession bar stays.
+- **Changed, Editor → Fixtures:** rebuilt around three jobs. **Make a season** (pick the start date, the format and the kick-off pattern and it creates every round); **look after a round** (one row per match: change the teams or the kick-off time
+  right there, then Simulate, Postpone or Remove; the round's name, look and line-up lock are under Round settings; move or delete the whole round); and **Add the next round**. The Test match stays. Copying and importing matches as CSV is under More.
+  About 70 buttons are gone: undo and redo, selecting and bulk edits, dragging, the week mover, shifting, reversing and renumbering weeks, blank weeks, byes by hand (a club that isn't playing is simply listed as not playing), the Planner's pattern editor,
+  the Clubs-by-week and Meetings tables and the separate Checks view (a round now warns on its own when a club plays twice or a match has no time).
+- **Fixed:** the dark theme had six colours that were defined in terms of themselves, so they were never set: error and warning messages in the Editor were not red or amber in dark mode, and a few hover and autofill colours were missing. They have real values now.
+- **Fixed:** a test match (week 99) counted as the "last week", so "Add the next round" would have failed after one. Test matches are now left out of the season when working out what comes next.
+- **Tidied:** about 1,400 lines of code and 60 style rules nothing used any more.
+
 ## 0.39.2 (2026-10-07)
 
 Fixes to the broadcast. No database change.
