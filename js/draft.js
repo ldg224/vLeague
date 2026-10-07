@@ -319,7 +319,7 @@ if (ctx) {
       const t = e.target;
       if (t.dataset.f === 'q' || t.dataset.f === 'max') {
         F[t.dataset.t].q = t.value; const s = t.selectionStart; draw();
-        const i = main.querySelector(`[data-f="q"][data-t="${t.dataset.t}"]`); i.focus(); try { i.setSelectionRange(s, s); } catch { /* number boxes have no caret to restore */ }
+        const i = main.querySelector(`[data-f="${t.dataset.f}"][data-t="${t.dataset.t}"]`); i?.focus(); try { i?.setSelectionRange(s, s); } catch { /* number boxes have no caret to restore */ }
       }
     });
     // Auto-pick saves as it changes. "After a few minutes" waits for a valid number of minutes.

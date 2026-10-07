@@ -3,6 +3,10 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.29.2 (2026-10-07)
+
+- **Fixed:** on the Draft page, the **Max value** box lost its cursor after every digit, so you had to click back in to type each number. It now keeps the cursor.
+
 ## 0.29.1 (2026-10-07)
 
 - **Changed:** the **Draft** tab is always there for managers. When no draft is open it shows a small preview: the draft's name, when it opens and closes, and the pick order.
