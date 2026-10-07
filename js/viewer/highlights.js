@@ -25,36 +25,98 @@ function loadImg(src) {
   return new Promise(res => { if (!src) return res(null); const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
 }
 const shirt = id => String(id).slice(-2);
+const LEAGUE_ASPECT = 116 / 158;   // the vLeague crest's width over its height (assets/brand/crest.svg viewBox)
 const lastName = n => String(n || '').split(' ').slice(-1)[0];
 
 // ---------------------------------------------------------------- match state
+
+// Catmull-Rom through four samples (k = 0..1 between the middle two): smooth paths from frames written five times a second.
+const cr = (p0, p1, p2, p3, k) => 0.5 * (2 * p1 + (p2 - p0) * k + (2 * p0 - 5 * p1 + 4 * p2 - p3) * k * k + (3 * p1 - p0 - 3 * p2 + p3) * k * k * k);
+// Is the ball's path through these steps one smooth movement (no kick, bounce or deflection in the middle)?
+const smoothSteps = (u, v) => {
+  const lu = Math.hypot(u[0], u[1], u[2]), lv = Math.hypot(v[0], v[1], v[2]);
+  if (lu < 8 || lv < 8) return true;
+  const dot = (u[0] * v[0] + u[1] * v[1] + u[2] * v[2]) / (lu * lv), r = lv / lu;
+  return dot > 0.8 && r > 0.4 && r < 2.5;
+};
 
 class Frames {
   constructor(d) {
     this.d = d; this.f = d.frames.data; this.sc = d.frames.scale; this.n = d.players.length;
     this.half2 = d.periods[1]?.start_t ?? Infinity;
+    this.buildDead();
   }
   idx(t) {
     const f = this.f, ds = t * 10; let lo = 0, hi = f.length - 1;
     while (lo < hi) { const m = (lo + hi + 1) >> 1; if (f[m][0] <= ds) lo = m; else hi = m - 1; }
     return lo;
   }
-  at(t) {
-    const i = this.idx(t), a = this.f[i], b = this.f[Math.min(i + 1, this.f.length - 1)], sc = this.sc;
+  // When play stops the engine leaves the ball where it stopped (in the net, over the line) and only places it on the restart spot when
+  // the restart is taken, which on screen was a jump. These are the stoppages: where the ball stopped (p0), where it is put back (p1).
+  buildDead() {
+    const f = this.f, n = f.length, sc = this.sc; this.dead = [];
+    for (let i = 0; i < n; i++) {
+      if (f[i][5] || (i > 0 && !f[i - 1][5])) continue;
+      let j = i; while (j < n && !f[j][5]) j++;
+      const p0 = [f[i][1] / sc, f[i][2] / sc], p1 = j < n ? [f[j][1] / sc, f[j][2] / sc] : p0, z1 = j < n ? f[j][3] / sc : 0, z0 = f[i][3] / sc;   // z1: a throw-in is taken with the ball overhead
+      this.dead.push({ s: f[i][0] / 10, e: (j < n ? f[j][0] : f[n - 1][0] + 10) / 10, p0, p1, z0, z1 });
+      i = j;
+    }
+  }
+  deadAt(t) {
+    const D = this.dead; let lo = 0, hi = D.length - 1;
+    if (!D.length || t < D[0].s) return null;
+    while (lo < hi) { const m = (lo + hi + 1) >> 1; if (D[m].s <= t) lo = m; else hi = m - 1; }
+    return t < D[lo].e ? D[lo] : null;
+  }
+  // True when the four frames around step i sit in one half (no kick-off reset between them), so a curve through them is safe.
+  sameHalf(i) {
+    const f = this.f, h = this.half2 * 10;
+    return !(f[Math.max(0, i - 1)][0] < h && f[Math.min(f.length - 1, i + 2)][0] >= h);
+  }
+  // The ball: x, y, z, how visible it is, and whether play is stopped. At a stoppage it waits where it stopped, then is put back on the
+  // restart spot: out of sight while it travels, fading in before the restart. The camera follows the same path, so it glides there
+  // instead of cutting.
+  ballState(t) {
+    const dd = this.deadAt(t);
+    if (dd) {
+      const len = dd.e - dd.s, hold = Math.min(1.4, 0.35 * len), fade = Math.min(1.1, 0.3 * len), g0 = dd.s + hold, g1 = dd.e - fade;
+      if (t < g0) return { x: dd.p0[0], y: dd.p0[1], z: dd.z0 * (1 - seg01(t, dd.s, dd.s + 0.5)), alpha: 1 - 0.65 * seg01(t, dd.s + hold * 0.5, g0), dead: true };
+      if (t < g1) { const u = easeInOut((t - g0) / Math.max(0.01, g1 - g0)); return { x: lerp(dd.p0[0], dd.p1[0], u), y: lerp(dd.p0[1], dd.p1[1], u), z: 0, alpha: 0, dead: true }; }
+      return { x: dd.p1[0], y: dd.p1[1], z: dd.z1, alpha: seg01(t, g1, dd.e), dead: true };
+    }
+    const f = this.f, n = f.length, i = this.idx(t), a = f[i], b = f[Math.min(i + 1, n - 1)], sc = this.sc;
     const cross = a[0] / 10 < this.half2 && b[0] / 10 >= this.half2;
     const k = b[0] > a[0] && !cross ? clamp((t * 10 - a[0]) / (b[0] - a[0]), 0, 1) : 0;
-    const L = j => (a[j] + (b[j] - a[j]) * k) / sc;
-    const inPlay = !!(a[5] && b[5]);
-    const players = [];
-    for (let p = 0; p < this.n; p++) players.push([L(6 + 2 * p), L(7 + 2 * p)]);
-    return { ball: inPlay ? [L(1), L(2), L(3)] : [a[1] / sc, a[2] / sc, 0], inPlay: !!a[5], holder: a[4], players };
+    let x = (a[1] + (b[1] - a[1]) * k) / sc, y = (a[2] + (b[2] - a[2]) * k) / sc, z = (a[3] + (b[3] - a[3]) * k) / sc;
+    if (a[5] && b[5] && !cross && i > 0 && i + 2 < n && f[i - 1][5] && f[i + 2][5] && this.sameHalf(i)) {
+      const a0 = f[i - 1], b2 = f[i + 2], v = (p, q) => [q[1] - p[1], q[2] - p[2], q[3] - p[3]];
+      if (smoothSteps(v(a0, a), v(a, b)) && smoothSteps(v(a, b), v(b, b2))) {
+        x = cr(a0[1], a[1], b[1], b2[1], k) / sc; y = cr(a0[2], a[2], b[2], b2[2], k) / sc; z = Math.max(0, cr(a0[3], a[3], b[3], b2[3], k) / sc);
+      }
+    }
+    return { x, y, z, alpha: 1, dead: false };
+  }
+  at(t) {
+    const f = this.f, n = f.length, i = this.idx(t), a = f[i], b = f[Math.min(i + 1, n - 1)], sc = this.sc;
+    const cross = a[0] / 10 < this.half2 && b[0] / 10 >= this.half2;
+    const k = b[0] > a[0] && !cross ? clamp((t * 10 - a[0]) / (b[0] - a[0]), 0, 1) : 0;
+    const curve = !cross && i > 0 && i + 2 < n && this.sameHalf(i), a0 = f[Math.max(0, i - 1)], b2 = f[Math.min(n - 1, i + 2)];
+    const da = Math.max(1, b[0] - a0[0]), db = Math.max(1, b2[0] - a[0]);
+    const players = [], vel = [];
+    for (let p = 0; p < this.n; p++) {
+      const jx = 6 + 2 * p, jy = 7 + 2 * p;
+      const x = curve ? cr(a0[jx], a[jx], b[jx], b2[jx], k) : a[jx] + (b[jx] - a[jx]) * k, y = curve ? cr(a0[jy], a[jy], b[jy], b2[jy], k) : a[jy] + (b[jy] - a[jy]) * k;
+      players.push([x / sc, y / sc]);
+      // Velocity (m/s): the slope each side of this step, blended across it.
+      const vax = (b[jx] - a0[jx]) / da * 10 / sc, vay = (b[jy] - a0[jy]) / da * 10 / sc, vbx = (b2[jx] - a[jx]) / db * 10 / sc, vby = (b2[jy] - a[jy]) / db * 10 / sc;
+      vel.push(cross ? [0, 0] : [vax + (vbx - vax) * k, vay + (vby - vay) * k]);
+    }
+    const bs = this.ballState(t);
+    return { ball: [bs.x, bs.y, bs.z], inPlay: !bs.dead, ballAlpha: bs.alpha, holder: bs.dead ? -1 : a[4], players, vel };
   }
   // Just the ball [x, y] at t (cheaper than at() when the players aren't needed).
-  ball(t) {
-    const i = this.idx(t), a = this.f[i], b = this.f[Math.min(i + 1, this.f.length - 1)], sc = this.sc;
-    const k = b[0] > a[0] && a[5] && b[5] && !(a[0] / 10 < this.half2 && b[0] / 10 >= this.half2) ? clamp((t * 10 - a[0]) / (b[0] - a[0]), 0, 1) : 0;
-    return [(a[1] + (b[1] - a[1]) * k) / sc, (a[2] + (b[2] - a[2]) * k) / sc];
-  }
+  ball(t) { const b = this.ballState(t); return [b.x, b.y]; }
 }
 
 // ---------------------------------------------------------------- cameras (pinhole)
@@ -288,10 +350,16 @@ export class HighlightsRenderer {
     if (italic) { c.translate(x, y); c.transform(1, 0, -0.18, 1, 0, 0); c.fillText(str, 0, 0); } else c.fillText(str, x, y);
     c.restore();
   }
+  // Draw a picture centred at (cx, cy), as large as fits inside w x h WITHOUT changing its shape (the crests aren't square).
+  fitImg(img, cx, cy, w, h, aspect) {
+    const iw = aspect ? aspect * 100 : (img.naturalWidth || img.width || 1), ih = aspect ? 100 : (img.naturalHeight || img.height || 1), s = Math.min(w / iw, h / ih);
+    this.c.drawImage(img, cx - iw * s / 2, cy - ih * s / 2, iw * s, ih * s);
+  }
+  leagueFit(cx, cy, w, h) { this.fitImg(this.A.league, cx, cy, w, h, LEAGUE_ASPECT); }
   logoAt(team, x, y, size, alpha = 1) {
     const c = this.c, img = this.A.logos[team.code];
     c.save(); c.globalAlpha *= alpha;
-    if (img) c.drawImage(img, x - size / 2, y - size / 2, size, size);
+    if (img) this.fitImg(img, x, y, size, size);
     else {
       c.fillStyle = safeColour(team.colour); c.beginPath(); c.arc(x, y, size / 2, 0, Math.PI * 2); c.fill();
       this.text(team.code, x, y + size * 0.12, { size: size * 0.32, weight: 900, align: 'center', colour: onColour(team.colour) });
@@ -325,7 +393,7 @@ export class HighlightsRenderer {
     if (this.A.league) {
       c.save(); c.shadowColor = 'rgba(66,165,245,0.6)'; c.shadowBlur = 60 * k;
       const s = 260 * (0.6 + 0.4 * k); c.globalAlpha = k;
-      c.drawImage(this.A.league, W / 2 - s / 2, H / 2 - 190 - s / 2 + 60, s, s); c.restore();
+      this.leagueFit((W / 2 - s / 2) + (s) / 2, (H / 2 - 190 - s / 2 + 60) + (s) / 2, s, s); c.restore();
     }
     const a = easeOut((t - 1.0) / 0.7);
     this.text('vLEAGUE', W / 2, H / 2 + 150, { size: 104, weight: 900, align: 'center', spacing: 6 * a, alpha: a, shadow: 20 });
@@ -350,7 +418,7 @@ export class HighlightsRenderer {
       c.globalAlpha = 0.85; c.fillStyle = g; c.fillRect(0, 0, W, H); c.globalAlpha = 1;
       this.stripes(t, 0.35);
       const team = side ? this.away : this.home, wm = this.A.logosAlt[team.code] || this.A.logos[team.code];
-      if (wm) { c.globalAlpha = 0.08; const s = 900; c.translate(side ? W - 300 : 300, H / 2); c.rotate(side ? 0.35 : -0.35); c.drawImage(wm, -s / 2, -s / 2, s, s); }
+      if (wm) { c.globalAlpha = 0.08; const s = 900; c.translate(side ? W - 300 : 300, H / 2); c.rotate(side ? 0.35 : -0.35); this.fitImg(wm, 0, 0, s, s); }
       c.restore();
     }
     this.grid();
@@ -457,7 +525,7 @@ export class HighlightsRenderer {
     const c = this.c;
     this.bg(0.9);
     const k = easeOut(t / 0.8);
-    if (this.A.league) { c.save(); c.globalAlpha = k; c.shadowColor = 'rgba(66,165,245,.5)'; c.shadowBlur = 50; c.drawImage(this.A.league, W / 2 - 110, 240, 220, 220); c.restore(); }
+    if (this.A.league) { c.save(); c.globalAlpha = k; c.shadowColor = 'rgba(66,165,245,.5)'; c.shadowBlur = 50; this.leagueFit((W / 2 - 110) + (220) / 2, (240) + (220) / 2, 220, 220); c.restore(); }
     this.text('vLEAGUE', W / 2, 560, { size: 90, weight: 900, align: 'center', spacing: 6, alpha: k });
     this.text('FULL MATCH REPLAY, LADDER AND STATS', W / 2, 640, { size: 30, weight: 800, align: 'center', colour: 'rgba(255,255,255,.7)', spacing: 4, alpha: easeOut((t - 0.5) / 0.6) });
     this.text('ldg224.github.io/s3', W / 2, 700, { size: 40, weight: 900, align: 'center', colour: LIME, alpha: easeOut((t - 0.8) / 0.6) });
@@ -622,6 +690,7 @@ export class HighlightsRenderer {
   drawClip(s, local) {
     const c = this.c;
     const { cam, tSim, cut, angle, plan } = this.camFor(s, local);
+    this._tn = tSim;
     const st = this.fr.at(tSim);
     this.drawPitch(cam);
     this.drawGoal(cam, 0); this.drawGoal(cam, 105);
@@ -634,7 +703,7 @@ export class HighlightsRenderer {
         const k = seg01(tSim, fall.until, fall.until + 0.5);
         x = lerp(fall.x, p[0], k); y = lerp(fall.y, p[1], k); lying = tSim < fall.until ? fall : false;
       }
-      return { i, x, y, lying, d: cam.p(x, y)?.[2] ?? 0 };
+      return { i, x, y, vx: st.vel[i][0], vy: st.vel[i][1], lying, d: cam.p(x, y)?.[2] ?? 0 };
     });
     const [rx, ry] = this.refAt(plan, tSim);
     const card = plan.cards.find(k => tSim >= k.t && tSim < k.until);
@@ -819,6 +888,21 @@ export class HighlightsRenderer {
       g.addColorStop(0, 'rgba(5,7,10,0.75)'); g.addColorStop(1, 'rgba(5,7,10,0.15)');
       c.fillStyle = g; c.fill();
     }
+    // The crowd is alive: camera flashes now and then, and a burst of them after a goal.
+    const tn = this._tn ?? 0;
+    let boost = 0; for (const gl of this.goals) if (tn >= gl.t) boost = Math.max(boost, Math.exp(-(tn - gl.t) / 5));
+    const slot = Math.floor(tn * 6), hash = (a, b) => { const v = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return v - Math.floor(v); };
+    c.save();
+    faces.forEach((f, fi2) => {
+      for (let k = 0; k < 34; k++) {
+        if (hash(fi2 * 53 + k, slot) > 0.045 + 0.4 * boost) continue;
+        const u = hash(k, fi2 + 3), v = hash(k + 9, fi2 + 7), w = [0, 1, 2].map(j => f[0][j] * (1 - u) * (1 - v) + f[1][j] * u * (1 - v) + f[2][j] * u * v + f[3][j] * (1 - u) * v);
+        const q = cam.p(w[0], w[1], w[2]); if (!q) continue;
+        const rad = Math.max(1.4, q[2] * 0.035), life = 1 - ((tn * 6) % 1);
+        c.globalAlpha = 0.35 + 0.65 * life; c.fillStyle = '#ffffff'; c.beginPath(); c.arc(q[0], q[1], rad * (0.6 + life), 0, Math.PI * 2); c.fill();
+      }
+    });
+    c.restore();
   }
 
   drawGoal(cam, gx) {
@@ -834,20 +918,46 @@ export class HighlightsRenderer {
     const side = it.i < this.nHome ? 0 : 1;
     let col = side ? this.ac : this.hc;
     if (this.gkIdx.has(it.i)) col = side ? '#a855f7' : '#f5b042';
+    // Pace and direction (from the match data). The stride follows the distance run, so a standing player stands and a sprinter pumps.
+    const sp = Math.hypot(it.vx || 0, it.vy || 0), moving = sp > 0.35;
+    const ux = moving ? it.vx / sp : 0, uy = moving ? it.vy / sp : 0, qx = moving ? -uy : 0, qy = moving ? ux : 1;
+    const phase = moving ? ((it.x * ux + it.y * uy) / 1.15) * Math.PI : 0, amp = clamp((sp - 0.4) / 5.0, 0, 1);
+    const bob = Math.abs(Math.sin(phase)) * 0.06 * amp, hipZ = 0.92 + bob;
     const r = Math.max(10, p[2] * 0.6);
-    const head = cam.p(it.x, it.y, 1.85);
-    const top = head ? head[1] : p[1] - r * 2;
+    const head = cam.p(it.x, it.y, 1.85 + bob), hip = cam.p(it.x, it.y, hipZ), sho = cam.p(it.x, it.y, 1.58 + bob);
+    const top = head ? head[1] : p[1] - r * 2, bx = p[0], bh = p[1] - top, bw = Math.max(12, bh * 0.42);
     // shadow
     c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(p[0] + r * 0.4, p[1], r * 1.05, r * 0.42, 0, 0, Math.PI * 2); c.fill();
-    // body: a short upright capsule, like a player figure seen from the stand
-    const bx = p[0], bh = p[1] - top, bw = Math.max(12, bh * 0.42);
+    // legs (behind the body): shorts to the knee, sock and boot below, swinging fore and aft along the line of running
+    const shorts = shade(col, 0.55), skin = '#f1c9a5';
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    for (let s = 0; s < 2; s++) {
+      const ph = phase + s * Math.PI, sw = Math.sin(ph) * amp, lift = Math.max(0, Math.cos(ph)) * amp * 0.3, off = s ? 0.12 : -0.12;
+      const foot = cam.p(it.x + ux * sw * 0.6 + qx * off, it.y + uy * sw * 0.6 + qy * off, lift);
+      const hp = cam.p(it.x + qx * off * 0.8, it.y + qy * off * 0.8, hipZ);
+      const knee = cam.p(it.x + ux * (sw * 0.3 + 0.12 * amp) + qx * off, it.y + uy * (sw * 0.3 + 0.12 * amp) + qy * off, 0.5 + lift * 0.9);
+      if (!foot || !hp || !knee) continue;
+      c.strokeStyle = shorts; c.lineWidth = Math.max(4, bw * 0.36); c.beginPath(); c.moveTo(hp[0], hp[1]); c.lineTo(knee[0], knee[1]); c.stroke();
+      c.strokeStyle = col; c.lineWidth = Math.max(3, bw * 0.26); c.beginPath(); c.moveTo(knee[0], knee[1]); c.lineTo(foot[0], foot[1]); c.stroke();
+      c.fillStyle = '#10141b'; c.beginPath(); c.ellipse(foot[0] + (ux ? Math.sign(ux) * bw * 0.06 : 0), foot[1], bw * 0.2, bw * 0.1, 0, 0, Math.PI * 2); c.fill();
+    }
+    // body: shorts block at the hips, the shirt above it
+    const bt = sho ? sho[1] : top + bh * 0.28, bb = hip ? hip[1] : p[1] - bh * 0.4;
     const g = c.createLinearGradient(bx - bw, 0, bx + bw, 0); g.addColorStop(0, col); g.addColorStop(1, shade(col, 0.55));
-    c.fillStyle = g; c.beginPath(); c.roundRect(bx - bw / 2, top + bh * 0.28, bw, bh * 0.72, bw / 2); c.fill();
-    c.fillStyle = '#f1c9a5'; c.beginPath(); c.arc(bx, top + bh * 0.16, bw * 0.34, 0, Math.PI * 2); c.fill();
+    c.fillStyle = g; c.beginPath(); c.roundRect(bx - bw / 2, bt - bw * 0.1, bw, Math.max(bw * 0.8, bb - bt + bw * 0.1), bw / 2); c.fill();
+    // arms swing against the legs
+    for (let s = 0; s < 2; s++) {
+      const ph = phase + s * Math.PI + Math.PI, sw = Math.sin(ph) * amp, off = s ? 0.24 : -0.24;
+      const sh2 = cam.p(it.x + qx * off, it.y + qy * off, 1.45 + bob), hand = cam.p(it.x + ux * sw * 0.45 + qx * off * 1.15, it.y + uy * sw * 0.45 + qy * off * 1.15, 0.98 + bob + Math.max(0, sw) * 0.12);
+      if (!sh2 || !hand) continue;
+      c.strokeStyle = skin; c.lineWidth = Math.max(3, bw * 0.17); c.beginPath(); c.moveTo(sh2[0], sh2[1]); c.lineTo(hand[0], hand[1]); c.stroke();
+    }
+    const hc = head ? head[1] + bw * 0.16 : top + bh * 0.16;
+    c.fillStyle = skin; c.beginPath(); c.arc(bx, hc, bw * 0.34, 0, Math.PI * 2); c.fill();
     if (holder) { c.lineWidth = 3; c.strokeStyle = '#fff'; c.beginPath(); c.ellipse(p[0], p[1], r * 1.5, r * 0.6, 0, 0, Math.PI * 2); c.stroke(); }
     // shirt number
     const pl = this.d.players[it.i];
-    this.text(shirt(pl.id), bx, top + bh * 0.62, { size: Math.max(9, bw * 0.55), weight: 900, align: 'center', colour: onColour(col), base: 'middle' });
+    this.text(shirt(pl.id), bx, bt + (bb - bt) * 0.42, { size: Math.max(9, bw * 0.55), weight: 900, align: 'center', colour: onColour(col), base: 'middle' });
     if (holder) {
       const name = lastName(pl.name).toUpperCase(), fs = 24;
       c.font = `900 ${fs}px ${FONT}`; const w = c.measureText(name).width + 28;
@@ -858,9 +968,10 @@ export class HighlightsRenderer {
   }
 
   drawBall(cam, st) {
-    const c = this.c, [x, y, z] = st.ball;
+    const c = this.c, [x, y, z] = st.ball, alpha = st.ballAlpha ?? (st.inPlay ? 1 : 0.4);
+    if (alpha < 0.02) return;
     const g = cam.p(x, y, 0), b = cam.p(x, y, z + 0.11); if (!g || !b) return;
-    c.save(); c.globalAlpha = st.inPlay ? 1 : 0.4;
+    c.save(); c.globalAlpha = alpha;
     if (this.trail.length > 2 && st.inPlay) {
       c.beginPath(); c.moveTo(this.trail[0][0], this.trail[0][1]);
       for (const q of this.trail) c.lineTo(q[0], q[1]);
@@ -872,7 +983,18 @@ export class HighlightsRenderer {
     const bg = c.createRadialGradient(b[0] - r / 3, b[1] - r / 3, 1, b[0], b[1], r);
     bg.addColorStop(0, '#ffffff'); bg.addColorStop(1, '#c9ced6');
     c.fillStyle = bg; c.beginPath(); c.arc(b[0], b[1] - r * 0.2, r, 0, Math.PI * 2); c.fill();
-    c.strokeStyle = 'rgba(0,0,0,.5)'; c.lineWidth = 1; c.stroke();
+    // Panels that turn with the ball's travel, so a rolling or flying ball visibly spins.
+    if (r > 6) {
+      const cx = b[0], cy = b[1] - r * 0.2, spin = (x * 0.8 + y * 0.6 + z * 0.5) * 1.7;
+      c.save(); c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.clip(); c.fillStyle = 'rgba(30,36,48,0.78)';
+      for (let k = 0; k < 5; k++) {
+        const a = spin + k * Math.PI * 0.4, depth = Math.cos(a * 0.7 + k);
+        if (depth < -0.2) continue;
+        c.beginPath(); c.ellipse(cx + Math.cos(a) * r * 0.62, cy + Math.sin(a) * r * 0.5, r * (0.2 + 0.08 * depth), r * (0.18 + 0.06 * depth), a, 0, Math.PI * 2); c.fill();
+      }
+      c.restore();
+    }
+    c.strokeStyle = 'rgba(0,0,0,.5)'; c.lineWidth = 1; c.beginPath(); c.arc(b[0], b[1] - r * 0.2, r, 0, Math.PI * 2); c.stroke();
     c.restore();
   }
 
@@ -1023,7 +1145,7 @@ export class HighlightsRenderer {
     else if (key !== 'classic' && acc) { c.strokeStyle = acc; c.beginPath(); c.roundRect(x, y, w, h, [0, 14, 14, 14]); c.stroke(); }
     c.restore();
     // contents
-    if (this.A.league) c.drawImage(this.A.league, x + 12, y + 10, 44, 44);
+    if (this.A.league) this.leagueFit((x + 12) + (44) / 2, (y + 10) + (44) / 2, 44, 44);
     c.fillStyle = this.hc; c.fillRect(x + 70, y + 12, 6, 40);
     this.text(this.home.code, x + 88, y + 44, { size: 32, weight: 900 });
     this.pill(x + 184, y + 10, 124, 44, '#ffffff', 10);
@@ -1044,7 +1166,7 @@ export class HighlightsRenderer {
     this.scoreBoard(x, y, sc, this.clockAt(tSim));
     this.addedBoard(x, y, tSim);
     // Corner watermark
-    if (this.A.league) { c.globalAlpha = 0.75; c.drawImage(this.A.league, W - 110, H - 110, 60, 60); c.globalAlpha = 1; }
+    if (this.A.league) { c.globalAlpha = 0.75; this.leagueFit((W - 110) + (60) / 2, (H - 110) + (60) / 2, 60, 60); c.globalAlpha = 1; }
   }
 
   drawTransition(T) {
@@ -1064,7 +1186,7 @@ export class HighlightsRenderer {
       c.restore();
       if (this.A.league && Math.abs(d) < len * 0.6) {
         const a = 1 - Math.abs(d) / (len * 0.6);
-        c.save(); c.globalAlpha = a; c.drawImage(this.A.league, W / 2 - 80, H / 2 - 80, 160, 160); c.restore();
+        c.save(); c.globalAlpha = a; this.leagueFit((W / 2 - 80) + (160) / 2, (H / 2 - 80) + (160) / 2, 160, 160); c.restore();
       }
     }
   }
@@ -1104,7 +1226,7 @@ export async function makeThumbnail(r) {
   r.pill(W / 2 - 420, 60, 840, 110, r.limeGrad(W / 2 - 420, 0, W / 2 + 420, 0), 24);
   r.text(`WEEK ${r.fx?.week ?? ''} HIGHLIGHTS`, W / 2, 140, { size: 66, weight: 900, align: 'center', colour: '#fff', italic: true });
   r.text(`${r.home.code}  v  ${r.away.code}`, W / 2, H - 90, { size: 86, weight: 900, align: 'center', shadow: 24, italic: true });
-  if (r.A.league) c.drawImage(r.A.league, 60, H - 210, 150, 150);
+  if (r.A.league) r.leagueFit((60) + (150) / 2, (H - 210) + (150) / 2, 150, 150);
   c.restore();
   r.c = saved;
   return new Promise(res => cv.toBlob(res, 'image/png'));

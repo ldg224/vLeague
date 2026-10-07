@@ -3,6 +3,24 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.38.0 (2026-10-07)
+
+A livelier broadcast. No database change. Applies to the broadcast view and the highlights video, for matches already played as well as new ones.
+
+- **Added, stats panels:** every 8 minutes of match time (from minute 5) a panel drops down out of the scoreboard for 9 seconds and lists both teams side by side with
+  animated bars: **Possession & shots** (possession, shots, on target, expected goals), **Passing** (passes, accuracy, corners, offsides), **Duels & discipline** (tackles won,
+  interceptions, fouls, cards) and **Goalkeeping & defence** (saves, clearances, blocks, shots faced). Everything is counted up to that moment, so a live match never gives
+  anything away, and a panel never opens over a goal banner, a card, a replay, a kick-off tag or the half-time and full-time scorelines. It uses the round's look.
+- **Added:** a **possession bar** under the scoreboard that shows each side's share so far.
+- **Fixed, the ball teleporting:** when play stopped the ball stayed where it stopped and then jumped to the restart spot (up to 54 m) the moment the restart was taken. Now it waits
+  where it stopped, is put back out of sight, and fades in at the spot before the restart. The camera glides there instead of cutting. A throw-in no longer pops the ball up 2 m,
+  and a ball in the net settles instead of dropping. Measured over a whole match, the ball's largest visible step is now 37 m/s, a hard shot (before: jumps of 90 m/s and more).
+- **Changed, smoother movement:** players and the ball now follow smooth curves between the engine's five frames a second, not straight lines, wherever the movement really is smooth (kicks,
+  bounces and deflections still change direction sharply).
+- **Added, players run:** legs and arms swing with the player's speed and direction, with a little bounce, so a sprinter pumps and a standing player stands. Before they slid along in one pose.
+- **Added:** the ball's panels turn as it travels, and the crowd flashes: now and then, and in a burst after a goal.
+- **Fixed, squashed logo:** the vLeague crest (bottom-right corner, title cards, scoreboard) and team crests were stretched into a square. They keep their shape now.
+
 ## 0.37.1 (2026-10-07)
 
 No database change.
