@@ -117,3 +117,13 @@
   .hm-ko { font-size: 1.6rem; }
   .hm-card { padding: 16px 14px; }
 }
+
+/* What's new (0.33): the latest update, one line under the club name; tap for the changes. */
+.hm-new { margin: -8px 0 16px; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); font-size: .88rem; }
+.hm-new summary { cursor: pointer; color: var(--muted); }
+.hm-new summary b { color: var(--text); }
+.hm-new small { color: var(--faint); }
+.hm-new-tag { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--club); color: var(--on-club); font: 700 .68rem var(--font); letter-spacing: .06em; text-transform: uppercase; }
+.hm-new ul { margin: 10px 0 8px; padding-left: 20px; color: var(--muted); }
+.hm-new li { padding: 2px 0; }
+.hm-new a { font-weight: 600; font-size: .82rem; }

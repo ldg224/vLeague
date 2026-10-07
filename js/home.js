@@ -7,6 +7,7 @@ import { renderPitch } from './pitch.js';
 import { spoilerHidden, revealScore, fmtTime, fmtDay } from './prefs.js';
 import { clubs, esc, crestUrl } from './member.js';
 import { db } from './auth.js';
+import { whatsNew } from './whats-new.js';
 import {
   kickoff, status, shownScore, liveMinute, ladder, finished, byKickoff, matchUrl, logoUrl, sameDay,
 } from './dashboard-data.js';
@@ -19,6 +20,7 @@ let deadlines = [];    // line-up deadline per week (0.6)
 let revealed = [];     // locked team sheets (week_sheets) for the week on the match card
 let sheet = null;      // this club's current team sheet
 let unread = 0;
+let news = '';          // the latest update's summary (whats-new.js)
 
 // ---------------------------------------------------------------- small helpers
 const teamOf = code => all.find(c => c.code === code) || ctx.season?.teams.find(t => t.code === code) || { code, name: code };
@@ -180,7 +182,7 @@ function render() {
     main.innerHTML = `${top}${notice()}<p class="quiet">The league data didn’t load. <a href="home.html">Try again</a></p>`;
     return;
   }
-  main.innerHTML = `${top}${notice()}${matchCard(s, code, now)}${reveal(s, code, now)}
+  main.innerHTML = `${top}${news}${notice()}${matchCard(s, code, now)}${reveal(s, code, now)}
     <div class="hm-grid">${season(s, code, now)}${comingUp(s, code, now)}</div>`;
   drawPitches(s);
 }
@@ -248,6 +250,7 @@ if (ctx) {
       unread = ctx.season ? unreadCount(ctx.season, sbNews, club.code) : 0;
     } catch { unread = 0; }
     badge('inbox', unread);
+    news = await whatsNew(esc);
     render();
     ctx.main.addEventListener('click', onClick);
     setInterval(tick, 20000);

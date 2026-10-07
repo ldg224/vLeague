@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.33.0 (2026-10-07)
+
+No database change.
+
+- **Added, managers:** a small **What's new** note on Home, just under the club name: the latest version, its one-line summary and, when you tap it,
+  the main changes (Editor-only changes are left out). It reads `CHANGELOG.md` itself, so there is nothing extra to write at release time.
+
 ## 0.32.0 (2026-10-07)
 
 Draft: a visibility switch, a big status bar, and a simpler page. Needs `0033_draft_visible.sql` (run it once).
