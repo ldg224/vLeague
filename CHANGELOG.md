@@ -3,6 +3,17 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.39.2 (2026-10-07)
+
+Fixes to the broadcast. No database change.
+
+- **Reverted:** the players are the original pill-shaped figures again. The running figures with legs and arms from 0.38.0 are gone (the ball and player smoothing stays).
+- **Fixed, the possession panel:** the numbers were white over the club colours, unreadable when a club's colour is light. They now sit on a dark panel with the bar underneath, so they read on any colours.
+  The stat panels drop below it.
+- **Fixed, the squashed vLeague logo:** 0.38.0 fixed it in the highlights but missed two places in the broadcast (the corner logo and the replay transition). They keep their shape now.
+- **Fixed, other readability problems found while checking:** the Derby scoreboard (on the page and in the video) mixed club colours into a board that could turn light under white text, so it is darker now; and a
+  look with a light accent colour (yellow, say) now gets dark text on its plate, not white.
+
 ## 0.39.1 (2026-10-07)
 
 No database change.

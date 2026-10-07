@@ -24,12 +24,14 @@ export function roundPlate(season, fx) {
   return { big: r.label || `Week ${fx.week}`, small: '' };
 }
 
+// Text that reads on the look's accent colour (dark on a light accent, white on a dark one).
+const inkOn = hex => { const n = parseInt(hex.slice(1), 16); return (0.299 * (n >> 16 & 255) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)) >= 150 ? '#1b1400' : '#ffffff'; };
 const colourVars = (h, a) => `--h:${HEX.test(h || '') ? h : '#38bdf8'};--a:${HEX.test(a || '') ? a : '#f43f5e'}`;
 
 export function scoreboard(o) {
   const { fx, season, look, crests, score, state, goals, meta, h, a } = o, plate = roundPlate(season, fx);
   const banner = look.banner && look.banner.toLowerCase() !== plate.big.toLowerCase() ? look.banner : '';
-  return `<div class="sb" data-look="${esc(look.key)}" style="${look.accent ? `--look:${esc(look.accent)};` : ''}${colourVars(o.hColour, o.aColour)}">
+  return `<div class="sb" data-look="${esc(look.key)}" style="${look.accent ? `--look:${esc(look.accent)};--look-ink:${inkOn(look.accent)};` : ''}${colourVars(o.hColour, o.aColour)}">
     <div class="sb-plate">${look.ornament ? `<span class="sb-orn" aria-hidden="true">${esc(look.ornament)}</span>` : ''}
       <span class="sb-roundbox"><span class="sb-round">${esc(plate.big)}</span>${plate.small ? `<small class="sb-sub">${esc(plate.small)}</small>` : ''}</span>
       ${banner ? `<span class="sb-banner">${esc(banner)}</span>` : ''}${look.ornament ? `<span class="sb-orn" aria-hidden="true">${esc(look.ornament)}</span>` : ''}</div>

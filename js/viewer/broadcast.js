@@ -321,18 +321,17 @@ export class BroadcastRenderer extends HighlightsRenderer {
     ];
   }
 
-  // A possession bar under the scoreboard, with each side's share written in it.
+  // A possession panel under the scoreboard: the numbers sit on dark glass (so they read on any club colours), the bar below them.
   possessionBar(t) {
-    const c = this.c, [h, a] = this.possAt(t), x = 60, y = 156, w = 560, bh = 22;
-    c.save();
-    c.shadowColor = 'rgba(0,0,0,.4)'; c.shadowBlur = 14; this.pill(x, y, w, bh, 'rgba(6,26,56,0.9)', 8); c.shadowBlur = 0;
-    c.beginPath(); c.roundRect(x + 2, y + 2, w - 4, bh - 4, 6); c.clip();
-    c.fillStyle = this.hc; c.fillRect(x, y, w * h / 100, bh);
-    c.fillStyle = this.ac; c.fillRect(x + w * h / 100, y, w * a / 100, bh);
+    const c = this.c, [h, a] = this.possAt(t), x = 60, y = 156, w = 560, ph = 52;
+    c.save(); c.shadowColor = 'rgba(0,0,0,.4)'; c.shadowBlur = 14; this.pill(x, y, w, ph, 'rgba(6,26,56,0.92)', 10); c.restore();
+    this.text(`${h}%`, x + 18, y + 26, { size: 24, weight: 900 });
+    this.text('POSSESSION', x + w / 2, y + 24, { size: 15, weight: 800, align: 'center', colour: 'rgba(255,255,255,.75)', spacing: 3 });
+    this.text(`${a}%`, x + w - 18, y + 26, { size: 24, weight: 900, align: 'right' });
+    c.save(); c.beginPath(); c.roundRect(x + 14, y + 35, w - 28, 8, 4); c.clip();
+    c.fillStyle = this.hc; c.fillRect(x + 14, y + 35, (w - 28) * h / 100, 8);
+    c.fillStyle = this.ac; c.fillRect(x + 14 + (w - 28) * h / 100, y + 35, (w - 28) * a / 100, 8);
     c.restore();
-    this.text(`${h}%`, x + 14, y + 17, { size: 17, weight: 900, shadow: 6 });
-    this.text('POSSESSION', x + w / 2, y + 17, { size: 14, weight: 900, align: 'center', colour: 'rgba(255,255,255,.9)', spacing: 3, shadow: 6 });
-    this.text(`${a}%`, x + w - 14, y + 17, { size: 17, weight: 900, align: 'right', shadow: 6 });
   }
 
   // When a stat panel is due: every 8 minutes of match time from minute 5, for 9 seconds, in rotation. It never opens over a
@@ -347,7 +346,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
     for (const k of this.cards) if (t >= k.t - 0.5 && t < k.t + CARD_SHOW + 0.5) return;
     for (const ps of this.kickoffs) if (t >= ps.t - 0.5 && t < ps.t + 5) return;
     const [title, rows] = this.panelsAt(t)[m % 4], c = this.c, L = this.look();
-    const x = 60, y0 = 190, w = 560, head = 50, rowH = 52, h = head + rows.length * rowH + 14;
+    const x = 60, y0 = 218, w = 560, head = 50, rowH = 52, h = head + rows.length * rowH + 14;
     const p = easeOut(seg01(local, 0, 0.6)) * (1 - easeInOut(seg01(local, HOLD - 0.6, HOLD)));
     if (p <= 0.001) return;
     c.save();
@@ -447,7 +446,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
     c.fillStyle = this.limeGrad(0, 0, 140, 0); c.fillRect(-60, 0, 60, H);
     c.fillStyle = 'rgba(66,165,245,0.35)'; c.fillRect(-110, 0, 22, H);
     c.restore();
-    if (this.A.league && Math.abs(k - 0.5) < 0.3) { c.save(); c.globalAlpha = 1 - Math.abs(k - 0.5) / 0.3; c.drawImage(this.A.league, W / 2 - 80, H / 2 - 80, 160, 160); c.restore(); }
+    if (this.A.league && Math.abs(k - 0.5) < 0.3) { c.save(); c.globalAlpha = 1 - Math.abs(k - 0.5) / 0.3; this.leagueFit((W / 2 - 80) + (160) / 2, (H / 2 - 80) + (160) / 2, 160, 160); c.restore(); }
   }
 
   // Small red cards above a team's name on the score bug, one per player sent off so far.
@@ -466,7 +465,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
     this.redCards(t, this.home.code, x + 88, y + 4);
     this.redCards(t, this.away.code, x + 322, y + 4);
     if (t < this.t1) this.addedBoard(x, y, t);
-    if (this.A.league) { c.globalAlpha = 0.75; c.drawImage(this.A.league, W - 110, H - 110, 60, 60); c.globalAlpha = 1; }
+    if (this.A.league) { c.globalAlpha = 0.75; this.leagueFit((W - 110) + (60) / 2, (H - 110) + (60) / 2, 60, 60); c.globalAlpha = 1; }
   }
 
   // A scoreline over the pitch at half-time and full-time.

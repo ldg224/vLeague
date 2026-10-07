@@ -53,13 +53,13 @@
 /* Derby: the board splits in the two clubs' colours, with an orange plate. */
 .sb[data-look="derby"] .sb-plate { background: linear-gradient(90deg, #ff7043, #ff8a50); color: #1b0a00; clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 100%, 0 100%); padding-inline: 30px; border-radius: 0; }
 .sb[data-look="derby"] .sb-banner { background: #1b0a00; color: #ffb59a; }
-.sb[data-look="derby"] .sb-board { background: linear-gradient(115deg, color-mix(in srgb, var(--h) 48%, #0b0f17) 0 49.2%, #ff7043 49.2% 50.8%, color-mix(in srgb, var(--a) 48%, #0b0f17) 50.8% 100%); color: #fff; border: 0; }
+.sb[data-look="derby"] .sb-board { background: linear-gradient(115deg, color-mix(in srgb, var(--h) 28%, #0b0f17) 0 49.2%, #ff7043 49.2% 50.8%, color-mix(in srgb, var(--a) 28%, #0b0f17) 50.8% 100%); color: #fff; border: 0; }
 .sb[data-look="derby"] .sb-board::before { content: ''; position: absolute; inset: auto 0 0 0; height: 5px; background: linear-gradient(90deg, #ff7043, #ffb347, #ff7043); }
 .sb[data-look="derby"] .sb-team.h::after, .sb[data-look="derby"] .sb-team.a::after { background: #fff; }
 
 /* Any other look (added as data): the board takes the look's accent. */
-.sb:not([data-look="classic"]):not([data-look="finals"]):not([data-look="grand_final"]):not([data-look="christmas"]):not([data-look="derby"]) .sb-plate { background: var(--look); color: #fff; }
-.sb:not([data-look="classic"]):not([data-look="finals"]):not([data-look="grand_final"]):not([data-look="christmas"]):not([data-look="derby"]) .sb-banner { background: rgba(0, 0, 0, .3); color: #fff; }
+.sb:not([data-look="classic"]):not([data-look="finals"]):not([data-look="grand_final"]):not([data-look="christmas"]):not([data-look="derby"]) .sb-plate { background: var(--look); color: var(--look-ink, #fff); }
+.sb:not([data-look="classic"]):not([data-look="finals"]):not([data-look="grand_final"]):not([data-look="christmas"]):not([data-look="derby"]) .sb-banner { background: rgba(0, 0, 0, .3); color: var(--look-ink, #fff); }
 .sb:not([data-look="classic"]):not([data-look="finals"]):not([data-look="grand_final"]):not([data-look="christmas"]):not([data-look="derby"]) .sb-board { background: var(--card); border: 2px solid var(--look); }
 
 @media (max-width: 640px) { .sb-board { padding: 14px 12px; gap: 8px; } .sb-plate { padding: 6px 12px; } }

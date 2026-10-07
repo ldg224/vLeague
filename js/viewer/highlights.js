@@ -25,6 +25,8 @@ function loadImg(src) {
   return new Promise(res => { if (!src) return res(null); const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
 }
 const shirt = id => String(id).slice(-2);
+// A colour moved toward another by t (0 = a, 1 = b), as a hex string.
+const mixHex = (a, b, t) => { const n = s => parseInt(String(s).slice(1), 16), x = n(a), y = n(b), f = (p, q) => Math.round(p + (q - p) * t); return '#' + [16, 8, 0].map(sh => f(x >> sh & 255, y >> sh & 255).toString(16).padStart(2, '0')).join(''); };
 const LEAGUE_ASPECT = 116 / 158;   // the vLeague crest's width over its height (assets/brand/crest.svg viewBox)
 const lastName = n => String(n || '').split(' ').slice(-1)[0];
 
@@ -918,46 +920,20 @@ export class HighlightsRenderer {
     const side = it.i < this.nHome ? 0 : 1;
     let col = side ? this.ac : this.hc;
     if (this.gkIdx.has(it.i)) col = side ? '#a855f7' : '#f5b042';
-    // Pace and direction (from the match data). The stride follows the distance run, so a standing player stands and a sprinter pumps.
-    const sp = Math.hypot(it.vx || 0, it.vy || 0), moving = sp > 0.35;
-    const ux = moving ? it.vx / sp : 0, uy = moving ? it.vy / sp : 0, qx = moving ? -uy : 0, qy = moving ? ux : 1;
-    const phase = moving ? ((it.x * ux + it.y * uy) / 1.15) * Math.PI : 0, amp = clamp((sp - 0.4) / 5.0, 0, 1);
-    const bob = Math.abs(Math.sin(phase)) * 0.06 * amp, hipZ = 0.92 + bob;
     const r = Math.max(10, p[2] * 0.6);
-    const head = cam.p(it.x, it.y, 1.85 + bob), hip = cam.p(it.x, it.y, hipZ), sho = cam.p(it.x, it.y, 1.58 + bob);
-    const top = head ? head[1] : p[1] - r * 2, bx = p[0], bh = p[1] - top, bw = Math.max(12, bh * 0.42);
+    const head = cam.p(it.x, it.y, 1.85);
+    const top = head ? head[1] : p[1] - r * 2;
     // shadow
     c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(p[0] + r * 0.4, p[1], r * 1.05, r * 0.42, 0, 0, Math.PI * 2); c.fill();
-    // legs (behind the body): shorts to the knee, sock and boot below, swinging fore and aft along the line of running
-    const shorts = shade(col, 0.55), skin = '#f1c9a5';
-    c.lineCap = 'round'; c.lineJoin = 'round';
-    for (let s = 0; s < 2; s++) {
-      const ph = phase + s * Math.PI, sw = Math.sin(ph) * amp, lift = Math.max(0, Math.cos(ph)) * amp * 0.3, off = s ? 0.12 : -0.12;
-      const foot = cam.p(it.x + ux * sw * 0.6 + qx * off, it.y + uy * sw * 0.6 + qy * off, lift);
-      const hp = cam.p(it.x + qx * off * 0.8, it.y + qy * off * 0.8, hipZ);
-      const knee = cam.p(it.x + ux * (sw * 0.3 + 0.12 * amp) + qx * off, it.y + uy * (sw * 0.3 + 0.12 * amp) + qy * off, 0.5 + lift * 0.9);
-      if (!foot || !hp || !knee) continue;
-      c.strokeStyle = shorts; c.lineWidth = Math.max(4, bw * 0.36); c.beginPath(); c.moveTo(hp[0], hp[1]); c.lineTo(knee[0], knee[1]); c.stroke();
-      c.strokeStyle = col; c.lineWidth = Math.max(3, bw * 0.26); c.beginPath(); c.moveTo(knee[0], knee[1]); c.lineTo(foot[0], foot[1]); c.stroke();
-      c.fillStyle = '#10141b'; c.beginPath(); c.ellipse(foot[0] + (ux ? Math.sign(ux) * bw * 0.06 : 0), foot[1], bw * 0.2, bw * 0.1, 0, 0, Math.PI * 2); c.fill();
-    }
-    // body: shorts block at the hips, the shirt above it
-    const bt = sho ? sho[1] : top + bh * 0.28, bb = hip ? hip[1] : p[1] - bh * 0.4;
+    // body: a short upright capsule, like a player figure seen from the stand
+    const bx = p[0], bh = p[1] - top, bw = Math.max(12, bh * 0.42);
     const g = c.createLinearGradient(bx - bw, 0, bx + bw, 0); g.addColorStop(0, col); g.addColorStop(1, shade(col, 0.55));
-    c.fillStyle = g; c.beginPath(); c.roundRect(bx - bw / 2, bt - bw * 0.1, bw, Math.max(bw * 0.8, bb - bt + bw * 0.1), bw / 2); c.fill();
-    // arms swing against the legs
-    for (let s = 0; s < 2; s++) {
-      const ph = phase + s * Math.PI + Math.PI, sw = Math.sin(ph) * amp, off = s ? 0.24 : -0.24;
-      const sh2 = cam.p(it.x + qx * off, it.y + qy * off, 1.45 + bob), hand = cam.p(it.x + ux * sw * 0.45 + qx * off * 1.15, it.y + uy * sw * 0.45 + qy * off * 1.15, 0.98 + bob + Math.max(0, sw) * 0.12);
-      if (!sh2 || !hand) continue;
-      c.strokeStyle = skin; c.lineWidth = Math.max(3, bw * 0.17); c.beginPath(); c.moveTo(sh2[0], sh2[1]); c.lineTo(hand[0], hand[1]); c.stroke();
-    }
-    const hc = head ? head[1] + bw * 0.16 : top + bh * 0.16;
-    c.fillStyle = skin; c.beginPath(); c.arc(bx, hc, bw * 0.34, 0, Math.PI * 2); c.fill();
+    c.fillStyle = g; c.beginPath(); c.roundRect(bx - bw / 2, top + bh * 0.28, bw, bh * 0.72, bw / 2); c.fill();
+    c.fillStyle = '#f1c9a5'; c.beginPath(); c.arc(bx, top + bh * 0.16, bw * 0.34, 0, Math.PI * 2); c.fill();
     if (holder) { c.lineWidth = 3; c.strokeStyle = '#fff'; c.beginPath(); c.ellipse(p[0], p[1], r * 1.5, r * 0.6, 0, 0, Math.PI * 2); c.stroke(); }
     // shirt number
     const pl = this.d.players[it.i];
-    this.text(shirt(pl.id), bx, bt + (bb - bt) * 0.42, { size: Math.max(9, bw * 0.55), weight: 900, align: 'center', colour: onColour(col), base: 'middle' });
+    this.text(shirt(pl.id), bx, top + bh * 0.62, { size: Math.max(9, bw * 0.55), weight: 900, align: 'center', colour: onColour(col), base: 'middle' });
     if (holder) {
       const name = lastName(pl.name).toUpperCase(), fs = 24;
       c.font = `900 ${fs}px ${FONT}`; const w = c.measureText(name).width + 28;
@@ -1119,7 +1095,7 @@ export class HighlightsRenderer {
     else if (key === 'grand_final') { plateFill = gold('#fff3b0', '#d4a900'); plateInk = '#2a1d00'; }
     else if (key === 'christmas') { plateFill = '#c62828'; }
     else if (key === 'derby') { plateFill = gold('#ff8a50', '#ff7043'); plateInk = '#1b0a00'; }
-    else if (key !== 'classic' && acc) plateFill = acc;
+    else if (key !== 'classic' && acc) { plateFill = acc; plateInk = onColour(acc); }
     c.save(); c.shadowColor = 'rgba(0,0,0,.4)'; c.shadowBlur = 16;
     c.beginPath(); c.roundRect(x, py, pw, ph + 6, [12, 12, 0, 0]); c.fillStyle = plateFill; c.fill(); c.restore();
     if (key === 'christmas') { c.save(); c.strokeStyle = '#fff'; c.lineWidth = 2; c.beginPath(); c.roundRect(x + 3, py + 3, pw - 6, ph - 2, [9, 9, 0, 0]); c.stroke(); c.restore(); }
@@ -1129,7 +1105,7 @@ export class HighlightsRenderer {
     let fill = 'rgba(6,26,56,0.92)';
     if (key === 'christmas') fill = 'rgba(15,38,26,0.95)';
     else if (key === 'grand_final') fill = 'rgba(14,20,32,0.96)';
-    else if (key === 'derby') { const g = c.createLinearGradient(x, 0, x + w, 0); g.addColorStop(0, this.hc + 'cc'); g.addColorStop(0.49, '#0b0f17f2'); g.addColorStop(0.51, '#0b0f17f2'); g.addColorStop(1, this.ac + 'cc'); fill = g; }
+    else if (key === 'derby') { const g = c.createLinearGradient(x, 0, x + w, 0); g.addColorStop(0, mixHex(this.hc, '#0b0f17', 0.72)); g.addColorStop(0.49, '#0b0f17'); g.addColorStop(0.51, '#0b0f17'); g.addColorStop(1, mixHex(this.ac, '#0b0f17', 0.72)); fill = g; }
     this.pill(x, y, w, h, fill, [0, 14, 14, 14]);
     c.restore();
     // trim
