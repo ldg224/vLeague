@@ -1,11 +1,11 @@
-# vLeague
+﻿# vLeague
 
 Virtual football. The home of vLeague from Season 1: sign in, manage your club, and (soon) everything else.
 
 - Live site: https://ldg224.github.io/vLeague/
 - Plain HTML, CSS and JavaScript on GitHub Pages; no build step.
 - Accounts and data: Supabase (free plan). Setup: `docs/BACKEND.md`.
-- What's next: `docs/PLAN.md`. What changed in each version: `CHANGELOG.md`. How to release or roll back: `docs/RELEASING.md`.
+- What's next: the plan is kept privately (not in this repo). What changed in each version: `CHANGELOG.md`. How to release or roll back: `docs/RELEASING.md`.
 - Brand: the vLeague crest, the Material Blue ramp with white as the accent, Oswald + Figtree
   (full rules in the s3 site's `docs/BRAND.md`).
 
@@ -32,4 +32,4 @@ Virtual football. The home of vLeague from Season 1: sign in, manage your club, 
 - `js/version.js`: the version shown in footers.
 - `css/site.css`: brand tokens, buttons, messages and the sign-in pages.
 - `supabase/migrations/`: the database setup, in order. `supabase/tests/rls_check.py`: checks the security rules as guest, manager and office.
-- `assets/brand/`: crest, favicon, app icon. `assets/img/stadium-dusk.jpg`: the dashboard's board photo, by Pascal Müller on Unsplash (Unsplash License).
+- `assets/brand/`: crest, favicon, app icon. `assets/img/stadium-dusk.jpg`: the dashboard's board photo, by Pascal MÃ¼ller on Unsplash (Unsplash License).

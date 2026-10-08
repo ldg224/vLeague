@@ -15,12 +15,12 @@ Virtual football league app. Managers sign in and run their club; guests get a m
 
 ## Where to read first
 - `README.md`: pages and files overview.
-- `docs/PLAN.md`: roadmap and the user's recorded decisions. Check it before changing behaviour. Work items use IDs, not version numbers: EU-nn (essential), VU-nn (visual), FU-nn (future), T-nn (testing). IDs are permanent; cite them in commits and the CHANGELOG, and move finished items to Done.
+- `C:\Claude\Plans\vLeague\PLAN.md` (private, in the workspace repo, deliberately not in this public repo): roadmap, issues and the user's recorded decisions. Check it before changing behaviour. Work items use IDs, not version numbers: EU-nn (essential), VU-nn (visual), FU-nn (future), T-nn (testing). IDs are permanent; cite them in commits and the CHANGELOG, and move finished items to Done.
 - `docs/RELEASING.md`: versioning and release steps (below).
 - `docs/BACKEND.md`, `docs/DRAFT.md`, `js/sim/docs/`: backend, draft, and simulator details.
 - `CHANGELOG.md`: what changed in each version.
 
-## Product decisions to respect (from `docs/PLAN.md`)
+## Product decisions to respect (from the private PLAN.md)
 - A club's primary colour runs its whole page. The Editor and signed-out pages stay vLeague navy and blue.
 - Guests stay fully signed out; the dashboard signs out anyone who arrives signed in. No guest accounts.
 - No chat, and nothing sent to the league's WhatsApp group.
