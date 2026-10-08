@@ -50,7 +50,7 @@ export class MatchPlayer {
     Object.assign(this, ctx);
     this.el = document.getElementById('mp');
     this.$ = s => this.el.querySelector(s);
-    this.el.classList.toggle('mp-live', this.st === 'live');   // a live match is a broadcast: no play, pause, seek or speed
+    this.el.classList.toggle('mp-live', this.st === 'live');   // a live match can be rewound, paused and jumped back to live, but has no speed control
     this.cv = this.$('#mp-canvas'); this.g = this.cv.getContext('2d');
     this.view = null; this.r = {}; this.playing = false; this.t = 0; this.speed = 1;
     this.scale = this.bestScale = startScale(); this.cost = []; this.slow = this.fast = 0; this.holdUntil = performance.now() + 3000; this.dirty = true; this.exporting = false;
@@ -181,7 +181,7 @@ export class MatchPlayer {
     big.hidden = playing || this.view === 'tactical';
     big.innerHTML = this.view === 'highlights' && this.t >= b - 0.05 ? icon('rotate-cw') : icon('play');
     const lv = this.$('#mp-live');
-    if (lv) lv.classList.toggle('behind', liveSimTime(this.FX, this.S) - this.t > 5);
+    if (lv) { const behind = liveSimTime(this.FX, this.S) - this.t > 5; lv.classList.toggle('behind', behind); lv.textContent = behind ? '● Jump to live' : '● Live'; }
     this.$('#mp-seek').style.setProperty('--pos', `${((this.t - a) / (b - a || 1)) * 100}%`);
   }
 
@@ -189,7 +189,9 @@ export class MatchPlayer {
     if (this.view === 'tactical') { this.tactical.play(); return this.syncUi(); }
     const [, b] = this.range();
     if (this.t >= b - 0.05 && this.view === 'highlights') this.t = 0;
-    this.playing = true; this.syncUi();
+    this.playing = true;
+    this.follow = this.st === 'live' && this.view !== 'highlights' && this.t >= liveSimTime(this.FX, this.S) - 2;   // resuming at the live edge locks back on to live
+    this.syncUi();
   }
   pause() { if (this.view === 'tactical') this.tactical.pause(); this.playing = false; this.follow = false; this.syncUi(); }
   seek(t) {
@@ -202,7 +204,6 @@ export class MatchPlayer {
   }
   // A timeline row: jump there in the full-match view.
   jump(tSim) {
-    if (this.st === 'live') return;
     if (this.view === 'highlights') this.show(this.bc?.BroadcastRenderer ? 'broadcast' : 'tactical');
     this.seek(tSim - 6); this.play();
   }
@@ -210,16 +211,15 @@ export class MatchPlayer {
   wire() {
     this.el.addEventListener('click', e => {
       const v = e.target.closest('[data-view]');
-      if (this.st === 'live' && e.target.closest('#mp-play, #mp-big, #mp-live, .mp-canvas')) return;   // nothing to control while live
       if (v) { this.pause(); return this.show(v.dataset.view); }
       if (e.target.closest('#mp-play, #mp-big')) return (this.view === 'tactical' ? this.tactical?.playing : this.playing) ? this.pause() : this.play();
-      if (e.target.closest("#mp-live")) { this.seek(liveSimTime(this.FX, this.S)); return this.play(); }
+      if (e.target.closest("#mp-live")) { this.seek(liveSimTime(this.FX, this.S)); this.follow = true; return this.play(); }
       if (e.target.closest('#mp-full')) return this.fullscreen();
       // Full screen with the controls hidden: the first tap only brings them back.
       if (this._tapWoke && e.target.closest('.mp-stage')) { this._tapWoke = false; return; }
       if (e.target.closest('.mp-canvas') && this.view !== 'tactical') return this.playing ? this.pause() : this.play();
     });
-    this.el.addEventListener('input', e => { if (e.target.id === 'mp-seek' && this.st !== 'live') this.seek(+e.target.value); });
+    this.el.addEventListener('input', e => { if (e.target.id === 'mp-seek') this.seek(+e.target.value); });
     this.el.addEventListener('change', e => {
       if (e.target.id === 'mp-speed') { this.speed = +e.target.value; if (this.tactical) this.tactical.speed = this.speed; }
     });
@@ -299,7 +299,7 @@ export class MatchPlayer {
       // the background), so the page showed goals before the video did.
       if (this.follow && this.st === 'live' && this.view !== 'highlights') this.t = liveSimTime(this.FX, this.S);
       else this.t += dt * (this.st === "live" && this.view !== "highlights" ? liveSpeed(this.FX, this.S, this.t) : this.speed);
-      if (this.t >= b) { this.t = b; if (this.view === 'highlights' || this.st !== 'live') this.playing = false; }
+      if (this.t >= b) { this.t = b; if (this.view === 'highlights' || this.st !== 'live') this.playing = false; else this.follow = true; }
       this.dirty = true;
     }
     if (!this.dirty) return;

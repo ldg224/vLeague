@@ -61,7 +61,6 @@ body.mp-fs-open { overflow: hidden; }
 .mp-marks .mk-card.mk-second_yellow::before { content: ''; position: absolute; left: -3px; top: -2px; width: 6px; height: 8px; background: #facc15; border-radius: 2px; z-index: -1; }
 .mp-marks .mk-ht, .mp-marks .mk-ft { background: rgba(255,255,255,.3); border-radius: 1px; width: 2px; margin-left: -1px; height: 10px; }
 #mp-full { margin-left: auto; }
-.ctl.live.behind { opacity: .6; }
 
 
 /* vLeague additions */
@@ -69,10 +68,8 @@ body.mp-fs-open { overflow: hidden; }
 .mp-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: pulse 1.6s ease-in-out infinite; }
 .reduce-motion .mp-pill .dot { animation: none; }
 .mp-head .card-title { font-size: 1.05rem; }
-/* A live match is a broadcast: no play, pause, seek or speed. Only full screen stays. */
-.mp-live .mp-controls { margin-top: 8px; justify-content: flex-end; }
-.mp-live .mp-controls > :not(#mp-full) { display: none !important; }
+/* A live match can be rewound, paused and played, and jumped back to live; there is no speed control and the big play button is off. */
 .mp-live .mp-big { display: none !important; }
-.mp-live .mp-canvas { cursor: default; }
+.ctl.live.behind { opacity: 1; background: var(--live-fg, #ff5252); color: #fff; }
 .mp-live .mp-tabs { }
 .gc-card.replay-card { padding: 14px; }

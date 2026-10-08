@@ -3,6 +3,12 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.44.0 (2026-10-09)
+
+Rewind a live match. No database change. If anything goes wrong, `v0.43.1` is the version to go back to (`docs/RELEASING.md`).
+
+- **Added, live matches (EU-06):** the match viewer's seek bar, Pause / Play and timeline rows now work during a live match, so a manager can go back and watch a goal or a card again. You can only go back to what has already happened, never ahead of the live moment, and the dots on the bar show only events that have happened. There is still no speed control: the picture always runs at the live pace. When you are more than 5 seconds behind, the "● Live" button turns red and reads "Jump to live"; pressing it, or letting the picture catch up, locks back on to live. Works in the broadcast and tactical views.
+
 ## 0.43.1 (2026-10-09)
 
 Card colours in the match viewer. No database change. If anything goes wrong, `v0.43.0` is the version to go back to (`docs/RELEASING.md`).
