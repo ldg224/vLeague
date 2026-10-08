@@ -1,7 +1,7 @@
 // The Game centre's line-ups on a pitch (FU-08). Pure functions, no DOM: they return html.
 //   byPlace(formation)       -> a sort for items with a `slot`: goalkeeper, then defence, midfield and attack, each line left to right
 //   pitchHtml(home, away, k) -> both elevens on one pitch, the home side on the left attacking right (home at the top on a phone)
-// A side is { code, formation, captain, items: [{ id, name, slot, position }], extras(id) -> icons html, rating(id) -> { value, cls, motm } | null }.
+// A side is { code, formation, captain, items: [{ id, name, slot, position }], extras(id) -> { play, cards } icons html (goals and assists / cards), rating(id) -> { value, cls, motm } | null }.
 // k = { colour(code) -> '#rrggbb' | undefined, label(code) -> the club's name, shirt(id) -> shirt number | undefined }.
 import { FORMATIONS, DEFAULT_FORMATION } from './pitch.js';
 import { onColour } from './club-colour.js';
@@ -32,8 +32,8 @@ function side(s, colour, cls, k) {
   const bands = [];
   for (const x of s.items) { const [line, across] = placeOf(s.formation, x); (bands[line] ||= []).push({ x, across }); }
   return `<div class="pp-half ${cls}" style="--b:${esc(colour)};--t:${esc(onColour(colour))}">${bands.filter(Boolean).map(b => `<div class="pp-band">${b.sort((p, q) => p.across - q.across).map(({ x }) => {
-    const r = s.rating?.(x.id), n = k.shirt?.(x.id);
-    return `<div class="pp-p${r?.motm ? ' motm' : ''}"><div class="pp-b">${n == null || n === '' ? esc(x.slot || x.position || '') : esc(n)}<span class="pp-ev">${s.extras?.(x.id) || ''}</span>${s.captain === x.id ? '<i class="pp-c" title="Captain">C</i>' : ''}</div><div class="pp-n">${esc(surname(x.name))}</div>${r ? `<span class="rating ${r.cls}">${esc(r.value)}</span>` : ''}</div>`;
+    const r = s.rating?.(x.id), n = k.shirt?.(x.id), ev = s.extras?.(x.id) || {};
+    return `<div class="pp-p${r?.motm ? ' motm' : ''}"><div class="pp-b">${n == null || n === '' ? esc(x.slot || x.position || '') : esc(n)}${ev.cards ? `<span class="pp-cards">${ev.cards}</span>` : ''}${ev.play ? `<span class="pp-play">${ev.play}</span>` : ''}${s.captain === x.id ? '<i class="pp-c" title="Captain">C</i>' : ''}</div><div class="pp-n">${esc(surname(x.name))}</div>${r ? `<span class="rating ${r.cls}">${esc(r.value)}</span>` : ''}</div>`;
   }).join('')}</div>`).join('')}</div>`;
 }
 

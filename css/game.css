@@ -48,6 +48,7 @@
 .gc-lu .pos { color: var(--faint); font-size: .75rem; font-weight: 700; }
 .gc-lu small { color: var(--faint); }
 .rating { display: inline-block; min-width: 2.4rem; padding: 2px 6px; border-radius: 6px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; background: var(--surface-raised, var(--line)); }
+.rating.r-na { background: transparent; color: var(--faint); border: 1px dashed var(--line); font-weight: 600; font-size: .75rem; }
 .rating.r-hi { background: #2e8b57; color: #fff; } .rating.r-mid { background: #c79a2b; color: #1a1200; } .rating.r-lo { background: #b84a4a; color: #fff; }
 .gc-vs { width: 100%; border-collapse: collapse; font-size: .92rem; }
 .gc-vs th, .gc-vs td { padding: 8px 4px; border-bottom: 1px solid var(--line); text-align: center; }
@@ -110,9 +111,13 @@ html { scroll-behavior: smooth; }
 .pp-b { position: relative; width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .9);
   background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--b) 78%, #fff), var(--b)); color: var(--t); font: 800 .9rem var(--font); font-variant-numeric: tabular-nums; box-shadow: 0 5px 12px rgba(0, 0, 0, .5); }
 .pp-p.motm .pp-b { border-color: #ffd54f; box-shadow: 0 0 0 3px rgba(255, 213, 79, .55), 0 5px 12px rgba(0, 0, 0, .5); }
-.pp-ev { position: absolute; left: 50%; bottom: -9px; transform: translateX(-50%); display: inline-flex; gap: 1px; white-space: nowrap; }
-.pp-ev svg { width: 14px; height: 14px; }
-.pp-c { position: absolute; top: -7px; right: -7px; width: 16px; height: 16px; display: grid; place-items: center; border-radius: 50%; background: #ffd54f; color: #1a1200; font: 800 .65rem/1 var(--font); font-style: normal; }
+/* On a player's badge: the captain's gold C at the top left, cards at the top right, goals and assists at the bottom right. */
+.pp-c { position: absolute; top: -7px; left: -7px; width: 17px; height: 17px; display: grid; place-items: center; border-radius: 50%; background: #0b1626; border: 1.5px solid #ffd54f; color: #ffd54f; font: 800 .66rem/1 var(--font); font-style: normal; }
+.pp-cards { position: absolute; top: -8px; right: -8px; display: inline-flex; gap: 1px; }
+.pp-cards svg { width: 13px; height: 17px; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .6)); }
+.pp-play { position: absolute; bottom: -7px; right: -10px; display: inline-flex; align-items: center; gap: 1px; padding: 1px 4px; border-radius: 999px; background: rgba(8, 18, 30, .92); color: #fff; }
+.pp-play svg { width: 15px; height: 15px; }
+.pp .rating.r-na { background: rgba(8, 18, 30, .72); color: #d6dfeb; border-color: rgba(255, 255, 255, .28); }
 .pp-n { max-width: 100%; padding: 2px 7px; border-radius: 6px; background: rgba(8, 18, 30, .86); color: #fff; font-size: .72rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pp-p .rating { font-size: .7rem; min-width: 2rem; padding: 1px 4px; }
 @media (max-width: 640px) {
