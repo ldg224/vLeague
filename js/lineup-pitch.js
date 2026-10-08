@@ -33,7 +33,7 @@ function side(s, colour, cls, k) {
   for (const x of s.items) { const [line, across] = placeOf(s.formation, x); (bands[line] ||= []).push({ x, across }); }
   return `<div class="pp-half ${cls}" style="--b:${esc(colour)};--t:${esc(onColour(colour))}">${bands.filter(Boolean).map(b => `<div class="pp-band">${b.sort((p, q) => p.across - q.across).map(({ x }) => {
     const r = s.rating?.(x.id), n = k.shirt?.(x.id), ev = s.extras?.(x.id) || {};
-    return `<div class="pp-p${r?.motm ? ' motm' : ''}"><div class="pp-b">${n == null || n === '' ? esc(x.slot || x.position || '') : esc(n)}${ev.cards ? `<span class="pp-cards">${ev.cards}</span>` : ''}${ev.play ? `<span class="pp-play">${ev.play}</span>` : ''}${s.captain === x.id ? '<i class="pp-c" title="Captain">C</i>' : ''}</div><div class="pp-n">${esc(surname(x.name))}</div>${r ? `<span class="rating ${r.cls}">${esc(r.value)}</span>` : ''}</div>`;
+    return `<div class="pp-p${r?.motm ? ' motm' : ''}" title="${esc(x.name)}"><div class="pp-b">${n == null || n === '' ? esc(x.slot || x.position || '') : esc(n)}${ev.cards ? `<span class="pp-cards">${ev.cards}</span>` : ''}${ev.play ? `<span class="pp-play">${ev.play}</span>` : ''}${s.captain === x.id ? '<i class="pp-c" title="Captain">C</i>' : ''}</div><div class="pp-n">${esc(surname(x.name))}</div>${r ? `<span class="rating ${r.cls}">${esc(r.value)}</span>` : ''}</div>`;
   }).join('')}</div>`).join('')}</div>`;
 }
 
@@ -41,5 +41,5 @@ export function pitchHtml(h, a, k) {
   const hc = k.colour(h.code) || '#1e88e5', ac0 = k.colour(a.code), ac = ac0 && !sameColour(hc, ac0) ? ac0 : '#90caf9';
   const cap = (s, c) => `<span style="--b:${esc(c)}"><i></i>${esc(k.label(s.code))}${s.formation ? ` <small>${esc(s.formation)}</small>` : ''}</span>`;
   return `<div class="pp-wrap"><div class="pp-cap">${cap(h, hc)}${cap(a, ac)}</div>
-    <div class="pp" aria-hidden="true"><i class="pp-mid"></i><i class="pp-circle"></i><i class="pp-box l"></i><i class="pp-box r"></i><i class="pp-six l"></i><i class="pp-six r"></i>${side(h, hc, 'home', k)}${side(a, ac, 'away', k)}</div></div>`;
+    <div class="pp" role="group" aria-label="Line-ups on a pitch"><i class="pp-mid"></i><i class="pp-circle"></i><i class="pp-box l"></i><i class="pp-box r"></i><i class="pp-six l"></i><i class="pp-six r"></i>${side(h, hc, 'home', k)}${side(a, ac, 'away', k)}</div></div>`;
 }

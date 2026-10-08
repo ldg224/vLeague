@@ -177,7 +177,9 @@ async function run() {
           <tr><th>Attack rating</th><td>${rate(R.home.att)}</td><td>${rate(R.away.att)}</td></tr>
           <tr><th>Defence rating</th><td>${rate(R.home.def)}</td><td>${rate(R.away.def)}</td></tr></tbody></table>
         ${meets.length ? `<p class="gc-note">Met this season: ${meets.map(f => `${esc(f.home)} ${f.result.home}–${f.result.away} ${esc(f.away)}`).join(', ')}</p>` : ''}</section>
-      <section class="gc-sec"><h2>Line-ups</h2>${hx.items.length && ax.items.length ? pitchHtml(hx, ax, pitchKit) : ''}<div class="gc-two"><div><h3>${esc(nameOf(home()))}</h3>${lu(hx)}</div><div><h3>${esc(nameOf(away()))}</h3>${lu(ax)}</div></div>${hx.items.length || ax.items.length ? '<p class="gc-note">The number beside each player is their average match rating this season, and N/A means they haven’t played yet. The gold C is the captain.</p>' : ''}</section>`;
+      <section class="gc-sec"><h2>Line-ups</h2>${hx.items.length && ax.items.length
+        ? `${pitchHtml(hx, ax, pitchKit)}<p class="gc-note">The number under each name is that player’s average match rating this season, and N/A means they haven’t played yet. The gold C is the captain.</p>`
+        : `<div class="gc-two"><div><h3>${esc(nameOf(home()))}</h3>${lu(hx)}</div><div><h3>${esc(nameOf(away()))}</h3>${lu(ax)}</div></div>`}</section>`;
   }
 
   // ---------------------------------------------------------------- the match viewer
@@ -236,9 +238,6 @@ async function run() {
     const t = horizon(), full = st() === 'ft', ev = eventsTo(t), P = data.stats.players, bestId = full ? bestPlayer() : null;
     const goals = id => ev.filter(e => e.type === 'goal' && e.scorer === id && !e.own_goal).length, assists = id => ev.filter(e => e.type === 'goal' && e.assist === id).length;
     const cards = id => ev.filter(e => e.type === 'card' && e.player === id).map(e => (e.card === 'yellow' ? ICONS.yellow : ICONS.red)).join('');
-    const col = c => { const team = data.teams[c === fx.home ? 'home' : 'away']; return `<div><h3>${esc(fullNameOf(teamOf(season, c)))} <small>${esc(team.formation || '')}</small></h3><ol class="gc-lu">${[...team.lineup].sort(byPlace(team.formation)).map(x => {
-      const r = full ? P[x.id]?.rating : null;
-      return `<li><span class="pos">${esc(x.slot || x.position)}</span><span class="nm">${shirtHtml(x.id)}${esc(x.name)}${team.captain === x.id ? ' <small>(c)</small>' : ''} <span class="evs">${ICONS.ball.repeat(goals(x.id))}${ICONS.assist.repeat(assists(x.id))}${cards(x.id)}</span></span>${r ? `<span class="rating ${x.id === bestId ? 'r-motm' : r >= 7 ? 'r-hi' : r < 6 ? 'r-lo' : 'r-mid'}"${x.id === bestId ? ' title="Man of the match"' : ''}>${r.toFixed(1)}</span>` : ''}</li>`; }).join('')}</ol></div>`; };
     const side = c => {
       const team = data.teams[c === fx.home ? 'home' : 'away'];
       return {
@@ -247,7 +246,7 @@ async function run() {
         rating: id => { const r = full ? P[id]?.rating : null; return r ? { value: r.toFixed(1), cls: id === bestId ? 'r-motm' : r >= 7 ? 'r-hi' : r < 6 ? 'r-lo' : 'r-mid', motm: id === bestId } : null; },
       };
     };
-    return `<section class="gc-sec" id="gc-lineups"><h2>Line-ups</h2>${pitchHtml(side(fx.home), side(fx.away), pitchKit)}<div class="gc-two">${col(fx.home)}${col(fx.away)}</div>${full ? '' : '<p class="gc-note">Ratings appear at full time.</p>'}</section>`;
+    return `<section class="gc-sec" id="gc-lineups"><h2>Line-ups</h2>${pitchHtml(side(fx.home), side(fx.away), pitchKit)}${full ? '' : '<p class="gc-note">Ratings appear at full time.</p>'}</section>`;
   }
 
   // ---------------------------------------------------------------- page

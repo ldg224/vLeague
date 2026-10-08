@@ -5,10 +5,11 @@ Every published version of the vLeague app. Newest first. How versions work and 
 
 ## 0.42.2 (2026-10-08)
 
-Better football and boot icons, a tidier player badge on the line-up pitch, and averages and captains before kick-off. No database change. If anything goes wrong, `v0.42.1` is the version to go back to (`docs/RELEASING.md`).
+Better football and boot icons, a tidier player badge on the line-up pitch, averages and captains before kick-off, and the line-ups shown as the pitch alone. No database change. If anything goes wrong, `v0.42.1` is the version to go back to (`docs/RELEASING.md`).
 
 - **Changed, goal and assist icons:** the goal icon is now a proper football and the assist icon a football boot (Material Design Icons), in place of the hand-drawn ball and blue boot. They show in the line-up lists, the timeline and, drawn on the video, beside the scorers at half-time and full-time.
 - **Changed, line-up pitch badges:** the captain's gold C is at the top left of the name circle; cards are at the top right and goals and assists at the bottom right.
+- **Changed, Game centre line-ups:** the text lists under the pitch are gone; the pitch is the line-up. (Hover or long-press a player for their full name. Before a club's line-up is locked, the plain list still shows what is known.)
 - **Added, Game centre before kick-off:** each player in the locked line-ups shows their average match rating this season (the games they have played, not counting this one), or N/A if they haven't played yet, both on the pitch and in the list. The captain the club chose is marked with the gold C on the pitch and (c) in the list. Results hidden by spoiler-free settings are left out of the averages.
 ## 0.42.1 (2026-10-08)
 
