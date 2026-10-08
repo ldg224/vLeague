@@ -19,7 +19,7 @@ While we're on 0.x, minor versions can change things freely.
 2. Pick the number (table above).
 3. Set it in **`js/version.js`** (`VERSION`), which the site shows in the footer.
 4. Add it to the top of **`CHANGELOG.md`**: number, date, and what changed under Added / Changed / Fixed / Removed,
-   in plain words.
+   in plain words. Also add one line under the heading, `Headlines: first | second` (2 items at most, a few words each, friendly: "Rewind a live match"). That line alone is the managers' "What's new" note on Home; a version without it shows nothing.
 5. Commit with the version in the message, e.g. `0.2.1: fix the week arrows on phones`, and push.
 6. Tag and publish the release (tags are how we find a version later):
    ```powershell
