@@ -1,176 +1,150 @@
-# vLeague app: roadmap
+# vLeague app: plan
 
-Agreed on 30 September 2026 (Alpha and Bravo's research and plan, reviewed and approved by the user).
-One minor version per step, released with the rules in `docs/RELEASING.md`. Tick items off as they ship.
+Agreed on 30 September 2026 (Alpha and Bravo's research and plan, reviewed and approved by the user), reorganised on
+8 October 2026. Work is tracked by **code and ID, not version number** (version numbers change too fast). Versions
+still exist for releasing and rolling back: see `docs/RELEASING.md`. What shipped in each version: `CHANGELOG.md`.
 
 **The idea:** a manager doesn't "open the manager portal"; they sign in and walk into their club (their colours,
 next match, XI, inbox). Guests get one beautiful matchday page. One league, one site.
 
-## Decisions
+## How items are labelled
 
-- **A club's primary colour runs its whole page (0.17, the user's decision, 6 October 2026).** It replaces the earlier "accents
-  only" rule. The page, cards, band, buttons, tabs, links and charts take the colour as picked; text on it is white or dark, and
-  coloured text is lightened so a dark club still reads. There is no separate accent colour. The Editor and signed-out pages stay
-  vLeague navy and blue.
-- **Guests stay fully signed out.** The dashboard is the guest profile and signs out anyone who arrives signed in.
-  No guest accounts for now.
-- **No chat, ever, and nothing sent to the league's WhatsApp group** (it stays for personal messages). Reactions on
-  the site instead. The league doesn't use Discord.
-- **Registration:** "Set up your club" at a manager's first sign-in now (0.4); a public "Enter a club" page with a
-  registration window only after 1.0.
-- **Deadline day:** not now, but the Editor gets the option to set one up (off by default).
-- **No history import** for now.
-- **Match files (about 2 MB each) stay on GitHub Pages**; Supabase keeps only result summaries. Its free plan allows
-  5 GB of downloads a month.
-- Four places for managers: **Home, My club, Inbox, League**. The office also gets the **Editor**.
+| Code | Meaning | Use for |
+|---|---|---|
+| **EU-nn** | Essential update | Bugs, broken or missing core behaviour, things that must work |
+| **VU-nn** | Visual update | Layout, look and feel, polish; nothing is broken |
+| **FU-nn** | Future update | New features and ideas (not started) |
+| **T-nn** | Testing | Checks and rehearsals to run, and tuning against real results |
 
-## Steps
+IDs are permanent: never reuse one, never renumber. Mention the ID in commit messages and in `CHANGELOG.md` when an item
+ships (for example "EU-02: re-registration no longer says 'joined'"). When an item is finished, move it to **Done** with
+the date, not a version number.
 
-### 0.1 – 0.2: done
-Sign-in page, "View as guest", the guest dashboard, the dashboard as the guest profile, version numbers.
+**Status:** `Open` (clear and ready) · `Check` (may already be fixed; verify first) · `Needs detail` (too vague to start;
+the question is written under it) · `Decision` (the user must choose before work starts).
 
-### 0.3: Foundation (done in 0.3.0)
-- [x] Supabase tables `clubs`, `profiles`, `team_sheets` with row-level security; `crests` bucket; 8 clubs imported
-      with crests; the league office account.
-- [x] Auth settings: sign-ups off, site URL, redirects, Gmail sender, 8-character passwords.
-- [x] "Set your password" page (invites and resets), "Forgot password?", sign-in goes to Home or Editor by role.
-- [x] Placeholder Home and Editor; security checks (`supabase/tests/rls_check.py`).
-- Team sheets are private to the club and the office; from 0.6 each week's locked copy is public.
+---
 
-### 0.4: Set up your club (done in 0.4.0)
-- [x] Four-step wizard at first sign-in: name (≤25) / short name (≤12) / 3-letter code; primary and secondary
-      colour with live contrast check; crest upload with previews; manager name, stadium, motto, notes for the office.
-- [x] The accent colour computed on save and previewed exactly.
-- [x] Office approval queue (approve, or send back with a note); a crest reveal posted to news on approval.
-      Later changes to name, code or crest go back for approval; colours and motto change instantly.
-- [x] Editor: invite a manager and link them to a club.
-- Every manager (the office's club too) sees the wizard once; it isn't shown again until the office presses
-  "Set up again" for that club, which starts the process again. (User's decision, 1 October 2026.)
-- Known limits, for a later patch: a short name can't be cleared once set; the accent a manager saves isn't
-  re-checked by the database; a crest path isn't checked to exist.
+## Decisions (the user's, kept for reference)
 
-### 0.5: Home (done in 0.5.0)
-- [x] Home, My club, Inbox and League, with the club band and accents.
-- [x] Home: next match with countdown and "line-up locks in …", what needs doing, last result, table position,
-      league activity feed.
+- **A club's primary colour runs its whole page (6 October 2026).** It replaces the earlier "accents only" rule. The page,
+  cards, band, buttons, tabs, links and charts take the colour as picked; text on it is white or dark, and coloured text is
+  lightened so a dark club still reads. There is no separate accent colour. The Editor and signed-out pages stay vLeague
+  navy and blue. No second per-club colour for light mode (5 October 2026: clubs have already registered).
+- **Guests stay fully signed out.** The dashboard is the guest profile and signs out anyone who arrives signed in. No guest accounts.
+- **No chat, ever, and nothing sent to the league's WhatsApp group** (it stays for personal messages). Reactions on the site
+  instead. The league doesn't use Discord.
+- **Registration:** "Set up your club" at a manager's first sign-in; every manager (the office's club too) sees it once, until the
+  office presses "Set up again" for that club (1 October 2026). A public "Enter a club" page with a registration window only after launch.
+- **Line-up lock:** line-ups lock before the first match of the week, never later than the first kick-off (not T-10, because results are
+  often simulated in advance). League time zone: Australia/Melbourne. Managers keep editing; changes count for the next week.
+- **Weekly budget** is $125,000. Player prices come from ratings (`500 + 7500 * ((rating-1)/8)^1.8`), never stored. The cap is a guide
+  the Draft page shows; it doesn't block a pick.
+- **Squads** are 16 (XI + 5 bench: 2 GK, 5 DEF, 5 MID, 4 FWD) as the target; the app never blocks a club with fewer (11 including a GK can be simulated).
+- **Press conferences** open 24 hours before kick-off. **Preset answers, not typed text** (6 October 2026): each question has a few
+  answers with a tone (confident, humble, deflecting), moving four meters (fans, happiness, team and opposition performance, capped at 3%).
+  The Team and Opposition meters change the match; chosen answers are quoted in the Inbox.
+- **vLeague stands on its own** (5 October 2026): the s3 site stays a standalone test site. vLeague starts clean: **no history import** for now.
+- **Match files (about 2 MB each)** are kept in a private `matches` bucket (readable from kick-off); Supabase keeps result summaries.
+  Free plan: 500 MB database and 5 GB monthly transfer are nowhere near; a weekly backup export and keep-alive are optional extras.
+- **Finals bracket view:** after launch. **Season planner** (rounds, match windows, scoreboard looks, rhythms): waits, and only the parts found missing get built (7 October 2026).
+- **Club pages:** the League's short codes cover it for now (7 October 2026); a page per club exists (`club.html`).
+- Four places for managers: **Home, My club, Inbox, League** (plus Matches, Draft, Settings). The office also gets the **Editor**.
 
-### 0.6: My club (done in 0.6.0)
-- [x] The XI on a pitch (tap to swap, formation, captain, set pieces, tactics), saved to `team_sheets`.
-- [x] A line-up deadline per week, set by the office (Editor → Deadlines). At the deadline every club's sheet is
-      locked for that week and revealed on both clubs' Homes and the dashboard. Managers keep editing; changes
-      count for the next week. (User's decision, 1 October 2026: not T-10, because results are often simulated in
-      advance. League time zone: Australia/Melbourne.)
-- [x] The s3 editor's Simulate reads team sheets from Supabase; the s3 Manager Hub's line-up and tactics tabs point to My club (press stays there until 0.10).
+---
 
-### 0.7: Settings and email reminders (done in 0.7.0)
-- [x] Settings (settings.html), its own tab from 0.8.0 (managers only): account (name, email, password, sign out, sign
-      out everywhere), email reminders, accent (club colour or vLeague blue), text size, spoiler-free results,
-      12/24-hour clock, reduce motion (start page dropped in 0.8.0). Appearance stays per device; the rest follows the account.
-- [x] Email reminders that are useful, not annoying: a deadline reminder only when the club hasn't picked a team
-      (24 h, 3 h, both or off), club changes sent back, line-ups out (opt-in), weekly round-up (opt-in), and for the
-      office, clubs without a team. Never twice, never between 10 pm and 8 am, one-click unsubscribe in every email.
+## Open work
 
-### 0.8: Clearer and simpler (done in 0.8.0)
-- [x] A review of everything a new manager sees: Settings as a tab, a team sheet that saves itself, a phone-friendly
-      player picker, 3-step club setup with an optional crest, plainer Editor states and copy.
+### EU: Essential updates
 
-### 0.9: Light mode (done in 0.9.0)
-- [x] A Theme setting (Dark / Light / System), per device, Dark by default. Colour tokens replace the hard-coded colours; the pitch and matchday
-      board stay dark on purpose. No second per-club accent for light mode (user's decision, 5 October 2026: clubs
-      have already registered, so club colours stay as they are).
+| ID | Item | Status |
+|---|---|---|
+| EU-01 | **League week tabs can't be scrolled across.** The row of round buttons (`.weektabs`) scrolls sideways with its scrollbar hidden, so on a computer there is no way to move along it without touch. Add arrows and/or mouse-wheel scrolling; keep swipe on phones. | Open |
+| EU-02 | **Re-registration news says "[club] join vLeague".** Every time the office approves a setup (including "Set up again") the database posts the same "joined" news (`0003_club_setup.sql`). It should only say that the first time; later it should say the club updated its details (or post nothing). | Open |
+| EU-03 | **Second yellow cards show as yellows, not reds.** The broadcast knows about second yellows, but the Game centre timeline and line-ups only tell "yellow" from "anything else", and the match file's card event may not mark the second one. Find what the match file records, then show a second yellow as a red (with the yellow before it). Verify with T-03. | Check |
+| EU-04 | **Draft tab missing / clock running before the start date.** The tab is meant to always show for managers with a preview (done earlier), and the draft clock runs in the database every minute. Check on the live site that the tab shows and the clock does not run before the draft's start date; fix if not. Verify with T-02. | Check |
+| EU-05 | **"Fix draft mode".** Too vague to start. *Needs from you:* what goes wrong (a screen, a button, the order, the clock, auto-pick, emails), as a manager or as the office? One example is enough. | Needs detail |
+| EU-06 | **Can't go back during a live game** (to see a goal or a card again). Live matches are held to the live clock on purpose, with no controls (video controls were removed during live on 7 October). *Decision:* allow rewinding to anything already played (never ahead of live), or only jump back to key moments (goals, cards) from the Timeline? | Decision |
+| EU-07 | **Highlights are laggy.** Smoothing was added earlier, but it is still slow. *Needs from you:* which device and browser, and where it stutters (start, camera moves, replays). Then profile. | Needs detail |
+| EU-08 | **More options in Editor → Fixtures.** That tab was deliberately cut down to three jobs in a clean-up. *Needs from you:* which options you miss (for example moving a whole week, byes by hand, swapping home and away, bulk time changes). | Needs detail |
+| EU-09 | **Retire the old match pages and the s3 dependency.** Match files already come from the `matches` bucket; remove what still points at s3 and confirm the `?src=` local-test path is the only use left. | Open |
 
-### 0.10: Manager phone numbers (done in 0.10.0)
-- [x] A pinned Inbox post asks every manager for a phone number; stored privately (that club and the office only).
-- [x] Editor → Phones: who has added one, Copy all, Download CSV.
+### VU: Visual updates
 
-### 0.11: Teams and players on Supabase (players done in 0.11.0)
-Agreed 5 October 2026: vLeague stops relying on the s3 site (s3 stays a standalone test site, neither affects the
-other). Players come first so everything else can use them. Clubs are already in Supabase (0.8.1 to 0.8.6).
-vLeague starts clean: no fixtures or results are carried over from s3 (decided 5 October 2026).
-- [ ] `players` table (`0008_players.sql`): id (4-digit text, so the 80 old ids keep working; new ones from a
-      sequence), name, position (GK/DEF/MID/FWD), offense and defense (1 to 10), club (empty = free agent).
-      Everyone can read; only the league office writes (`is_office()`). The 80 s3 players are copied in once as a
-      starting pool, with their ids, as free agents unless their club exists here.
-- [ ] **Editor → Players**, built for speed:
-      1. *Generate*: pick how many (default "fill every club to 16, plus 20 free agents"), press Generate, see a
-         preview table, re-roll any single row, Accept. Nothing is saved until Accept.
-      2. *Table*: every player, filter by club / position / free agents, edit a cell in place, move a player to a
-         club (or free agent), delete. Changes save as you go with an Undo toast.
-      3. *Paste a list*: one player per line (`Name, FWD, 8, 3`); anything missing is filled in.
-- [ ] **Name generator** (`js/names.js`, loaded only in the Editor): about 18 cultures with first and last names,
-      the culture picked per player at random (weighted, editable); never repeats a first name or a last name
-      across the whole pool, checked against existing players too, so no two players look alike.
-- [ ] **Rating generator**: a position-shaped spread, not flat random: GKs are defence-heavy, DEF lean defence,
-      FWD lean offence, MID balanced; most players 4 to 7 with a few stars and a few weak links. A "Squad
-      strength" slider (low / even / mixed) so generated clubs are about equal by default. At least 2 GKs per
-      club and at least 24 in the pool.
-- [ ] Squads are 16 (XI + 5 bench: 2 GK, 5 DEF, 5 MID, 4 FWD) as the target the generator fills; the app never
-      blocks a club with fewer (a squad needs only 11 including a GK to be simulated).
-- [ ] The app reads squads from Supabase (My club, the dashboard's top players, line-up picker); the shared loader
-      is cached in the browser for a few minutes and fetches only the columns a page needs (about 25 KB total).
-- [ ] The weekly budget and prices (`500 + 7500 * ((rating-1)/8)^1.8`) are NOT in 0.11; they come with squads in
-      0.12 once the real cap is confirmed. Prices will be worked out from ratings, never stored.
-- Free-plan care: a few small reads per page; 500 MB database and 5 GB monthly transfer are nowhere near. A weekly
-  backup export and keep-alive are optional extras.
+| ID | Item | Status |
+|---|---|---|
+| VU-01 | **News editor looks bad and isn't centred** (Editor → News). Centre it, tidy spacing and the composer/preview layout to match Players and Fixtures. | Open |
+| VU-02 | **Possession meter is on for the whole game and blocks extra time.** Show it like the stats panel: appears now and then, hides in between, and never covers the extra-time banner. | Open |
+| VU-03 | **Line-ups are not ordered.** Show each XI in a fixed order: GK, then DEF, MID, FWD (by pitch slot), bench after. Applies before the match (locked sheet) and after. | Open |
+| VU-04 | **No shirt numbers in line-ups.** Players already have a number (1 to 99) in the database. Show it beside the name in the Game centre line-ups, both before and after the match. | Open |
 
-### 0.12: Fixtures and results on Supabase (done in 0.12.0; checked 7 October 2026)
-Fixtures, results, standings, the dashboard, Home, League, the Editor, the club page and the reminder emails all read Supabase. The s3
-site is only read by a local `?src=` test copy. Line-ups lock at or before the week's first kick-off (0.30).
+### FU: Future updates
 
-### 0.13: Season planner (waits until after the Inbox and press work; may not be needed)
-Decided 7 October 2026: we already have a fixture generator and per-week lock rules, so the planner (rounds, match windows,
-scoreboard looks, rhythms) waits, and only the parts that turn out to be missing get built. Settled answers:
-- **Lock rule:** line-ups lock before the first match of the week. Done in 0.30 (never later than the first kick-off).
-- **Simulate came first** (0.14), the planner comes after.
-- **Finals bracket view:** after 1.0.
-Still possible later: scoreboard looks (Christmas, finals...) as data, and several game settings inside one week.
+Ideas from the user (8 October 2026) unless noted.
 
-### 0.14: Simulate (done in 0.14.0), news and the old site retires
-- [x] Simulate in Editor → Fixtures (one match, a week or everything unplayed; play again; remove result); engine copied
-      into `js/sim/`; reminder emails read Supabase; match files in a private `matches` bucket (readable from kick-off).
-- [x] News composer and history in the Editor (done in 0.18.0): audience (everyone, every manager, chosen clubs),
-      pin, live preview, starters (week preview, deadline reminder). Approvals, forms and polls are still to come.
-- [ ] Optional league events such as deadline day, set up and scheduled from the Editor (off by default).
-- [ ] Match pages and the old site retired (match files are in the `matches` bucket, not on Pages).
+| ID | Item | Status |
+|---|---|---|
+| FU-01 | **History page:** past winners and runners-up from HCL. Conflicts with "no history import", so the office would enter past seasons by hand in the Editor. *Needs:* which seasons, and what to show beyond winner and runner-up. | Needs detail |
+| FU-02 | **Goal of the week.** *Needs:* who picks it (the office, or a vote by managers)? Would it use highlight clips? | Needs detail |
+| FU-03 | **In-season tournaments** for extra championship points or just bragging rights. *Needs:* how many, which clubs, points awarded, and how they fit with the fixture list. | Needs detail |
+| FU-04 | **Win probability updating during a match** (today the chance is worked out before kick-off only, in `js/match-model.js`). Show it moving with the score, minute and red cards. | Open |
+| FU-05 | **Live match ratings for players** (today ratings appear at full time). Show running ratings in the line-ups as the match goes. | Open |
+| FU-06 | **Player traits** (examples: solo player, likes to flop, only passes to the best players). *Needs:* the list of traits, whether they change the simulation or are just flavour, and who sets them. | Needs detail |
+| FU-07 | **Draft queue shows predicted money.** Likely: next to each queued player, the budget left if the queue is picked in order. *Needs:* confirm that is what you meant. | Needs detail |
+| FU-08 | **2D pitch for line-ups,** as done in the s2 site. Show the XI on a pitch in the Game centre. | Open |
+| FU-09 | **Instagram account** for the league. Not an app change; a league task (the plan's rule about WhatsApp doesn't cover it). Could later link from the footer. | Decision |
+| FU-10 | **Optional league events,** such as deadline day, set up and scheduled from the Editor (off by default). | Open |
+| FU-11 | **Match centre extras:** momentum graph and shot map from the engine; a written match report; ratings on coloured chips. | Open |
+| FU-12 | **Team and Player of the Week** after each round. | Open |
+| FU-13 | **Installable app and notifications.** Add to home screen; opt-in push (asked only on a tap): line-ups out, kick-off, goals for your club, full time, "your line-up locks in 1 hour and isn't set", news for your club. (iPhone: works once installed, iOS 16.4+.) | Open |
+| FU-14 | **Predictor:** managers predict every fixture, with a leaderboard; guests predict on their own device with a personal streak. | Open |
+| FU-15 | **Office edits the press question bank** in the Editor; quotes also shown in a match preview on Home. | Open |
+| FU-16 | **Reactions on results** in the Game centre (reactions on news and press answers exist). | Open |
 
-### 0.15.0: Simpler Editor (done): Requests, Clubs, Managers and Phones are one Clubs tab, with every registration kept in full
+### T: Testing
 
-### Draft (done, 0.21 to 0.29)
-Limited-time player draft: manager board, queue and auto-pick, office tools, quiet times, emails, live updates. See `docs/DRAFT.md`. The office switches the Draft page on with Make page visible (0.32); managers can queue before it starts.
+| ID | Item |
+|---|---|
+| T-01 | Tune the win chance against real results once there are a few rounds (`RATING_POWER` and friends in `js/match-model.js`). |
+| T-02 | Rehearse a draft end to end with the page hidden and a future start date: the tab/preview, the clock, quiet times, auto-pick and emails. Settles EU-04 (and may expose EU-05). |
+| T-03 | Play several **Test matches** until one has a straight red and one a second yellow; check the timeline, line-ups, stats and broadcast agree. Settles EU-03. |
+| T-04 | After any security-rule change, run `supabase/tests/rls_check.py` (as guest, manager and office). |
 
-### Inbox and press (done in 0.30.0)
-- [x] One inbox: news for this club, press conferences, deadlines. Every post has a delete button; "Clear all" and Undo (0.30).
-- [x] News audiences: one club, several, all clubs, everyone (0.18.0). Guests-only is not offered yet.
-- [x] Press conference opening 24 hours before kick-off. **Preset answers, not typed text** (user's decision, 6 October 2026):
-      each question has a few answers with a tone (confident, humble, deflecting), moving four meters (fans, happiness, team and
-      opposition performance, capped at 3%). The Team and Opposition meters change the match; chosen answers are quoted in the Inbox.
-- [x] Reactions on news and press answers (0.30). Reactions on results are still to come with the Match centre.
-- [ ] Later: the office edits the question bank in the Editor; quotes also shown in a match preview on Home.
+### Launch (the old "1.0")
 
-### Matches and Game centre (0.34, first version done)
-- [x] **Matches** tab: a card per game with win chance, form, stadium and home or away records (`js/match-model.js` works out the chance).
-- [x] **Game centre** (`game.html`): preview, top-down replay (live follows the broadcast), timeline, stats, line-ups and ratings. Guests can open it.
-- [ ] Tune the win chance against real results once there are a few rounds (`RATING_POWER` and friends in `js/match-model.js`).
-- [ ] Club pages: not needed for now; League's short codes cover it (decided 7 October 2026).
+The app runs the league on its own.
+- [ ] EU-09 done: the s3 site becomes a read-only archive pointing here.
+- [ ] Final design, accessibility and phone-speed pass.
 
-### 0.16: Match centre (what is left)
-- [ ] The 3D broadcast view, live and after full time.
-- [ ] Momentum graph and shot map from the engine; ratings on coloured chips; match report; Man of the Match.
-- [ ] Team and Player of the Week after each round.
+### After launch
 
-### 0.17: Installable app and notifications
-- [ ] Add to home screen; opt-in push (asked only on a tap): line-ups out, kick-off, goals for your club, full time,
-      "your line-up locks in 1 hour and isn't set", news for your club. (iPhone: works once installed, iOS 16.4+.)
+- Public "Enter a club" page with a registration window.
+- Deadline day's free-agent claim window and live ticker.
+- Scheduled kit reveals.
+- Finals bracket view.
 
-### 0.18: Predictor
-- [ ] Managers predict every fixture, with a leaderboard; guests predict on their own device with a personal streak.
+---
 
-### 0.19: Club pages
-- [ ] A page per club (with its accents): squad, results, derbies, head-to-head.
+## Done
 
-### 1.0: vLeague runs on its own
-- [ ] The s3 site becomes a read-only archive pointing here; final design, accessibility and phone-speed pass.
+What is built, by area. Details and dates of each change are in `CHANGELOG.md`.
 
-### After 1.0
-- Public "Enter a club" page with a registration window. Deadline day's free-agent claim window and live ticker.
-  Scheduled kit reveals.
+- **Accounts and setup:** sign-in, "Forgot password?", set-password page, "View as guest", role-based landing (Home or Editor).
+  Supabase tables with row-level security, `crests` bucket, sign-ups off, 8-character passwords. Four-step club setup
+  wizard (names, colours with live contrast check, crest, manager details) with an office approval queue.
+- **Manager pages:** Home (next match, countdown, "line-up locks in …", what needs doing, last result, table position, activity feed),
+  My club (the XI on a pitch: formation, captain, set pieces, tactics; saves itself; phone-friendly player picker), Inbox, League,
+  Matches, Settings (account, email reminders, text size, spoiler-free results, clock, reduce motion, Dark/Light/System theme), club pages.
+- **Line-ups and fixtures:** per-week deadlines set by the office; at the lock every sheet is copied and revealed publicly. Fixtures,
+  results, standings, the dashboard, Home, League, the Editor and reminder emails all read Supabase.
+- **Players and teams on Supabase:** `players` table, Editor → Players (generate, table, paste a list), name and rating generators.
+- **Simulate:** one match, a week or everything unplayed; Test match button (week 99, never counts); results stored with match files.
+- **Email reminders:** deadline reminder only when no team is picked, club changes sent back, line-ups out, weekly round-up, office alerts.
+  Never twice, never between 10 pm and 8 am, one-click unsubscribe.
+- **News:** composer and history in the Editor (audience, pin, preview, starters, optional email); one Inbox with delete and "Clear all".
+  Press conferences with preset answers; reactions on news and press answers.
+- **Draft:** manager board (grid, queue, auto-pick, instant updates), office tools (create, start/pause/resume, make page visible, drag order),
+  quiet times, emails. See `docs/DRAFT.md`.
+- **Matches and Game centre:** a card per game with win chance, form, stadium and records; one scrolling Game centre (scoreboard in the round's look,
+  broadcast / tactical / highlights viewer, stats, line-ups with ratings, Man of the match, timeline); open to guests.
+- **Editor:** Clubs, Fixtures, Players, News, Draft, Phones (as part of Clubs); manager phone numbers collected through a pinned Inbox post.

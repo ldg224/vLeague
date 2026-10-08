@@ -15,7 +15,7 @@ Virtual football league app. Managers sign in and run their club; guests get a m
 
 ## Where to read first
 - `README.md`: pages and files overview.
-- `docs/PLAN.md`: roadmap and the user's recorded decisions. Check it before changing behaviour.
+- `docs/PLAN.md`: roadmap and the user's recorded decisions. Check it before changing behaviour. Work items use IDs, not version numbers: EU-nn (essential), VU-nn (visual), FU-nn (future), T-nn (testing). IDs are permanent; cite them in commits and the CHANGELOG, and move finished items to Done.
 - `docs/RELEASING.md`: versioning and release steps (below).
 - `docs/BACKEND.md`, `docs/DRAFT.md`, `js/sim/docs/`: backend, draft, and simulator details.
 - `CHANGELOG.md`: what changed in each version.
