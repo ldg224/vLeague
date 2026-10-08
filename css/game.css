@@ -80,5 +80,6 @@ html { scroll-behavior: smooth; }
 .ico { width: 1.15em; height: 1.15em; flex: none; vertical-align: -.22em; }
 .gc-ev .ic { display: grid; place-items: center; align-self: center; }
 .gc-lu .nm { display: flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
+.gc-lu .sn { min-width: 1.5em; text-align: right; color: var(--faint); font-weight: 700; font-variant-numeric: tabular-nums; }
 .gc-lu .evs { display: inline-flex; gap: 2px; align-items: center; }
 .rating.r-motm { background: #2f6fe0; color: #fff; box-shadow: 0 0 0 2px color-mix(in srgb, #2f6fe0 35%, transparent); }

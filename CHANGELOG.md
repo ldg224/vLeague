@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.41.2 (2026-10-08)
+
+Line-ups, the League's round buttons and the possession panel. No database change. If anything goes wrong, `v0.41.1` is the version to go back to (`docs/RELEASING.md`).
+
+- **Changed, Game centre line-ups (VU-03):** each side's eleven now reads goalkeeper first, then defence, midfield and attack, left to right across the pitch, both before the match (the locked line-up) and after it.
+- **Added, Game centre line-ups (VU-04):** the shirt number beside each player's name. A test match's made-up players have no number, so none shows for them.
+- **Fixed, League (EU-01):** the row of round buttons couldn't be moved along with a mouse because its scrollbar is hidden. There are now ‹ › arrows (shown when there are more rounds than fit, and only with a mouse), and the mouse wheel over the row moves it too. Swiping on a phone is unchanged.
+- **Changed, broadcast (VU-02):** the possession panel no longer stays on all match. It shows for 24 seconds every 10 minutes of each half, fading in and out, and stays away during replays, in added time (it covered the "+N" board) and after full time.
+
 ## 0.41.1 (2026-10-08)
 
 The Game centre uses drawn icons, and the man of the match is clearer. No database change.

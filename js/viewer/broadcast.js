@@ -282,6 +282,18 @@ export class BroadcastRenderer extends HighlightsRenderer {
     return tot < 50 ? [50, 50] : [Math.round(100 * h / tot), 100 - Math.round(100 * h / tot)];
   }
 
+  // The panel comes and goes, like the stats graphics on TV: 24 seconds of match time every 10 minutes of each half (from the 5th
+  // minute), fading in and out. It stays away while a replay plays, once added time is on (the board sits where the panel would),
+  // and after full time. Returns 0..1.
+  possessionShow(t, sh) {
+    if (t >= this.t1 || sh?.kind === 'replay' || this.addedAt(t)) return 0;
+    const p = [...this.d.periods].reverse().find(q => q.start_t <= t + 1e-6) || this.d.periods[0];
+    const el = t - p.start_t - 300;
+    if (el < 0) return 0;
+    const k = el % 600, SHOW = 24, FADE = 1.2;
+    return k >= SHOW ? 0 : seg01(k, 0, FADE) * (1 - seg01(k, SHOW - FADE, SHOW));
+  }
+
   // A possession panel under the scoreboard: the numbers sit on dark glass (so they read on any club colours), the bar below them.
   possessionBar(t) {
     const c = this.c, [h, a] = this.possAt(t), x = 60, y = 156, w = 560, ph = 52;
@@ -312,7 +324,8 @@ export class BroadcastRenderer extends HighlightsRenderer {
     const ft = seg01(t, this.t1 - 4, this.t1 - 3.4);
     if (ft > 0) this.momentPanel('FULL-TIME', [this.d.result.home, this.d.result.away], ft, true);
     this.bug(t);
-    this.possessionBar(t);
+    const pa = this.possessionShow(t, sh);
+    if (pa > 0) { this.c.save(); this.c.globalAlpha *= pa; this.possessionBar(t); this.c.restore(); }
     // Branded wipe into and out of replays.
     for (const s of this.shots) {
       if (s.kind !== 'replay') continue;

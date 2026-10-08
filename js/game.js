@@ -15,6 +15,7 @@ import { prefs, fmtTime, spoilerHidden, revealScore } from './prefs.js';
 import { winChance, percents, clubSummary } from './match-model.js';
 import { lookInfo, scoreboard } from './scoreboard.js';
 import { playerCard, MatchPlayer } from './viewer/player.js';
+import { FORMATIONS, DEFAULT_FORMATION } from './pitch.js';
 
 chrome();
 const main = document.getElementById('main');
@@ -58,7 +59,14 @@ async function run() {
   const horizon = () => (st() === 'ft' ? duration() : live() ? liveSimTime(fx, season, new Date()) : 0);
   const pace = () => ((duration() || 5400) / ((season.live_minutes || 45) * 60));   // match seconds per real second at the broadcast's pace
 
-  async function loadSheets() { try { const r = await (await db()).from('week_sheets').select('week, club, lineup').eq('week', fx.week); sheets = r.data || []; } catch { /* squads are used */ } }
+  // Line-ups read goalkeeper first, then defence, midfield and attack, left to right (the order of the slots on the pitch).
+  const slotPlace = (formation, slot) => { const s = (FORMATIONS[formation] || FORMATIONS[DEFAULT_FORMATION])[slot]; return s ? [s.y, s.x] : [Infinity, 0]; };
+  const byPlace = formation => (a, b) => { const [ay, ax] = slotPlace(formation, a.slot), [by, bx] = slotPlace(formation, b.slot); return ay - by || ax - bx; };
+  // The shirt (singlet) number comes from the player list; a test match's made-up players have none.
+  const shirt = id => (season.players || []).find(p => p.id === id)?.number;
+  const shirtHtml = id => { const n = shirt(id); return n == null || n === '' ? '' : `<span class="sn" title="Shirt number">${esc(n)}</span>`; };
+
+  async function loadSheets() { try { const r = await (await db()).from('week_sheets').select('week, club, formation, lineup').eq('week', fx.week); sheets = r.data || []; } catch { /* squads are used */ } }
 
   async function loadFile() {
     if (data || loadingFile || !['live', 'ft'].includes(st()) || !fx.result?.file) return;
@@ -137,8 +145,8 @@ async function run() {
     const sum = c => clubSummary(season, c, now), hs = sum(fx.home), as = sum(fx.away), R = w.factors.ratings;
     const meets = season.fixtures.filter(f => f.result && f.id !== fx.id && ((f.home === fx.home && f.away === fx.away) || (f.home === fx.away && f.away === fx.home)));
     const rec = r => `${r.w}-${r.d}-${r.l}`, rate = v => (v == null ? '–' : v.toFixed(1));
-    const lineup = c => { const sh = sheets.find(s => s.club === c); const ids = Object.values(sh?.lineup || {}).filter(Boolean); const by = Object.fromEntries((season.players || []).map(p => [p.id, p])); return ids.map(i => by[i]).filter(Boolean); };
-    const lu = c => { const l = lineup(c); return l.length ? `<ol class="gc-lu">${l.map(p => `<li><span class="pos">${esc(p.position)}</span>${esc(p.name)}</li>`).join('')}</ol>` : '<p class="quiet">Line-up not locked yet.</p>'; };
+    const lineup = c => { const sh = sheets.find(s => s.club === c); const slots = Object.entries(sh?.lineup || {}).filter(([, pid]) => pid).map(([slot, pid]) => ({ slot, pid })).sort(byPlace(sh?.formation)); const by = Object.fromEntries((season.players || []).map(p => [p.id, p])); return slots.map(x => by[x.pid]).filter(Boolean); };
+    const lu = c => { const l = lineup(c); return l.length ? `<ol class="gc-lu">${l.map(p => `<li><span class="pos">${esc(p.position)}</span><span class="nm">${shirtHtml(p.id)}${esc(p.name)}</span></li>`).join('')}</ol>` : '<p class="quiet">Line-up not locked yet.</p>'; };
     return `<section class="gc-sec"><h2>Win chance</h2>
         <div class="mc-bar big"><i class="bh" style="flex:${ph}"></i><i class="bd" style="flex:${pd}"></i><i class="ba" style="flex:${pa}"></i></div>
         <div class="mc-pcts"><span><b>${ph}%</b> ${esc(nameOf(home()))}</span><span><b>${pd}%</b> Draw</span><span><b>${pa}%</b> ${esc(nameOf(away()))}</span></div>
@@ -211,9 +219,9 @@ async function run() {
     const t = horizon(), full = st() === 'ft', ev = eventsTo(t), P = data.stats.players, bestId = full ? bestPlayer() : null;
     const goals = id => ev.filter(e => e.type === 'goal' && e.scorer === id && !e.own_goal).length, assists = id => ev.filter(e => e.type === 'goal' && e.assist === id).length;
     const cards = id => ev.filter(e => e.type === 'card' && e.player === id).map(e => (e.card === 'yellow' ? ICONS.yellow : ICONS.red)).join('');
-    const col = c => { const team = data.teams[c === fx.home ? 'home' : 'away']; return `<div><h3>${esc(fullNameOf(teamOf(season, c)))} <small>${esc(team.formation || '')}</small></h3><ol class="gc-lu">${team.lineup.map(x => {
+    const col = c => { const team = data.teams[c === fx.home ? 'home' : 'away']; return `<div><h3>${esc(fullNameOf(teamOf(season, c)))} <small>${esc(team.formation || '')}</small></h3><ol class="gc-lu">${[...team.lineup].sort(byPlace(team.formation)).map(x => {
       const r = full ? P[x.id]?.rating : null;
-      return `<li><span class="pos">${esc(x.slot || x.position)}</span><span class="nm">${esc(x.name)}${team.captain === x.id ? ' <small>(c)</small>' : ''} <span class="evs">${ICONS.ball.repeat(goals(x.id))}${ICONS.assist.repeat(assists(x.id))}${cards(x.id)}</span></span>${r ? `<span class="rating ${x.id === bestId ? 'r-motm' : r >= 7 ? 'r-hi' : r < 6 ? 'r-lo' : 'r-mid'}"${x.id === bestId ? ' title="Man of the match"' : ''}>${r.toFixed(1)}</span>` : ''}</li>`; }).join('')}</ol></div>`; };
+      return `<li><span class="pos">${esc(x.slot || x.position)}</span><span class="nm">${shirtHtml(x.id)}${esc(x.name)}${team.captain === x.id ? ' <small>(c)</small>' : ''} <span class="evs">${ICONS.ball.repeat(goals(x.id))}${ICONS.assist.repeat(assists(x.id))}${cards(x.id)}</span></span>${r ? `<span class="rating ${x.id === bestId ? 'r-motm' : r >= 7 ? 'r-hi' : r < 6 ? 'r-lo' : 'r-mid'}"${x.id === bestId ? ' title="Man of the match"' : ''}>${r.toFixed(1)}</span>` : ''}</li>`; }).join('')}</ol></div>`; };
     return `<section class="gc-sec" id="gc-lineups"><h2>Line-ups</h2><div class="gc-two">${col(fx.home)}${col(fx.away)}</div>${full ? '' : '<p class="gc-note">Ratings appear at full time.</p>'}</section>`;
   }
 

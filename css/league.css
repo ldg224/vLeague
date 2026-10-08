@@ -25,7 +25,13 @@
 .ladder tr.me { background: color-mix(in srgb, var(--club) 14%, transparent); }
 .ladder tr.me .pos { color: var(--text); }
 
-/* Week tabs: one row that scrolls sideways on its own */
+/* Week tabs: one row that scrolls sideways on its own (swipe on a phone; arrows and the wheel with a mouse) */
+.weekbar { display: flex; align-items: center; gap: 6px; }
+.weekbar .weektabs { flex: 1; min-width: 0; }
+.wk-arrow { display: none; flex: none; width: 34px; height: 34px; margin-top: 4px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font: 700 1.2rem/1 var(--font); cursor: pointer; }
+.wk-arrow:hover:not(:disabled) { color: var(--text); border-color: var(--blue-400); }
+.wk-arrow:disabled { opacity: .35; cursor: default; }
+@media (pointer: fine) { .wk-arrow:not([hidden]) { display: inline-flex; align-items: center; justify-content: center; } }
 .weektabs { position: relative; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 8px 0 4px; }
 .weektabs::-webkit-scrollbar { display: none; }
 .weektabs::before { content: 'Round'; align-self: center; margin-right: 4px; font-size: .82rem; font-weight: 700; color: var(--faint); }
