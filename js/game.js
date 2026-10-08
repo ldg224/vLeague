@@ -15,7 +15,7 @@ import { prefs, fmtTime, spoilerHidden, revealScore } from './prefs.js';
 import { winChance, percents, clubSummary } from './match-model.js';
 import { lookInfo, scoreboard } from './scoreboard.js';
 import { playerCard, MatchPlayer } from './viewer/player.js';
-import { FORMATIONS, DEFAULT_FORMATION } from './pitch.js';
+import { byPlace, pitchHtml } from './lineup-pitch.js';
 
 chrome();
 const main = document.getElementById('main');
@@ -59,13 +59,6 @@ async function run() {
   const horizon = () => (st() === 'ft' ? duration() : live() ? liveSimTime(fx, season, new Date()) : 0);
   const pace = () => ((duration() || 5400) / ((season.live_minutes || 45) * 60));   // match seconds per real second at the broadcast's pace
 
-  // Line-ups read goalkeeper first, then defence, midfield and attack, left to right (the order of the slots on the pitch).
-  // A slot's height is its line (GK, defence, midfield, attacking midfield, attack) plus a small forward or back nudge, so it is
-  // snapped to the nearest line first; otherwise a nudged centre-back would sort ahead of the full-backs.
-  const LINES = [9, 26, 48, 65, 80];   // the rows in js/pitch.js
-  const lineOf = y => LINES.reduce((best, v, i) => (Math.abs(v - y) < Math.abs(LINES[best] - y) ? i : best), 0);
-  const slotPlace = (formation, slot) => { const s = (FORMATIONS[formation] || FORMATIONS[DEFAULT_FORMATION])[slot]; return s ? [lineOf(s.y), s.x] : [Infinity, 0]; };
-  const byPlace = formation => (a, b) => { const [ay, ax] = slotPlace(formation, a.slot), [by, bx] = slotPlace(formation, b.slot); return ay - by || ax - bx; };
   // The shirt (singlet) number comes from the player list; a test match's made-up players have none.
   const shirt = id => (season.players || []).find(p => p.id === id)?.number;
   const shirtHtml = id => { const n = shirt(id); return n == null || n === '' ? '' : `<span class="sn" title="Shirt number">${esc(n)}</span>`; };
@@ -130,6 +123,7 @@ async function run() {
   // ---------------------------------------------------------------- the header
   const kitColour = code => clubsRows.find(c => c.code === code)?.colour || teamOf(season, code)?.colour;
   const sameColour = (x, y) => !!x && !!y && String(x).toLowerCase() === String(y).toLowerCase();
+  const pitchKit = { colour: code => kitColour(code), label: code => fullNameOf(teamOf(season, code)), shirt: id => shirt(id) };
   const sides = () => { const h = kitColour(fx.home), a = kitColour(fx.away); return h ? ` style="--hc:${esc(h)};${a && !sameColour(h, a) ? `--ac:${esc(a)}` : ''}"` : ''; };
   function head() {
     const now = new Date(), k = kickoff(fx), s = st(), sc = shownScore(fx, season, now), h = home(), a = away(), sd = stadium();
@@ -149,8 +143,14 @@ async function run() {
     const sum = c => clubSummary(season, c, now), hs = sum(fx.home), as = sum(fx.away), R = w.factors.ratings;
     const meets = season.fixtures.filter(f => f.result && f.id !== fx.id && ((f.home === fx.home && f.away === fx.away) || (f.home === fx.away && f.away === fx.home)));
     const rec = r => `${r.w}-${r.d}-${r.l}`, rate = v => (v == null ? '–' : v.toFixed(1));
-    const lineup = c => { const sh = sheets.find(s => s.club === c); const slots = Object.entries(sh?.lineup || {}).filter(([, pid]) => pid).map(([slot, pid]) => ({ slot, pid })).sort(byPlace(sh?.formation)); const by = Object.fromEntries((season.players || []).map(p => [p.id, p])); return slots.map(x => by[x.pid]).filter(Boolean); };
-    const lu = c => { const l = lineup(c); return l.length ? `<ol class="gc-lu">${l.map(p => `<li><span class="pos">${esc(p.position)}</span><span class="nm">${shirtHtml(p.id)}${esc(p.name)}</span></li>`).join('')}</ol>` : '<p class="quiet">Line-up not locked yet.</p>'; };
+    // A club's locked eleven, in pitch order: { formation, captain, items: [{ id, name, slot, position }] }.
+    const lineup = c => {
+      const sh = sheets.find(s => s.club === c), by = Object.fromEntries((season.players || []).map(p => [p.id, p]));
+      const items = Object.entries(sh?.lineup || {}).filter(([, pid]) => pid && by[pid]).map(([slot, pid]) => ({ slot, id: pid, name: by[pid].name, position: by[pid].position })).sort(byPlace(sh?.formation));
+      return { code: c, formation: sh?.formation, captain: sh?.captain, items };
+    };
+    const lu = x => (x.items.length ? `<ol class="gc-lu">${x.items.map(p => `<li><span class="pos">${esc(p.position)}</span><span class="nm">${shirtHtml(p.id)}${esc(p.name)}</span></li>`).join('')}</ol>` : '<p class="quiet">Line-up not locked yet.</p>');
+    const hx = lineup(fx.home), ax = lineup(fx.away);
     return `<section class="gc-sec"><h2>Win chance</h2>
         <div class="mc-bar big"><i class="bh" style="flex:${ph}"></i><i class="bd" style="flex:${pd}"></i><i class="ba" style="flex:${pa}"></i></div>
         <div class="mc-pcts"><span><b>${ph}%</b> ${esc(nameOf(home()))}</span><span><b>${pd}%</b> Draw</span><span><b>${pa}%</b> ${esc(nameOf(away()))}</span></div>
@@ -165,7 +165,7 @@ async function run() {
           <tr><th>Attack rating</th><td>${rate(R.home.att)}</td><td>${rate(R.away.att)}</td></tr>
           <tr><th>Defence rating</th><td>${rate(R.home.def)}</td><td>${rate(R.away.def)}</td></tr></tbody></table>
         ${meets.length ? `<p class="gc-note">Met this season: ${meets.map(f => `${esc(f.home)} ${f.result.home}–${f.result.away} ${esc(f.away)}`).join(', ')}</p>` : ''}</section>
-      <section class="gc-sec"><h2>Line-ups</h2><div class="gc-two"><div><h3>${esc(nameOf(home()))}</h3>${lu(fx.home)}</div><div><h3>${esc(nameOf(away()))}</h3>${lu(fx.away)}</div></div></section>`;
+      <section class="gc-sec"><h2>Line-ups</h2>${hx.items.length && ax.items.length ? pitchHtml(hx, ax, pitchKit) : ''}<div class="gc-two"><div><h3>${esc(nameOf(home()))}</h3>${lu(hx)}</div><div><h3>${esc(nameOf(away()))}</h3>${lu(ax)}</div></div></section>`;
   }
 
   // ---------------------------------------------------------------- the match viewer
@@ -226,7 +226,15 @@ async function run() {
     const col = c => { const team = data.teams[c === fx.home ? 'home' : 'away']; return `<div><h3>${esc(fullNameOf(teamOf(season, c)))} <small>${esc(team.formation || '')}</small></h3><ol class="gc-lu">${[...team.lineup].sort(byPlace(team.formation)).map(x => {
       const r = full ? P[x.id]?.rating : null;
       return `<li><span class="pos">${esc(x.slot || x.position)}</span><span class="nm">${shirtHtml(x.id)}${esc(x.name)}${team.captain === x.id ? ' <small>(c)</small>' : ''} <span class="evs">${ICONS.ball.repeat(goals(x.id))}${ICONS.assist.repeat(assists(x.id))}${cards(x.id)}</span></span>${r ? `<span class="rating ${x.id === bestId ? 'r-motm' : r >= 7 ? 'r-hi' : r < 6 ? 'r-lo' : 'r-mid'}"${x.id === bestId ? ' title="Man of the match"' : ''}>${r.toFixed(1)}</span>` : ''}</li>`; }).join('')}</ol></div>`; };
-    return `<section class="gc-sec" id="gc-lineups"><h2>Line-ups</h2><div class="gc-two">${col(fx.home)}${col(fx.away)}</div>${full ? '' : '<p class="gc-note">Ratings appear at full time.</p>'}</section>`;
+    const side = c => {
+      const team = data.teams[c === fx.home ? 'home' : 'away'];
+      return {
+        code: c, formation: team.formation, captain: team.captain, items: [...team.lineup],
+        extras: id => ICONS.ball.repeat(goals(id)) + ICONS.assist.repeat(assists(id)) + cards(id),
+        rating: id => { const r = full ? P[id]?.rating : null; return r ? { value: r.toFixed(1), cls: id === bestId ? 'r-motm' : r >= 7 ? 'r-hi' : r < 6 ? 'r-lo' : 'r-mid', motm: id === bestId } : null; },
+      };
+    };
+    return `<section class="gc-sec" id="gc-lineups"><h2>Line-ups</h2>${pitchHtml(side(fx.home), side(fx.away), pitchKit)}<div class="gc-two">${col(fx.home)}${col(fx.away)}</div>${full ? '' : '<p class="gc-note">Ratings appear at full time.</p>'}</section>`;
   }
 
   // ---------------------------------------------------------------- page

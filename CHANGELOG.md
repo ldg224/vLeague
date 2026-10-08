@@ -3,11 +3,12 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
-## 0.41.3 (2026-10-08)
+## 0.42.0 (2026-10-08)
 
-A fix to the line-up order from 0.41.2. No database change. If anything goes wrong, `v0.41.2` is the version to go back to (`docs/RELEASING.md`).
+The line-ups are drawn on a pitch, and a fix to the line-up order. No database change. If anything goes wrong, `v0.41.2` is the version to go back to (`docs/RELEASING.md`).
 
-- **Fixed, Game centre line-ups (VU-03):** 0.41.2 put some players out of order within a line (for example centre-backs before full-backs, or the holding midfielder first). Each line now reads left to right: 4-3-3 is GK, LB LCB RCB RB, LCM CDM RCM, LW ST RW.
+- **Added, Game centre line-ups (FU-08):** both elevens on one pitch, in the style of the old s2 site. The home side is on the left attacking right (on a phone: home at the top, attacking down) and the away side on the right. Each player is a badge in their club's colour with the shirt number (or their position when they have none) and their surname beneath. Each line runs from the player's own left to right. Goals, assists and cards show on the badge, the captain has a gold C, and after full time each player's rating shows under their name with the man of the match ringed in gold. It shows before kick-off too, as soon as both line-ups are locked. The list underneath stays, for the full names and ratings.
+- **Fixed, Game centre line-ups (VU-03):** 0.41.2 put some players out of order within a line (for example centre-backs before full-backs, or the holding midfielder first). Each line now reads left to right: a 4-3-3 is GK, LB LCB RCB RB, LCM CDM RCM, LW ST RW.
 
 ## 0.41.2 (2026-10-08)
 
