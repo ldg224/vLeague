@@ -85,28 +85,36 @@ def _player_stats(m):
     return stats
 
 
+# Rating calibration (PLAN T-05). Volume actions (passes, tackles, shot involvement, goals conceded...) add up with minutes, so
+# the sum is measured against what a typical player in that position does over a full match. A quiet game is then no better
+# than a busy one, and the league average no longer climbs as the match goes on. Keep js/live-rating.js in step.
+RATING_BASE = 6.6
+VOLUME_NORM = {'GK': 0.85, 'DEF': 0.50, 'MID': 1.33, 'FWD': 0.78}   # mean volume score at full time, measured on simulated matches
+
+
 def shape_rating(r):
-    """Diminishing returns above 7: a good game is 7.5-8.5, a brace about 9, and 10.0 is out of reach
-    (like FotMob, where 10 is practically never given). Below 7 the raw score is kept as it is."""
-    if r <= 7.0:
+    """Diminishing returns above 6.8: a good game is 7.5-8.3, a brace about 8.4, and 9 is nearly out of reach
+    (like FotMob, where 10 is practically never given). Below 6.8 the raw score is kept as it is."""
+    if r <= 6.8:
         return r
-    return min(9.9, 7.0 + 3.0 * (1 - math.exp(-(r - 7.0) / 2.2)))
+    return min(9.9, 6.8 + 2.2 * (1 - math.exp(-(r - 6.8) / 1.5)))
 
 
 def _rating(p, s, m):
     """FotMob-style 1-10 match rating built from the player's contributions."""
     won = m.score[p.side] > m.score[1 - p.side]
     lost = m.score[p.side] < m.score[1 - p.side]
-    r = 6.0
-    r += 1.0 * s['goals'] + 0.7 * s['assists'] + 0.25 * s['key_passes'] + 0.15 * s['shots_on_target']
-    r += 0.012 * s['passes_completed'] - 0.035 * (s['passes'] - s['passes_completed'])
-    r += 0.12 * s['tackles_won'] + 0.1 * s['interceptions'] + 0.05 * s['clearances'] + 0.1 * s['blocks']
-    r += 0.1 * s['take_ons'] + 0.05 * s['aerials_won'] - 0.05 * s['miscontrols']
-    r -= 0.05 * s['fouls'] + 0.3 * s['yellow'] + 1.5 * s['red'] + 0.8 * s['own_goals']
+    r = RATING_BASE + 1.0 * s['goals'] + 0.7 * s['assists']
+    v = 0.25 * s['key_passes'] + 0.15 * s['shots_on_target']
+    v += 0.012 * s['passes_completed'] - 0.035 * (s['passes'] - s['passes_completed'])
+    v += 0.12 * s['tackles_won'] + 0.1 * s['interceptions'] + 0.05 * s['clearances'] + 0.1 * s['blocks']
+    v += 0.1 * s['take_ons'] + 0.05 * s['aerials_won'] - 0.05 * s['miscontrols'] - 0.05 * s['fouls']
     if p.is_gk:
-        r += 0.3 * s['saves'] - 0.25 * s['goals_conceded']
+        v += 0.3 * s['saves'] - 0.25 * s['goals_conceded']
     elif p.line == 'DEF':
-        r -= 0.1 * s['goals_conceded']
+        v -= 0.1 * s['goals_conceded']
+    r += v - VOLUME_NORM.get(p.position, VOLUME_NORM['MID'])
+    r -= 0.3 * s['yellow'] + 1.5 * s['red'] + 0.8 * s['own_goals']
     r += 0.2 if won else -0.2 if lost else 0.0
     return round(max(3.0, shape_rating(r)), 1)
 

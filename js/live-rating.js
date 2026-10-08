@@ -7,15 +7,18 @@ import { lineOfSlot } from './lineup-pitch.js';
 
 const DEF = 1;   // the defensive line (see lineOfSlot)
 
-// Diminishing returns above 7: a good game is 7.5 to 8.5, and 10 is out of reach.
-const shape = r => (r <= 7 ? r : Math.min(9.9, 7 + 3 * (1 - Math.exp(-(r - 7) / 2.2))));
+// Calibration (PLAN T-05), as in output.py: RATING_BASE, VOLUME_NORM and shape_rating. Volume actions are measured against what a typical
+// player in that position has done by this point of the match (norm x fraction of the match played), so the average does not drift up.
+const BASE = 6.6;
+const VOLUME_NORM = { GK: 0.85, DEF: 0.50, MID: 1.33, FWD: 0.78 };
+const shape = r => (r <= 6.8 ? r : Math.min(9.9, 6.8 + 2.2 * (1 - Math.exp(-(r - 6.8) / 1.5))));
 
 export function ratingsAt(data, t) {
   const home = data.teams.home, S = {}, info = {};
   for (const p of data.players) {
     S[p.id] = { goals: 0, own: 0, assists: 0, key: 0, sot: 0, passes: 0, done: 0, tackles: 0, inter: 0, clear: 0, blocks: 0, takeOns: 0, aerials: 0, miscontrols: 0, fouls: 0, yellow: 0, red: 0, saves: 0, conceded: 0 };
     const formation = (p.team === home.code ? home : data.teams.away).formation;
-    info[p.id] = { side: p.team === home.code ? 0 : 1, team: p.team, gk: p.slot === 'GK', def: lineOfSlot(formation, p.slot) === DEF };
+    info[p.id] = { pos: p.position, side: p.team === home.code ? 0 : 1, team: p.team, gk: p.slot === 'GK', def: lineOfSlot(formation, p.slot) === DEF };
   }
   const score = [0, 0];
   for (const e of data.events) {
@@ -46,17 +49,18 @@ export function ratingsAt(data, t) {
       default: break;
     }
   }
-  const out = {};
+  const out = {}, frac = Math.min(1, t / (data.periods.at(-1).end_t + 1));
   for (const id in S) {
     const s = S[id], i = info[id], mine = score[i.side], theirs = score[1 - i.side];
-    let r = 6.0;
-    r += 1.0 * s.goals + 0.7 * s.assists + 0.25 * s.key + 0.15 * s.sot;
-    r += 0.012 * s.done - 0.035 * (s.passes - s.done);
-    r += 0.12 * s.tackles + 0.1 * s.inter + 0.05 * s.clear + 0.1 * s.blocks;
-    r += 0.1 * s.takeOns + 0.05 * s.aerials - 0.05 * s.miscontrols;
-    r -= 0.05 * s.fouls + 0.3 * s.yellow + 1.5 * s.red + 0.8 * s.own;
-    if (i.gk) r += 0.3 * s.saves - 0.25 * s.conceded;
-    else if (i.def) r -= 0.1 * s.conceded;
+    let r = BASE + 1.0 * s.goals + 0.7 * s.assists;
+    let v = 0.25 * s.key + 0.15 * s.sot;
+    v += 0.012 * s.done - 0.035 * (s.passes - s.done);
+    v += 0.12 * s.tackles + 0.1 * s.inter + 0.05 * s.clear + 0.1 * s.blocks;
+    v += 0.1 * s.takeOns + 0.05 * s.aerials - 0.05 * s.miscontrols - 0.05 * s.fouls;
+    if (i.gk) v += 0.3 * s.saves - 0.25 * s.conceded;
+    else if (i.def) v -= 0.1 * s.conceded;
+    r += v - (VOLUME_NORM[i.pos] ?? VOLUME_NORM.MID) * frac;
+    r -= 0.3 * s.yellow + 1.5 * s.red + 0.8 * s.own;
     r += mine > theirs ? 0.2 : mine < theirs ? -0.2 : 0;
     out[id] = Math.round(Math.max(3.0, shape(r)) * 10) / 10;
   }
