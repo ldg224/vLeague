@@ -658,7 +658,7 @@ export class HighlightsRenderer {
       const f = fouls.find(f => f.player === c.player && c.t - f.t < 3) || { t: c.t, x: c.x, y: c.y };
       let up = f.t + 1.5;
       for (let t = f.t; t < f.t + 5; t += 0.1) { const r = this.refAt(plan, t); if (Math.hypot(r[0] - f.x, r[1] - f.y) < 3.5) { up = t + 0.6; break; } }
-      return { t: up, until: up + 3.8, colour: c.card === 'yellow' ? 'yellow' : 'red', player: c.player, foulT: f.t };
+      return { t: up, until: up + 3.8, colour: c.card === 'yellow' ? 'yellow' : 'red', player: c.player, foulT: f.t, e: c };
     });
   }
   refAt(plan, t) {
@@ -995,7 +995,7 @@ export class HighlightsRenderer {
       if (since >= 0) this.goalBanner(ev, since);
     } else if (s.type === 'clip' && (clip.kind === 'yellow' || clip.kind === 'red')) {
       // Caption appears as the referee shows the card.
-      const k = plan?.cards.find(x => x.player === ev.player);
+      const k = plan?.cards.find(x => x.e === ev);
       const since = tSim - (k ? k.t : clip.t + 2);
       if (since >= 0 && since < 3.4) this.lowerThird(clip, since);
     } else if (s.type === 'clip') {
@@ -1038,7 +1038,7 @@ export class HighlightsRenderer {
     const c = this.c, ev = clip.e;
     const a = easeOut(t / 0.3) * (1 - seg01(t, 2.7, 3.2));
     const text = clip.kind === 'save' ? `SAVE!  ·  ${this.keeperName(ev)}` : clip.kind === 'woodwork' ? `OFF THE ${ev.end_z > 2.2 ? 'BAR' : 'POST'}!  ·  ${lastName(this.names[ev.player])}`
-      : clip.kind === 'red' ? `RED CARD  ·  ${this.names[ev.player]}` : clip.kind === 'yellow' ? `YELLOW CARD  ·  ${this.names[ev.player]}`
+      : clip.kind === 'red' ? `${ev.card === 'second_yellow' ? 'SECOND YELLOW' : 'RED CARD'}  ·  ${this.names[ev.player]}` : clip.kind === 'yellow' ? `YELLOW CARD  ·  ${this.names[ev.player]}`
       : `SO CLOSE!  ·  ${lastName(this.names[ev.player])}  ·  xG ${ev.xg?.toFixed(2)}`;
     const cardCol = clip.kind === 'red' ? '#ef4444' : clip.kind === 'yellow' ? '#facc15' : null;
     c.save(); c.globalAlpha = a;

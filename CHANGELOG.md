@@ -3,6 +3,12 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.43.1 (2026-10-09)
+
+Card colours in the match viewer. No database change. If anything goes wrong, `v0.43.0` is the version to go back to (`docs/RELEASING.md`).
+
+- **Fixed, highlights (EU-03):** on the highlights scrub bar every card was a yellow marker; red cards are now red, and a second yellow shows red with the yellow behind it (as on the broadcast and tactical views). The lower caption for a second yellow says "SECOND YELLOW", and a player booked twice now gets the right caption timing on the second card. The card list in the tactical view says "Second yellow" instead of "Red card".
+
 ## 0.43.0 (2026-10-08)
 
 Live match ratings on the line-up pitch. No database change. If anything goes wrong, `v0.42.2` is the version to go back to (`docs/RELEASING.md`).

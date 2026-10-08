@@ -123,7 +123,7 @@ export class MatchPlayer {
     const shown = this.data.events.filter(e => ['goal', 'shot', 'save', 'card', 'penalty', 'woodwork', 'offside'].includes(e.type)), n = this.names;
     const label = e => e.type === 'goal' ? `GOAL! ${n[e.scorer] || ''}${e.own_goal ? ' (OG)' : ''} · ${e.score.join('-')}`
       : e.type === 'shot' ? `Shot · ${n[e.player]} · ${e.outcome}` : e.type === 'save' ? `Save · ${n[e.player]}`
-      : e.type === 'card' ? `${e.card === 'yellow' ? 'Yellow card' : 'Red card'} · ${n[e.player]}` : e.type === 'woodwork' ? 'Off the woodwork!' : e.type === 'penalty' ? 'Penalty!' : `Offside · ${n[e.player]}`;
+      : e.type === 'card' ? `${e.card === 'yellow' ? 'Yellow card' : e.card === 'second_yellow' ? 'Second yellow' : 'Red card'} · ${n[e.player]}` : e.type === 'woodwork' ? 'Off the woodwork!' : e.type === 'penalty' ? 'Penalty!' : `Offside · ${n[e.player]}`;
     const cap = this.$('#caption');
     this.tactical = new Replay(this.$('#pitch'), this.data, {
       onFrame: t => {
@@ -164,7 +164,7 @@ export class MatchPlayer {
   }
   marks() {
     if (this.view === 'highlights') {
-      return this.renderer('highlights').segs.filter(s => s.type === 'clip').map(s => ({ t: s.start, type: s.clip.kind === 'goal' ? 'goal' : ['yellow', 'red'].includes(s.clip.kind) ? 'card' : 'chance',
+      return this.renderer('highlights').segs.filter(s => s.type === 'clip').map(s => ({ t: s.start, type: s.clip.kind === 'goal' ? 'goal' : ['yellow', 'red'].includes(s.clip.kind) ? 'card' : 'chance', card: s.clip.e.card === 'second_yellow' || s.clip.e.card === 'red' ? s.clip.e.card : undefined,
         label: s.clip.kind === 'goal' ? `Goal: ${this.names[s.clip.e.scorer] || ''}` : s.clip.kind }));
     }
     if (this.view === 'broadcast' && this.renderer('broadcast').markers) return this.renderer('broadcast').markers;
