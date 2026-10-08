@@ -10,6 +10,7 @@ import { crest, teamOf, nameOf, fullNameOf, useClubs, day } from './places.js';
 import { prefs, fmtTime, spoilerHidden, revealScore } from './prefs.js';
 import { db } from './auth.js';
 import { winChance, percents, clubSummary } from './match-model.js';
+import { weekBar, wireWeekBar, weekBarArrow } from './week-tabs.js';
 
 const ctx = await enterPlace('matches');
 if (ctx) {
@@ -73,14 +74,10 @@ if (ctx) {
       groups.get(key).items.push(f);
     }
     main.innerHTML = `<div class="matches"><div class="mc-titlebar"><h1 class="page-title" tabindex="-1">Matches</h1>${mine ? `<button type="button" class="mc-filter" data-mine aria-pressed="${onlyMine}">My club only</button>` : ''}</div>
-      <div class="weektabs" role="tablist" aria-label="Rounds">${weeks.map(w => `<button type="button" role="tab" data-week="${esc(w)}" aria-selected="${w === week}">${esc(season.rounds?.[w]?.short || w)}</button>`).join('')}</div>
+      ${weekBar(weeks.map(w => `<button type="button" role="tab" data-week="${esc(w)}" aria-selected="${w === week}">${esc(season.rounds?.[w]?.short || w)}</button>`).join(''), 'Rounds')}
       <p class="mc-round">${esc(season.rounds?.[week]?.label || `Week ${week}`)}</p>
       ${groups.size ? '' : `<p class="empty">${onlyMine ? 'Your club isn’t playing this round. <button type="button" class="link-btn" data-mine>Show every match</button>' : 'No matches in this round yet.'}</p>`}${[...groups.values()].map(g => `<h2 class="day">${esc(g.label)}</h2><div class="mcs">${g.items.map(f => card(f, now)).join('')}</div>`).join('')}</div>`;
-    const tabs = main.querySelector('.weektabs');
-    if (tabs) {
-      if (scroll != null) tabs.scrollLeft = scroll;
-      else { const sel = tabs.querySelector('[aria-selected="true"]'); if (sel) tabs.scrollLeft = sel.offsetLeft - (tabs.clientWidth - sel.offsetWidth) / 2; }
-    }
+    wireWeekBar(main, scroll);
   }
 
   main.classList.add('league-main');
@@ -88,6 +85,7 @@ if (ctx) {
     const show = e.target.closest('[data-reveal]');
     if (show) { e.preventDefault(); await revealScore([show.dataset.reveal]); draw(); return; }
     if (e.target.closest('[data-mine]')) { onlyMine = !onlyMine; try { localStorage.setItem('vleague-matches-mine', onlyMine ? '1' : '0'); } catch { /* storage blocked */ } draw(); return; }
+    if (weekBarArrow(main, e)) return;
     const b = e.target.closest('.weektabs button');
     if (!b) return;
     week = Number(b.dataset.week); draw();

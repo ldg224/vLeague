@@ -9,6 +9,7 @@ import {
 } from './dashboard-data.js';
 import { crest, teamOf, nameOf, fullNameOf, useClubs, day } from './places.js';
 import { prefs, fmtTime, spoilerHidden, revealScore } from './prefs.js';
+import { weekBar, wireWeekBar, weekBarArrow } from './week-tabs.js';
 
 const ctx = await enterPlace('league');
 if (ctx) {
@@ -74,7 +75,7 @@ if (ctx) {
     const playing = new Set(season.fixtures.filter(f => f.week === week).flatMap(f => [f.home, f.away]));
     const byes = season.fixtures.some(f => f.week === week && f.test) ? [] : season.teams.filter(t => !playing.has(t.code));
     const byeHtml = byes.length ? `<h3 class="day">Bye</h3><div class="byes">${byes.map(t => `<span class="bye">${crest(t, 20)}<span class="nm">${esc(fullNameOf(t))}</span></span>`).join('')}</div>` : '';
-    return `<div class="weekbar"><button type="button" class="wk-arrow" data-wk="-1" aria-label="Earlier rounds">‹</button><div class="weektabs" role="tablist" aria-label="Weeks">${weeks.map(w => `<button type="button" role="tab" data-week="${esc(w)}" aria-selected="${w === week}"${season.rounds?.[w] ? ` aria-label="${esc(season.rounds[w].label)}" title="${esc(season.rounds[w].label)}"` : ''}>${esc(season.rounds?.[w]?.short ?? w)}</button>`).join('')}</div><button type="button" class="wk-arrow" data-wk="1" aria-label="Later rounds">›</button></div>
+    return `${weekBar(weeks.map(w => `<button type="button" role="tab" data-week="${esc(w)}" aria-selected="${w === week}"${season.rounds?.[w] ? ` aria-label="${esc(season.rounds[w].label)}" title="${esc(season.rounds[w].label)}"` : ''}>${esc(season.rounds?.[w]?.short ?? w)}</button>`).join(''), 'Weeks')}
       <div role="tabpanel" aria-label="${esc(season.rounds?.[week]?.label || `Week ${week}`)}">${[...groups.values()].map(g => `<h3 class="day">${esc(g.label)}</h3><div class="fxs">${g.items.map(f => row(f, now)).join('')}</div>`).join('')}${byeHtml}</div>`;
   }
 
@@ -95,28 +96,7 @@ if (ctx) {
       <section class="sect fixtures-sect"><div class="sect-head"><h2>Matches</h2></div>${fixturesHtml(now)}</section>
       <div class="leaders-sect">${leadersHtml(now)}</div>
     </div>`;
-    const tabs = main.querySelector('.weektabs');
-    if (tabs) {
-      if (scroll != null) tabs.scrollLeft = scroll;
-      else {
-        const sel = tabs.querySelector('[aria-selected="true"]');
-        if (sel) tabs.scrollLeft = sel.offsetLeft - (tabs.clientWidth - sel.offsetWidth) / 2;
-      }
-      // On a computer there is no swipe and the scrollbar is hidden: the arrows (and the mouse wheel over the row) move along the rounds.
-      const arrows = [...main.querySelectorAll('.wk-arrow')];
-      const sync = () => {
-        const over = tabs.scrollWidth > tabs.clientWidth + 1;
-        arrows.forEach(a => { a.hidden = !over; });
-        if (over) { arrows[0].disabled = tabs.scrollLeft <= 0; arrows[1].disabled = tabs.scrollLeft >= tabs.scrollWidth - tabs.clientWidth - 1; }
-      };
-      tabs.addEventListener('scroll', sync, { passive: true });
-      tabs.addEventListener('wheel', e => {
-        if (tabs.scrollWidth <= tabs.clientWidth + 1 || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
-        e.preventDefault();
-        tabs.scrollLeft += e.deltaY;
-      }, { passive: false });
-      sync();
-    }
+    wireWeekBar(main, scroll);
   }
 
   main.classList.add('league-main');
@@ -132,12 +112,7 @@ if (ctx) {
       if (show) main.querySelector(`a.fx[href$="=${CSS.escape(encodeURIComponent(show.dataset.reveal))}"]`)?.focus();
       return;
     }
-    const arrow = e.target.closest('.wk-arrow');
-    if (arrow) {
-      const tabs = main.querySelector('.weektabs');
-      tabs?.scrollBy({ left: Number(arrow.dataset.wk) * tabs.clientWidth * 0.7, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-      return;
-    }
+    if (weekBarArrow(main, e)) return;
     const b = e.target.closest('.weektabs button');
     if (!b) return;
     week = Number(b.dataset.week);
