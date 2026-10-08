@@ -1,3 +1,4 @@
+import { icon } from './icons.js';
 // The draft as a grid (0.31): a row per round, a column per club, and in each cell the pick number and who was taken.
 // Used by the managers' Board and by the Editor's Draft order (where unmade picks can be dragged). No page code.
 //
@@ -33,7 +34,7 @@ export function renderGrid(grid, o) {
   if (!grid.rounds.length) return '';
   const move = editable && made === 0;
   const head = grid.cols.map((c, i) => `<th scope="col" class="dg-col${c === me ? ' me' : ''}"${move ? ` draggable="true" data-col="${esc(c)}" data-i="${i}"` : ''}>
-      ${move ? `<button type="button" class="dg-mv" data-act="colleft" data-i="${i}" aria-label="Move ${esc(clubName(c))} left"${i ? '' : ' disabled'}>◀</button>` : ''}<span>${esc(clubName(c))}${c === me ? ' (you)' : ''}</span>${move ? `<button type="button" class="dg-mv" data-act="colright" data-i="${i}" aria-label="Move ${esc(clubName(c))} right"${i < grid.cols.length - 1 ? '' : ' disabled'}>▶</button>` : ''}</th>`).join('');
+      ${move ? `<button type="button" class="dg-mv" data-act="colleft" data-i="${i}" aria-label="Move ${esc(clubName(c))} left"${i ? '' : ' disabled'}>${icon('chevron-left')}</button>` : ''}<span>${esc(clubName(c))}${c === me ? ' (you)' : ''}</span>${move ? `<button type="button" class="dg-mv" data-act="colright" data-i="${i}" aria-label="Move ${esc(clubName(c))} right"${i < grid.cols.length - 1 ? '' : ' disabled'}>${icon('chevron-right')}</button>` : ''}</th>`).join('');
   const body = grid.rounds.map(r => `<tr><th scope="row" class="dg-r">${r.n}</th>${grid.cols.map(c => {
     const cell = r.cells.get(c) || [];
     return `<td class="dg-cell${c === me ? ' me' : ''}${cell.length === 0 ? ' none' : ''}">${cell.map(x => {

@@ -57,8 +57,7 @@ body:not(.su-edit) .su-step-head { display: none; }
 .su-link[hidden] { display: none; }
 #code-state.good { color: var(--tint-text); }
 #code-state.bad { color: var(--text); font-weight: 600; }
-#code-state.bad::before { content: '✕ '; }
-#code-state.good::before { content: '✓ '; }
+/* the tick and cross before the code message are drawn by css/site.css */
 
 /* Colours */
 .su-colours { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }

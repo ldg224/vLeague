@@ -206,7 +206,7 @@
   .dr-table .c-value { width: 4.2em; padding-inline: 4px; font-size: .78rem; }
   .dt-avail [data-add] { font-size: 0; padding: 6px 9px; }
   .dt-avail [data-add]::before { content: '+'; font-size: .95rem; line-height: 1; }
-  .dt-avail [data-add]:disabled::before { content: '✓'; }
+  .dt-avail [data-add]:disabled::before { content: ''; display: inline-block; width: 14px; height: 14px; background: currentColor; -webkit-mask: var(--i-check) center / contain no-repeat; mask: var(--i-check) center / contain no-repeat; }
 }
 @media (max-width: 640px) {
   /* One button per row on a phone: Pick on your turn, otherwise +. (A player's card has both.) */

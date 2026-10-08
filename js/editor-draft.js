@@ -23,6 +23,7 @@ const QDAYS = [[1, 'Mon'], [2, 'Tue'], [3, 'Wed'], [4, 'Thu'], [5, 'Fri'], [6, '
 const OVERNIGHT = { days: [0, 1, 2, 3, 4, 5, 6], from: '22:00', to: '07:00' };
 
 import { gridOf, renderGrid, moveColumn } from './draft-grid.js';
+import { icon } from './icons.js';
 
 export const draftView = () => '<h1>Draft</h1><div id="dr-root"><p class="quiet">Loading…</p></div>';
 
@@ -197,7 +198,7 @@ export async function mountDraft(ctx) {
             <input class="dr-rot" type="number" value="1" aria-label="Rotate by"><button class="btn ghost small" data-act="rotate">Rotate by</button></div><small>These change only the ${rest.length} unmade pick${rest.length === 1 ? '' : 's'}.</small></div>
         </div></details>
         <ol class="dr-order" start="${rest[0].pick_no}">${rest.map((o, i) => `<li><span>Pick ${o.pick_no}</span>${clubSelect(`data-pickno="${o.pick_no}" aria-label="Club for pick ${o.pick_no}"`, o.club)}
-          <button class="dr-b" data-act="rowup" data-no="${o.pick_no}" aria-label="Move pick ${o.pick_no} up"${i ? '' : ' disabled'}>▲</button><button class="dr-b" data-act="rowdown" data-no="${o.pick_no}" aria-label="Move pick ${o.pick_no} down"${i < rest.length - 1 ? '' : ' disabled'}>▼</button><button class="dr-b" data-act="rowdel" data-no="${o.pick_no}" aria-label="Remove pick ${o.pick_no}">✕</button></li>`).join('')}</ol>` : ''}
+          <button class="dr-b" data-act="rowup" data-no="${o.pick_no}" aria-label="Move pick ${o.pick_no} up"${i ? '' : ' disabled'}>${icon('chevron-up')}</button><button class="dr-b" data-act="rowdown" data-no="${o.pick_no}" aria-label="Move pick ${o.pick_no} down"${i < rest.length - 1 ? '' : ' disabled'}>${icon('chevron-down')}</button><button class="dr-b" data-act="rowdel" data-no="${o.pick_no}" aria-label="Remove pick ${o.pick_no}">${icon('x')}</button></li>`).join('')}</ol>` : ''}
     </section>`;
   };
 
@@ -228,7 +229,7 @@ export async function mountDraft(ctx) {
       <div class="dr-qrows">${rows.map((w, i) => `<div class="dr-qrow" data-i="${i}">
         <span class="dr-qdays" role="group" aria-label="Days this quiet time starts">${QDAYS.map(([v, l]) => `<label><input type="checkbox" value="${v}"${w.days.includes(v) ? ' checked' : ''}><span>${l}</span></label>`).join('')}</span>
         <label>From <input type="time" name="from" value="${esc(w.from)}"></label><label>Until <input type="time" name="to" value="${esc(w.to)}"></label>
-        <button class="dr-b" type="button" data-act="q-del" data-i="${i}" aria-label="Remove this quiet time">✕</button></div>`).join('') || '<p class="quiet">No quiet times.</p>'}</div>
+        <button class="dr-b" type="button" data-act="q-del" data-i="${i}" aria-label="Remove this quiet time">${icon('x')}</button></div>`).join('') || '<p class="quiet">No quiet times.</p>'}</div>
       <p class="ed-hint">A time that ends before it starts (like 10:00 pm until 7:00 am) runs overnight. The days are the days it starts on.</p>
       <div class="ed-actions"><button class="btn ghost small" type="button" data-act="q-add">+ Add a quiet time</button>
         <button class="btn ghost small" type="button" data-act="q-night">Every night, 10 pm to 7 am</button>
@@ -295,7 +296,7 @@ export async function mountDraft(ctx) {
       if (!at) { el.textContent = ''; return; }
       if (q?.active_left == null) { el.textContent = left(at - Date.now()); return; }   // no quiet times: the plain countdown
       const paused = !!q.quiet_until && Date.now() < new Date(q.quiet_until);
-      el.textContent = left(paused ? q.active_left * 1000 : Math.max(0, q.active_left * 1000 - (Date.now() - q.at))) + (paused ? ' ⏸' : '');
+      el.innerHTML = left(paused ? q.active_left * 1000 : Math.max(0, q.active_left * 1000 - (Date.now() - q.at))) + (paused ? ` ${icon('pause')}` : '');
     });
   }
 

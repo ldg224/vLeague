@@ -3,6 +3,18 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.42.1 (2026-10-08)
+
+Emoji and symbol characters are replaced by drawn icons. No database change. If anything goes wrong, `v0.42.0` is the version to go back to (`docs/RELEASING.md`).
+
+Emoji and symbols such as the thumbs up or the pause sign are drawn by each phone's or computer's own font, so they changed shape from one device to the next. They are now small drawn icons (from the free Lucide and Tabler Icons sets, in `js/icons.js`) that look the same everywhere and take the colour of the text around them.
+
+- **Changed, Inbox reactions:** the five reactions (thumbs up, fire, laughing, cheers, surprised) are icons, with names for screen readers. The database still stores the same five choices, so everyone's earlier reactions are kept. The old clap is now a party popper ("Cheers").
+- **Changed, match video:** the big play button, replay, full screen and exit full screen buttons are icons. The ball beside each scorer on the half-time and full-time screens is a drawn football. A card in the tactical view's caption now reads "Yellow card" or "Red card" in words.
+- **Changed, Draft and Editor:** the move up, move down, remove, move club left and right and pause signs, and the pencil beside editable details, are icons.
+- **Changed, ticks, crosses and warnings:** the tick on Settings and a player already queued, the tick and cross on the club-code check, and the warning on a video error are icons.
+- **Changed, Game centre:** the "Back" arrow is an icon.
+- **Left as they are:** plain arrows in sentences, the small ▾ ▴ arrows that open a section, the ★ on a named round, and the five reaction characters the database stores.
 ## 0.42.0 (2026-10-08)
 
 The line-ups are drawn on a pitch, and a fix to the line-up order. No database change. If anything goes wrong, `v0.41.2` is the version to go back to (`docs/RELEASING.md`).

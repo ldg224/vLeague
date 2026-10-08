@@ -5,6 +5,7 @@
 // pick is made (realtime), with a 15 s poll as backup. Tap a player's name for their card; picks are confirmed in a small dialog.
 import { enterPlace } from './shell.js';
 import { esc } from './member.js';
+import { icon } from './icons.js';
 import { openDraft, phase, loadDraft, saveQueue, savePrefs, makePick, quietState, describeQuiet } from './draft-data.js';
 import { loadPlayers, forgetPlayers } from './players-data.js';
 import { ago } from './places.js';
@@ -111,7 +112,7 @@ if (ctx) {
         closed: ['Closed', 'The draft has closed', 'Picks can’t be made now.', ''],
         done: ['Finished', 'The draft is finished', `All ${n} picks are done.`, ''],
       }[ph];
-      const quiet = d.quiet?.length ? (inQuiet() && ph === 'live' ? `⏸ Quiet time: the timer is paused until ${new Date(st.qs.quiet_until).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' })}. You can still pick.` : `Timers pause ${describeQuiet(d.quiet)}. You can still pick then.`) : '';
+      const quiet = d.quiet?.length ? (inQuiet() && ph === 'live' ? `${icon('pause')} Quiet time: the timer is paused until ${new Date(st.qs.quiet_until).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' })}. You can still pick.` : `Timers pause ${describeQuiet(d.quiet)}. You can still pick then.`) : '';
       const small = [rulesText() && `Roster rules: ${rulesText()}`, quiet].filter(Boolean);
       return `<section class="dr-status ph-${ph}${mine ? ' mine' : ''}${ph === 'live' && inQuiet() ? ' quiet' : ''}"><div class="dr-st-main"><div><span class="dr-st-tag">${B[0]}</span><p class="dr-st-name">${esc(d.name || 'Draft')}</p>
         <h1 class="page-title dr-st-big" tabindex="-1">${B[1]}</h1><p class="dr-st-sub">${B[2]}</p></div>
@@ -125,7 +126,7 @@ if (ctx) {
     const SORTS = { avail: DEFAULT.avail.map(s => ({ ...s })) };
     const colsOf = () => COLS;
     const col = (t, k) => colsOf(t).find(c => c.key === k);
-    const arrow = d => (d > 0 ? '▲' : '▼');
+    const arrow = d => (d > 0 ? icon('chevron-up') : icon('chevron-down'));
     const sorted = (t, list) => [...list].sort((a, b) => {
       for (const { key, dir } of SORTS[t]) { const x = col(t, key).val(a), y = col(t, key).val(b); if (x !== y) return (x < y ? -1 : 1) * dir; }
       return a.name < b.name ? -1 : 1;
@@ -144,7 +145,7 @@ if (ctx) {
       return `<div class="dr-filter"><input type="search" data-f="q" data-t="${t}" placeholder="Search players" value="${esc(f.q)}">
         <select data-f="pos" data-t="${t}" aria-label="Position"><option value="">All positions</option>${['GK', 'DEF', 'MID', 'FWD'].map(p => `<option${f.pos === p ? ' selected' : ''}>${p}</option>`).join('')}</select>
         <input type="number" inputmode="numeric" min="0" step="1000" data-f="max" data-t="avail" placeholder="Max value $" aria-label="Maximum value" value="${esc(f.max)}">${code ? `<label class="dr-fit"><input type="checkbox" data-f="fit" data-t="avail"${f.fit ? ' checked' : ''}> Fits my squad</label>` : ''}</div>
-        <div class="dr-sortbar"><span>Sort by</span>${s.map((x, i) => `<span class="dr-chip"><b>${i + 1}</b><button data-t="${t}" data-sflip="${i}" title="Flip direction">${esc(col(t, x.key).long)} ${arrow(x.dir)}</button><button data-t="${t}" data-sdel="${i}" aria-label="Stop sorting by ${esc(col(t, x.key).long)}"${s.length > 1 ? '' : ' disabled'}>✕</button></span>`).join('')}
+        <div class="dr-sortbar"><span>Sort by</span>${s.map((x, i) => `<span class="dr-chip"><b>${i + 1}</b><button data-t="${t}" data-sflip="${i}" title="Flip direction">${esc(col(t, x.key).long)} ${arrow(x.dir)}</button><button data-t="${t}" data-sdel="${i}" aria-label="Stop sorting by ${esc(col(t, x.key).long)}"${s.length > 1 ? '' : ' disabled'}>${icon('x')}</button></span>`).join('')}
           ${unused.length ? `<select data-sadd="${t}" aria-label="Add a sort"><option value="">+ Then by…</option>${unused.map(c => `<option value="${c.key}">${esc(c.long)}</option>`).join('')}</select>` : ''}
           <button class="dr-b" data-t="${t}" data-sreset>Reset</button></div>
         <p class="quiet dr-hint">Tap a heading to sort by it. Shift-tap, or use “Then by…”, to sort by a second or third thing, for example Position, then Defensive rating.</p>`;
@@ -176,7 +177,7 @@ if (ctx) {
       const map = byId(), q = queue();
       return `<section class="dr-queue"><h2>My queue <small>${q.length}</small></h2>
         ${myTurn() && q.length ? `<button class="dr-b pick big" data-pick="${esc(q[0])}"${blocked(map.get(q[0])) ? ` disabled title="${esc(blocked(map.get(q[0])))}"` : ''}>Pick now: ${esc(map.get(q[0])?.name)}</button>` : ''}
-        <ol class="dr-list" id="queue">${q.map((id, i) => playerRow(map.get(id), `<span class="mv"><button class="dr-b" data-up="${i}" aria-label="Move up"${i ? '' : ' disabled'}>▲</button><button class="dr-b" data-down="${i}" aria-label="Move down"${i < q.length - 1 ? '' : ' disabled'}>▼</button><button class="dr-b" data-rm="${i}" aria-label="Remove">✕</button></span>`, ` draggable="true" data-i="${i}"`)).join('') || '<li class="empty">Add players with “+ Queue”. Drag or use the arrows to rank them.</li>'}</ol></section>`;
+        <ol class="dr-list" id="queue">${q.map((id, i) => playerRow(map.get(id), `<span class="mv"><button class="dr-b" data-up="${i}" aria-label="Move up"${i ? '' : ' disabled'}>${icon('chevron-up')}</button><button class="dr-b" data-down="${i}" aria-label="Move down"${i < q.length - 1 ? '' : ' disabled'}>${icon('chevron-down')}</button><button class="dr-b" data-rm="${i}" aria-label="Remove">${icon('x')}</button></span>`, ` draggable="true" data-i="${i}"`)).join('') || '<li class="empty">Add players with “+ Queue”. Drag or use the arrows to rank them.</li>'}</ol></section>`;
     }
     function autoPanel(open) {
       if (!code) return '';
@@ -383,7 +384,7 @@ if (ctx) {
       { target: ['.dr-filter', '.dr-sortbar'], tab: 'players', sub: 'players', title: 'Search, filter and sort', text: 'Type a name, or choose a position to narrow the list. <b>Tap any column heading</b> to sort by it, and tap again to flip it.', tip: 'Want the best defenders? Sort by Position, then add “Then by… Defensive rating”.' },
       { target: '.dr-main .dr-tablewrap', tab: 'players', sub: 'players', title: 'Available players', text: 'Everyone who hasn’t been taken yet. <b>OFF</b> is attack, <b>DEF</b> is defence, <b>OVR</b> is the overall rating, and <b>Value</b> is what they cost against your cap. The colours run from red (weak) to green (outstanding).', tip: 'Tap a player’s name for their card. “Fits my squad” and “Max value” narrow the list further.' },
       { target: '[data-add]', optional: true, tab: 'players', sub: 'players', title: 'Add to your queue', text: 'Press <b>+ Queue</b> next to any player you like. It adds them to your queue so you don’t have to hunt for them later.' },
-      { target: '.dr-queue', tab: 'players', sub: 'queue', title: 'My queue', text: 'Your wish list, best player first. Drag players or use the <b>▲ ▼</b> arrows to rank them, and <b>✕</b> to remove one. If someone else takes a player, they drop off by themselves.', tip: 'Fill it with plenty of players so you’re never stuck.' },
+      { target: '.dr-queue', tab: 'players', sub: 'queue', title: 'My queue', text: 'Your wish list, best player first. Drag players or use the <b>' + icon('chevron-up') + ' ' + icon('chevron-down') + '</b> arrows to rank them, and <b>' + icon('x') + '</b> to remove one. If someone else takes a player, they drop off by themselves.', tip: 'Fill it with plenty of players so you’re never stuck.' },
       { target: '.dr-autobox', optional: true, tab: 'players', sub: 'auto', title: 'Auto-pick', text: 'Can’t be online? Let the draft pick <b>for you</b>. Choose <b>what</b> to pick (from your queue, or at random) and <b>when</b> (straight away, after a few minutes, or only if you miss your turn).', tip: 'It saves as you change it. Nothing to press.' },
       { target: '.dr-avail', tab: 'players', sub: 'players', title: 'Making a pick', text: () => myTurn()
           ? 'It’s your turn, so every row has a <b>Pick</b> button, and your queue has a big <b>Pick now</b> button. You’ll be asked to confirm, and shown what it does to your budget.'

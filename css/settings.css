@@ -13,7 +13,7 @@
 .tick { font-size: .8rem; font-weight: 600; color: var(--faint); }
 .tick:empty { display: none; }
 .tick.ok { color: var(--res-w); }
-.tick.ok::before { content: '✓ '; }
+/* the tick is drawn by css/site.css */
 .tick.err { color: var(--err-text); flex-basis: 100%; text-align: right; }
 .tick.busy::after { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--faint); border-top-color: transparent; animation: spin .7s linear infinite; }
 .tick.busy:empty { display: inline-block; }

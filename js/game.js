@@ -16,6 +16,7 @@ import { winChance, percents, clubSummary } from './match-model.js';
 import { lookInfo, scoreboard } from './scoreboard.js';
 import { playerCard, MatchPlayer } from './viewer/player.js';
 import { byPlace, pitchHtml } from './lineup-pitch.js';
+import { icon } from './icons.js';
 
 chrome();
 const main = document.getElementById('main');
@@ -30,7 +31,7 @@ try {
   useClubs(clubsRows);
   if (user) {
     document.getElementById('back').href = 'matches.html';
-    document.getElementById('back').textContent = '← Matches';
+    document.getElementById('back').innerHTML = `${icon('arrow-left')} Matches`;
     await prefs().catch(() => null);
     const prof = await myProfile().catch(() => null);
     paintClub(clubsRows.find(c => c.code === prof?.club) || null);

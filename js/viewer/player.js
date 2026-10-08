@@ -6,6 +6,7 @@
 import { liveSimTime, liveSpeed, clockAt, addedAt } from './data.js';
 import { esc, statusPill } from './ui.js';
 import { Replay } from './replay.js';
+import { icon } from '../icons.js';
 
 const W = 1920, H = 1080;
 const mmss = s => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
@@ -29,7 +30,7 @@ export function playerCard(st) {
       <canvas class="mp-canvas" id="mp-canvas" width="1280" height="720" aria-label="Match video"></canvas>
       <canvas class="mp-tactical" id="pitch" width="1110" height="740" aria-label="Tactical view" hidden></canvas>
       <div class="replay-caption" id="caption"></div>
-      <button class="mp-big" id="mp-big" hidden aria-label="Play">▶</button>
+      <button class="mp-big" id="mp-big" hidden aria-label="Play">${icon('play')}</button>
       <div class="mp-msg" id="mp-msg">Loading match…</div>
     </div>
     <div class="mp-controls">
@@ -37,7 +38,7 @@ export function playerCard(st) {
       <span class="mp-extra" id="mp-extra"></span>
       <span class="replay-clock" id="mp-time">0:00</span>
       <div class="mp-seek"><input type="range" id="mp-seek" min="0" max="1" step="0.05" value="0" aria-label="Position"><div class="mp-marks" id="mp-marks"></div></div>
-      <button class="ctl" id="mp-full" aria-label="Full screen" title="Full screen">⛶</button>
+      <button class="ctl" id="mp-full" aria-label="Full screen" title="Full screen">${icon('maximize')}</button>
     </div>
     </div>
   </section>`;
@@ -122,7 +123,7 @@ export class MatchPlayer {
     const shown = this.data.events.filter(e => ['goal', 'shot', 'save', 'card', 'penalty', 'woodwork', 'offside'].includes(e.type)), n = this.names;
     const label = e => e.type === 'goal' ? `GOAL! ${n[e.scorer] || ''}${e.own_goal ? ' (OG)' : ''} · ${e.score.join('-')}`
       : e.type === 'shot' ? `Shot · ${n[e.player]} · ${e.outcome}` : e.type === 'save' ? `Save · ${n[e.player]}`
-      : e.type === 'card' ? `${e.card === 'yellow' ? '🟨' : '🟥'} ${n[e.player]}` : e.type === 'woodwork' ? 'Off the woodwork!' : e.type === 'penalty' ? 'Penalty!' : `Offside · ${n[e.player]}`;
+      : e.type === 'card' ? `${e.card === 'yellow' ? 'Yellow card' : 'Red card'} · ${n[e.player]}` : e.type === 'woodwork' ? 'Off the woodwork!' : e.type === 'penalty' ? 'Penalty!' : `Offside · ${n[e.player]}`;
     const cap = this.$('#caption');
     this.tactical = new Replay(this.$('#pitch'), this.data, {
       onFrame: t => {
@@ -178,7 +179,7 @@ export class MatchPlayer {
     this.$('#mp-time').textContent = this.view === 'highlights' ? `${mmss(this.t)} / ${mmss(b)}` : `${clockAt(this.data.periods, this.t)}${extra ? ` +${extra}` : ''}`;
     const big = this.$('#mp-big');
     big.hidden = playing || this.view === 'tactical';
-    big.textContent = this.view === 'highlights' && this.t >= b - 0.05 ? '↻' : '▶';
+    big.innerHTML = this.view === 'highlights' && this.t >= b - 0.05 ? icon('rotate-cw') : icon('play');
     const lv = this.$('#mp-live');
     if (lv) lv.classList.toggle('behind', liveSimTime(this.FX, this.S) - this.t > 5);
     this.$('#mp-seek').style.setProperty('--pos', `${((this.t - a) / (b - a || 1)) * 100}%`);
@@ -258,7 +259,7 @@ export class MatchPlayer {
     document.body.classList.toggle('mp-fs-open', on);
     btn.setAttribute('aria-label', on ? 'Exit full screen' : 'Full screen');
     btn.title = on ? 'Exit full screen (Esc)' : 'Full screen';
-    btn.textContent = on ? '✕' : '⛶';
+    btn.innerHTML = on ? icon('minimize') : icon('maximize');
     this.fsWake();
     this.resize();
   }

@@ -9,6 +9,7 @@ import { playersView, mountPlayers } from './editor-players.js';
 import { fixturesView, mountFixtures } from './editor-fixtures.js';
 import { newsView, mountNews } from './editor-news.js';
 import { draftView, mountDraft } from './editor-draft.js';
+import { icon } from './icons.js';
 
 chrome();
 const me = await enter('editor.html');
@@ -182,7 +183,7 @@ function clubItem(c, accts) {
 // A little pen next to everything in a club. It swaps the value for a small form; Save writes it, Cancel puts it back.
 // The office can change anything directly (no approval step). The database checks everything again.
 
-const pen = (key, label) => `<button class="ed-pen" type="button" data-edit="${key}" aria-label="Edit ${esc(label)}" title="Edit ${esc(label)}">✎</button>`;
+const pen = (key, label) => `<button class="ed-pen" type="button" data-edit="${key}" aria-label="Edit ${esc(label)}" title="Edit ${esc(label)}">${icon('pencil')}</button>`;
 const dash = '<span class="quiet">—</span>';
 const crestPic = c => (c.crest_path ? `<img src="${esc(crestUrl(c.crest_path))}" alt="" class="ed-crest-pic">` : '<span class="quiet">None</span>');
 const STATUS = { active: 'Active', pending: 'Pending', withdrawn: 'Withdrawn' };
@@ -343,8 +344,8 @@ function accountRow(a, loose) {
   }).join('');
   return `<li class="ed-acct" data-id="${esc(a.id)}" data-email="${esc(a.email)}">
     <span class="who">
-      <span class="ed-row2" data-acct-field="name"><b class="ed-val">${esc(a.display_name || a.email)}</b><button class="ed-pen" type="button" data-edit-acct="name" aria-label="Edit name" title="Edit name">✎</button><span class="ed-editor" hidden></span></span>
-      <span class="ed-row2" data-acct-field="email"><small class="ed-val">${esc(a.email)}${a.role === 'office' ? ' · league office' : ''}</small><button class="ed-pen" type="button" data-edit-acct="email" aria-label="Edit email" title="Edit email">✎</button><span class="ed-editor" hidden></span></span>
+      <span class="ed-row2" data-acct-field="name"><b class="ed-val">${esc(a.display_name || a.email)}</b><button class="ed-pen" type="button" data-edit-acct="name" aria-label="Edit name" title="Edit name">${icon('pencil')}</button><span class="ed-editor" hidden></span></span>
+      <span class="ed-row2" data-acct-field="email"><small class="ed-val">${esc(a.email)}${a.role === 'office' ? ' · league office' : ''}</small><button class="ed-pen" type="button" data-edit-acct="email" aria-label="Edit email" title="Edit email">${icon('pencil')}</button><span class="ed-editor" hidden></span></span>
       <small>${esc(accountState(a))}</small></span>
     ${loose ? `<label class="sr-only" for="club-${esc(a.id)}">Club</label><select id="club-${esc(a.id)}" data-act="link">${options}</select>` : ''}
     <span class="ed-actions"><button class="btn ghost small" data-act="reset" type="button">Send password link</button>

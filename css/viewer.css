@@ -43,9 +43,10 @@ body.mp-fs-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) { .mp-screen.mp-fs .mp-controls { transition: none; } }
 .mp-big { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 76px; height: 76px; border-radius: 50%; border: 0; background: rgba(10,15,25,.72); color: #fff; font-size: 2rem; cursor: pointer; box-shadow: 0 0 0 3px rgba(255,255,255,.85), 0 10px 30px rgba(0,0,0,.5); backdrop-filter: blur(4px); }
 .mp-big:hover { background: rgba(10,15,25,.9); }
+.mp-big .ic { width: 1em; height: 1em; vertical-align: middle; fill: currentColor; }
 .mp-big[hidden] { display: none; }
 .mp-msg { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-weight: 700; background: var(--surface); }
-.mp-msg.err { color: #fff; } .mp-msg.err::before { content: "⚠ "; }
+.mp-msg.err { color: #fff; } /* the warning sign before an error is drawn by css/site.css */
 .mp-msg[hidden] { display: none; }
 .mp-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
 .mp-extra { display: contents; }

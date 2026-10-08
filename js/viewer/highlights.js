@@ -352,6 +352,27 @@ export class HighlightsRenderer {
     if (italic) { c.translate(x, y); c.transform(1, 0, -0.18, 1, 0, 0); c.fillText(str, 0, 0); } else c.fillText(str, x, y);
     c.restore();
   }
+  // A football drawn as a shape, centred at (cx, cy) with diameter d. (The ball emoji is drawn by each device's own font and
+  // looks different everywhere; this is the same ball as the icons in the Game centre.)
+  ball(cx, cy, d, alpha = 1) {
+    const c = this.c; c.save(); c.globalAlpha *= alpha;
+    c.translate(cx - d / 2, cy - d / 2); c.scale(d / 24, d / 24);
+    c.fillStyle = '#fff'; c.strokeStyle = '#1b2333'; c.lineWidth = 1.5;
+    c.beginPath(); c.arc(12, 12, 10, 0, Math.PI * 2); c.fill(); c.stroke();
+    c.fillStyle = '#1b2333'; c.fill(new Path2D('M12 7.2l4.2 3-1.6 4.9H9.4L7.8 10.2z'));
+    c.lineWidth = 1.4; c.lineCap = 'round';
+    c.stroke(new Path2D('M12 7.2V2.8M16.2 10.2l4.3-1.4M14.6 15.1l2.7 3.7M9.4 15.1l-2.7 3.7M7.8 10.2L3.5 8.8'));
+    c.restore();
+  }
+  // A scorer's line: a ball, then the text, the pair centred on x.
+  scorerLine(str, x, y, { size = 27, alpha = 1 } = {}) {
+    const c = this.c; c.save();
+    c.font = `700 ${size}px ${FONT}`; if ('letterSpacing' in c) c.letterSpacing = '0px';
+    const w = c.measureText(str).width; c.restore();
+    const d = size * 0.95, gap = size * 0.35, x0 = x - (d + gap + w) / 2;
+    this.ball(x0 + d / 2, y - size * 0.33, d, alpha);
+    this.text(str, x0 + d + gap, y, { size, weight: 700, align: 'left', alpha });
+  }
   // Draw a picture centred at (cx, cy), as large as fits inside w x h WITHOUT changing its shape (the crests aren't square).
   fitImg(img, cx, cy, w, h, aspect) {
     const iw = aspect ? aspect * 100 : (img.naturalWidth || img.width || 1), ih = aspect ? 100 : (img.naturalHeight || img.height || 1), s = Math.min(w / iw, h / ih);
@@ -481,8 +502,8 @@ export class HighlightsRenderer {
     const list = side => this.goals.filter(g => g.team === (side ? this.away.code : this.home.code))
       .map(g => `${lastName(this.names[g.scorer])} ${g.minute}'${g.own_goal ? ' (OG)' : ''}`);
     const a = easeOut((t - 0.6) / 0.6);
-    list(0).slice(0, 4).forEach((s, i) => this.text('⚽ ' + s, W / 2 - 520, 555 + i * 38, { size: 27, weight: 700, align: 'center', alpha: a }));
-    list(1).slice(0, 4).forEach((s, i) => this.text('⚽ ' + s, W / 2 + 520, 555 + i * 38, { size: 27, weight: 700, align: 'center', alpha: a }));
+    list(0).slice(0, 4).forEach((s, i) => this.scorerLine(s, W / 2 - 520, 555 + i * 38, { alpha: a }));
+    list(1).slice(0, 4).forEach((s, i) => this.scorerLine(s, W / 2 + 520, 555 + i * 38, { alpha: a }));
     // Stat bars, centred under the score
     const st = this.d.stats.teams;
     const rows = [['POSSESSION %', 'possession'], ['xG', 'xg'], ['SHOTS', 'shots'], ['ON TARGET', 'shots_on_target'], ['PASS ACCURACY %', 'pass_accuracy']];

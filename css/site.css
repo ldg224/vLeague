@@ -221,3 +221,11 @@ html { scrollbar-gutter: stable; }
 .nc-act { margin: 4px 16px 14px; }
 .nc-btn { display: inline-block; padding: 10px 20px; border-radius: 10px; background: var(--nc, var(--blue-600)); color: #fff; font-weight: 700; text-decoration: none; }
 .nc-btn:hover { filter: brightness(1.1); }
+
+/* Icons (js/icons.js): inline svg in the page's text colour. The same shapes are here as masks for the few drawn in CSS (::before). */
+.ic { width: 1.15em; height: 1.15em; vertical-align: -.2em; flex: none; }
+:root { --i-check: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%20fill%3D'none'%20stroke%3D'black'%20stroke-width%3D'2'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cpath%20d%3D%22M20%206%209%2017l-5-5%22%20%2F%3E%3C%2Fsvg%3E"); --i-x: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%20fill%3D'none'%20stroke%3D'black'%20stroke-width%3D'2'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cpath%20d%3D%22M18%206%206%2018%22%20%2F%3E%3Cpath%20d%3D%22m6%206%2012%2012%22%20%2F%3E%3C%2Fsvg%3E"); --i-alert: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2024%2024'%20fill%3D'none'%20stroke%3D'black'%20stroke-width%3D'2'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%3E%3Cpath%20d%3D%22m21.73%2018-8-14a2%202%200%200%200-3.48%200l-8%2014A2%202%200%200%200%204%2021h16a2%202%200%200%200%201.73-3%22%20%2F%3E%3Cpath%20d%3D%22M12%209v4%22%20%2F%3E%3Cpath%20d%3D%22M12%2017h.01%22%20%2F%3E%3C%2Fsvg%3E"); }
+.tick.ok::before, #code-state.bad::before, #code-state.good::before, .mp-msg.err::before { content: ''; display: inline-block; width: 1.05em; height: 1.05em; margin-right: .3em; vertical-align: -.18em; background: currentColor; -webkit-mask: var(--i) center / contain no-repeat; mask: var(--i) center / contain no-repeat; }
+.tick.ok::before, #code-state.good::before { --i: var(--i-check); }
+#code-state.bad::before { --i: var(--i-x); }
+.mp-msg.err::before { --i: var(--i-alert); }

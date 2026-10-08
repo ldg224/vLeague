@@ -9,6 +9,7 @@ import { loadPress, savePressAnswer, pickQuestions, chosen, meters, loadReaction
 import { kickoff } from './dashboard-data.js';
 import { markdown, inline, ago, day, time } from './places.js';
 import { newsBody } from './news-card.js';
+import { icon, REACTION } from './icons.js';
 
 const ctx = await enterPlace('inbox');
 if (ctx) {
@@ -57,7 +58,7 @@ if (ctx) {
   // One row of reaction buttons. Pressing your own emoji again takes it back.
   const reactBar = target => {
     const r = reactions.get(target) || { counts: {}, mine: null };
-    return `<div class="rx" role="group" aria-label="React">${EMOJI.map(e => `<button type="button" class="rx-b${r.mine === e ? ' on' : ''}" data-rx="${esc(target)}" data-e="${e}" aria-pressed="${r.mine === e}">${e}${r.counts[e] ? `<span>${r.counts[e]}</span>` : ''}</button>`).join('')}</div>`;
+    return `<div class="rx" role="group" aria-label="React">${EMOJI.map(e => `<button type="button" class="rx-b${r.mine === e ? ' on' : ''}" data-rx="${esc(target)}" data-e="${e}" aria-pressed="${r.mine === e}" aria-label="${REACTION[e].label}" title="${REACTION[e].label}">${icon(REACTION[e].name)}${r.counts[e] ? `<span>${r.counts[e]}</span>` : ''}</button>`).join('')}</div>`;
   };
 
   function pressView(i) {
@@ -113,7 +114,7 @@ if (ctx) {
       ${toast ? `<p class="ib-toast" role="status">${esc(toast.text)} <button type="button" class="ib-undo" data-undo>Undo</button></p>` : ''}
       ${items.length ? `<ul class="ib-list">${items.map(i => {
         const v = view(i), isNew = !read.has(i.id);
-        return `<li>${clearable(i) ? `<button type="button" class="ib-del" data-del="${esc(i.id)}" aria-label="Delete “${esc(v.title)}”" title="Delete">✕</button>` : ''}<details class="ib-post${isNew ? ' new' : ''}" data-id="${esc(i.id)}"${opened.has(i.id) ? ' open' : ''}>
+        return `<li>${clearable(i) ? `<button type="button" class="ib-del" data-del="${esc(i.id)}" aria-label="Delete “${esc(v.title)}”" title="Delete">${icon('x')}</button>` : ''}<details class="ib-post${isNew ? ' new' : ''}" data-id="${esc(i.id)}"${opened.has(i.id) ? ' open' : ''}>
           <summary><span class="dot" aria-hidden="true"></span>
             <span class="ib-title">${esc(v.title)}</span>
             <span class="ib-meta">${isNew ? '<span class="sr-only">Unread. </span>' : ''}${i.pinned ? '<span class="pin">Pinned</span>' : ''}${[v.from !== 'vLeague' && esc(v.from), i.at && esc(ago(i.at))].filter(Boolean).join(' · ')}</span></summary>
