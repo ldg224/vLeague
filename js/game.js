@@ -16,6 +16,7 @@ import { winChance, percents, clubSummary } from './match-model.js';
 import { lookInfo, scoreboard } from './scoreboard.js';
 import { playerCard, MatchPlayer } from './viewer/player.js';
 import { byPlace, pitchHtml } from './lineup-pitch.js';
+import { ratingsAt } from './live-rating.js';
 import { icon } from './icons.js';
 
 chrome();
@@ -236,6 +237,7 @@ async function run() {
   // ---------------------------------------------------------------- line-ups
   function lineupsSection() {
     const t = horizon(), full = st() === 'ft', ev = eventsTo(t), P = data.stats.players, bestId = full ? bestPlayer() : null;
+    const liveR = live() ? ratingsAt(data, t) : null;   // a live match: ratings as they stand now, from the events so far
     const goals = id => ev.filter(e => e.type === 'goal' && e.scorer === id && !e.own_goal).length, assists = id => ev.filter(e => e.type === 'goal' && e.assist === id).length;
     const cards = id => ev.filter(e => e.type === 'card' && e.player === id).map(e => (e.card === 'yellow' ? ICONS.yellow : ICONS.red)).join('');
     const side = c => {
@@ -243,10 +245,10 @@ async function run() {
       return {
         code: c, formation: team.formation, captain: team.captain, items: [...team.lineup],
         extras: id => ({ play: ICONS.ball.repeat(goals(id)) + ICONS.assist.repeat(assists(id)), cards: cards(id) }),
-        rating: id => { const r = full ? P[id]?.rating : null; return r ? { value: r.toFixed(1), cls: id === bestId ? 'r-motm' : r >= 7 ? 'r-hi' : r < 6 ? 'r-lo' : 'r-mid', motm: id === bestId } : null; },
+        rating: id => { const r = full ? P[id]?.rating : liveR?.[id]; return r ? { value: r.toFixed(1), cls: id === bestId ? 'r-motm' : r >= 7 ? 'r-hi' : r < 6 ? 'r-lo' : 'r-mid', motm: id === bestId } : null; },
       };
     };
-    return `<section class="gc-sec" id="gc-lineups"><h2>Line-ups</h2>${pitchHtml(side(fx.home), side(fx.away), pitchKit)}${full ? '' : '<p class="gc-note">Ratings appear at full time.</p>'}</section>`;
+    return `<section class="gc-sec" id="gc-lineups"><h2>Line-ups</h2>${pitchHtml(side(fx.home), side(fx.away), pitchKit)}${full ? '' : '<p class="gc-note">Ratings update as the match goes (everyone starts on 6.0). The man of the match is picked at full time.</p>'}</section>`;
   }
 
   // ---------------------------------------------------------------- page

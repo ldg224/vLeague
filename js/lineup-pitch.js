@@ -14,6 +14,9 @@ const LINES = [9, 26, 48, 65, 80];   // the rows in js/pitch.js
 const lineOf = y => LINES.reduce((best, v, i) => (Math.abs(v - y) < Math.abs(LINES[best] - y) ? i : best), 0);
 const slotOf = (formation, slot) => (FORMATIONS[formation] || FORMATIONS[DEFAULT_FORMATION])[slot];
 
+// The line a slot is on: 0 goalkeeper, 1 defence, 2 midfield, 3 attacking midfield, 4 attack (null for an unknown slot).
+export const lineOfSlot = (formation, slot) => { const s = slotOf(formation, slot); return s ? lineOf(s.y) : null; };
+
 export const byPlace = formation => (a, b) => {
   const sa = slotOf(formation, a.slot), sb = slotOf(formation, b.slot);
   const [ay, ax] = sa ? [lineOf(sa.y), sa.x] : [Infinity, 0], [by, bx] = sb ? [lineOf(sb.y), sb.x] : [Infinity, 0];

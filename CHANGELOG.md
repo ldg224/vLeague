@@ -3,6 +3,11 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.43.0 (2026-10-08)
+
+Live match ratings on the line-up pitch. No database change. If anything goes wrong, `v0.42.2` is the version to go back to (`docs/RELEASING.md`).
+
+- **Added, Game centre (FU-05):** while a match is live, every player's rating on the pitch is updated as the match goes, instead of appearing only at full time. Everyone starts on 6.0 at kick-off, and the rating moves with what the player does (goals, assists, key passes, shots on target, passes, tackles, interceptions, clearances, blocks, take-ons, saves, and cards, fouls, misplaced passes, own goals and goals conceded on the other side). A win or a loss at that moment moves it by 0.2. It uses the engine's own rating formula on the events so far, so at full time it gives exactly the same ratings as the match file (checked against 66 players across three simulated matches), and a live match never shows anything that hasn't happened on the broadcast yet. The man of the match is still picked at full time.
 ## 0.42.2 (2026-10-08)
 
 Better football and boot icons, a tidier player badge on the line-up pitch, averages and captains before kick-off, and the line-ups shown as the pitch alone. No database change. If anything goes wrong, `v0.42.1` is the version to go back to (`docs/RELEASING.md`).
