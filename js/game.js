@@ -60,7 +60,11 @@ async function run() {
   const pace = () => ((duration() || 5400) / ((season.live_minutes || 45) * 60));   // match seconds per real second at the broadcast's pace
 
   // Line-ups read goalkeeper first, then defence, midfield and attack, left to right (the order of the slots on the pitch).
-  const slotPlace = (formation, slot) => { const s = (FORMATIONS[formation] || FORMATIONS[DEFAULT_FORMATION])[slot]; return s ? [s.y, s.x] : [Infinity, 0]; };
+  // A slot's height is its line (GK, defence, midfield, attacking midfield, attack) plus a small forward or back nudge, so it is
+  // snapped to the nearest line first; otherwise a nudged centre-back would sort ahead of the full-backs.
+  const LINES = [9, 26, 48, 65, 80];   // the rows in js/pitch.js
+  const lineOf = y => LINES.reduce((best, v, i) => (Math.abs(v - y) < Math.abs(LINES[best] - y) ? i : best), 0);
+  const slotPlace = (formation, slot) => { const s = (FORMATIONS[formation] || FORMATIONS[DEFAULT_FORMATION])[slot]; return s ? [lineOf(s.y), s.x] : [Infinity, 0]; };
   const byPlace = formation => (a, b) => { const [ay, ax] = slotPlace(formation, a.slot), [by, bx] = slotPlace(formation, b.slot); return ay - by || ax - bx; };
   // The shirt (singlet) number comes from the player list; a test match's made-up players have none.
   const shirt = id => (season.players || []).find(p => p.id === id)?.number;

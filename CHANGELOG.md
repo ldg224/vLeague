@@ -3,6 +3,12 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.41.3 (2026-10-08)
+
+A fix to the line-up order from 0.41.2. No database change. If anything goes wrong, `v0.41.2` is the version to go back to (`docs/RELEASING.md`).
+
+- **Fixed, Game centre line-ups (VU-03):** 0.41.2 put some players out of order within a line (for example centre-backs before full-backs, or the holding midfielder first). Each line now reads left to right: 4-3-3 is GK, LB LCB RCB RB, LCM CDM RCM, LW ST RW.
+
 ## 0.41.2 (2026-10-08)
 
 Line-ups, the League's round buttons and the possession panel. No database change. If anything goes wrong, `v0.41.1` is the version to go back to (`docs/RELEASING.md`).
