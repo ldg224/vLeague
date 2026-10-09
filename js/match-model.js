@@ -1,6 +1,6 @@
 // Win chance (0.34): who is likely to win a match, worked out from several things at once. No page code, no database code.
 //
-//   winChance(season, fx, { sheets, now }) -> { home, draw, away (0..1, add up to 1), xg: [home, away], basis, factors }
+//   winChance(season, fx, { sheets, now, live }) ->{ home, draw, away (0..1, add up to 1), xg: [home, away], basis, factors }
 //
 // How it works. Each side gets an expected number of goals (xG); the chances of every score from 0-0 to 10-10 then come from two
 // Poisson distributions, and adding up the scores gives the win, draw and loss chances. The expected goals blend:
@@ -11,6 +11,7 @@
 //   3. Form: the last five results against what the table said to expect.
 //   4. Home ground: how much more the home side scores in this league (measured, with a sensible start before there is data).
 //   5. Head to head: a small nudge from this season's meetings of the same two clubs.
+// While a match is live, `live` ({ score, frac, reds }, from liveState) turns this into an in-play chance: see "In play" below.
 // Everything is recomputed from the season as it stood before the match, so it moves as results, line-ups and form change.
 import { ladder, finished, kickoff } from './dashboard-data.js';
 
@@ -70,7 +71,7 @@ function leagueState(season, fx, now) {
 // Poisson probabilities for 0..MAX_GOALS goals.
 const poisson = l => { const out = [Math.exp(-l)]; for (let k = 1; k <= MAX_GOALS; k++) out.push(out[k - 1] * l / k); return out; };
 
-export function winChance(season, fx, { sheets = [], now = new Date() } = {}) {
+export function winChance(season, fx, { sheets = [], now = new Date(), live = null } = {}) {
   const players = season.players || [];
   const L = leagueState(season, fx, now);
   const sheetOf = c => sheets.find(s => s.week === fx.week && s.club === c) || null;
@@ -108,13 +109,18 @@ export function winChance(season, fx, { sheets = [], now = new Date() } = {}) {
   const xgH = L.perTeam * Math.exp(h.lnX + h2h) * homeBonus, xgA = L.perTeam * Math.exp(a.lnX - h2h) / homeBonus;
   const lh = Math.min(6, Math.max(0.15, xgH)), la = Math.min(6, Math.max(0.15, xgA));
 
-  const ph = poisson(lh), pa = poisson(la);
+  // In play: only the goals still to come are uncertain. Each side's expected goals shrink with the time left, a sending-off
+  // costs that side a third of its attack and hands the other side a third more, and the score so far is added back at the end.
+  const L2 = live ? { r: 1 - live.frac, d0: live.score.home - live.score.away } : { r: 1, d0: 0 };
+  const redEdge = (own, opp) => Math.pow(0.7, own) * Math.pow(1 / 0.7, opp);
+  const rh = live ? lh * L2.r * redEdge(live.reds.home, live.reds.away) : lh, ra = live ? la * L2.r * redEdge(live.reds.away, live.reds.home) : la;
+  const ph = poisson(rh), pa = poisson(ra);
   let home = 0, draw = 0, away = 0;
-  for (let i = 0; i <= MAX_GOALS; i++) for (let j = 0; j <= MAX_GOALS; j++) { const p = ph[i] * pa[j]; if (i > j) home += p; else if (i === j) draw += p; else away += p; }
+  for (let i = 0; i <= MAX_GOALS; i++) for (let j = 0; j <= MAX_GOALS; j++) { const p = ph[i] * pa[j], d = i - j + L2.d0; if (d > 0) home += p; else if (d === 0) draw += p; else away += p; }
   const t = home + draw + away;
   const fromSheets = R.home.fromSheet && R.away.fromSheet;
   return {
-    home: home / t, draw: draw / t, away: away / t, xg: [lh, la],
+    home: home / t, draw: draw / t, away: away / t, xg: [lh, la], live: !!live,
     basis: fromSheets ? 'line-ups' : R.home.size && R.away.size ? 'squads' : 'results',
     games: L.games,
     factors: { ratings: R, homeBonus: L.home, h2h: meets.length, resultsWeight: h.w },

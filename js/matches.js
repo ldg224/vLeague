@@ -5,7 +5,7 @@
 // spoiler-free results on. Redraws every 15 s, reloads every minute.
 import { enterPlace } from './shell.js';
 import { esc, clubs } from './member.js';
-import { loadSeason, matchUrl, kickoff, status, shownScore, liveMinute, byKickoff, activeWeek } from './dashboard-data.js';
+import { loadSeason, matchUrl, kickoff, status, shownScore, liveMinute, liveState, byKickoff, activeWeek } from './dashboard-data.js';
 import { crest, teamOf, nameOf, fullNameOf, useClubs, day } from './places.js';
 import { prefs, fmtTime, spoilerHidden, revealScore } from './prefs.js';
 import { db } from './auth.js';
@@ -42,11 +42,11 @@ if (ctx) {
     // Win chance (before the match, or while it is being played). A finished match shows its result instead.
     let chance = '';
     if (st === 'upcoming' || st === 'awaiting' || st === 'tba' || st === 'live') {
-      const w = winChance(season, fx, { sheets, now }), [h, d, a] = percents(w), ht = nameOf(teamOf(season, fx.home)), at = nameOf(teamOf(season, fx.away));
+      const w = winChance(season, fx, { sheets, now, live: hid ? null : liveState(fx, season, now) }), [h, d, a] = percents(w), ht = nameOf(teamOf(season, fx.home)), at = nameOf(teamOf(season, fx.away));
       chance = `<div class="mc-chance" role="group" aria-label="Win chance: ${esc(ht)} ${h} percent, draw ${d} percent, ${esc(at)} ${a} percent">
         <div class="mc-bar"><i class="bh" style="flex:${h}"></i><i class="bd" style="flex:${d}"></i><i class="ba" style="flex:${a}"></i></div>
         <div class="mc-pcts"><span><b>${h}%</b> ${esc(ht)}</span><span><b>${d}%</b> Draw</span><span><b>${a}%</b> ${esc(at)}</span></div>
-        <small>Win chance · ${w.basis === 'line-ups' ? 'from the locked line-ups' : w.basis === 'squads' ? 'from squad ratings' : 'early days, so mostly league averages'}, results, form and home ground · expected goals ${w.xg[0].toFixed(1)} to ${w.xg[1].toFixed(1)}</small></div>`;
+        <small>Win chance${w.live ? ', updating live' : ''} · ${w.basis === 'line-ups' ? 'from the locked line-ups' : w.basis === 'squads' ? 'from squad ratings' : 'early days, so mostly league averages'}, results, form and home ground · expected goals ${w.xg[0].toFixed(1)} to ${w.xg[1].toFixed(1)}</small></div>`;
     }
     const hs = clubSummary(seen, fx.home, now), as = clubSummary(seen, fx.away, now), sd = stadium(fx.home);
     const foot = `<div class="mc-foot"><span class="mc-venue">${sd ? `<b>Stadium</b> ${esc(sd)}` : `<b>Home</b> ${esc(fullNameOf(teamOf(season, fx.home)))}`}</span>

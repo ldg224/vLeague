@@ -9,7 +9,7 @@
 import { chrome, esc, clubs } from './member.js';
 import { currentUser, myProfile, db } from './auth.js';
 import { paintClub } from './shell.js';
-import { loadSeason, kickoff, status, shownScore, liveSimTime, liveMinute } from './dashboard-data.js';
+import { loadSeason, kickoff, status, shownScore, liveSimTime, liveMinute, liveState } from './dashboard-data.js';
 import { crest, teamOf, nameOf, fullNameOf, useClubs, day } from './places.js';
 import { prefs, fmtTime, spoilerHidden, revealScore } from './prefs.js';
 import { winChance, percents, clubSummary } from './match-model.js';
@@ -141,7 +141,7 @@ async function run() {
   // ---------------------------------------------------------------- preview
   const chips = form => `<span class="chips">${form.map(o => `<abbr class="res-${o}">${o}</abbr>`).join('') || '<i class="mc-none">No games yet</i>'}</span>`;
   function previewSection() {
-    const w = winChance(season, fx, { sheets }), [ph, pd, pa] = percents(w), now = new Date();
+    const w = winChance(season, fx, { sheets, live: spoilerHidden(fx, season) ? null : liveState(fx, season) }), [ph, pd, pa] = percents(w), now = new Date();
     const sum = c => clubSummary(season, c, now), hs = sum(fx.home), as = sum(fx.away), R = w.factors.ratings;
     const meets = season.fixtures.filter(f => f.result && f.id !== fx.id && ((f.home === fx.home && f.away === fx.away) || (f.home === fx.away && f.away === fx.home)));
     const rec = r => `${r.w}-${r.d}-${r.l}`, rate = v => (v == null ? '–' : v.toFixed(1));
@@ -167,7 +167,7 @@ async function run() {
     return `<section class="gc-sec"><h2>Win chance</h2>
         <div class="mc-bar big"><i class="bh" style="flex:${ph}"></i><i class="bd" style="flex:${pd}"></i><i class="ba" style="flex:${pa}"></i></div>
         <div class="mc-pcts"><span><b>${ph}%</b> ${esc(nameOf(home()))}</span><span><b>${pd}%</b> Draw</span><span><b>${pa}%</b> ${esc(nameOf(away()))}</span></div>
-        <p class="gc-note">Expected goals ${w.xg[0].toFixed(1)} to ${w.xg[1].toFixed(1)}. ${w.basis === 'results' ? 'Neither club has a full squad yet, so this leans on the league’s averages and will sharpen as squads and results come in. ' : `Worked out from ${w.basis === 'line-ups' ? 'the locked line-ups' : 'each club’s best eleven'}, `}${w.games} game${w.games === 1 ? '' : 's'} played so far (the more games, the more the results count), recent form, and how much the home side scores in this league (${w.factors.homeBonus.toFixed(2)}× the away side)${meets.length ? ', plus this season’s meetings' : ''}.</p></section>
+        <p class="gc-note">${w.live ? 'Updating as the match is played: the score, the time left and any sending-offs all count. ' : ''}Expected goals ${w.xg[0].toFixed(1)} to ${w.xg[1].toFixed(1)}${w.live ? ' over a full match' : ''}. ${w.basis === 'results' ? 'Neither club has a full squad yet, so this leans on the league’s averages and will sharpen as squads and results come in. ' : `Worked out from ${w.basis === 'line-ups' ? 'the locked line-ups' : 'each club’s best eleven'}, `}${w.games} game${w.games === 1 ? '' : 's'} played so far (the more games, the more the results count), recent form, and how much the home side scores in this league (${w.factors.homeBonus.toFixed(2)}× the away side)${meets.length ? ', plus this season’s meetings' : ''}.</p></section>
       <section class="gc-sec"><h2>How they compare</h2>
         <table class="gc-vs"><thead><tr><th></th><th>${esc(nameOf(home()))}</th><th>${esc(nameOf(away()))}</th></tr></thead><tbody>
           <tr><th>League position</th><td>${hs.rank ?? '–'}</td><td>${as.rank ?? '–'}</td></tr>

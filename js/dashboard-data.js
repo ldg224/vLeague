@@ -128,6 +128,16 @@ export function shownScore(fx, s, now = new Date()) {
   return sc;
 }
 
+// Where a live match stands for the win chance: the score shown, how much of the match has been played (0..1, of the match file's
+// own length, so added time counts) and the sending-offs so far. Null unless the match is live.
+export function liveState(fx, s, now = new Date()) {
+  if (status(fx, s, now) !== 'live') return null;
+  const t = liveSimTime(fx, s, now), t0 = fx.result.periods?.[0]?.start_t ?? 0, t1 = fx.result.duration_t;
+  const reds = { home: 0, away: 0 };
+  for (const c of fx.result.cards || []) if ((c.card === 'red' || c.card === 'second_yellow') && c.t <= t) reds[c.team === fx.home ? 'home' : 'away']++;
+  return { score: shownScore(fx, s, now), frac: Math.min(1, Math.max(0, (t - t0) / ((t1 - t0) || 1))), reds };
+}
+
 // Goals the viewer has seen so far, for the scorer lines.
 export function shownGoals(fx, s, now = new Date()) {
   const st = status(fx, s, now);

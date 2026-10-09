@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.47.0 (2026-10-09)
+
+Headlines: the win chance now updates during a live match (S-08)
+
+No database change. If anything goes wrong, `v0.46.1` is the version to go back to (`docs/RELEASING.md`).
+
+- **Changed, win chance:** while a match is live, the chance is worked out from the score shown, the time left and any red cards or second yellows, instead of staying at the pre-match numbers. A 1-0 lead at 80 minutes is now a clear favourite, a goal late on swings it, and it settles near certainty by full time. It follows the live broadcast clock, so it never gives away a goal ahead of the picture, and stays at the pre-match numbers when a match's score is hidden by spoiler-free results. Shown on the Matches cards (which say "updating live") and the Game centre.
+
 ## 0.46.1 (2026-10-09)
 
 Headlines: Suggest changes numbers each submission (B-nn, S-nn) and lands it in the board's INBOX
