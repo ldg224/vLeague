@@ -1,7 +1,7 @@
 // The Game centre's line-ups on a pitch (FU-08). Pure functions, no DOM: they return html.
 //   byPlace(formation)       -> a sort for items with a `slot`: goalkeeper, then defence, midfield and attack, each line left to right
 //   pitchHtml(home, away, k) -> both elevens on one pitch, the home side on the left attacking right (home at the top on a phone)
-// A side is { code, formation, captain, items: [{ id, name, slot, position }], extras(id) -> { play, cards } icons html (goals and assists / cards), rating(id) -> { value, cls, motm } | null }.
+// A side is { code, formation, captain, items: [{ id, name, slot, position }], extras(id) -> { goals, assists, cards } icon html, rating(id) -> { value, cls, motm } | null }.
 // k = { colour(code) -> '#rrggbb' | undefined, label(code) -> the club's name, shirt(id) -> shirt number | undefined }.
 import { FORMATIONS, DEFAULT_FORMATION } from './pitch.js';
 import { onColour } from './club-colour.js';
@@ -28,6 +28,8 @@ const placeOf = (formation, x) => {
   const s = slotOf(formation, x.slot);
   return s ? [lineOf(s.y), s.x] : [FALLBACK_LINE[x.position] ?? 2, 50];
 };
+// Material Design Icons (Pictogrammers, free licence) star, for the rating pill.
+const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.63L12,2L9.19,8.63L2,9.24L7.46,13.97L5.82,21L12,17.27Z"/></svg>';
 const surname = name => String(name || '').trim().split(/\s+/).slice(-1)[0] || '?';
 const sameColour = (x, y) => !!x && !!y && String(x).toLowerCase() === String(y).toLowerCase();
 
@@ -35,8 +37,10 @@ function side(s, colour, cls, k) {
   const bands = [];
   for (const x of s.items) { const [line, across] = placeOf(s.formation, x); (bands[line] ||= []).push({ x, across }); }
   return `<div class="pp-half ${cls}" style="--b:${esc(colour)};--t:${esc(onColour(colour))}">${bands.filter(Boolean).map(b => `<div class="pp-band">${b.sort((p, q) => p.across - q.across).map(({ x }) => {
-    const r = s.rating?.(x.id), n = k.shirt?.(x.id), ev = s.extras?.(x.id) || {};
-    return `<div class="pp-p${r?.motm ? ' motm' : ''}" title="${esc(x.name)}"><div class="pp-b${String(x.slot || x.position || '').length > 2 ? ' pp-s' : ''}">${esc(x.slot || x.position || '')}${ev.cards ? `<span class="pp-cards">${ev.cards}</span>` : ''}${ev.play ? `<span class="pp-play">${ev.play}</span>` : ''}${s.captain === x.id ? '<i class="pp-c" title="Captain">C</i>' : ''}</div><div class="pp-n">${n == null || n === '' ? '' : `<b class="pp-no">${esc(n)}</b> `}${esc(surname(x.name))}</div>${r ? `<span class="rating ${r.cls}">${esc(r.value)}</span>` : ''}</div>`;
+    const r = s.rating?.(x.id), n = k.shirt?.(x.id), ev = s.extras?.(x.id) || {}, pos = x.slot || x.position || '';
+    // On the marker: rating pill top right, captain C top left, cards on the left, assists bottom left, goals bottom right.
+    const pill = r ? `<span class="rating pp-rt ${r.cls}">${esc(r.value)}${r.value === 'N/A' ? '' : STAR}</span>` : '';
+    return `<div class="pp-p${r?.motm ? ' motm' : ''}" title="${esc(x.name)}"><div class="pp-b${pos.length > 2 ? ' pp-s' : ''}">${esc(pos)}${pill}${ev.cards ? `<span class="pp-cards">${ev.cards}</span>` : ''}${ev.assists ? `<span class="pp-ast" title="Assists">${ev.assists}</span>` : ''}${ev.goals ? `<span class="pp-gl" title="Goals">${ev.goals}</span>` : ''}${s.captain === x.id ? '<i class="pp-c" title="Captain">C</i>' : ''}</div><div class="pp-n">${n == null || n === '' ? '' : `<b class="pp-no">${esc(n)}</b> `}${esc(surname(x.name))}</div></div>`;
   }).join('')}</div>`).join('')}</div>`;
 }
 

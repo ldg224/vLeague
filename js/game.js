@@ -242,13 +242,14 @@ async function run() {
   function lineupsSection() {
     const t = horizon(), full = st() === 'ft', ev = eventsTo(t), P = data.stats.players, bestId = full ? bestPlayer() : null;
     const liveR = live() ? ratingsAt(data, t) : null;   // a live match: ratings as they stand now, from the events so far
+    const badge = (icon, n) => (n ? icon + (n > 1 ? `<i>${n}</i>` : '') : '');
     const goals = id => ev.filter(e => e.type === 'goal' && e.scorer === id && !e.own_goal).length, assists = id => ev.filter(e => e.type === 'goal' && e.assist === id).length;
     const cards = id => ev.filter(e => e.type === 'card' && e.player === id).map(e => (e.card === 'yellow' ? ICONS.yellow : ICONS.red)).join('');
     const side = c => {
       const team = data.teams[c === fx.home ? 'home' : 'away'];
       return {
         code: c, formation: team.formation, captain: team.captain, items: [...team.lineup],
-        extras: id => ({ play: ICONS.ball.repeat(goals(id)) + ICONS.assist.repeat(assists(id)), cards: cards(id) }),
+        extras: id => ({ goals: badge(ICONS.ball, goals(id)), assists: badge(ICONS.assist, assists(id)), cards: cards(id) }),
         rating: id => { const r = full ? P[id]?.rating : liveR?.[id]; return r ? { value: r.toFixed(1), cls: id === bestId ? 'r-motm' : r >= 7 ? 'r-hi' : r < 6 ? 'r-lo' : 'r-mid', motm: id === bestId } : null; },
       };
     };

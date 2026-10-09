@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.48.0 (2026-10-09)
+
+Headlines: new player markers on the match line-up pitch: position in the club colour, rating, goals and assists in set places (S-21)
+
+No database change. If anything goes wrong, `v0.47.8` is the version to go back to (`docs/RELEASING.md`).
+
+- **Changed, match line-ups:** every player marker is laid out the same way. The circle is the club's primary colour with the player's position in it. The shirt number and surname sit underneath ("10 Messi"). The match rating is a pill with a star at the top right (for example 9.3 ★), moved up from under the name. Assists are a white capsule with the boot at the bottom left, and goals are a dark circle with the ball at the bottom right, with a small count when a player has more than one. Cards sit on the left side of the circle, and the captain's C stays at the top left. Before kick-off the pill shows the player's season average, or N/A if they haven't played.
+
 ## 0.47.8 (2026-10-09)
 
 Headlines: the shirt number goes before the surname on the match line-up pitch, like "10 Messi" (S-21)
