@@ -39,7 +39,7 @@ All tables: readable by everyone signed in; written only as noted. Pick-making g
 | `draft_prefs` | `draft`, `club`, `mode` (`always`/`on_miss`/`after_minutes`/`never`), `minutes` | that club's manager (office can edit) |
 
 Functions: `make_pick(draft, player)` (the manager whose turn it is), `office_set_pick(draft, pick_no, club, player)` (override),
-`office_advance(draft)` (pause/resume/extend/skip), `draft_tick()` (pg_cron, every minute: applies auto-pick rules when a
+`office_advance(draft)` (pause/resume/extend/skip), `draft_tick()` (pg_cron, every 5 seconds since 0037: applies auto-pick rules when a
 deadline passes or a club's `after_minutes` is reached), `office_autofill(draft)` (auto-assign the rest).
 A pick sets `players.club` (and so each club's value). **Active team value** = sum of `players.value` for a club's current roster
 (a view, `club_values`).

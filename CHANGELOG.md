@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.47.5 (2026-10-09)
+
+Headlines: the draft auto-pick no longer waits up to a minute after a timer runs out (B-09)
+
+Database change: apply `supabase/migrations/0037_draft_tick_seconds.sql` in the Supabase SQL editor. If anything goes wrong, `v0.47.4` is the version to go back to (`docs/RELEASING.md`).
+
+- **Fixed, draft:** the draft clock only ran once a minute, so when a team's timer hit zero its auto-pick (or the timed-out pick) could wait up to 60 seconds. It now runs every 5 seconds. Nothing changes in the app itself; only the schedule in the database.
+
 ## 0.47.4 (2026-10-09)
 
 Headlines: highlights glide smoothly when the camera zooms in on a player (B-05)
