@@ -171,10 +171,16 @@ const melb = d => {
 };
 const throwOn = (r, what) => { if (r.error) throw new Error(`${what} (${r.error.message})`); return r; };
 
-export async function startTestMatch(c, clubs, { look = 'random', looks = [], onProgress, onStatus = () => {} } = {}) {
+// Options from the Editor's Test tab: `homeCode` / `awayCode` pick the clubs (blank = random), `script` is a list of events at set minutes
+// ([{ minute, team: 'home' | 'away', kind: 'penalty_scored' | 'penalty_saved' | 'penalty_missed' | 'yellow' | 'red' | 'second_yellow' }]),
+// and `onlyScriptGoals` makes the scripted scored penalties the only goals, so the final score is exactly what was asked for.
+export async function startTestMatch(c, clubs, { look = 'random', looks = [], homeCode = '', awayCode = '', script = [], onlyScriptGoals = false, onProgress, onStatus = () => {} } = {}) {
   const active = clubs.filter(x => x.status === 'active');
   if (active.length < 2) throw new Error('A test match needs at least two active clubs.');
-  const [home, away] = [...active].sort(() => Math.random() - 0.5);
+  const byCode = code => active.find(x => x.code === code);
+  if (homeCode && awayCode && homeCode === awayCode) throw new Error('Pick two different clubs.');
+  const shuffled = [...active].sort(() => Math.random() - 0.5);
+  const home = byCode(homeCode) || shuffled.find(x => x.code !== awayCode), away = byCode(awayCode) || shuffled.find(x => x.code !== home.code);
   const pickLook = look === 'random' ? (looks.length ? looks[Math.floor(Math.random() * looks.length)].key : 'classic') : look;
 
   // Two random squads of 16: made-up names and ratings, with a different overall strength each so the match isn't a coin flip.
@@ -197,7 +203,7 @@ export async function startTestMatch(c, clubs, { look = 'random', looks = [], on
   throwOn(await c.from('fixtures').insert({ id, week: TEST_WEEK, home: home.code, away: away.code, starts_at: null }), 'The test match couldn’t be made');
   try {
     const now = melb(new Date());
-    const data = await runEngine(league, home.code, away.code, Math.floor(Math.random() * 2 ** 31), { fixture_id: id, week: TEST_WEEK, date: now.date, time: now.time, stage: null, suspended: [], test: true }, onProgress);
+    const data = await runEngine(league, home.code, away.code, Math.floor(Math.random() * 2 ** 31), { fixture_id: id, week: TEST_WEEK, date: now.date, time: now.time, stage: null, suspended: [], test: true, script, only_script_goals: !!onlyScriptGoals }, onProgress);
     onStatus('Saving…');
     const summary = await saveResult(c, { id }, data);
     // Kick off now (a few seconds ago, so the clocks of a computer and the server can't make it start "later").

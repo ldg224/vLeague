@@ -399,3 +399,14 @@
 .fx-row select, .fx-row input, .fx-test select, .fx-grid select, .fx-grid input:not([type="checkbox"]), #dr-root input[type="number"] {
   min-height: 38px; padding: 6px 10px; border-radius: var(--r-sm); border: 1px solid rgba(var(--edge), .16); background: var(--bg); color: var(--text); font: 500 .92rem var(--font); }
 .fx-row select:focus-visible, .fx-row input:focus-visible, .fx-grid select:focus-visible, .fx-grid input:focus-visible, #dr-root input[type="number"]:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+
+/* Editor → Test (S-21) */
+.tt-two { grid-template-columns: 1fr 1fr; }
+.tt-row { display: grid; grid-template-columns: 90px 110px minmax(0, 1fr) auto; gap: 10px; align-items: end; margin: 0 0 10px; }
+.tt-row label, .tt-look { display: grid; gap: 6px; font-size: .85rem; font-weight: 600; color: var(--muted); }
+.tt-row input, .tt-row select, .tt-look select { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r-md, 8px); background: var(--card); color: inherit; min-width: 0; }
+.tt-check { display: flex; gap: 8px; align-items: center; margin: 12px 0; font-size: .92rem; }
+.tt-look { max-width: 320px; margin-bottom: 8px; }
+.tt-msg { margin: 12px 0; min-height: 1.2em; }
+.tt-msg:empty { display: none; }
+@media (max-width: 640px) { .tt-two { grid-template-columns: 1fr; } .tt-row { grid-template-columns: 1fr 1fr; } .tt-row button { grid-column: 1 / -1; } }

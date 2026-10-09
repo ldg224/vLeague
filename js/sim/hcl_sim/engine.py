@@ -62,6 +62,12 @@ class Match:
         self.poss_time = [0.0, 0.0]
         self.in_play_time = 0.0
         self.gk_dive = {}               # gk idx -> dive plan
+        # Test matches (the Editor's Test tab): events the office asked for at set minutes, e.g. a penalty at 30' or a red card at 60'.
+        # [{'minute': 30, 'team': 'home'|'away', 'kind': 'penalty_scored'|'penalty_saved'|'penalty_missed'|'yellow'|'red'|'second_yellow'}]
+        self.script = [dict(x, done=False) for x in sorted(self.info.get('script') or [], key=lambda x: int(x.get('minute', 1)))]
+        self.only_script_goals = bool(self.info.get('only_script_goals'))   # no goals except the scripted penalties: an exact scoreline
+        self.scripted_goal = False      # a scripted scored penalty is in flight, so the goal counts in an exact-score test
+        self.force_pen = None           # the outcome the next penalty must have ('scored' | 'saved' | 'missed'), or None
 
     # ---------- helpers ----------
 
@@ -175,10 +181,69 @@ class Match:
             return True
         return el > limit + 25
 
+    # ---------- scripted events (test matches) ----------
+
+    def _script_tick(self):
+        if self.phase != 'play' or self.restart_kind == 'penalty':
+            return
+        minute = (0 if self.period == 1 else 45) + int((self.t - self.period_start) // 60) + 1
+        for it in self.script:
+            if it['done'] or (int(it.get('minute', 1)) <= 45) != (self.period == 1) or minute < int(it.get('minute', 1)):
+                continue
+            team = self.home if it.get('team') in ('home', self.home.code) else self.away
+            kind = it.get('kind', '')
+            if kind.startswith('penalty'):
+                # A penalty waits for the team to have the ball near the box (so the foul isn't at the halfway line), but not for long.
+                ax, _ = team.to_att(self.ball.x, self.ball.y)
+                if not (self.possession is team and ax > 72) and minute < int(it.get('minute', 1)) + 4:
+                    continue
+            if self._script_fire(it, team, kind):
+                it['done'] = True
+            break
+
+    def _script_fire(self, it, team, kind):
+        b = self.ball
+        opp = self.other(team)
+        if kind.startswith('penalty'):
+            att = min((p for p in team.active() if not p.is_gk), key=lambda p: dist(p.x, p.y, b.x, b.y), default=None)
+            dfn = min((p for p in opp.active() if not p.is_gk), key=lambda p: dist(p.x, p.y, att.x, att.y), default=None) if att else None
+            if att is None or dfn is None:
+                return True
+            self.ev('foul', dfn, on=att.id, x=att.x, y=att.y)
+            self.stoppages += 4
+            self.force_pen = kind.split('_', 1)[1] if '_' in kind else 'scored'
+            self._start_restart('penalty', team, team.from_att(PITCH_LENGTH - PENALTY_SPOT, 34), (8, 14))
+            return True
+        if kind in ('yellow', 'red', 'second_yellow'):
+            pool = [p for p in team.active() if not p.is_gk]
+            if kind == 'yellow':
+                pool = [p for p in pool if p.yellow == 0]
+            elif kind == 'second_yellow':
+                booked = [p for p in pool if p.yellow == 1]
+                if not booked:   # nobody booked yet: the first yellow now, the second three minutes later
+                    first = [p for p in pool if p.yellow == 0]
+                    if first:
+                        self._script_card(min(first, key=lambda p: dist(p.x, p.y, b.x, b.y)), opp, 'yellow')
+                    it['minute'] = int(it.get('minute', 1)) + 3
+                    return False
+                pool = booked
+            if not pool:
+                return True
+            self._script_card(min(pool, key=lambda p: dist(p.x, p.y, b.x, b.y)), opp, kind)
+            return True
+        return True
+
+    def _script_card(self, o, opp, card):
+        victim = min(opp.active(), key=lambda p: dist(p.x, p.y, o.x, o.y), default=None)
+        if victim is not None:
+            self._foul(o, victim, False, force_card=card)
+
     def _tick(self):
         self.tick += 1
         self.t = self.tick * TICK
         b = self.ball
+        if self.script:
+            self._script_tick()
         if self.phase == 'dead':
             self._dead_update()
         else:
@@ -339,6 +404,11 @@ class Match:
         finishing = p.a('heading') if header else p.a('finishing')
         penalty = opt.get('subtype') == 'penalty'
         gk = next((q for q in self.other(T).active() if q.is_gk), None)
+        forced = self.force_pen if penalty else None
+        self.force_pen = None
+        self.scripted_goal = forced == 'scored'
+        if penalty and forced is None and self.only_script_goals:
+            forced = 'missed'   # a penalty nobody asked for does not score in an exact-score test
 
         # Aim: inside a post, usually away from the keeper; better finishers aim tighter.
         inset = 0.35 + 0.9 * (1 - finishing)
@@ -350,6 +420,19 @@ class Match:
         if penalty and rng.random() < 0.12:
             aim_y = 34 + rng.uniform(-0.8, 0.8)
         aim_z = rng.choice((rng.uniform(0.15, 0.6), rng.uniform(0.3, 2.1)))
+        keeper_guess = None
+        if forced == 'scored':
+            aim_y = (GOAL_Y1 + 0.5) if side == GOAL_Y2 else (GOAL_Y2 - 0.5)
+            side_low = aim_y < 34
+            keeper_guess = (GOAL_Y2 - 1.2) if side_low else (GOAL_Y1 + 1.2)   # he dives the other way
+            aim_z = rng.uniform(0.3, 1.6)
+        elif forced == 'saved':
+            aim_y = 34 + rng.uniform(-1.4, 1.4); aim_z = rng.uniform(0.3, 0.9)
+            keeper_guess = aim_y                                                  # he picks the right corner
+        elif forced == 'missed':
+            aim_y = (GOAL_Y1 - 3.0) if rng.random() < 0.5 else (GOAL_Y2 + 3.0); aim_z = rng.uniform(0.4, 1.2)
+        elif self.only_script_goals and not penalty:
+            aim_y = (GOAL_Y1 - 4.0) if rng.random() < 0.5 else (GOAL_Y2 + 4.0)   # open play never scores in an exact-score test
         power = 0.55 + 0.45 * rng.random() * (0.5 + 0.5 * finishing)
         speed = (11 + 5 * finishing) if header else (19 + 13 * power * (0.7 + 0.3 * finishing))
 
@@ -360,6 +443,8 @@ class Match:
             sigma += TUNING['header_error_extra']
         if penalty:
             sigma *= 0.55
+        if forced or (self.only_script_goals and not penalty and not header):
+            sigma = 0.0
         sigma *= 1 + max(0.0, d - 18) / 40
         ang = math.radians(rng.gauss(0, sigma))
         ux, uy = rotate(dx / d, dy / d, ang)
@@ -397,6 +482,8 @@ class Match:
             reaction = TUNING['gk_reaction'] + 0.15 * (1 - gk.a('reflexes'))
             if penalty:
                 guess = rng.choice((GOAL_Y1 + 1.2, 34.0, GOAL_Y2 - 1.2)) if rng.random() < 0.85 else cross[1]
+                if keeper_guess is not None:
+                    guess = keeper_guess
                 self.gk_dive[gk.idx] = {'at': self.t, 'y': guess, 'until': self.t + 1.5}
             else:
                 # Keeper reads the shot with an error that shrinks with positioning skill.
@@ -775,7 +862,7 @@ class Match:
             if p.action and p.action['kind'] == 'dribble':
                 self.ev('take_on', p, won=True, opponent=o.id)
 
-    def _foul(self, o, p, behind):
+    def _foul(self, o, p, behind, force_card=None):
         rng = self.rng
         victim_team = self.team_of(p)
         e = self.ev('foul', o, on=p.id, x=p.x, y=p.y)
@@ -791,6 +878,8 @@ class Match:
             card = 'red'
         elif rng.random() < TUNING['yellow_on_foul'] * (0.6 + 0.8 * o.a('aggression')) + (0.12 if behind else 0) + (0.2 if dogso else 0):
             card = 'yellow' if o.yellow == 0 else 'second_yellow'
+        if force_card:
+            card = force_card
         if card:
             self.stoppages += 12
             if card == 'yellow':
@@ -880,6 +969,20 @@ class Match:
     def _goal(self, line_x, yc):
         b = self.ball
         scoring = self.home if (self.home.direction == 1) == (line_x == PITCH_LENGTH) else self.away
+        if self.only_script_goals and not self.scripted_goal:
+            # An exact-score test: only the scripted penalties count. Anything else that would cross the line (a rebound, a deflection,
+            # an own goal) is claimed by the keeper on the line.
+            gk = next((q for q in self.other(scoring).active() if q.is_gk), None)
+            if gk is not None:
+                self._resolve_shot('saved')
+                self.ev('save', gk, result='caught')
+                b.x = line_x + (0.6 if line_x == 0 else -0.6)
+                b.y = clamp(yc, GOAL_Y1 + 0.3, GOAL_Y2 - 0.3)
+                b.z = 0.3
+                gk.x, gk.y = b.x, b.y
+                self._gain(gk, 'catch', hands=True)
+                return
+        self.scripted_goal = False
         scorer = b.last_touch
         own_goal = scorer is not None and scorer.side != scoring.side
         shot = self.pending_shot

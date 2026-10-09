@@ -3,6 +3,17 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.50.0 (2026-10-09)
+
+Headlines: a new Test page in the Editor, with controls for the clubs, the final score and events at set minutes (S-21)
+
+No database change. If anything goes wrong, `v0.49.3` is the version to go back to (`docs/RELEASING.md`).
+
+- **Added, Editor → Test:** make a made-up test match with controls. Pick the home and away club (or leave either random), set the final score, and add events at set minutes: a penalty that is scored, saved or missed, a yellow card, a red card or a second yellow. It is played by the engine, goes live at once for anyone watching, and "Remove test matches" takes it away. No real player, club or table changes.
+- **Final score:** setting it creates that many scored penalties at spread-out minutes and turns on "only the scripted penalties score", so the score is exactly what was asked. Anything else that would have gone in (a rebound, a deflection, an own goal) is claimed by the keeper on the line. Without a final score, matches play as before, plus the scripted events.
+- **Added, match engine:** scripted events (`info.script`, `info.only_script_goals`). A penalty is awarded once the team has the ball near the box around that minute, after a foul by the nearest defender, and the scripted outcome is forced. A card goes to the player nearest the ball.
+- The "Play a test match now" button on the Fixtures page is still there for a quick random match.
+
 ## 0.49.3 (2026-10-09)
 
 Headlines: the referee gives a second yellow in two steps, yellow then red, and the two cards look the same everywhere (B-02)
