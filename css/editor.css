@@ -237,6 +237,14 @@
 .nw-pills { display: flex; gap: 6px; flex-wrap: wrap; }
 .nw-pills:empty { display: none; }
 .nw-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+/* VU-01: centred, one width for heading, form and posted list; hidden things stay hidden; label notes sit beside the label. */
+.member-main:has(.ed-tabs) #view:has(#news-root) > h1, .member-main:has(.ed-tabs) #view > #news-root { width: 100%; max-width: 1000px; margin-inline: auto; box-sizing: border-box; }
+.nw [hidden] { display: none !important; }
+.nw-label small { margin-left: 6px; }
+.nw-card { align-content: start; }
+.nw-msg:empty { display: none; }
+.nw-h { font-size: .8rem; font-weight: 700; }
+.nw-posts li { min-height: 64px; }
 @media (max-width: 860px) {
   .nw { grid-template-columns: 1fr; }
   .nw-sticky { position: static; }

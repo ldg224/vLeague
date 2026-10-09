@@ -78,8 +78,8 @@ export async function mountNews(ctx) {
           <div class="nw-pic"><div class="nw-thumb" ${draftImage ? '' : 'hidden'}>${draftImage ? `<img src="${esc(imageUrl(draftImage))}" alt="">` : ''}</div>
             <label class="btn ghost small nw-up">${draftImage ? 'Change picture' : 'Add a picture'}<input type="file" name="file" accept="image/png,image/jpeg,image/webp" hidden></label>
             <button class="btn ghost small" type="button" data-act="nopic" ${draftImage ? '' : 'hidden'}>Remove</button></div></div>
-        <div class="nw-row"><label class="nw-field">Button text <small>optional</small><input name="blabel" maxlength="30" value="${esc(d0.button?.label || '')}" placeholder="Read more"></label>
-          <label class="nw-field">Button link <small>https://…</small><input name="burl" type="url" maxlength="300" value="${esc(d0.button?.url || '')}" placeholder="https://"></label></div>
+        <div class="nw-row"><label class="nw-field"><span class="nw-label">Button text <small>optional</small></span><input name="blabel" maxlength="30" value="${esc(d0.button?.label || '')}" placeholder="Read more"></label>
+          <label class="nw-field"><span class="nw-label">Button link <small>https://…</small></span><input name="burl" type="url" maxlength="300" value="${esc(d0.button?.url || '')}" placeholder="https://"></label></div>
       </section>
 
       <section class="nw-card"><h2>Who is it for?</h2>
