@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.51.1 (2026-10-09)
+
+Headlines: no limits on the number of goals or events on the Test page (S-21)
+
+No database change. If anything goes wrong, `v0.51.0` is the version to go back to (`docs/RELEASING.md`).
+
+- **Changed, Editor → Test:** the limits are gone: any final score (it was 0 to 9 each), any number of events (it was 20 rows and 30 in all). A minute is still 1 to 90.
+
 ## 0.51.0 (2026-10-09)
 
 Headlines: the Test page can script goals from open play, so a scoreline looks like a real match (S-21)
