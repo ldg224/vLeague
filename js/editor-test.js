@@ -1,8 +1,8 @@
 // Editor → Test (S-21): make a test match with controls. A made-up match for trying the broadcast, Game centre and highlights without
 // touching the season (see startTestMatch in js/simulate.js): pick the two clubs, set the final score, and script events at set minutes
-// (a penalty scored, saved or missed; a yellow, red or second yellow). It plays out live as soon as it is made.
+// (a goal from open play; a penalty scored, saved or missed; a yellow, red or second yellow). It plays out live as soon as it is made.
 
-const EVENTS = [['penalty_scored', 'Penalty, scored'], ['penalty_saved', 'Penalty, saved'], ['penalty_missed', 'Penalty, missed'],
+const EVENTS = [['goal', 'Goal, from open play'], ['penalty_scored', 'Penalty, scored'], ['penalty_saved', 'Penalty, saved'], ['penalty_missed', 'Penalty, missed'],
   ['yellow', 'Yellow card'], ['red', 'Red card'], ['second_yellow', 'Second yellow (sent off)']];
 const MAX_EVENTS = 20;
 
@@ -42,13 +42,13 @@ export async function mountTest(ctx) {
           <label>Away club<select id="tt-away">${clubOpts(keep.away, keep.home)}</select></label></div>
         <div class="ed-fields tt-two"><label>Final score, home <i>blank = let the match decide</i><input id="tt-gh" type="number" min="0" max="9" step="1" value="${esc(keep.gh)}"></label>
           <label>Final score, away <i>blank = let the match decide</i><input id="tt-ga" type="number" min="0" max="9" step="1" value="${esc(keep.ga)}"></label></div>
-        <label class="tt-check"><input id="tt-exact" type="checkbox"${keep.exact ? ' checked' : ''}> Only the scripted penalties score (the score is exactly the scripted goals)</label>
+        <label class="tt-check"><input id="tt-exact" type="checkbox"${keep.exact ? ' checked' : ''}> Only the scripted goals count (the score is exactly the goals and scored penalties listed)</label>
         <label class="tt-look">Scoreboard look<select id="tt-look"><option value="random">Random look</option>${looks.map(l => `<option value="${esc(l.key)}"${keep.look === l.key ? ' selected' : ''}>${esc(l.name)}</option>`).join('')}</select></label>
-        <p class="ed-hint">The players are made up, in memory only. No real player, club or table changes. Setting a final score creates that many scored penalties at spread-out minutes, and turns on “only the scripted penalties score”.</p></section>
+        <p class="ed-hint">The players are made up, in memory only. No real player, club or table changes. Setting a final score adds that many open-play goals at spread-out minutes, and turns on “only the scripted goals count”.</p></section>
       <section class="ed-sec"><h2>Events at set minutes</h2>
         ${rows.length ? rows.map(rowHtml).join('') : '<p class="quiet">None yet. Add a penalty, a card or both.</p>'}
         <div class="ed-actions"><button class="btn ghost small" type="button" data-add${rows.length >= MAX_EVENTS ? ' disabled' : ''}>Add an event</button></div>
-        <p class="ed-hint">A penalty is awarded to the team once they have the ball near the box around that minute. A card goes to the player nearest the ball. A second yellow gives the first yellow a few minutes earlier if nobody has one.</p></section>
+        <p class="ed-hint">A goal comes from open play: around that minute that team takes a shot, and it goes in whatever the defence and keeper do (if they can't get a shot away within about six minutes, they get a scored penalty instead). A penalty is awarded once the team has the ball near the box around its minute. A card goes to the player nearest the ball. A second yellow gives the first yellow a few minutes earlier if nobody has one.</p></section>
       <p class="tt-msg" role="alert">${msgHtml || esc(msg)}</p>
       <div class="ed-actions"><button class="btn" type="button" data-play ${busy ? 'disabled' : ''}>Play the test match now</button>
         ${tests ? `<button class="btn ghost" type="button" data-clean ${busy ? 'disabled' : ''}>Remove test matches (${tests})</button>` : ''}</div>`;
@@ -68,12 +68,12 @@ export async function mountTest(ctx) {
       const h = Math.round(+gh || 0), a = Math.round(+ga || 0);
       if (h < 0 || a < 0 || h > 9 || a > 9) throw new Error('The final score is 0 to 9 goals each.');
       // Scripted goals already in the rows count towards the target.
-      const have = side => script.filter(s => s.team === side && s.kind === 'penalty_scored').length;
+      const have = side => script.filter(s => s.team === side && (s.kind === 'penalty_scored' || s.kind === 'goal')).length;
       const need = { home: h - have('home'), away: a - have('away') };
-      if (need.home < 0 || need.away < 0) throw new Error('There are more scored penalties in the list than the final score allows.');
+      if (need.home < 0 || need.away < 0) throw new Error('There are more goals in the list than the final score allows.');
       const total = need.home + need.away;
       const sides = [...Array(need.home).fill('home'), ...Array(need.away).fill('away')].sort(() => Math.random() - 0.5);
-      sides.forEach((side, i) => script.push({ minute: Math.round(8 + (i + 0.5) * (78 / Math.max(1, total))), team: side, kind: 'penalty_scored' }));
+      sides.forEach((side, i) => script.push({ minute: Math.round(8 + (i + 0.5) * (78 / Math.max(1, total))), team: side, kind: 'goal' }));
       exact = true;
     }
     if (script.length > 30) throw new Error('That is too many events.');
@@ -118,7 +118,7 @@ export async function mountTest(ctx) {
   }
 
   root.addEventListener('click', e => {
-    if (e.target.closest('[data-add]')) { rows.push({ minute: rows.length ? Math.min(90, +rows[rows.length - 1].minute + 10) : 30, team: 'home', kind: 'penalty_scored' }); draw(); return; }
+    if (e.target.closest('[data-add]')) { rows.push({ minute: rows.length ? Math.min(90, +rows[rows.length - 1].minute + 10) : 30, team: 'home', kind: 'goal' }); draw(); return; }
     const del = e.target.closest('[data-del]'); if (del) { rows.splice(+del.dataset.del, 1); draw(); return; }
     if (e.target.closest('[data-play]')) play();
     else if (e.target.closest('[data-clean]')) clean();

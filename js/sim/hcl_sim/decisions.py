@@ -236,15 +236,15 @@ def _frange(a, b, step):
         x += step
 
 
-def _shot_option(c, penalty=False, header=False):
+def _shot_option(c, penalty=False, header=False, force=False):
     ax, ay = c.ax, c.ay
     d = math.hypot(PITCH_LENGTH - ax, ay - 34)
-    if d > 36 and not penalty:
+    if d > (42 if force else 36) and not penalty:
         return None
     blockers = blockers_in_cone(ax, ay, c.opps)
     xg = expected_goals(ax, ay, header=header, pressure=min(c.pressure, 1.5), blockers=blockers, penalty=penalty)
     long_shots = c.p.a('long_shots')
-    if d > 20 and xg < 0.03 and not penalty:
+    if d > 20 and xg < 0.03 and not penalty and not force:
         return None     # speculative efforts from distance are rare
     # Players with a good long shot back themselves from distance when they have a sight of goal.
     appetite = TUNING['shot_appetite'] * (0.7 + 0.7 * long_shots if d > 18 else 1.0)
@@ -423,6 +423,11 @@ def choose(m, p, rng):
     comp = p.a('composure')
     tau = TUNING['decision_temperature_poor'] + (TUNING['decision_temperature'] - TUNING['decision_temperature_poor']) * dec
     tau *= 1.0 + min(c.pressure, 1.5) * (1.0 - comp)
+    if any(g['side'] == p.side for g in getattr(m, 'pending_goals', ())) and not c.restart:
+        # A goal the office asked for: this team takes a shot as soon as one is on, from further out than usual.
+        shot = next((o for o in opts if o['kind'] == 'shoot'), None) or _shot_option(c, force=True)
+        if shot:
+            return c, shot
     best = max(o['utility'] for o in opts)
     weights = [math.exp((o['utility'] - best) / tau) for o in opts]
     r = rng.random() * sum(weights)

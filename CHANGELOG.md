@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.51.0 (2026-10-09)
+
+Headlines: the Test page can script goals from open play, so a scoreline looks like a real match (S-21)
+
+No database change. If anything goes wrong, `v0.50.0` is the version to go back to (`docs/RELEASING.md`).
+
+- **Added, Editor → Test:** a "Goal, from open play" event. Around that minute the team takes a shot as soon as one is on (from a little further out than usual), and it goes in: it is aimed in the corner away from the keeper, the keeper dives the other way and nobody can touch it. It comes with the usual assist and replays. If the team can't get a shot away within about six minutes they get a scored penalty instead, so the goal always happens.
+- **Changed, Editor → Test:** setting a final score now adds open-play goals (it used to add scored penalties) and counts only the scripted goals. Several goals close together for one team are queued, none is lost.
+- Checked on six simulated matches with five scripted goals each: every one ended exactly as scripted.
+
 ## 0.50.0 (2026-10-09)
 
 Headlines: a new Test page in the Editor, with controls for the clubs, the final score and events at set minutes (S-21)

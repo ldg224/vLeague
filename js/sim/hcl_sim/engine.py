@@ -66,6 +66,8 @@ class Match:
         # [{'minute': 30, 'team': 'home'|'away', 'kind': 'penalty_scored'|'penalty_saved'|'penalty_missed'|'yellow'|'red'|'second_yellow'}]
         self.script = [dict(x, done=False) for x in sorted(self.info.get('script') or [], key=lambda x: int(x.get('minute', 1)))]
         self.only_script_goals = bool(self.info.get('only_script_goals'))   # no goals except the scripted penalties: an exact scoreline
+        self.pending_goals = []         # open-play goals the office asked for: [{'side': 0 | 1, 'since': minute}]; that team's next shot is forced in
+        self.protect_next = False       # the shot about to be struck can't be touched in flight (a scripted goal)
         self.scripted_goal = False      # a scripted scored penalty is in flight, so the goal counts in an exact-score test
         self.force_pen = None           # the outcome the next penalty must have ('scored' | 'saved' | 'missed'), or None
 
@@ -183,10 +185,19 @@ class Match:
 
     # ---------- scripted events (test matches) ----------
 
+    def _minute_now(self):
+        return (0 if self.period == 1 else 45) + int((self.t - self.period_start) // 60) + 1
+
     def _script_tick(self):
         if self.phase != 'play' or self.restart_kind == 'penalty':
             return
-        minute = (0 if self.period == 1 else 45) + int((self.t - self.period_start) // 60) + 1
+        minute = self._minute_now()
+        pg = next((g for g in self.pending_goals if minute >= g['since'] + 6 or (self.period == 2 and g['since'] <= 45)), None)
+        if pg:
+            # The team never got a shot away in time: a scored penalty instead, so the goal still happens.
+            self.pending_goals.remove(pg)
+            self._script_fire({'minute': minute}, self.home if pg['side'] == 0 else self.away, 'penalty_scored')
+            return
         for it in self.script:
             if it['done'] or (int(it.get('minute', 1)) <= 45) != (self.period == 1) or minute < int(it.get('minute', 1)):
                 continue
@@ -213,6 +224,9 @@ class Match:
             self.stoppages += 4
             self.force_pen = kind.split('_', 1)[1] if '_' in kind else 'scored'
             self._start_restart('penalty', team, team.from_att(PITCH_LENGTH - PENALTY_SPOT, 34), (8, 14))
+            return True
+        if kind == 'goal':
+            self.pending_goals.append({'side': team.side, 'since': self._minute_now()})
             return True
         if kind in ('yellow', 'red', 'second_yellow'):
             pool = [p for p in team.active() if not p.is_gk]
@@ -392,7 +406,8 @@ class Match:
         b.in_hands = False
         b.last_touch = p
         b.flight = {'kind': 'shot' if kind == 'shoot' else subtype, 'kicker': p, 'receiver': opt.get('receiver'),
-                    'event': e, 't': self.t}
+                    'event': e, 't': self.t, 'protected': kind == 'shoot' and self.protect_next}
+        self.protect_next = False
         p.touch_ready_at = self.t + 0.4
         self.restart_kind = None
 
@@ -406,7 +421,11 @@ class Match:
         gk = next((q for q in self.other(T).active() if q.is_gk), None)
         forced = self.force_pen if penalty else None
         self.force_pen = None
+        pg = next((g for g in self.pending_goals if g['side'] == T.side), None) if forced is None and not penalty else None
+        if pg:
+            forced = 'scored'; self.pending_goals.remove(pg)   # the goal the office asked for
         self.scripted_goal = forced == 'scored'
+        self.protect_next = forced == 'scored'
         if penalty and forced is None and self.only_script_goals:
             forced = 'missed'   # a penalty nobody asked for does not score in an exact-score test
 
@@ -488,6 +507,8 @@ class Match:
             else:
                 # Keeper reads the shot with an error that shrinks with positioning skill.
                 read_y = cross[1] + rng.gauss(0, 0.6 * (1.2 - gk.a('gk_positioning')))
+                if keeper_guess is not None:
+                    read_y = keeper_guess
                 self.gk_dive[gk.idx] = {'at': self.t + reaction, 'y': clamp(read_y, GOAL_Y1 - 0.5, GOAL_Y2 + 0.5),
                                         'until': self.t + reaction + 1.4}
         return e
@@ -521,6 +542,8 @@ class Match:
     def _free_ball_contacts(self, prev):
         b = self.ball
         f = b.flight or {}
+        if f.get('protected'):
+            return   # a scripted goal: nobody, not even the keeper, gets a touch
         px, py, pz = prev
         cands = []
         for q in self.players:
