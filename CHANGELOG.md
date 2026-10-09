@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.47.2 (2026-10-09)
+
+Headlines: the Win chance on the match page is just the bar and the percentages
+
+No database change. If anything goes wrong, `v0.47.1` is the version to go back to (`docs/RELEASING.md`).
+
+- **Changed, match page:** removed the explanatory paragraph under the Win chance (expected goals, games played, form, home advantage). Only the bar and the three percentages remain, before and during the match.
+
 ## 0.47.1 (2026-10-09)
 
 Headlines: the live win chance now shows on the match page while a match is being played

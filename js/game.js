@@ -141,11 +141,10 @@ async function run() {
   // ---------------------------------------------------------------- preview
   const chips = form => `<span class="chips">${form.map(o => `<abbr class="res-${o}">${o}</abbr>`).join('') || '<i class="mc-none">No games yet</i>'}</span>`;
   const chanceSection = w => {
-    const [ph, pd, pa] = percents(w), meets = season.fixtures.filter(f => f.result && f.id !== fx.id && ((f.home === fx.home && f.away === fx.away) || (f.home === fx.away && f.away === fx.home)));
+    const [ph, pd, pa] = percents(w);
     return `<section class="gc-sec" id="gc-chance"><h2>Win chance</h2>
         <div class="mc-bar big"><i class="bh" style="flex:${ph}"></i><i class="bd" style="flex:${pd}"></i><i class="ba" style="flex:${pa}"></i></div>
-        <div class="mc-pcts"><span><b>${ph}%</b> ${esc(nameOf(home()))}</span><span><b>${pd}%</b> Draw</span><span><b>${pa}%</b> ${esc(nameOf(away()))}</span></div>
-        <p class="gc-note">${w.live ? 'Updating as the match is played: the score, the time left and any sending-offs all count. ' : ''}Expected goals ${w.xg[0].toFixed(1)} to ${w.xg[1].toFixed(1)}${w.live ? ' over a full match' : ''}. ${w.basis === 'results' ? 'Neither club has a full squad yet, so this leans on the league’s averages and will sharpen as squads and results come in. ' : `Worked out from ${w.basis === 'line-ups' ? 'the locked line-ups' : 'each club’s best eleven'}, `}${w.games} game${w.games === 1 ? '' : 's'} played so far (the more games, the more the results count), recent form, and how much the home side scores in this league (${w.factors.homeBonus.toFixed(2)}× the away side)${meets.length ? ', plus this season’s meetings' : ''}.</p></section>`;
+        <div class="mc-pcts"><span><b>${ph}%</b> ${esc(nameOf(home()))}</span><span><b>${pd}%</b> Draw</span><span><b>${pa}%</b> ${esc(nameOf(away()))}</span></div></section>`;
   };
 
   function previewSection() {
