@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.45.1 (2026-10-09)
+
+Headlines: Re-registering a club no longer says it "joined" again
+
+Database change: apply `supabase/migrations/0034_setup_news_once.sql` in the Supabase SQL editor. If anything goes wrong, `v0.45.0` is the version to go back to (`docs/RELEASING.md`).
+
+- **Fixed, news (EU-02):** the "[club] join vLeague" news is posted only the first time the office approves a club's setup. After "Set up again", an approval with a new crest posts "reveal a new crest", and anything else posts nothing.
+
 ## 0.45.0 (2026-10-09)
 
 Headlines: More replays: penalties, saves and fouls | Live matches no longer slow before a goal
