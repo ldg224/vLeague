@@ -121,6 +121,12 @@ class Frames {
   ball(t) { const b = this.ballState(t); return [b.x, b.y]; }
 }
 
+// A point on a path sampled FPS times a second, at fractional sample position u: blended between the two samples either side.
+function pathAt(path, u) {
+  const n = path.length, x = clamp(u, 0, n - 1), i = Math.floor(x), j = Math.min(i + 1, n - 1), k = x - i;
+  return [lerp(path[i][0], path[j][0], k), lerp(path[i][1], path[j][1], k)];
+}
+
 // ---------------------------------------------------------------- cameras (pinhole)
 
 // Camera in the main stand, `dist` metres from the target at `elevDeg` above the pitch.
@@ -662,15 +668,14 @@ export class HighlightsRenderer {
     });
   }
   refAt(plan, t) {
-    const p = plan.ref.path;
-    return p[clamp(Math.round((t - plan.ref.t0) * FPS), 0, p.length - 1)];
+    return pathAt(plan.ref.path, (t - plan.ref.t0) * FPS);
   }
 
   camFor(s, local) {
     const tSim = s.t0 + local;
     const plan = this.shotsFor(s), { shots, goalX } = plan;
     const sh = shots.find(x => local >= x.from && local < x.to) || shots[shots.length - 1];
-    const [bx, by] = sh.path[clamp(Math.round((local - sh.from) * FPS), 0, sh.path.length - 1)];
+    const [bx, by] = pathAt(sh.path, (local - sh.from) * FPS);   // blended between samples, so close-up shots glide at any frame rate (B-05)
     const toGoal = Math.hypot(bx - goalX, by - 34);
     const gs = goalX === 105 ? 1 : -1;
     let cam;

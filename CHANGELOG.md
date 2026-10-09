@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.47.4 (2026-10-09)
+
+Headlines: highlights glide smoothly when the camera zooms in on a player (B-05)
+
+No database change. If anything goes wrong, `v0.47.3` is the version to go back to (`docs/RELEASING.md`).
+
+- **Fixed, highlights:** the camera followed its path in 30-a-second steps and jumped to the nearest step instead of blending between two, so on close-up shots (the low touchline camera, goal celebrations) the picture visibly stepped while the players moved smoothly. The camera and the referee now blend between steps, so motion is smooth at any screen speed. The full-match view already did this.
+
 ## 0.47.3 (2026-10-09)
 
 Headlines: players no longer look tiny in the wide camera angles (B-06)
