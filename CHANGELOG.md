@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.47.1 (2026-10-09)
+
+Headlines: the live win chance now shows on the match page while a match is being played
+
+No database change. If anything goes wrong, `v0.47.0` is the version to go back to (`docs/RELEASING.md`).
+
+- **Fixed, match page:** the win chance used to appear only before kick-off, so the live numbers from 0.47.0 only showed on the Matches cards. The Game centre now shows a Win chance section under the viewer while the match is live (with a jump link), refreshed every few seconds as goals and cards happen. It goes away at full time.
+
 ## 0.47.0 (2026-10-09)
 
 Headlines: the win chance now updates during a live match (S-08)

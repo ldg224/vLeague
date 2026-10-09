@@ -140,6 +140,14 @@ async function run() {
 
   // ---------------------------------------------------------------- preview
   const chips = form => `<span class="chips">${form.map(o => `<abbr class="res-${o}">${o}</abbr>`).join('') || '<i class="mc-none">No games yet</i>'}</span>`;
+  const chanceSection = w => {
+    const [ph, pd, pa] = percents(w), meets = season.fixtures.filter(f => f.result && f.id !== fx.id && ((f.home === fx.home && f.away === fx.away) || (f.home === fx.away && f.away === fx.home)));
+    return `<section class="gc-sec" id="gc-chance"><h2>Win chance</h2>
+        <div class="mc-bar big"><i class="bh" style="flex:${ph}"></i><i class="bd" style="flex:${pd}"></i><i class="ba" style="flex:${pa}"></i></div>
+        <div class="mc-pcts"><span><b>${ph}%</b> ${esc(nameOf(home()))}</span><span><b>${pd}%</b> Draw</span><span><b>${pa}%</b> ${esc(nameOf(away()))}</span></div>
+        <p class="gc-note">${w.live ? 'Updating as the match is played: the score, the time left and any sending-offs all count. ' : ''}Expected goals ${w.xg[0].toFixed(1)} to ${w.xg[1].toFixed(1)}${w.live ? ' over a full match' : ''}. ${w.basis === 'results' ? 'Neither club has a full squad yet, so this leans on the league’s averages and will sharpen as squads and results come in. ' : `Worked out from ${w.basis === 'line-ups' ? 'the locked line-ups' : 'each club’s best eleven'}, `}${w.games} game${w.games === 1 ? '' : 's'} played so far (the more games, the more the results count), recent form, and how much the home side scores in this league (${w.factors.homeBonus.toFixed(2)}× the away side)${meets.length ? ', plus this season’s meetings' : ''}.</p></section>`;
+  };
+
   function previewSection() {
     const w = winChance(season, fx, { sheets, live: spoilerHidden(fx, season) ? null : liveState(fx, season) }), [ph, pd, pa] = percents(w), now = new Date();
     const sum = c => clubSummary(season, c, now), hs = sum(fx.home), as = sum(fx.away), R = w.factors.ratings;
@@ -164,10 +172,7 @@ async function run() {
     const lu = x => (x.items.length ? `<ol class="gc-lu">${x.items.map(p => `<li><span class="pos">${esc(p.position)}</span><span class="nm">${shirtHtml(p.id)}${esc(p.name)}${x.captain === p.id ? ' <small>(c)</small>' : ''}</span>${avgChip(p.id)}</li>`).join('')}</ol>` : '<p class="quiet">Line-up not locked yet.</p>');
     const hx = lineup(fx.home), ax = lineup(fx.away);
     for (const x of [hx, ax]) x.rating = pid => { const a = avg(pid); return a ? { value: a.value, cls: avgCls(Number(a.value)) } : { value: 'N/A', cls: 'r-na' }; };
-    return `<section class="gc-sec"><h2>Win chance</h2>
-        <div class="mc-bar big"><i class="bh" style="flex:${ph}"></i><i class="bd" style="flex:${pd}"></i><i class="ba" style="flex:${pa}"></i></div>
-        <div class="mc-pcts"><span><b>${ph}%</b> ${esc(nameOf(home()))}</span><span><b>${pd}%</b> Draw</span><span><b>${pa}%</b> ${esc(nameOf(away()))}</span></div>
-        <p class="gc-note">${w.live ? 'Updating as the match is played: the score, the time left and any sending-offs all count. ' : ''}Expected goals ${w.xg[0].toFixed(1)} to ${w.xg[1].toFixed(1)}${w.live ? ' over a full match' : ''}. ${w.basis === 'results' ? 'Neither club has a full squad yet, so this leans on the league’s averages and will sharpen as squads and results come in. ' : `Worked out from ${w.basis === 'line-ups' ? 'the locked line-ups' : 'each club’s best eleven'}, `}${w.games} game${w.games === 1 ? '' : 's'} played so far (the more games, the more the results count), recent form, and how much the home side scores in this league (${w.factors.homeBonus.toFixed(2)}× the away side)${meets.length ? ', plus this season’s meetings' : ''}.</p></section>
+    return `${chanceSection(w)}
       <section class="gc-sec"><h2>How they compare</h2>
         <table class="gc-vs"><thead><tr><th></th><th>${esc(nameOf(home()))}</th><th>${esc(nameOf(away()))}</th></tr></thead><tbody>
           <tr><th>League position</th><td>${hs.rank ?? '–'}</td><td>${as.rank ?? '–'}</td></tr>
@@ -253,11 +258,12 @@ async function run() {
 
   // ---------------------------------------------------------------- page
   // One scrolling page: the scoreboard, then the viewer, then what happened (stats, line-ups, timeline). Before kick-off, the preview.
-  const below = () => `${statsSection()}${lineupsSection()}${timelineSection()}`;
+  const liveChance = () => (live() ? chanceSection(winChance(season, fx, { sheets, live: spoilerHidden(fx, season) ? null : liveState(fx, season) })) : '');
+  const below = () => `${liveChance()}${statsSection()}${lineupsSection()}${timelineSection()}`;
   function draw() {
     unmount();
     const waiting = !data && ['live', 'ft'].includes(st());
-    main.innerHTML = `<div class="gc"${sides()}>${head()}${data ? `${playerCard(st())}<nav class="gc-jump" aria-label="Jump to a section"><a href="#gc-stats">Stats</a><a href="#gc-lineups">Line-ups</a><a href="#gc-timeline">Timeline</a></nav><div id="gc-below">${below()}</div>`
+    main.innerHTML = `<div class="gc"${sides()}>${head()}${data ? `${playerCard(st())}<nav class="gc-jump" aria-label="Jump to a section">${live() ? '<a href="#gc-chance">Win chance</a>' : ''}<a href="#gc-stats">Stats</a><a href="#gc-lineups">Line-ups</a><a href="#gc-timeline">Timeline</a></nav><div id="gc-below">${below()}</div>`
       : `${waiting ? `<p class="quiet">${esc(fileError || 'Loading the match…')}</p>` : ''}${previewSection()}`}</div>`;
     mount();
   }
