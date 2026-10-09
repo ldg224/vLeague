@@ -65,14 +65,10 @@ export async function loadDraft(id, club) {
   return { draft: draft[0] || null, order, picks, queue: queue.map(r => r.player), prefs: prefs[0] || { mode: 'on_miss', minutes: null, pick_how: 'queue' } };
 }
 
-// Replace this club's queue (rank 1 = first choice).
+// Replace this club's queue (rank 1 = first choice). One database call (0039), so a refresh or a failure can't leave it empty.
 export async function saveQueue(id, club, players) {
-  const c = await db();
-  const del = await c.from('draft_queue').delete().eq('draft', id).eq('club', club);
-  if (del.error) throw new Error(del.error.message);
-  if (!players.length) return;
-  const ins = await c.from('draft_queue').insert(players.map((player, i) => ({ draft: id, club, rank: i + 1, player })));
-  if (ins.error) throw new Error(ins.error.message);
+  const { error } = await (await db()).rpc('save_draft_queue', { p_draft: id, p_club: club, p_players: players });
+  if (error) throw new Error(error.message);
 }
 
 export async function savePrefs(id, club, mode, minutes, pickHow = 'queue') {

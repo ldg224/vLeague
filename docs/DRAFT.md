@@ -90,3 +90,6 @@ minutes or more). The setting is `email.draft` = `both` (default) | `turn` | `of
 sent in the draft's quiet times, between 10 pm and 8 am Melbourne, or to a club whose auto-pick is "always". The page subscribes to
 Supabase realtime on `draft_picks` and `drafts` (they're in the `supabase_realtime` publication) and refreshes on any change, with the
 15 s poll as a backup. Players' cards and the pick dialog are `<dialog>` elements built in `js/draft.js`.
+
+## Taking a pick back (0039, 0.52.0)
+The pick on the clock is the lowest pick with no row in `draft_picks`, so picks no longer have to be made in order. `office_remove_pick(draft, pick_no)` deletes one made pick and frees its player; the clock moves to the lowest open pick (fresh timer if live; a finished draft is paused). The Editor shows a red × on each made pick. Queues are saved with `save_draft_queue()` (one transaction).

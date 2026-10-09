@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.52.0 (2026-10-10)
+
+Headlines: a club's draft queue can no longer be lost (B-13), and the Editor can take a pick back so that club picks again
+
+Database change: run `supabase/migrations/0039_draft_repick_and_queue_save.sql` in the Supabase SQL editor **before** using this version (the draft page needs it to save a queue). It is safe to re-run. If anything goes wrong, `v0.51.2` is the version to go back to (`docs/RELEASING.md`).
+
+- **Fixed, Draft (B-13):** a club's queue is now saved in one step. Before, saving deleted the queue and then added it back as two steps, and a page refresh (which happens whenever anyone picks) landing between them left the queue empty on the server. The clock then had nothing to pick from, so a missed turn became a random player even with "From my queue: if I miss my turn" set. The page also saves one change at a time, in order, and a refresh no longer replaces a queue that is mid-save. If a save fails you now see the error and the queue the server really has.
+- **Added, Editor → Draft order:** a small red × on every made pick. It puts the player back to free agents and gives that club the pick again with a fresh timer. Take back several and the clock goes to the lowest unmade pick, then the next, then carries on where the draft had reached (for example pick 5, then pick 23, then pick 31). A finished draft is paused when you take a pick back; press Resume.
+- **Changed, Draft:** the pick on the clock is now always the lowest pick that hasn't been made, not "the next number". "Undo last pick" takes back the highest pick made, and "Undo auto-assign" takes back just the picks that auto-assign filled. Roster minimums count a club's unmade picks wherever they are in the order.
+
 ## 0.51.2 (2026-10-09)
 
 Headlines: a "Skip to highlights" option on the Test page (S-21)

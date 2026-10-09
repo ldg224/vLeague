@@ -6,7 +6,10 @@ import { icon } from './icons.js';
 //                            order: [{ pick_no, club }], picks: [{ pick_no, player, how }]. A round is one pick per club, so
 //                            the columns are the clubs in the order they first pick (the first round).
 //   renderGrid(grid, o)   -> HTML. o: { esc, clubName(code), who(pick row) -> html, me, current (pick_no on the clock),
-//                            made (picks made so far), editable, selected (pick_no picked for a swap) }
+//                            made (picks made so far), editable, selected (pick_no picked for a swap), removable (show a red x on
+//                            each made pick, data-act="rmpick" data-no) }
+//                            A pick is made when it has a row in `picks`, not when its number is low: the office can take one
+//                            back, so a later pick can be made while an earlier one is open.
 //   moveColumn(cols, from, to) -> { [oldClub]: newClub } mapping for moving a column, applied to the unmade picks.
 
 export function gridOf(order, picks = []) {
@@ -30,7 +33,7 @@ export function moveColumn(cols, from, to) {
 }
 
 export function renderGrid(grid, o) {
-  const { esc, clubName, who, me, current, made = 0, editable, selected } = o;
+  const { esc, clubName, who, me, current, made = 0, editable, selected, removable } = o;
   if (!grid.rounds.length) return '';
   const move = editable && made === 0;
   const head = grid.cols.map((c, i) => `<th scope="col" class="dg-col${c === me ? ' me' : ''}"${move ? ` draggable="true" data-col="${esc(c)}" data-i="${i}"` : ''}>
@@ -38,9 +41,9 @@ export function renderGrid(grid, o) {
   const body = grid.rounds.map(r => `<tr><th scope="row" class="dg-r">${r.n}</th>${grid.cols.map(c => {
     const cell = r.cells.get(c) || [];
     return `<td class="dg-cell${c === me ? ' me' : ''}${cell.length === 0 ? ' none' : ''}">${cell.map(x => {
-      const done = x.pick_no <= made, now = x.pick_no === current, drag = editable && !done;
+      const done = !!x.pick, now = x.pick_no === current, drag = editable && !done && x.pick_no > made;
       return `<div class="dg-pick${done ? ' done' : ''}${now ? ' now' : ''}${selected === x.pick_no ? ' sel' : ''}${drag ? ' drag' : ''}"${drag ? ` draggable="true" data-no="${x.pick_no}" tabindex="0" role="button" aria-label="Pick ${x.pick_no}, ${esc(clubName(c))}. Press to select, then press another pick to swap them."` : ` data-no="${x.pick_no}"`}>
-        <span class="dg-no">#${x.pick_no}</span><span class="dg-who">${done ? who(x) : now ? '<i>On the clock</i>' : ''}</span></div>`;
+        <span class="dg-no">#${x.pick_no}</span><span class="dg-who">${done ? who(x) : now ? '<i>On the clock</i>' : ''}</span>${removable && done ? `<button type="button" class="dg-x" data-act="rmpick" data-no="${x.pick_no}" title="Take back pick ${x.pick_no} so ${esc(clubName(c))} picks again" aria-label="Take back pick ${x.pick_no} (${esc(clubName(c))}) so they pick again">&times;</button>` : ''}</div>`;
     }).join('')}</td>`;
   }).join('')}</tr>`).join('');
   return `<div class="dg-wrap"><table class="dg"><thead><tr><th scope="col" class="dg-r">Round</th>${head}</tr></thead><tbody>${body}</tbody></table></div>`;

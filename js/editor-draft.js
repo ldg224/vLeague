@@ -81,7 +81,10 @@ export async function mountDraft(ctx) {
     for (let r = 0; r < rounds; r++) out.push(...(snake && r % 2 ? [...base].reverse() : base));
     return out;
   }
-  const made = () => (S.d.status === 'setup' ? 0 : S.d.current_pick - 1);
+  // The last pick number made. Picks aren't always made in order: the office can take one back (red x), so an earlier pick can be open
+  // while later ones stand. The order tools only touch picks after this one; an open pick before it waits for its re-pick.
+  const made = () => (S.d.status === 'setup' ? 0 : S.picks.reduce((m, k) => Math.max(m, k.pick_no), 0));
+  const unmade = () => { const done = new Set(S.picks.map(k => k.pick_no)); return S.order.filter(o => !done.has(o.pick_no)); };
   const madeClubs = () => S.order.filter(o => o.pick_no <= made()).map(o => o.club);
   const restClubs = () => S.order.filter(o => o.pick_no > made()).map(o => o.club);
 
@@ -172,8 +175,8 @@ export async function mountDraft(ctx) {
   let gridSel = null;
   const orderGrid = () => {
     const m = made(), map = new Map(S.players.map(p => [p.id, p]));
-    return `<p class="dg-hint">${m ? 'Made picks are fixed.' : 'Drag a column heading to change a club’s draft position.'} Drag any unmade pick onto another to swap them, or press one and then the other.</p>${renderGrid(gridOf(S.order, S.picks), {
-      esc, clubName: cname, editable: true, made: m, current: S.d.status === 'done' ? null : S.d.current_pick, selected: gridSel,
+    return `<p class="dg-hint">${m ? 'Made picks are fixed. The red × takes a pick back so that club picks again.' : 'Drag a column heading to change a club’s draft position.'} Drag any unmade pick onto another to swap them, or press one and then the other.</p>${renderGrid(gridOf(S.order, S.picks), {
+      esc, clubName: cname, editable: true, removable: S.d.status !== 'setup', made: m, current: S.d.status === 'done' ? null : S.d.current_pick, selected: gridSel,
       who: x => { const p = map.get(x.pick?.player); return p ? `${esc(p.name)} <small>${esc(p.position)}</small>` : '<i>skipped</i>'; },
     })}`;
   };
@@ -188,7 +191,7 @@ export async function mountDraft(ctx) {
           <label>First round<select name="first"><option value="keep">Keep the current order</option><option value="random">Shuffle the clubs</option>
             <option value="low">Lowest team value first</option><option value="high">Highest team value first</option><option value="alpha">A to Z</option></select></label></div>
         <div class="ed-actions"><button class="btn ghost" type="submit">${rest.length ? 'Rebuild the unmade picks' : 'Build the order'}</button></div>
-        <p class="ed-hint">${m ? `Picks 1 to ${m} are made and stay as they are.` : 'Replaces the whole order.'} Use the tools below to change single picks.</p></form>
+        <p class="ed-hint">${m ? `Picks up to ${m} stay as they are (made, or waiting for a re-pick).` : 'Replaces the whole order.'} Use the tools below to change single picks.</p></form>
       ${rest.length ? `<details class="dr-tools"><summary>Order tools</summary>
         <div class="dr-toolgrid">
           <form class="dr-swap" novalidate><b>Swap two picks</b><div class="ed-actions"><input name="a" type="number" min="${m + 1}" max="${last}" placeholder="Pick" aria-label="First pick"><input name="b" type="number" min="${m + 1}" max="${last}" placeholder="Pick" aria-label="Second pick"><button class="btn ghost small" type="submit">Swap</button></div></form>
@@ -242,7 +245,7 @@ export async function mountDraft(ctx) {
   const autoPanel = () => {
     const d = S.d;
     if (!['live', 'paused'].includes(d.status)) return '';
-    const rest = S.order.filter(o => o.pick_no >= d.current_pick);
+    const rest = unmade();
     if (preview) return `<section class="ed-invite"><h2>Auto-assign the rest: preview</h2>
       <p class="ed-hint">Best value first, in draft order. Nothing is saved until you confirm. You can undo it afterwards.</p>
       <div class="pl-scroll"><table class="pl-table"><thead><tr><th>Pick</th><th>Club</th><th>Player</th><th>Value</th></tr></thead><tbody>${preview.map(r =>
@@ -250,7 +253,7 @@ export async function mountDraft(ctx) {
       <div class="ed-actions"><button class="btn" data-act="autofill">Assign ${preview.length} pick${preview.length === 1 ? '' : 's'}</button><button class="btn ghost" data-act="nopreview">Cancel</button></div></section>`;
     return fold('auto', 'Auto-assign the rest', `${rest.length} pick${rest.length === 1 ? '' : 's'} left`, `<p class="ed-hint">Fills the ${rest.length} remaining pick${rest.length === 1 ? '' : 's'} with the best-value free players. ${free().length} free player${free().length === 1 ? '' : 's'} left.</p>
       <div class="ed-actions"><button class="btn ghost" data-act="preview"${rest.length ? '' : ' disabled'}>Preview</button>
-        ${undoFrom && undoFrom < d.current_pick ? `<button class="btn ghost" data-act="undoauto">Undo auto-assign (back to pick ${undoFrom})</button>` : ''}</div>`);
+        ${undoFrom?.length ? `<button class="btn ghost" data-act="undoauto">Undo auto-assign (${undoFrom.length} pick${undoFrom.length === 1 ? '' : 's'})</button>` : ''}</div>`);
   };
 
   const boardPanel = () => {
@@ -469,6 +472,14 @@ export async function mountDraft(ctx) {
     if (act === 'extend') run(() => rpc('office_draft_control', { p_draft: d.id, p_action: 'extend', p_minutes: Math.max(1, Math.round(+root.querySelector('.dr-ext').value) || 1) }), 'Time added.');
     if (act === 'skip') run(() => rpc('office_set_pick', { p_draft: d.id, p_player: null }), 'A random player was picked.');
     if (act === 'makepick') run(async () => { await rpc('office_set_pick', { p_draft: d.id, p_player: root.querySelector('.dr-pl').value }); undoFrom = null; }, 'Pick made.');
+    if (act === 'rmpick') {
+      const no = +b.dataset.no, k = S.picks.find(x => x.pick_no === no), o = S.order.find(x => x.pick_no === no);
+      if (!k || !o) return;
+      const what = k.player ? `${nameOf(k.player)} goes back to free agents and ` : '';
+      if (!confirm(`Take back pick ${no} (${cname(o.club)})? ${what}${cname(o.club)} picks again${d.status === 'live' ? ' with a fresh timer' : ' when the draft is resumed'}. Everyone else’s picks stay.`)) return;
+      run(async () => { await rpc('office_remove_pick', { p_draft: d.id, p_pick_no: no }); undoFrom = null; preview = null; },
+        d.status === 'done' ? `Pick ${no} taken back. The draft is paused: press Resume to let ${cname(o.club)} pick again.` : `Pick ${no} taken back: ${cname(o.club)} picks again.`);
+    }
     if (act === 'undo') run(async () => { await rpc('office_draft_undo', { p_draft: d.id }); undoFrom = null; }, 'Last pick undone.');
     if (act === 'delete') {
       const picked = S.picks.filter(k => k.player).length;
@@ -502,7 +513,7 @@ export async function mountDraft(ctx) {
       const have = {};
       for (const pl of S.players) if (pl.club) { const h = (have[pl.club] ||= {}); h[pl.position] = (h[pl.position] || 0) + 1; }
       const pool = free().sort((a, b) => b.value - a.value || (a.id < b.id ? -1 : 1)), taken = new Set();
-      const todo = S.order.filter(o => o.pick_no >= d.current_pick);
+      const todo = unmade();
       preview = todo.map((o, i) => {
         const after = todo.slice(i + 1).filter(x => x.club === o.club).length, h = (have[o.club] ||= {});
         const p = pool.find(x => !taken.has(x.id) && allowed(d, h, x, o.club, after)) || null;
@@ -512,8 +523,8 @@ export async function mountDraft(ctx) {
       draw();
     }
     if (act === 'nopreview') { preview = null; draw(); }
-    if (act === 'autofill') run(async () => { const from = d.current_pick; await rpc('office_autofill', { p_draft: d.id }); undoFrom = from; preview = null; }, 'Done. Press Undo auto-assign if that isn’t what you wanted.');
-    if (act === 'undoauto') run(async () => { await rpc('office_draft_undo', { p_draft: d.id, p_from: undoFrom }); undoFrom = null; }, 'Auto-assign undone.');
+    if (act === 'autofill') run(async () => { const nos = unmade().map(o => o.pick_no); await rpc('office_autofill', { p_draft: d.id }); undoFrom = nos; preview = null; }, 'Done. Press Undo auto-assign if that isn’t what you wanted.');
+    if (act === 'undoauto') run(async () => { for (const no of [...undoFrom].sort((a, b) => b - a)) await rpc('office_remove_pick', { p_draft: d.id, p_pick_no: no }); undoFrom = null; }, 'Auto-assign undone.');
     if (act === 'unqueue') run(() => write(client.from('draft_queue').delete().eq('draft', d.id).eq('club', b.dataset.club).eq('player', b.dataset.player)), 'Removed from the queue.');
   });
 

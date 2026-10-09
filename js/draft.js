@@ -55,6 +55,7 @@ if (ctx) {
     // The draft plus, when it has quiet times, how the clock stands (so it can freeze while the timer is paused).
     const loadAll = async () => { const s = await loadDraft(draft0.id, code); s.qs = s.draft?.quiet?.length ? await quietState(draft0.id) : null; return s; };
     let st = await loadAll(), players = await loadPlayers({ fresh: true });
+    let qSaves = 0, qChain = Promise.resolve(), failed = false;   // queue saves in flight
     let msg = '', sub = 'players';   // sub: which part of Available players shows on a phone (players, queue or auto-pick)
     const byId = () => new Map(players.map(p => [p.id, p]));
 
@@ -74,7 +75,8 @@ if (ctx) {
       if (!p) return '';
       const mx = st.draft.roster_max || {}, mn = st.draft.roster_min || {}, have = pos => players.filter(x => x.team === code && x.position === pos).length;
       if (mx[p.position] != null && have(p.position) >= mx[p.position]) return `You already have the most ${p.position} allowed (${mx[p.position]}).`;
-      const left = st.order.filter(o => o.club === code && o.pick_no > st.draft.current_pick).length;
+      const madeNo = new Set(st.picks.map(k => k.pick_no));
+      const left = st.order.filter(o => o.club === code && o.pick_no !== st.draft.current_pick && !madeNo.has(o.pick_no)).length;
       const needed = Object.keys(mn).reduce((n, k) => n + Math.max(0, mn[k] - have(k) - (k === p.position ? 1 : 0)), 0);
       return needed > left ? 'Taking this player would leave too few picks to fill every position.' : '';
     };
@@ -250,9 +252,10 @@ if (ctx) {
     async function refresh() {
       try {
         if (!await openDraft()) { location.reload(); return; }
-        const typing = document.activeElement?.matches?.('input,select'), before = sig();
+        const typing = document.activeElement?.matches?.('input,select'), before = sig(), mine = st.queue;
         forgetPlayers();
         [st, players] = await Promise.all([loadAll(), loadPlayers({ fresh: true })]);
+        if (qSaves) st.queue = mine;   // a save is in flight: what the server says now is out of date, so keep what I just set
         if (!typing && sig() !== before) draw();
       } catch { /* try again next time */ }
     }
@@ -302,9 +305,12 @@ if (ctx) {
     }
 
     const fail = e => { msg = /not your turn/i.test(e.message) ? 'It isn’t your turn.' : /taken|already/i.test(e.message) ? 'That player has just been taken.' : `That didn’t work: ${e.message}`; };
+    // Saves go one at a time, in order, so the last change always wins; a refresh while one is in flight keeps my queue (see refresh).
     async function setQueue(list) {
-      st.queue = list; draw();
-      try { await saveQueue(draft0.id, code, list); msg = ''; } catch (e) { fail(e); }
+      st.queue = list; qSaves++; draw();
+      qChain = qChain.then(() => saveQueue(draft0.id, code, list)).then(() => { msg = ''; }, e => { fail(e); failed = true; });
+      await qChain;
+      if (!--qSaves && failed) { failed = false; await refresh(); }   // a save failed: show what the server really has, with the error
       draw();
     }
 

@@ -28,3 +28,9 @@
 .dg-col .dg-mv { border: 0; background: transparent; color: var(--muted); cursor: pointer; padding: 2px 4px; font-size: .75rem; }
 .dg-col .dg-mv:disabled { opacity: .25; cursor: default; }
 .dg-hint { margin: 0 0 8px; color: var(--muted); font-size: .85rem; }
+
+/* The Editor's red x on a made pick: take it back so that club picks again. */
+.dg-pick { position: relative; }
+.dg-x { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #d32f2f; font: 700 1.1rem/1 var(--font-body, inherit); cursor: pointer; display: grid; place-items: center; }
+.dg-x:hover, .dg-x:focus-visible { background: #d32f2f; color: #fff; }
+.dg-pick:has(.dg-x) .dg-who { padding-right: 24px; }
