@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.47.6 (2026-10-09)
+
+Headlines: nobody runs into the box before a penalty is taken (B-07)
+
+No database change. If anything goes wrong, `v0.47.5` is the version to go back to (`docs/RELEASING.md`).
+
+- **Fixed, match engine:** at a penalty, play went live as soon as the taker reached the spot, and for the second or so of the run-up the other players charged into the box before the ball was kicked. Everyone now holds their place until the kick. They also wait further back, outside both the box and the arc round the penalty spot (they used to line up inside the arc). Checked on simulated penalties: 5 to 6 players were in the box before the kick, and now none are in the box or the arc. This applies to matches played from now on; matches already played keep their old footage.
+
 ## 0.47.5 (2026-10-09)
 
 Headlines: the draft auto-pick no longer waits up to a minute after a timer runs out (B-09)

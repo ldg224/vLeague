@@ -1003,6 +1003,20 @@ class Match:
                     p.urgency = 2 if dist(p.x, p.y, p.tx, p.ty) > 20 else 1
             return
 
+        # A penalty is live as soon as the taker is on the spot, but everyone else stays on their marks outside the box until the
+        # ball is actually kicked (restart_kind is cleared by the kick): no run-ins before the penalty is taken.
+        if self.restart_kind == 'penalty' and b.holder is not None and self.restart:
+            for p in self.players:
+                if p.sent_off:
+                    continue
+                if p is b.holder:
+                    p.tx, p.ty = self.restart['spot']
+                    p.tx -= 0.3 * (1 if self.team_of(p).direction == 1 else -1)
+                else:
+                    p.tx, p.ty = self.restart_targets.get(p, (p.x, p.y))
+                p.urgency = 1
+            return
+
         holder = b.holder
         if holder is None and t >= self.next_chaser_update:
             self._update_chasers()

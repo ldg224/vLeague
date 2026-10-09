@@ -172,7 +172,8 @@ def setpiece_targets(kind, attacking, defending, spot, taker, off_line_att):
         return targets
 
     if kind == 'penalty':
-        spots = [(86, 22 + i * 3.2) for i in range(9)]
+        # Outside the box (it starts at x = 88.5) and outside the arc, 9.15 m round the spot (x = 94), so at least 10.5 m from it.
+        spots = [(83.5, 22 + i * 3.2) for i in range(9)]
         i = 0
         for team in (attacking, defending):
             for p in team.active():
