@@ -118,6 +118,8 @@ html { scroll-behavior: smooth; }
 .pp-play { position: absolute; bottom: -7px; right: -10px; display: inline-flex; align-items: center; gap: 1px; padding: 1px 4px; border-radius: 999px; background: rgba(8, 18, 30, .92); color: #fff; }
 .pp-play svg { width: 15px; height: 15px; }
 .pp .rating.r-na { background: rgba(8, 18, 30, .72); color: #d6dfeb; border-color: rgba(255, 255, 255, .28); }
+.pp-b.pp-s { font-size: .68rem; letter-spacing: -.02em; }
+.pp-no { color: #90caf9; font-weight: 900; margin-right: 1px; }   /* S-21: shirt number before the surname */
 .pp-n { max-width: 100%; padding: 2px 7px; border-radius: 6px; background: rgba(8, 18, 30, .86); color: #fff; font-size: .72rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pp-p .rating { font-size: .7rem; min-width: 2rem; padding: 1px 4px; }
 @media (max-width: 640px) {

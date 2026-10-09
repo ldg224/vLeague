@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.47.8 (2026-10-09)
+
+Headlines: the shirt number goes before the surname on the match line-up pitch, like "10 Messi" (S-21)
+
+No database change. If anything goes wrong, `v0.47.7` is the version to go back to (`docs/RELEASING.md`).
+
+- **Changed, match line-ups:** under each player on the line-up pitch the name now reads "10 Messi" (number first, in blue). The circle shows the position (such as LW or ST) instead of repeating the number. Players with no number show just their surname.
+
 ## 0.47.7 (2026-10-09)
 
 Headlines: each player's shirt number now shows next to their name on the line-up pitch (S-21)
