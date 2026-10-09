@@ -93,7 +93,7 @@ if (ctx) {
         <div class="dr-bar" role="progressbar" aria-label="Weekly budget used" aria-valuemin="0" aria-valuemax="${CAP}" aria-valuenow="${used}"><i style="width:${pct.toFixed(1)}%"></i></div></div>`;
     }
 
-    // Quiet times: the pick timer doesn't run (managers can still pick). The clock shows ACTIVE time left, frozen while it's quiet.
+    // Active times: the pick timer runs only inside them (drafts.quiet holds them; 0040) (managers can still pick). The clock shows ACTIVE time left, frozen while it's quiet.
     const inQuiet = () => !!st.qs?.quiet_until && Date.now() < new Date(st.qs.quiet_until);
     const clockMs = () => {
       const d = st.draft; if (!d.pick_deadline) return 0;
@@ -109,13 +109,13 @@ if (ctx) {
       const B = {
         soon: ['Not started yet', 'Get ready', 'Read the rules, look through the players and build your queue. You can pick as soon as the draft starts.', ''],
         opens: ['Opens soon', 'Get ready', `Opens ${esc(whenAt(d.opens_at))}. Build your queue and set auto-pick now.`, `<small>Opens in</small><span id="clock" data-until="${esc(d.opens_at)}">${fmt(new Date(d.opens_at) - Date.now())}</span>`],
-        live: ['Live', mine ? 'It’s your pick' : t ? `${who} is picking` : 'Draft complete', t ? `Pick ${t.pick_no} of ${n}${mine ? '. Choose any player before the clock runs out.' : '.'}${d.pick_deadline ? ` The pick ends <b>${esc(whenAt(d.pick_deadline))}</b>${d.quiet?.length ? ', not counting quiet times' : ''}. The clock runs even when nobody has the page open.` : ''}` : '',
+        live: ['Live', mine ? 'It’s your pick' : t ? `${who} is picking` : 'Draft complete', t ? `Pick ${t.pick_no} of ${n}${mine ? '. Choose any player before the clock runs out.' : '.'}${d.pick_deadline ? ` The pick ends <b>${esc(whenAt(d.pick_deadline))}</b>${d.quiet?.length ? ', counting only active times' : ''}. The clock runs even when nobody has the page open.` : ''}` : '',
           `${mine ? '<small>Your time</small>' : '<small>Time left</small>'}<span id="clock">${fmt(clockMs())}</span>`],
         paused: ['Paused', 'The draft is paused', `${t ? `Pick ${t.pick_no} of ${n}, ${who} is up. ` : ''}It carries on when the office resumes it. You can still change your queue.`, ''],
         closed: ['Closed', 'The draft has closed', 'Picks can’t be made now.', ''],
         done: ['Finished', 'The draft is finished', `All ${n} picks are done.`, ''],
       }[ph];
-      const quiet = d.quiet?.length ? (inQuiet() && ph === 'live' ? `${icon('pause')} Quiet time: the timer is paused until ${new Date(st.qs.quiet_until).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' })}. You can still pick.` : `Timers pause ${describeQuiet(d.quiet)}. You can still pick then.`) : '';
+      const quiet = d.quiet?.length ? (inQuiet() && ph === 'live' ? `${icon('pause')} Outside active times: the timer is paused until ${new Date(st.qs.quiet_until).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' })}. You can still pick.` : `The pick timer runs ${describeQuiet(d.quiet)}, and is paused at other times. You can still pick whenever you’re online.`) : '';
       const small = [rulesText() && `Roster rules: ${rulesText()}`, quiet].filter(Boolean);
       return `<section class="dr-status ph-${ph}${mine ? ' mine' : ''}${ph === 'live' && inQuiet() ? ' quiet' : ''}"><div class="dr-st-main"><div><span class="dr-st-tag">${B[0]}</span><p class="dr-st-name">${esc(d.name || 'Draft')}</p>
         <h1 class="page-title dr-st-big" tabindex="-1">${B[1]}</h1><p class="dr-st-sub">${B[2]}</p></div>
@@ -392,7 +392,7 @@ if (ctx) {
           done: 'This bar tells you where the draft is. It’s <b>finished</b>. Have a look at the board to see who went where.',
         })[phase(st.draft)],
         tip: 'Picks happen slowly over days, not all at once. Come back whenever you like.' },
-      { target: '.dr-st-small', optional: true, tab: 'board', title: 'Rules and quiet times', text: 'The small print in the bar shows the <b>roster rules</b> (how many of each position you can have) and any <b>quiet times</b>, when the pick timer pauses, like overnight. <b>You can still make a pick</b> in a quiet time if you’re online.' },
+      { target: '.dr-st-small', optional: true, tab: 'board', title: 'Rules and active times', text: 'The small print in the bar shows the <b>roster rules</b> (how many of each position you can have) and the <b>active times</b>, when the pick timer runs. At other times it pauses. <b>You can still make a pick</b> whenever you’re online.' },
       { target: '.dr-budget', title: 'Your weekly budget', text: 'Every player has a value. Your squad’s values add up against a weekly cap. The bar fills as you pick, turns <b>orange</b> when you’re close and <b>red</b> if you go over.', tip: 'It’s a guide only. It won’t stop you making a pick.' },
       { target: '.dr-tabs', title: 'Three tabs', text: '<b>Board</b> shows every pick so far. <b>Available players</b> is where you choose. <b>Team values</b> shows what every club has spent.' },
       { target: '.dg-wrap', tab: 'board', title: 'The board', text: 'The whole draft at a glance: a row for each round and a column for each club. Each box shows the pick number and who was taken. The pick on the clock is <b>outlined</b> and your own club’s column is <b>tinted</b>.', tip: 'It updates the moment someone picks. Tap a name for the player’s card. “Download CSV” saves it as a spreadsheet.' },

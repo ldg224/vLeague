@@ -65,11 +65,13 @@ A pick sets `players.club` (and so each club's value). **Active team value** = s
 4. **Auto-pick settings** (`draft_prefs`): the four modes above, with the minutes box for `after_minutes`.
 5. **Team values** page: every club's roster and total (`club_values`), mine highlighted, live.
 
-## Active times (0.28)
+## Active times (0.28, turned round in 0.54 / migration 0040)
 
-`drafts.quiet` is a list of quiet windows when the pick timer doesn't run: `[{"days":[0..6],"from":"22:00","to":"07:00"}]`
-(days it starts on, 0 = Sunday; Melbourne time; `to` at or before `from` ends the next morning). Only the clock stops: picks by
-managers and the office still work in quiet time. `pick_deadline` is always "N active minutes after `pick_started`", worked out
+`drafts.quiet` (the column keeps its old name) is a list of ACTIVE windows, when the pick timer runs: `[{"days":[0..6],"from":"07:00","to":"22:00"}]`
+(days it starts on, 0 = Sunday; Melbourne time; `to` at or before `from` ends the next morning). Outside them the timer is paused;
+an empty list means it runs all the time. Before 0040 the same list meant the opposite (quiet windows). Internally "quiet" still
+means "paused": `_quiet_intervals()` returns the gaps between the active windows, and everything else is unchanged. Only the clock
+pauses: picks by managers and the office still work at any time. `pick_deadline` is always "N active minutes after `pick_started`", worked out
 by `_draft_add_active()` when a pick starts (and when the office extends or resumes); `office_set_quiet()` changes the schedule
 and keeps the current pick's remaining active time; `draft_quiet_state()` tells the page whether it's quiet now and how much
 active time is left, so the clock can freeze. "After N minutes" auto-picks count active minutes from `pick_started`. A club on

@@ -18,9 +18,9 @@ const POS = { GK: 'Goalkeepers', DEF: 'Defenders', MID: 'Midfielders', FWD: 'For
 const shuffle = a => a.map(x => [Math.random(), x]).sort((x, y) => x[0] - y[0]).map(x => x[1]);
 
 let selected = null, undoFrom = null, timer = null;
-// Active times (0.28): the schedule of quiet times, when the pick timer doesn't run. Days run Monday first.
+// Active times (0.28, turned round in 0.54): the schedule of when the pick timer RUNS; outside it the timer is paused. Days run Monday first.
 const QDAYS = [[1, 'Mon'], [2, 'Tue'], [3, 'Wed'], [4, 'Thu'], [5, 'Fri'], [6, 'Sat'], [0, 'Sun']];
-const OVERNIGHT = { days: [0, 1, 2, 3, 4, 5, 6], from: '22:00', to: '07:00' };
+const EVERYDAY = { days: [0, 1, 2, 3, 4, 5, 6], from: '07:00', to: '22:00' };
 
 import { gridOf, renderGrid, moveColumn } from './draft-grid.js';
 import { icon } from './icons.js';
@@ -134,7 +134,7 @@ export async function mountDraft(ctx) {
   // The big status bar: state, whose pick it is and the clock, then the main button. The rest sits under "More actions".
   const bar = () => {
     const d = S.d, t = turn(), live = ['live', 'paused'].includes(d.status);
-    const ends = d.status === 'live' && t && d.pick_deadline ? `<p class="dr-ends"><b>${esc(cname(t.club))}</b> is on the clock (pick ${d.current_pick} of ${S.order.length}). The pick ends <b>${esc(when(d.pick_deadline))}</b>${d.quiet?.length ? ', not counting quiet times' : ''}. <span class="dr-count" data-deadline="${esc(d.pick_deadline)}"></span> left. It runs on the server, so it keeps going when nobody has this page open.</p>`
+    const ends = d.status === 'live' && t && d.pick_deadline ? `<p class="dr-ends"><b>${esc(cname(t.club))}</b> is on the clock (pick ${d.current_pick} of ${S.order.length}). The pick ends <b>${esc(when(d.pick_deadline))}</b>${d.quiet?.length ? ', counting only active times' : ''}. <span class="dr-count" data-deadline="${esc(d.pick_deadline)}"></span> left. It runs on the server, so it keeps going when nobody has this page open.</p>`
       : d.status === 'paused' ? '<p class="dr-ends">Paused: no clock is running. Resume starts a fresh pick time.</p>' : '';
     return `<section class="dr-bigbar"><div class="dr-top">
       <div><h2>${esc(d.name)}</h2>
@@ -222,23 +222,23 @@ export async function mountDraft(ctx) {
         <p class="ed-hint">Rules apply to managers’ picks and every automatic pick. Your own overrides ignore them. They don’t change players already picked.</p></form></details>`;
   };
 
-  // Active times: when the pick timer runs. Quiet times are the gaps; a manager can still pick in them.
+  // Active times: when the pick timer runs. Outside them it is paused; a manager can still pick then. (Stored as drafts.quiet; see 0040.)
   const quietPanel = () => {
     const d = S.d;
     if (!Array.isArray(d.quiet)) return '<p class="ed-hint">Active times need the database update 0029_draft_active_times.sql. Run it once.</p>';
     const rows = qWork || d.quiet, qs = S.qs;
-    const state = !d.quiet.length ? 'The timer runs all the time.'
-      : qs?.quiet_until ? `Quiet right now: the timer is paused until ${esc(when(qs.quiet_until))}.`
-      : qs?.next_quiet ? `The timer is running. The next quiet time starts ${esc(when(qs.next_quiet))}.` : 'The timer is running.';
-    return `<details class="ed-invite dr-settings dr-quietbox"${qOpen || qWork ? ' open' : ''}><summary><b>Active times</b> <small>${d.quiet.length ? `${d.quiet.length} quiet time${d.quiet.length === 1 ? '' : 's'} set` : 'the timer runs all the time'}</small></summary>
-      <p class="ed-hint">Add quiet times when the pick timer <b>doesn’t run</b>, for example overnight. Nobody is locked out: managers and you can still pick, and the draft keeps working. Only the countdown stops, so a pick that starts at 3 am gets its full time counted from when the quiet time ends. Melbourne time.</p>
+    const state = !d.quiet.length ? 'No active times are set, so the timer runs all the time.'
+      : qs?.quiet_until ? `Outside the active times right now: the timer is paused until ${esc(when(qs.quiet_until))}.`
+      : qs?.next_quiet ? `The timer is running. It pauses at ${esc(when(qs.next_quiet))}.` : 'The timer is running.';
+    return `<details class="ed-invite dr-settings dr-quietbox"${qOpen || qWork ? ' open' : ''}><summary><b>Active times</b> <small>${d.quiet.length ? `${d.quiet.length} active time${d.quiet.length === 1 ? '' : 's'} set` : 'the timer runs all the time'}</small></summary>
+      <p class="ed-hint">Add the times when the pick timer <b>runs</b>. At any other time it is <b>paused</b>. With none added, it runs all the time. Nobody is locked out: managers and you can still pick at any time, and the draft keeps working. Only the countdown pauses, so a pick that starts at 3 am gets its full time counted from when the next active time begins. Melbourne time.</p>
       <div class="dr-qrows">${rows.map((w, i) => `<div class="dr-qrow" data-i="${i}">
-        <span class="dr-qdays" role="group" aria-label="Days this quiet time starts">${QDAYS.map(([v, l]) => `<label><input type="checkbox" value="${v}"${w.days.includes(v) ? ' checked' : ''}><span>${l}</span></label>`).join('')}</span>
+        <span class="dr-qdays" role="group" aria-label="Days this active time starts">${QDAYS.map(([v, l]) => `<label><input type="checkbox" value="${v}"${w.days.includes(v) ? ' checked' : ''}><span>${l}</span></label>`).join('')}</span>
         <label>From <input type="time" name="from" value="${esc(w.from)}"></label><label>Until <input type="time" name="to" value="${esc(w.to)}"></label>
-        <button class="dr-b" type="button" data-act="q-del" data-i="${i}" aria-label="Remove this quiet time">${icon('x')}</button></div>`).join('') || '<p class="quiet">No quiet times.</p>'}</div>
+        <button class="dr-b" type="button" data-act="q-del" data-i="${i}" aria-label="Remove this active time">${icon('x')}</button></div>`).join('') || '<p class="quiet">No active times, so the timer runs all the time.</p>'}</div>
       <p class="ed-hint">A time that ends before it starts (like 10:00 pm until 7:00 am) runs overnight. The days are the days it starts on.</p>
-      <div class="ed-actions"><button class="btn ghost small" type="button" data-act="q-add">+ Add a quiet time</button>
-        <button class="btn ghost small" type="button" data-act="q-night">Every night, 10 pm to 7 am</button>
+      <div class="ed-actions"><button class="btn ghost small" type="button" data-act="q-add">+ Add an active time</button>
+        <button class="btn ghost small" type="button" data-act="q-day">Every day, 7 am to 10 pm</button>
         <button class="btn" type="button" data-act="q-save">Save active times</button>${rows.length ? '<button class="btn ghost" type="button" data-act="q-clear">Remove all</button>' : ''}</div>
       <p class="ed-hint">${state}${d.status === 'live' ? ' Saving keeps the active time the current pick had left.' : ''}</p></details>`;
   };
@@ -462,18 +462,18 @@ export async function mountDraft(ctx) {
     if (!b || !S) return;
     if (b.dataset.act === 'colleft' || b.dataset.act === 'colright') { const i = +b.dataset.i; return moveCol(i, b.dataset.act === 'colleft' ? i - 1 : i + 1); }
     const d = S.d, act = b.dataset.act;
-    if (act === 'q-add' || act === 'q-night' || act === 'q-del' || act === 'q-clear') {
+    if (act === 'q-add' || act === 'q-day' || act === 'q-del' || act === 'q-clear') {
       const cur = readQuiet(); qOpen = true;
       qWork = act === 'q-clear' ? [] : act === 'q-del' ? cur.filter((_, i) => i !== +b.dataset.i)
-        : [...cur, act === 'q-night' ? { ...OVERNIGHT } : { days: [1, 2, 3, 4, 5], from: '12:00', to: '13:00' }];
+        : [...cur, act === 'q-day' ? { ...EVERYDAY } : { days: [1, 2, 3, 4, 5], from: '12:00', to: '21:00' }];
       return draw();
     }
     if (act === 'q-save') return run(async () => {
       const q = readQuiet();
       for (const w of q) {
-        if (!w.days.length) throw new Error('Tick at least one day for each quiet time.');
-        if (!w.from || !w.to) throw new Error('Give each quiet time a start and an end.');
-        if (w.from === w.to) throw new Error('A quiet time can’t start and end at the same time.');
+        if (!w.days.length) throw new Error('Tick at least one day for each active time.');
+        if (!w.from || !w.to) throw new Error('Give each active time a start and an end.');
+        if (w.from === w.to) throw new Error('An active time can’t start and end at the same time.');
       }
       await rpc('office_set_quiet', { p_draft: d.id, p_quiet: q });
       qWork = null;

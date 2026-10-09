@@ -27,8 +27,8 @@ export function phase(d, now = new Date()) {
   return d.status === 'paused' ? 'paused' : 'live';
 }
 
-// Quiet times (0.28): when the pick timer doesn't run. quiet = [{ days: [0..6], from: 'HH:MM', to: 'HH:MM' }], Melbourne time.
-// A manager can still pick in them; only the clock stops. The database works out the deadline (supabase/migrations/0029).
+// Active times (0.28, turned round in 0.54): when the pick timer RUNS; outside them it is paused. Held in drafts.quiet (the column keeps its
+// old name) = [{ days: [0..6], from: 'HH:MM', to: 'HH:MM' }], Melbourne time. A manager can still pick at any time; only the clock pauses. The database works out the deadline (supabase/migrations/0029).
 export const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 export const clockTime = t => { const [h, m] = String(t).split(':').map(Number); return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`; };
 export function describeQuiet(quiet = []) {
@@ -45,7 +45,7 @@ export function describeQuiet(quiet = []) {
   };
   return quiet.map(w => `${clockTime(w.from)} to ${clockTime(w.to)}, ${dayText(w)}`).join('; ');
 }
-// Is it quiet now, when does that end or the next one start, and how much active time is left on the pick? null if unknown.
+// Is the timer paused now (quiet_until = when it restarts), when does it next pause (next_quiet), and how much active time is left on the pick? null if unknown.
 export async function quietState(id) {
   try {
     const { data, error } = await (await db()).rpc('draft_quiet_state', { p_draft: id });

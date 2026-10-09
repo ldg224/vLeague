@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.54.0 (2026-10-10)
+
+Headlines: the draft's times are now active times
+
+Database change: run `supabase/migrations/0040_draft_times_are_active.sql` **once** (already applied to the live database). It changes what the saved times mean for every draft. If anything goes wrong, `v0.53.1` is the version to go back to (`docs/RELEASING.md`), and the migration's one function can be put back from `0039`'s predecessor, `0029`.
+
+- **Changed, Draft:** the times the office saves under Editor → Draft → Active times are now when the pick timer **runs**. At any other time the timer is **paused**. With no times set, it runs all the time, as before. Before, the same list meant the opposite (quiet times when the timer paused), even though the panel was already called "Active times". The times already saved were kept as they are; they simply mean the other thing now.
+- **Changed, wording:** the Editor panel, the managers' Draft page ("The pick timer runs …, and is paused at other times"), the page tour and the buttons now all talk about active times. The "Every night, 10 pm to 7 am" shortcut is now "Every day, 7 am to 10 pm".
+- Nothing else changes: managers and the office can still pick at any time, and a pick that starts while paused gets its full time from when the next active time begins.
+
 ## 0.53.1 (2026-10-10)
 
 Headlines: a full sweep of every page for things that wipe your work
