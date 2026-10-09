@@ -516,7 +516,7 @@ export async function mountDraft(ctx) {
     }
     if (act === 'duplicate') run(async () => {
       const row = (await write(client.from('drafts').insert({ name: `${d.name} (copy)`.slice(0, 60), opens_at: d.opens_at, closes_at: d.closes_at, pick_minutes: d.pick_minutes,
-        on_timeout: d.on_timeout, rounds: d.rounds, roster_min: d.roster_min, roster_max: d.roster_max, ...(Array.isArray(d.quiet) ? { quiet: d.quiet } : {}) }).select('id').single())).data;
+        on_timeout: d.on_timeout, rounds: d.rounds, roster_min: d.roster_min, roster_max: d.roster_max, ...(Array.isArray(d.quiet) ? { quiet: d.quiet } : {}), ...(d.auto_after_minutes != null ? { auto_after_minutes: d.auto_after_minutes } : {}) }).select('id').single())).data;
       await writeOrder(row.id, 1, S.order.map(o => o.club));
       selected = row.id; undoFrom = null; preview = null;
     }, 'Duplicated as a new draft in set-up.');

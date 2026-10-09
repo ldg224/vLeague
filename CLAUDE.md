@@ -43,6 +43,7 @@ One version per push to the live site. Roll back by reverting forward (new patch
 - Never force-push, rewrite history, or move a published tag without explicit approval.
 - Ask before pushing, tagging or releasing: pushes go live on the real site.
 - Database changes are new files in `supabase/migrations/`; never edit one that has already been applied. Re-run `supabase/tests/rls_check.py` after security-rule changes.
+- After changing any draft database function, run `python supabase/tests/draft/run.py` (rolled back, safe on the live project).
 - Match the existing code style; keep it dependency-free and buildless.
 - `__pycache__` files are currently tracked (there is no `.gitignore`). Don't add more, and ask before cleaning them up.
 

@@ -3,7 +3,7 @@
 // it shows the weekly cap used. The page shows once the office switches "Make page visible" on (0.32), even before the draft
 // starts: managers can read everything and build their queues, and only picking waits for a live draft. Updates the moment a
 // pick is made (realtime), with a 15 s poll as backup. Tap a player's name for their card; picks are confirmed in a small dialog.
-import { hasUnsavedInput, snapshotInputs, restoreInputs } from './paint.js';
+import { snapshotInputs, restoreInputs } from './paint.js';
 import { enterPlace } from './shell.js';
 import { esc } from './member.js';
 import { icon } from './icons.js';
@@ -125,7 +125,7 @@ if (ctx) {
         closed: ['Closed', 'The draft has closed', 'Picks can’t be made now.', ''],
         done: ['Finished', 'The draft is finished', `All ${n} picks are done.`, ''],
       }[ph];
-      const quiet = d.quiet?.length ? (inQuiet() && ph === 'live' ? `${icon('pause')} Outside active times: the timer is paused until ${new Date(st.qs.quiet_until).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' })}. You can still pick.` : `The pick timer runs ${describeQuiet(d.quiet)}, and is paused at other times. You can still pick whenever you’re online.`) : '';
+      const quiet = d.quiet?.length ? (inQuiet() && ph === 'live' ? `${icon('pause')} Outside active times: the timer is paused until ${new Date(st.qs.quiet_until).toLocaleTimeString('en-AU', { timeZone: 'Australia/Melbourne', hour: 'numeric', minute: '2-digit' })}. You can still pick.` : `The pick timer runs ${describeQuiet(d.quiet)}, and is paused at other times. You can still pick whenever you’re online.`) : '';
       const small = [rulesText() && `Roster rules: ${rulesText()}`, quiet].filter(Boolean);
       return `<section class="dr-status ph-${ph}${mine ? ' mine' : ''}${ph === 'live' && inQuiet() ? ' quiet' : ''}"><div class="dr-st-main"><div><span class="dr-st-tag">${B[0]}</span><p class="dr-st-name">${esc(d.name || 'Draft')}</p>
         <h1 class="page-title dr-st-big" tabindex="-1">${B[1]}</h1><p class="dr-st-sub">${B[2]}</p></div>
@@ -262,7 +262,7 @@ if (ctx) {
     }
 
     // What the page shows, boiled down, so a refresh that found nothing new doesn't redraw (and disturb) the page.
-    const sig = () => JSON.stringify([phase(st.draft), st.draft.status, st.draft.current_pick, st.draft.pick_deadline, st.draft.quiet, st.picks.length, st.queue, st.prefs,
+    const sig = () => JSON.stringify([phase(st.draft), st.draft.status, st.draft.current_pick, st.draft.pick_deadline, st.draft.quiet, st.draft.pick_started, st.picks.map(k => `${k.pick_no}:${k.player}:${k.club}`).join(), st.order.map(o => o.club).join(), st.queue, st.prefs,
       st.qs?.quiet_until, st.qs?.next_quiet, players.length, players.filter(p => p.team).length, players.reduce((n, p) => n + (p.value || 0), 0)]);
     async function refresh() {
       try {
@@ -270,7 +270,7 @@ if (ctx) {
         // ignored: reloading then wiped a queue being edited. And never reload with a save in flight.
         const open = await openDraft(undefined, true);
         if (!open) { if (!qSaves) location.reload(); return; }
-        const sel = window.getSelection?.(), typing = document.activeElement?.matches?.('input,select,textarea') || hasUnsavedInput(main) || Boolean(sel && !sel.isCollapsed && main.contains(sel.anchorNode)), before = sig(), mine = st.queue;
+        const sel = window.getSelection?.(), typing = document.activeElement?.matches?.('input,select,textarea') || Boolean(sel && !sel.isCollapsed && main.contains(sel.anchorNode)), before = sig(), mine = st.queue;
         forgetPlayers();
         [st, players] = await Promise.all([loadAll(), loadPlayers({ fresh: true })]);
         if (qSaves) st.queue = mine;   // a save is in flight: what the server says now is out of date, so keep what I just set
@@ -322,7 +322,7 @@ if (ctx) {
       a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     }
 
-    const fail = e => { msg = /not your turn/i.test(e.message) ? 'It isn’t your turn.' : /taken|already/i.test(e.message) ? 'That player has just been taken.' : `That didn’t work: ${e.message}`; };
+    const fail = e => { msg = /isn.t your pick|not your turn/i.test(e.message) ? 'It isn’t your turn.' : /isn.t available|taken|already/i.test(e.message) ? 'That player has just been taken.' : `That didn’t work: ${e.message}`; };
     // Saves go one at a time, in order, so the last change always wins; a refresh while one is in flight keeps my queue (see refresh).
     async function setQueue(list) {
       st.queue = list; qSaves++; draw();

@@ -154,9 +154,27 @@ async function compose(r: Row, s: Season | null, admin: any): Promise<Mail | nul
   if (r.kind === 'draft_turn' || r.kind === 'draft_warn') {
     const left = Number(d.left_min) || 0;
     const nice = left >= 90 ? `${Math.round(left / 60)} hours` : `${left} minutes`;
-    const fallback = d.queued > 0
-      ? `You have ${d.queued} player${d.queued === 1 ? '' : 's'} in your queue, so the draft will take the first one who fits.`
-      : d.timeout === 'best_value' ? 'The draft will take the best-value player who fits your squad.' : 'The draft will take a random player who fits your open positions.';
+    // What the server will really do for a manager who isn't around (it mirrors draft_tick, supabase/migrations/0038 and 0041).
+    const queued = Number(d.queued) || 0, auto = Number(d.auto_after) || 0, mins = Number(d.mins) || 0;
+    const mode = String(d.mode || 'on_miss'), random = d.how === 'random';
+    const span = (m: number) => (m >= 90 ? `${Math.round(m / 60)} hours` : `${m} minutes`);
+    const players = `${queued} player${queued === 1 ? '' : 's'}`;
+    const noQueue = d.timeout === 'best_value' ? 'the best-value player who fits your squad' : 'a random player who fits your open positions';
+    let fallback: string;
+    if (auto > 0 && mode !== 'always') {   // the league office's rule: the queue picks N minutes into every turn
+      fallback = queued > 0 ? `Your queue picks for you ${span(auto)} into your turn, whether or not you are online (${players} queued, so the first one who fits). Keep it up to date.`
+        : `You have nobody in your queue, so nothing is picked early: when your time runs out the draft will take ${noQueue}.`;
+    } else if (mode === 'after_minutes' && mins > 0) {
+      fallback = random ? `Your auto-pick takes a random player who fits ${span(mins)} into your turn.`
+        : queued > 0 ? `Your auto-pick takes the first player in your queue who fits ${span(mins)} into your turn (${players} queued).`
+        : `You have nobody in your queue, so when your time runs out the draft will take ${noQueue}.`;
+    } else if (mode === 'never') {
+      fallback = `Your auto-pick is off, so when your time runs out the draft will take ${noQueue}.`;
+    } else {   // "if I miss my turn" (the default)
+      fallback = random ? 'When your time runs out the draft will take a random player who fits your open positions.'
+        : queued > 0 ? `You have ${players} in your queue, so when your time runs out the draft will take the first one who fits.`
+        : `When your time runs out the draft will take ${noQueue}.`;
+    }
     if (r.kind === 'draft_turn') {
       return {
         subject: `You’re on the clock: pick ${d.pick} of ${d.of}`,

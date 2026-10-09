@@ -95,3 +95,20 @@ Supabase realtime on `draft_picks` and `drafts` (they're in the `supabase_realti
 
 ## Taking a pick back (0039, 0.52.0)
 The pick on the clock is the lowest pick with no row in `draft_picks`, so picks no longer have to be made in order. `office_remove_pick(draft, pick_no)` deletes one made pick and frees its player; the clock moves to the lowest open pick (fresh timer if live; a finished draft is paused). The Editor shows a red × on each made pick. Queues are saved with `save_draft_queue()` (one transaction).
+
+## Safety and testing (0.56 / migrations 0041 and 0042)
+- **One lock for every pick.** `make_pick`, `draft_tick` (the clock), the office tools and `_draft_apply` all take the draft row's `for update`
+  lock first, so a manager's pick, the clock and the office queue up one behind another and can never act on stale information.
+- **The clock** (`vleague-draft-tick`, pg_cron every 5 seconds) takes about 3 ms; no gap over 9 seconds in a day of ticks.
+- **Paused drafts have no clock:** an office pick while paused leaves the draft paused with no deadline (Resume starts one).
+- **Starting** goes to the lowest pick number in the order; the order may have gaps.
+- **Emails:** the "you're on the clock" key includes when the pick's clock began, so a re-pick or a resumed clock emails again, and the
+  text says what will really happen (league-wide rule, the manager's own mode, or the timeout).
+- **Tests:** `python supabase/tests/draft/run.py` runs 200+ checks (control, clock, taking picks back, queues, permissions, random
+  active-times tests, daylight saving) against the live database inside a transaction that is always rolled back. Run it after any change
+  to a draft function; `--pre migration.sql` tries a migration inside the test transaction first.
+- **Known limit:** the active-times clock gives up counting after 400 separate active stretches in one pick (more than a year of waiting
+  on a schedule of a few minutes a day), then returns an earlier deadline than the exact one. Real schedules never get near it.
+- **Queues belong to a draft.** A new draft (or a duplicate) starts with empty queues and auto-pick settings; "Reset to set-up" on the
+  same draft keeps them. Rosters count every player a club already owns, not only this draft's picks.
+

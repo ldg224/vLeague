@@ -3,6 +3,25 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.56.0 (2026-10-10)
+
+Headlines: a complete examination of the draft: four database fixes, three page fixes, clearer emails, and a test suite
+
+Database change: run `supabase/migrations/0041_draft_hardening.sql` and `0042_draft_email_fallback_data.sql` (both already applied to the live database; safe to re-run). The `send-reminders` function was redeployed. If anything goes wrong, `v0.55.0` is the version to go back to (`docs/RELEASING.md`).
+
+What was examined: every draft function and permission in the live database, the clock in every auto-pick mode, taking picks back, queues, active times (including the daylight-saving changeovers), the emails, the pages, and the stored data. 215 checks, run inside a transaction that is rolled back. See `docs/DRAFT.md` ("Safety and testing") and `supabase/tests/draft/`.
+
+- **Fixed, Draft clock (0041):** it now takes the same lock as a manager's pick and the office tools before it decides anything. Before, a manager picking in the same few milliseconds as the clock (or two clock runs overlapping) could leave the clock acting on stale information and give the next club a player chosen from the previous club's queue.
+- **Fixed, Draft (0041):** a pick made by the office while the draft is paused no longer starts a pick clock; the draft stays paused with no deadline.
+- **Fixed, Draft (0041):** starting a draft goes to the first pick in its order, whatever its number.
+- **Fixed, emails (0041):** a "you're on the clock" email is sent again when a pick is taken back and re-picked, or its clock is restarted by Resume. Before, it was keyed by the pick number alone, so nothing was sent.
+- **Changed, emails (0042):** the email now says what will really happen if the manager isn't around: "your queue picks for you 25 minutes into your turn" under the league-wide rule, their own auto-pick setting, or what happens when time runs out. Before it always said "when your timer runs out".
+- **Fixed, Draft page:** a search or filter you had typed stopped the page from showing new picks and your turn. It no longer does.
+- **Fixed, Draft page:** if a pick was taken back and made again, the board could keep showing the old player until something else changed. It now notices.
+- **Fixed, Draft page:** the messages "It isn't your turn" and "That player has just been taken" never appeared (the database words differ); they do now. The paused-until time uses Melbourne time.
+- **Fixed, Editor → Draft:** Duplicate dropped the league-wide auto-pick rule ("queue picks for everyone after N minutes"). It is copied now.
+- **Added, tests:** `python supabase/tests/draft/run.py` re-runs all the checks against the live database safely, any time.
+
 ## 0.55.0 (2026-10-10)
 
 Headlines: the draft queue shows predicted money (S-10)
