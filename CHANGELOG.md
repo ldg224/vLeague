@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.46.0 (2026-10-09)
+
+Headlines: "Suggest changes" in the footer sends issues and suggestions to the league's Trello board
+
+Database change and a new Edge Function: apply `supabase/migrations/0035_suggestions.sql`, set the `TRELLO_KEY` and `TRELLO_TOKEN` function secrets, and deploy `suggest` (`docs/BACKEND.md`). If anything goes wrong, `v0.45.1` is the version to go back to (`docs/RELEASING.md`).
+
+- **Added, managers:** a SUGGEST CHANGES link in the footer of every signed-in page. It opens a small form: Issue or Suggestion, a title and optional details. It makes a card on the league's Trello board (an issue lands in Reported Issues with Bug and Player Reported; a suggestion in Suggestions with Feature and Player Reported). Managers and the office only; guests don't see it and the server refuses them. Up to 5 a hour each. Every submission is also kept in the new `suggestions` table.
+
 ## 0.45.1 (2026-10-09)
 
 Headlines: Re-registering a club no longer says it "joined" again

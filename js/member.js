@@ -2,6 +2,7 @@
 import { currentUser, myProfile, landingPage, signOut, db } from './auth.js';
 import { SUPABASE_URL } from './config.js';
 import { VERSION } from './version.js';
+import { mountSuggest } from './suggest.js';
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 export const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ESC[c]);
@@ -36,6 +37,7 @@ export async function clubs() {
 export function chrome() {
   const v = document.getElementById('version');
   if (v) v.textContent = `v${VERSION}`;
+  mountSuggest();
   document.getElementById('signout')?.addEventListener('click', async () => {
     await signOut();
     location.replace('index.html?signin');

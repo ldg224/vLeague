@@ -95,6 +95,12 @@ office may call it. It emails the invite (link to `set-password.html`) and links
 on Supabase because it needs the service role key. Deploy or update it with
 `python supabase/functions/deploy.py invite-manager`.
 
+**Edge Function `suggest`** (`supabase/functions/suggest/`, 0.46): the footer's "Suggest changes". Managers and the office
+only (checked on the server). It saves the message in the `suggestions` table (no one reads or writes that table from the
+website; migration `0035_suggestions.sql`), limits each person to 5 an hour, and makes a card on the Trello board. It needs
+two Edge Function secrets, `TRELLO_KEY` and `TRELLO_TOKEN` (never in the repo). Deploy:
+`python supabase/functions/deploy.py suggest`.
+
 Storage bucket **`crests`**: public to read; PNG or WebP up to 500 KB; a manager can only add new files, and only in
 their own club's folder (`tur/…`); only the office can replace or delete a file (0.4), so a new crest goes live only
 when the office approves it. Crests are 512 px.

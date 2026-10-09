@@ -50,7 +50,7 @@
 .club-rows .state { font-size: .82rem; color: var(--muted); white-space: nowrap; }
 .club-rows .state.ok { color: var(--tint-text); }
 
-.member-foot { padding: 16px; display: flex; justify-content: center; gap: 18px; font-size: .75rem; }
+.member-foot { padding: 16px; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; font-size: .75rem; }
 /* The league office's way into the Editor: quiet, and only for office accounts. */
 .to-editor { display: none; }
 .is-office .to-editor { display: inline; }
@@ -138,3 +138,27 @@
 }
 .member.themed .save-btn:hover, .member.themed .small-btn:hover { background: color-mix(in srgb, var(--club) 88%, #ffffff); }
 .member.themed .switch[aria-checked="true"] { background: var(--club); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--club) 55%, #ffffff); }
+
+/* 0.46.0: "Suggest changes" in the footer and its form (js/suggest.js). */
+.member-foot .sg-link { text-transform: uppercase; letter-spacing: .06em; }
+.member-foot .sg-link:hover { color: var(--text); }
+.sg-dialog { width: min(420px, calc(100vw - 24px)); box-sizing: border-box; padding: 20px 22px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface, #111827); color: var(--text); box-shadow: 0 22px 60px rgba(0, 0, 0, .5); }
+.sg-dialog::backdrop { background: rgba(4, 8, 16, .7); }
+.sg-form h2 { margin: 0 0 2px; font: 700 1.35rem/1.15 var(--font-display); letter-spacing: .02em; text-transform: uppercase; }
+.sg-sub { margin: 4px 0 14px; color: var(--muted); font-size: .9rem; }
+.sg-kind { border: 0; margin: 0 0 12px; padding: 0; display: flex; gap: 8px; flex-wrap: wrap; }
+.sg-kind legend { padding: 0; }
+.sg-kind label { flex: 1 1 120px; }
+.sg-kind input { position: absolute; opacity: 0; pointer-events: none; }
+.sg-kind span { display: block; text-align: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font-weight: 600; }
+.sg-kind input:checked + span { background: var(--club, #64b5f6); border-color: transparent; color: var(--on-club, #0b1220); }
+.sg-kind input:focus-visible + span { outline: 2px solid var(--text); outline-offset: 2px; }
+.sg-lbl { display: block; margin: 10px 0 4px; font-size: .8rem; color: var(--muted); }
+.sg-lbl small { color: var(--faint); }
+.sg-form input:not([type=radio]), .sg-form textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: transparent; color: var(--text); font: inherit; }
+.sg-form textarea { resize: vertical; }
+.sg-msg { min-height: 1.2em; margin: 10px 0 0; font-size: .85rem; color: var(--muted); }
+.sg-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.sg-b { padding: 9px 16px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
+.sg-b.go { background: var(--club, #64b5f6); border-color: transparent; color: var(--on-club, #0b1220); }
+.sg-b:disabled { opacity: .55; cursor: default; }
