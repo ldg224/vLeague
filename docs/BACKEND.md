@@ -110,7 +110,7 @@ FC Turtle (club `TUR`), so it signs in to FC Turtle's Home and reaches the Edito
 
 **Checking the rules:** `python supabase/tests/rls_check.py` acts as a guest, a manager, an account with no club
 and the office, and checks what each can read and change (69 checks; nothing is left behind). Run it after any
-database change. It needs the Management API token in `C:\Users\offic\.vleague\supabase-token.txt`.
+database change. It needs the Management API token in `~\.vleague\supabase-token.txt` (set up on a new machine with `C:\Claude\Scripts\setup-supabase-token.ps1`).
 
 ## Adding a manager
 
