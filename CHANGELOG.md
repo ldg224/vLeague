@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.51.2 (2026-10-09)
+
+Headlines: a "Skip to highlights" option on the Test page (S-21)
+
+No database change. If anything goes wrong, `v0.51.1` is the version to go back to (`docs/RELEASING.md`).
+
+- **Added, Editor → Test:** tick "Skip to highlights" and the test match is made already finished (it kicked off a few hours ago), so you can open the Game centre and watch the highlights straight away, with no live broadcast to wait for.
+
 ## 0.51.1 (2026-10-09)
 
 Headlines: no limits on the number of goals or events on the Test page (S-21)

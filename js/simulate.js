@@ -173,8 +173,8 @@ const throwOn = (r, what) => { if (r.error) throw new Error(`${what} (${r.error.
 
 // Options from the Editor's Test tab: `homeCode` / `awayCode` pick the clubs (blank = random), `script` is a list of events at set minutes
 // ([{ minute, team: 'home' | 'away', kind: 'penalty_scored' | 'penalty_saved' | 'penalty_missed' | 'yellow' | 'red' | 'second_yellow' }]),
-// and `onlyScriptGoals` makes the scripted scored penalties the only goals, so the final score is exactly what was asked for.
-export async function startTestMatch(c, clubs, { look = 'random', looks = [], homeCode = '', awayCode = '', script = [], onlyScriptGoals = false, onProgress, onStatus = () => {} } = {}) {
+// and `onlyScriptGoals` makes the scripted goals the only ones, so the final score is exactly what was asked for, and `skipToHighlights` makes the match already finished.
+export async function startTestMatch(c, clubs, { look = 'random', looks = [], homeCode = '', awayCode = '', script = [], onlyScriptGoals = false, skipToHighlights = false, onProgress, onStatus = () => {} } = {}) {
   const active = clubs.filter(x => x.status === 'active');
   if (active.length < 2) throw new Error('A test match needs at least two active clubs.');
   const byCode = code => active.find(x => x.code === code);
@@ -206,8 +206,9 @@ export async function startTestMatch(c, clubs, { look = 'random', looks = [], ho
     const data = await runEngine(league, home.code, away.code, Math.floor(Math.random() * 2 ** 31), { fixture_id: id, week: TEST_WEEK, date: now.date, time: now.time, stage: null, suspended: [], test: true, script, only_script_goals: !!onlyScriptGoals }, onProgress);
     onStatus('Saving…');
     const summary = await saveResult(c, { id }, data);
-    // Kick off now (a few seconds ago, so the clocks of a computer and the server can't make it start "later").
-    throwOn(await c.from('fixtures').update({ starts_at: new Date(Date.now() - 3000).toISOString() }).eq('id', id), 'The kick-off time couldn’t be set');
+    // Kick off now (a few seconds ago, so the clocks of a computer and the server can't make it start "later"), or with `skipToHighlights`
+    // some hours ago, so the match is already finished and the highlights can be watched at once.
+    throwOn(await c.from('fixtures').update({ starts_at: new Date(Date.now() - (skipToHighlights ? 3 * 3600 * 1000 : 3000)).toISOString() }).eq('id', id), 'The kick-off time couldn’t be set');
     await c.from('deadlines').delete().eq('week', TEST_WEEK);   // the database made a line-up deadline for the week; there is nothing to lock
     return { id, home, away, look: pickLook, score: [summary.home, summary.away] };
   } catch (e) {

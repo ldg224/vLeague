@@ -33,7 +33,7 @@ export async function mountTest(ctx) {
 
   function draw() {
     const keep = { home: root.querySelector('#tt-home')?.value ?? '', away: root.querySelector('#tt-away')?.value ?? '', look: root.querySelector('#tt-look')?.value ?? 'random',
-      gh: root.querySelector('#tt-gh')?.value ?? '', ga: root.querySelector('#tt-ga')?.value ?? '', exact: root.querySelector('#tt-exact')?.checked ?? false };
+      gh: root.querySelector('#tt-gh')?.value ?? '', ga: root.querySelector('#tt-ga')?.value ?? '', exact: root.querySelector('#tt-exact')?.checked ?? false, skip: root.querySelector('#tt-skip')?.checked ?? false };
     root.innerHTML = `
       <div id="tt-sim" class="fx-sim" role="status" hidden></div>
       <section class="ed-sec"><h2>The match</h2>
@@ -42,6 +42,7 @@ export async function mountTest(ctx) {
         <div class="ed-fields tt-two"><label>Final score, home <i>blank = let the match decide</i><input id="tt-gh" type="number" min="0" step="1" value="${esc(keep.gh)}"></label>
           <label>Final score, away <i>blank = let the match decide</i><input id="tt-ga" type="number" min="0" step="1" value="${esc(keep.ga)}"></label></div>
         <label class="tt-check"><input id="tt-exact" type="checkbox"${keep.exact ? ' checked' : ''}> Only the scripted goals count (the score is exactly the goals and scored penalties listed)</label>
+        <label class="tt-check"><input id="tt-skip" type="checkbox"${keep.skip ? ' checked' : ''}> Skip to highlights (the match is already finished, so there is no live broadcast to wait for)</label>
         <label class="tt-look">Scoreboard look<select id="tt-look"><option value="random">Random look</option>${looks.map(l => `<option value="${esc(l.key)}"${keep.look === l.key ? ' selected' : ''}>${esc(l.name)}</option>`).join('')}</select></label>
         <p class="ed-hint">The players are made up, in memory only. No real player, club or table changes. Setting a final score adds that many open-play goals at spread-out minutes, and turns on “only the scripted goals count”.</p></section>
       <section class="ed-sec"><h2>Events at set minutes</h2>
@@ -49,7 +50,7 @@ export async function mountTest(ctx) {
         <div class="ed-actions"><button class="btn ghost small" type="button" data-add>Add an event</button></div>
         <p class="ed-hint">A goal comes from open play: around that minute that team takes a shot, and it goes in whatever the defence and keeper do (if they can't get a shot away within about six minutes, they get a scored penalty instead). A penalty is awarded once the team has the ball near the box around its minute. A card goes to the player nearest the ball. A second yellow gives the first yellow a few minutes earlier if nobody has one.</p></section>
       <p class="tt-msg" role="alert">${msgHtml || esc(msg)}</p>
-      <div class="ed-actions"><button class="btn" type="button" data-play ${busy ? 'disabled' : ''}>Play the test match now</button>
+      <div class="ed-actions"><button class="btn" type="button" data-play ${busy ? 'disabled' : ''}>Play the test match</button>
         ${tests ? `<button class="btn ghost" type="button" data-clean ${busy ? 'disabled' : ''}>Remove test matches (${tests})</button>` : ''}</div>`;
   }
 
@@ -82,7 +83,7 @@ export async function mountTest(ctx) {
     if (busy) return;
     let built;
     try { built = buildScript(); } catch (e) { msg = e.message; msgHtml = ''; draw(); return; }
-    const homeCode = root.querySelector('#tt-home').value, awayCode = root.querySelector('#tt-away').value, look = root.querySelector('#tt-look').value;
+    const skip = root.querySelector('#tt-skip').checked, homeCode = root.querySelector('#tt-home').value, awayCode = root.querySelector('#tt-away').value, look = root.querySelector('#tt-look').value;
     if (homeCode && awayCode && homeCode === awayCode) { msg = 'Pick two different clubs.'; draw(); return; }
     msg = ''; msgHtml = ''; busy = true; draw();
     const panel = root.querySelector('#tt-sim');
@@ -91,12 +92,12 @@ export async function mountTest(ctx) {
     const bar = panel.querySelector('.vid-bar span'), status = panel.querySelector('.fx-sim-status');
     try {
       const [sim, c] = await Promise.all([import('./simulate.js'), ctx.db()]);
-      const r = await sim.startTestMatch(c, ctx.clubs, { look, looks, homeCode, awayCode, script: built.script, onlyScriptGoals: built.exact,
+      const r = await sim.startTestMatch(c, ctx.clubs, { look, looks, homeCode, awayCode, script: built.script, onlyScriptGoals: built.exact, skipToHighlights: root.querySelector('#tt-skip').checked,
         onStatus: t => { status.textContent = t; },
         onProgress: frac => { bar.style.width = `${Math.round(Math.min(1, frac) * 100)}%`; status.textContent = frac < 0.02 ? 'Loading the simulator (the first time takes a moment)…' : `Playing the match… ${Math.round(frac * 100)}%`; } });
       bar.style.width = '100%';
       const link = `game.html?id=${encodeURIComponent(r.id)}`;
-      msg = ''; msgHtml = `${esc(r.home.name)} v ${esc(r.away.name)} ends ${r.score[0]}–${r.score[1]} and is live now. <a href="${esc(link)}" target="_blank" rel="noopener">Open the Game centre</a>. It also shows in Matches.`;
+      msg = ''; msgHtml = `${esc(r.home.name)} v ${esc(r.away.name)} ends ${r.score[0]}–${r.score[1]} and is ${skip ? 'ready: the highlights are waiting' : 'live now'}. <a href="${esc(link)}" target="_blank" rel="noopener">Open the Game centre</a>. It also shows in Matches.`;
       await load(); busy = false; draw();
     } catch (e) {
       msg = e.message; busy = false;
