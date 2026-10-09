@@ -5,13 +5,16 @@ import { db } from './auth.js';
 // The draft managers can see (0.32): the newest one the office has switched "Make page visible" on for, in any status, so
 // managers can read it and build their queues before it starts. If that column isn't there yet (0033 not run), fall back to the
 // old rule: live or paused and inside opens_at..closes_at.
-export async function openDraft(now = new Date()) {
+// strict: a failed read throws instead of looking like "no draft is open" (a timed refresh must not mistake a network blip, or a
+// session being renewed, for the draft having been hidden: that used to reload the page and lose a queue being edited).
+export async function openDraft(now = new Date(), strict = false) {
   try {
-    const { data } = await (await db()).from('drafts').select('*').order('id', { ascending: false });
+    const { data, error } = await (await db()).from('drafts').select('*').order('id', { ascending: false });
+    if (error) throw new Error(error.message);
     const all = data || [];
     if (all.length && !('visible' in all[0])) return all.find(d => ['live', 'paused'].includes(d.status) && (!d.opens_at || new Date(d.opens_at) <= now) && (!d.closes_at || now < new Date(d.closes_at))) || null;
     return all.find(d => d.visible) || null;
-  } catch { return null; }
+  } catch (e) { if (strict) throw e; return null; }
 }
 
 // Where a draft stands for a manager: 'soon' (visible, not started), 'opens' (started, but its open time is later), 'live',

@@ -251,7 +251,10 @@ if (ctx) {
       st.qs?.quiet_until, st.qs?.next_quiet, players.length, players.filter(p => p.team).length, players.reduce((n, p) => n + (p.value || 0), 0)]);
     async function refresh() {
       try {
-        if (!await openDraft()) { location.reload(); return; }
+        // Only a successful read that finds no visible draft means it was hidden. A failed read (offline, a renewing session) is
+        // ignored: reloading then wiped a queue being edited. And never reload with a save in flight.
+        const open = await openDraft(undefined, true);
+        if (!open) { if (!qSaves) location.reload(); return; }
         const typing = document.activeElement?.matches?.('input,select'), before = sig(), mine = st.queue;
         forgetPlayers();
         [st, players] = await Promise.all([loadAll(), loadPlayers({ fresh: true })]);

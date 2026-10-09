@@ -4,6 +4,7 @@
 // Scores follow the same rules as League: hidden before kick-off, live while it plays, and behind "Show score" with
 // spoiler-free results on. Redraws every 15 s, reloads every minute.
 import { enterPlace } from './shell.js';
+import { paint } from './paint.js';
 import { esc, clubs } from './member.js';
 import { loadSeason, matchUrl, kickoff, status, shownScore, liveMinute, liveState, byKickoff, activeWeek } from './dashboard-data.js';
 import { crest, teamOf, nameOf, fullNameOf, useClubs, day } from './places.js';
@@ -64,7 +65,7 @@ if (ctx) {
     const now = new Date(), weeks = weeksList();
     hidden = new Set(season.fixtures.filter(f => spoilerHidden(f, season)).map(f => f.id));
     seen = hidden.size ? { ...season, fixtures: season.fixtures.map(f => (hidden.has(f.id) ? { ...f, result: null } : f)) } : season;
-    if (!weeks.length) { main.innerHTML = '<h1 class="page-title" tabindex="-1">Matches</h1><p class="empty">No fixtures yet.</p>'; return; }
+    if (!weeks.length) { paint(main, '<h1 class="page-title" tabindex="-1">Matches</h1><p class="empty">No fixtures yet.</p>'); return; }
     if (!weeks.includes(week)) week = activeWeek(season, now);
     const scroll = main.querySelector('.weektabs')?.scrollLeft;
     const groups = new Map();
@@ -73,11 +74,11 @@ if (ctx) {
       if (!groups.has(key)) groups.set(key, { label: k ? day(k, now) : 'Date to be confirmed', items: [] });
       groups.get(key).items.push(f);
     }
-    main.innerHTML = `<div class="matches"><div class="mc-titlebar"><h1 class="page-title" tabindex="-1">Matches</h1>${mine ? `<button type="button" class="mc-filter" data-mine aria-pressed="${onlyMine}">My club only</button>` : ''}</div>
+    const painted = paint(main, `<div class="matches"><div class="mc-titlebar"><h1 class="page-title" tabindex="-1">Matches</h1>${mine ? `<button type="button" class="mc-filter" data-mine aria-pressed="${onlyMine}">My club only</button>` : ''}</div>
       ${weekBar(weeks.map(w => `<button type="button" role="tab" data-week="${esc(w)}" aria-selected="${w === week}">${esc(season.rounds?.[w]?.short || w)}</button>`).join(''), 'Rounds')}
       <p class="mc-round">${esc(season.rounds?.[week]?.label || `Week ${week}`)}</p>
-      ${groups.size ? '' : `<p class="empty">${onlyMine ? 'Your club isn’t playing this round. <button type="button" class="link-btn" data-mine>Show every match</button>' : 'No matches in this round yet.'}</p>`}${[...groups.values()].map(g => `<h2 class="day">${esc(g.label)}</h2><div class="mcs">${g.items.map(f => card(f, now)).join('')}</div>`).join('')}</div>`;
-    wireWeekBar(main, scroll);
+      ${groups.size ? '' : `<p class="empty">${onlyMine ? 'Your club isn’t playing this round. <button type="button" class="link-btn" data-mine>Show every match</button>' : 'No matches in this round yet.'}</p>`}${[...groups.values()].map(g => `<h2 class="day">${esc(g.label)}</h2><div class="mcs">${g.items.map(f => card(f, now)).join('')}</div>`).join('')}</div>`);
+    if (painted) wireWeekBar(main, scroll);
   }
 
   main.classList.add('league-main');
@@ -92,7 +93,7 @@ if (ctx) {
     main.querySelector(`.weektabs [data-week="${week}"]`)?.focus();
   });
 
-  if (!season) main.innerHTML = '<p class="empty">The league didn’t load. <a href="matches.html">Try again</a></p>';
+  if (!season) paint(main, '<p class="empty">The league didn’t load. <a href="matches.html">Try again</a></p>');
   else {
     season.fixtures ||= [];
     await loadSheets();

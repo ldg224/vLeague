@@ -3,6 +3,7 @@
 // league-wide is on League; news is in Inbox (its unread count is on the Inbox tab).
 // League data still comes from the s3 site's season.json (dashboard-data.js) until fixtures move to Supabase (0.11).
 import { enterPlace, badge } from './shell.js';
+import { paint } from './paint.js';
 import { renderPitch } from './pitch.js';
 import { spoilerHidden, revealScore, fmtTime, fmtDay } from './prefs.js';
 import { clubs, esc, crestUrl } from './member.js';
@@ -180,12 +181,12 @@ function render() {
   const top = `<header class="hm-club">${crest(code, 'hm-club-crest')}
       <div><h1>${esc(club.name)}</h1>${club.motto ? `<p>${esc(club.motto)}</p>` : ''}</div></header>`;
   if (!s) {
-    main.innerHTML = `${top}${notice()}<p class="quiet">The league data didn’t load. <a href="home.html">Try again</a></p>`;
+    paint(main, `${top}${notice()}<p class="quiet">The league data didn’t load. <a href="home.html">Try again</a></p>`);
     return;
   }
-  main.innerHTML = `${top}${news}${notice()}${matchCard(s, code, now)}${reveal(s, code, now)}
-    <div class="hm-grid">${season(s, code, now)}${comingUp(s, code, now)}</div>`;
-  drawPitches(s);
+  const painted = paint(main, `${top}${news}${notice()}${matchCard(s, code, now)}${reveal(s, code, now)}
+    <div class="hm-grid">${season(s, code, now)}${comingUp(s, code, now)}</div>`);
+  if (painted) drawPitches(s);
 }
 
 // The locked sheets for the week on the match card (public once the week is locked).

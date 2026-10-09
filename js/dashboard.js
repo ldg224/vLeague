@@ -3,6 +3,7 @@
 // league news and the leaders. It redraws every 15 s so live scores tick on, and reloads the data every minute.
 import { currentUser, db } from './auth.js';
 import { VERSION } from './version.js';
+import { paint } from './paint.js';
 import { newsBody, safeColour as postColour } from './news-card.js';
 import {
   loadSeason, logoUrl, matchUrl, kickoff, status, shownScore, shownGoals, liveMinute,
@@ -123,10 +124,10 @@ function drawBoard(now = new Date()) {
   if (!f) {
     const clubs = season.teams.filter(t => !t.withdrawn);
     const first = season.fixtures.map(kickoff).filter(k => k && k > now).sort((a, b) => a - b)[0];
-    el.innerHTML = `<div class="board-empty">
+    paint(el, `<div class="board-empty">
       <h2>Season ${esc(season.season || 1)}</h2>${first ? `<p class="board-sub">Kick-off ${esc(day(first, now))}, ${esc(time(first))}</p>` : ''}
       <ul class="clubs">${clubs.map(t => `<li>${crest(t, 44)}<span>${esc(t.name)}</span></li>`).join('')}</ul>
-    </div>`;
+    </div>`);
     return;
   }
   const { fx, why } = f, k = kickoff(fx), h = teamOf(fx.home), a = teamOf(fx.away);
@@ -157,7 +158,7 @@ function drawBoard(now = new Date()) {
   const stage = look.banner ? `${look.ornament ? `${esc(look.ornament)} ` : ''}${esc(look.banner)}`
     : fx.stage === 'SF' ? 'Semi-final' : fx.stage === 'GF' ? 'Grand Final' : esc(fx.round || `Week ${fx.week}`);
   const xiHtml = (why === 'live' || why === 'upcoming' || why === 'awaiting') ? lineupHtml(fx, now) : '';
-  el.innerHTML = `
+  paint(el, `
     <div class="board-top"><span class="stage">${stage}</span>${state}</div>
     <div class="fixture">
       <div class="side home" style="--c:${esc(safeColour(h.colour))}">${crest(h, 76)}<p class="name">${esc(h.name)}</p>${goalLines(fx, 'home', now)}</div>
@@ -165,7 +166,7 @@ function drawBoard(now = new Date()) {
       <div class="side away" style="--c:${esc(safeColour(a.colour))}">${crest(a, 76)}<p class="name">${esc(a.name)}</p>${goalLines(fx, 'away', now)}</div>
     </div>
     <div class="board-act">${action}</div>
-    ${xiHtml ? `<div class="lineups"><h2>Line-ups</h2>${xiHtml}</div>` : ''}`;
+    ${xiHtml ? `<div class="lineups"><h2>Line-ups</h2>${xiHtml}</div>` : ''}`);
 }
 
 // ---------- Matches ----------
@@ -199,7 +200,7 @@ function drawMatches(now = new Date()) {
   const weeks = weeksList(), box = $('#fixtures');
   if (!weeks.length) {
     $('#weeks').hidden = true;
-    box.innerHTML = '<p class="empty">No fixtures yet.</p>';
+    paint(box, '<p class="empty">No fixtures yet.</p>');
     return;
   }
   if (!weekPinned || !weeks.includes(week)) week = activeWeek(season, now);
@@ -215,7 +216,7 @@ function drawMatches(now = new Date()) {
     if (!groups.has(key)) groups.set(key, { label: k ? day(k, now) : 'Date to be confirmed', items: [] });
     groups.get(key).items.push(f);
   }
-  box.innerHTML = [...groups.values()].map(g => `<h3 class="day">${esc(g.label)}</h3><div class="fxs">${g.items.map(f => row(f, now)).join('')}</div>`).join('');
+  paint(box, [...groups.values()].map(g => `<h3 class="day">${esc(g.label)}</h3><div class="fxs">${g.items.map(f => row(f, now)).join('')}</div>`).join(''));
 }
 
 // ---------- Table ----------
@@ -223,14 +224,14 @@ function drawMatches(now = new Date()) {
 function drawTable(now = new Date()) {
   const rows = ladder(season, now);
   const played = rows.some(r => r.p);
-  $('#ladder').innerHTML = `<table class="ladder">
+  paint($('#ladder'), `<table class="ladder">
     <thead><tr><th scope="col"><abbr title="Position">#</abbr></th><th scope="col" class="club">Club</th><th scope="col"><abbr title="Played">P</abbr></th><th scope="col" class="wide"><abbr title="Won">W</abbr></th><th scope="col" class="wide"><abbr title="Drawn">D</abbr></th><th scope="col" class="wide"><abbr title="Lost">L</abbr></th><th scope="col"><abbr title="Goal difference">GD</abbr></th><th scope="col"><abbr title="Points">Pts</abbr></th></tr></thead>
     <tbody>${rows.map(r => `<tr style="--c:${esc(safeColour(r.team.colour))}">
       <td class="pos">${r.rank}</td>
       <th scope="row" class="club">${crest(r.team, 22)}<span>${esc(r.team.name)}</span></th>
       <td>${r.p}</td><td class="wide">${r.w}</td><td class="wide">${r.d}</td><td class="wide">${r.l}</td>
       <td>${r.gd > 0 ? '+' : ''}${r.gd}</td><td class="pts">${r.pts}</td></tr>`).join('')}</tbody>
-  </table>${played ? formStrip(rows) : ''}`;
+  </table>${played ? formStrip(rows) : ''}`);
 }
 function formStrip(rows) {
   const top = rows.filter(r => r.form.length).slice(0, 3);
@@ -287,7 +288,7 @@ function drawLeaders(now = new Date()) {
   $('#leaders').hidden = !L.goals.length && !L.assists.length && !L.rating.length;
   const list = (title, rows, value) => (rows.length ? `<div class="lead"><h3>${title}</h3>`
     + `<ol>${rows.map(p => `<li>${crest(teamOf(p.team), 20)}<span class="who">${esc(p.name)}</span><b>${value(p)}</b></li>`).join('')}</ol></div>` : '');
-  $('#leaderlists').innerHTML = `<div class="leads">${list('Goals', L.goals, p => p.g)}${list('Assists', L.assists, p => p.a)}${list('Average rating', L.rating, p => p.avg.toFixed(2))}</div>`;
+  paint($('#leaderlists'), `<div class="leads">${list('Goals', L.goals, p => p.g)}${list('Assists', L.assists, p => p.a)}${list('Average rating', L.rating, p => p.avg.toFixed(2))}</div>`);
 }
 
 // ---------- Page ----------
@@ -309,7 +310,7 @@ async function refresh() {
     console.error(e);
     if (!season) {
       $('#board').setAttribute('aria-busy', 'false');
-      $('#board-in').innerHTML = `<div class="board-empty"><h2>The league didn’t load</h2><p><a href="dashboard.html">Try again</a></p></div>`;
+      paint($('#board-in'), `<div class="board-empty"><h2>The league didn’t load</h2><p><a href="dashboard.html">Try again</a></p></div>`);
     }
   }
 }

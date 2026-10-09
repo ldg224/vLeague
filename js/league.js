@@ -3,6 +3,7 @@
 // a result stays behind "Show score" until revealed, and the table and top players leave hidden results out.
 // Redraws every 15 s, reloads every minute.
 import { enterPlace } from './shell.js';
+import { paint } from './paint.js';
 import { esc, clubs } from './member.js';
 import {
   loadSeason, matchUrl, kickoff, status, shownScore, liveMinute, byKickoff, activeWeek, ladder, leaders,
@@ -91,12 +92,12 @@ if (ctx) {
     hidden = new Set(season.fixtures.filter(f => spoilerHidden(f, season)).map(f => f.id));
     seen = hidden.size ? { ...season, fixtures: season.fixtures.map(f => (hidden.has(f.id) ? { ...f, result: null } : f)) } : season;
     const scroll = main.querySelector('.weektabs')?.scrollLeft;
-    main.innerHTML = `<div class="league">
+    const painted = paint(main, `<div class="league">
       <section class="sect table-sect"><div class="sect-head"><h2>Table</h2></div>${tableHtml(now)}</section>
       <section class="sect fixtures-sect"><div class="sect-head"><h2>Matches</h2></div>${fixturesHtml(now)}</section>
       <div class="leaders-sect">${leadersHtml(now)}</div>
-    </div>`;
-    wireWeekBar(main, scroll);
+    </div>`);
+    if (painted) wireWeekBar(main, scroll);
   }
 
   main.classList.add('league-main');
@@ -120,7 +121,7 @@ if (ctx) {
     main.querySelector(`.weektabs [data-week="${week}"]`)?.focus();
   });
 
-  if (!season) main.innerHTML = '<p class="empty">The league didn’t load. <a href="league.html">Try again</a></p>';
+  if (!season) paint(main, '<p class="empty">The league didn’t load. <a href="league.html">Try again</a></p>');
   else {
     season.fixtures ||= [];
     draw();

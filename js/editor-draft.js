@@ -24,6 +24,7 @@ const OVERNIGHT = { days: [0, 1, 2, 3, 4, 5, 6], from: '22:00', to: '07:00' };
 
 import { gridOf, renderGrid, moveColumn } from './draft-grid.js';
 import { icon } from './icons.js';
+import { hasUnsavedInput } from './paint.js';
 
 export const draftView = () => '<h1>Draft</h1><div id="dr-root"><p class="quiet">Loading…</p></div>';
 
@@ -292,7 +293,9 @@ export async function mountDraft(ctx) {
     const qb = root.querySelector('.dr-quietbox'); if (qb) qOpen = qb.open;
     root.querySelectorAll('details.dr-fold').forEach(x => (x.open ? folded.add(x.dataset.k) : folded.delete(x.dataset.k)));
     S.players.forEach(p => pname.set(p.id, p.name));
+    const y = window.scrollY;   // a redraw must not throw you back up the page
     root.innerHTML = `<div class="dr-ed">${picker()}${S.d ? visibleBar() + bar() + onClock() + autoPanel() + orderPanel() + settingsPanel() + quietPanel() + boardPanel() + clubsPanel() : ''}${newForm()}</div>`;
+    window.scrollTo(0, y);
     tick();
   }
   function tick() {
@@ -308,6 +311,20 @@ export async function mountDraft(ctx) {
   async function refresh(note) {
     if (note !== undefined) msg = note;
     try { S = await load(); draw(); } catch (e) { root.innerHTML = `<p class="quiet">${esc(e.message || 'The draft didn’t load.')} If this is new, run migrations 0023 and 0024 first.</p>`; }
+  }
+  // The 15-second look for changes made elsewhere (a manager's pick, the clock moving). It must never wipe what the office is doing:
+  // it leaves the page alone while anything is half-typed, a pick is selected for a swap, a preview or active-times edit is open, or
+  // focus is in a field, and it redraws only when the data really changed. The countdown keeps ticking either way.
+  const dataSig = x => JSON.stringify({ ...x, qs: null });
+  async function quietRefresh() {
+    if (!S || preview || qWork || gridSel != null || hasUnsavedInput(root)) return;
+    if (document.activeElement && root.contains(document.activeElement) && document.activeElement.matches('input, select, textarea, summary')) return;
+    try {
+      const next = await load();
+      if (dataSig(next) === dataSig(S)) { S.qs = next.qs; return; }
+      if (hasUnsavedInput(root) || preview || qWork || gridSel != null) return;   // something was started while the data loaded
+      S = next; draw();
+    } catch { /* try again in 15 seconds */ }
   }
   async function run(fn, ok) {
     try { await fn(); await refresh(ok); } catch (e) { msg = e.message || String(e); draw(); }
@@ -535,6 +552,6 @@ export async function mountDraft(ctx) {
   timer = setInterval(() => {
     if (!document.body.contains(root)) { clearInterval(timer); return; }
     tick();
-    if (++n % 15 === 0 && !preview && !root.contains(document.activeElement && document.activeElement.matches('input, select, textarea') ? document.activeElement : null)) refresh(msg);
+    if (++n % 15 === 0) quietRefresh();
   }, 1000);
 }
