@@ -210,7 +210,9 @@ export async function mountDraft(ctx) {
           <label>Opens <i>optional</i><input name="opens" type="datetime-local" value="${esc(localInput(d.opens_at))}"></label>
           <label>Closes <i>optional</i><input name="closes" type="datetime-local" value="${esc(localInput(d.closes_at))}"></label></div>
         <div class="ed-fields"><label>Time for each pick (hours)<input name="hours" type="number" min="0.02" max="336" step="any" value="${d.pick_minutes / 60}"></label>
-          <label>When time runs out<select name="timeout">${Object.entries(TIMEOUTS).map(([k, v]) => `<option value="${k}"${k === d.on_timeout ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select></label></div>
+          <label>When time runs out<select name="timeout">${Object.entries(TIMEOUTS).map(([k, v]) => `<option value="${k}"${k === d.on_timeout ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select></label>
+          <label>Queue picks for everyone after (minutes) <i>blank = managers choose</i><input name="autoafter" type="number" min="1" max="${d.pick_minutes}" step="1" value="${d.auto_after_minutes ?? ''}"></label></div>
+        <p class="ed-hint">Locks every manager's auto-pick: their queue picks for them this many active minutes into their turn, and they can't change it. Anyone with no queue still gets the full time above. A manager who set an instant pick keeps it.</p>
         ${rulesFields(d)}
         <div class="ed-actions"><button class="btn" type="submit">Save settings</button></div>
         <p class="ed-hint">Rules apply to managers’ picks and every automatic pick. Your own overrides ignore them. They don’t change players already picked.</p></form></details>`;
@@ -339,7 +341,11 @@ export async function mountDraft(ctx) {
       if (name.length < 2) throw new Error('Give the draft a name.');
       if (!(mins >= 1)) throw new Error('Give each pick some time.');
       const rules = readRules(f, d.rounds);
-      await write(client.from('drafts').update({ name, opens_at: isoOf(f.opens.value), closes_at: isoOf(f.closes.value), pick_minutes: mins, on_timeout: f.timeout.value, ...rules }).eq('id', d.id));
+      // The league-wide auto-pick is only sent when it changed, so saving other settings never needs the 0038 column.
+      const auto = f.autoafter.value.trim() === '' ? null : Math.round(+f.autoafter.value);
+      if (auto != null && !(auto >= 1 && auto <= mins)) throw new Error(`Queue picks for everyone after: 1 to ${mins} minutes, or leave it blank.`);
+      const lock = auto === (d.auto_after_minutes ?? null) ? {} : { auto_after_minutes: auto };
+      await write(client.from('drafts').update({ name, opens_at: isoOf(f.opens.value), closes_at: isoOf(f.closes.value), pick_minutes: mins, on_timeout: f.timeout.value, ...rules, ...lock }).eq('id', d.id));
     }, 'Settings saved.');
     if (f.matches('.dr-build')) run(async () => {
       const d = S.d, m = made(), rounds = Math.round(+f.rounds.value);

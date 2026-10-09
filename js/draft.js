@@ -183,6 +183,9 @@ if (ctx) {
       if (!code) return '';
       const { mode, minutes, pick_how: how = 'queue' } = st.prefs, max = st.draft.pick_minutes;
       const hint = [...HOW, ...MODES].find(x => x[0] === how)?.[2], when = MODES.find(x => x[0] === mode)?.[2];
+      // The office has set one rule for everyone: nothing here to change.
+      if (st.draft.auto_after_minutes) return `<details class="dr-autobox"${open ? ' open' : ''}><summary>Auto-pick</summary>
+        <p class="dr-locked">${icon('lock')} <b>Set by the league office.</b> Your queue picks for you ${esc(st.draft.auto_after_minutes)} minutes into your turn, whether or not you are online. Keep your queue up to date: with no queue you have the full ${esc(st.draft.pick_minutes >= 60 && st.draft.pick_minutes % 60 === 0 ? st.draft.pick_minutes / 60 + ' hour' + (st.draft.pick_minutes > 60 ? 's' : '') : st.draft.pick_minutes + ' minutes')} and then a player is picked for you.</p></details>`;
       return `<details class="dr-autobox"${open ? ' open' : ''}><summary>Auto-pick</summary>
         <form id="auto" class="dr-auto" novalidate>
           <label>What to pick<select name="how">${HOW.map(([v, l]) => `<option value="${v}"${how === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label><small>${esc(hint)}</small>

@@ -7,6 +7,7 @@ timers the office can pause and extend, and commissioner overrides. Managers pic
 
 - Live draft board: current pick, order, available players and recent picks update for everyone without a refresh.
 - **Queue**: each drafter ranks players ahead of time; if their timer runs out the best available player in the queue is taken.
+- **League-wide auto-pick** (0038): the office can set `drafts.auto_after_minutes`; every club's queue then picks that many active minutes into its turn, and managers can't change it (the clock ignores their own setting; the draft page shows it locked). Blank = managers choose.
 - **Timers** per pick (minutes or hours); the commissioner can pause, resume and extend.
 - **Commissioner controls**: override a pick, pause, set the order, roster rules.
 - Notifications when it's your turn, with a warning before an auto-pick.

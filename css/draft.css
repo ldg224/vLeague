@@ -101,6 +101,7 @@
 .dr-side .dr-list .dr-p .rts { display: none; }
 .dr-side .dr-list .dr-p .val { display: none; }
 .dr-autobox { border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); padding: 10px 12px; }
+.dr-locked { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0 0; line-height: 1.4; } .dr-locked svg { flex: none; width: 1.1em; height: 1.1em; margin-top: .15em; }
 .dr-autobox summary { cursor: pointer; font-weight: 700; }
 .dr-autobox .dr-auto { margin-top: 10px; gap: 6px; max-width: none; }
 .dr-autobox label { display: grid; gap: 4px; font-size: .85rem; font-weight: 600; color: var(--muted); }

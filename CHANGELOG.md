@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.49.0 (2026-10-09)
+
+Headlines: the office can lock one auto-pick rule for the whole draft, which managers can't change
+
+Database change: apply `supabase/migrations/0038_draft_auto_for_all.sql` in the Supabase SQL editor (it adds a column and replaces the draft clock; safe to re-run). Until it is applied, the new setting does nothing. If anything goes wrong, `v0.48.2` is the version to go back to (`docs/RELEASING.md`).
+
+- **Added, Editor → Draft → Draft settings:** "Queue picks for everyone after (minutes)". Set it (for example 15) and every club's queue picks for them that many active minutes into their turn. Blank means managers choose for themselves, as before. Anyone with no queue still has the full pick time and then gets a player picked for them as before. A manager who chose an instant pick keeps it. Quiet times still pause the count.
+- **Changed, managers' Auto-pick panel:** while the office has set a rule it shows a locked note instead of the settings. The rule is applied by the draft clock on the server, so a manager can't get round it by changing their own setting.
+
 ## 0.48.2 (2026-10-09)
 
 Headlines: line-up markers restyled to match the reference (S-21)
