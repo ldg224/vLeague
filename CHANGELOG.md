@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.47.7 (2026-10-09)
+
+Headlines: each player's shirt number now shows next to their name on the line-up pitch (S-21)
+
+No database change. If anything goes wrong, `v0.47.6` is the version to go back to (`docs/RELEASING.md`).
+
+- **Added, line-ups:** on the pitch where a manager sets the line-up (My club, the locked line-up and the Home page), the shirt number now sits beside each player's surname, in the club colour. Players without a number show just the name. The match page's line-up pitch already showed numbers on the player circles.
+
 ## 0.47.6 (2026-10-09)
 
 Headlines: nobody runs into the box before a penalty is taken (B-07)

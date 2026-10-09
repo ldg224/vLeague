@@ -125,9 +125,9 @@ export function renderPitch(el, { formation, lineup = {}, captain = null, player
   const tokens = Object.entries(slotsOf(f)).map(([slot, sl]) => {
     const id = lineup[slot] != null ? String(lineup[slot]) : null, p = id ? byId.get(id) : null;
     const off = p && p.position !== sl.want, cap = p && String(captain) === id;
-    const label = p ? `${slot}: ${p.name}${cap ? ', captain' : ''}${off ? `, a ${POS_NAME[p.position] || 'player'} out of position` : ''}` : `${slot}: empty`;
+    const label = p ? `${slot}: ${p.number != null && p.number !== '' ? `number ${p.number}, ` : ''}${p.name}${cap ? ', captain' : ''}${off ? `, a ${POS_NAME[p.position] || 'player'} out of position` : ''}` : `${slot}: empty`;
     const cls = `pt-slot${p ? '' : ' empty'}${off ? ' off' : ''}${slot === selected ? ' sel' : ''}`;
-    const inner = `<span class="pt-disc">${esc(slot)}${cap ? '<b class="pt-c" aria-hidden="true">C</b>' : ''}</span><span class="pt-name">${p ? esc(surname(p.name)) : '&nbsp;'}</span>`;
+    const inner = `<span class="pt-disc">${esc(slot)}${cap ? '<b class="pt-c" aria-hidden="true">C</b>' : ''}</span><span class="pt-name">${p ? `${p.number != null && p.number !== '' ? `<b class="pt-no">${esc(p.number)}</b> ` : ''}${esc(surname(p.name))}` : '&nbsp;'}</span>`;
     const pos = `left:${sl.x.toFixed(1)}%;bottom:${sl.y.toFixed(1)}%`;
     return editable
       ? `<button type="button" class="${cls}" data-slot="${esc(slot)}" style="${pos}" aria-label="${esc(label)}" aria-pressed="${slot === selected}">${inner}</button>`
