@@ -97,7 +97,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
   camTarget(t) {
     const b = this.fr.ball(Math.min(t + 0.4, this.t1));
     const gx = b[0] > 52.5 ? 105 : 0, k = clamp(1 - Math.hypot(b[0] - gx, b[1] - 34) / 34, 0, 0.35);
-    return [clamp(lerp(b[0], gx, k), 18, 87), clamp(lerp(b[1], 34, k * 0.6), 20, 48), lerp(60, 44, k / 0.35)];
+    return [clamp(lerp(b[0], gx, k), 18, 87), clamp(lerp(b[1], 34, k * 0.6), 20, 48), lerp(50, 40, k / 0.35)];   // was 60 to 44: players looked tiny when far out (B-06)
   }
   buildCamera() {
     const n = Math.ceil((this.t1 - this.t0) / CAM_DT) + 1, X = new Float32Array(n), Y = new Float32Array(n), D = new Float32Array(n);
@@ -115,7 +115,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
       for (let i = 0; i < n; i++) {
         const t = tAt(i), fi = this.fr.f[this.fr.idx(t)];
         if (!fi[5]) continue;   // ball dead (being placed for a restart): let the camera pan there smoothly
-        const b = this.fr.ball(t), z = D[i] / 60;
+        const b = this.fr.ball(t), z = D[i] / 50;
         X[i] = clamp(X[i], b[0] - KEEP_X * z, b[0] + KEEP_X * z);
         Y[i] = clamp(Y[i], b[1] - KEEP_NEAR * z, b[1] + KEEP_FAR * z);
       }

@@ -687,7 +687,7 @@ export class HighlightsRenderer {
         cam = makeCamAt([bx, by + dist * Math.cos(e), 1.7 + dist * Math.sin(e)], [bx, by, 1.75], 36); break;
       }
       case 'wide':   // high and far: shows the team shapes
-        cam = makeCam(clamp(lerp(bx, 52.5, 0.4), 30, 75), 34 + (by - 34) * 0.3, 74, 44, 38); break;
+        cam = makeCam(clamp(lerp(bx, 52.5, 0.4), 30, 75), 34 + (by - 34) * 0.3, 54, 44, 38); break;   // 54 m (was 74): players stay readable (B-06)
       case 'high':   // steep from the gantry, following play
         cam = makeCam(clamp(bx, 14, 91), clamp(by, 18, 50), 46, 58, 40); break;
       case 'tight':  // low on the touchline, close to the ball

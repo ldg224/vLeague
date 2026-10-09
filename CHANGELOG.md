@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.47.3 (2026-10-09)
+
+Headlines: players no longer look tiny in the wide camera angles (B-06)
+
+No database change. If anything goes wrong, `v0.47.2` is the version to go back to (`docs/RELEASING.md`).
+
+- **Fixed, match viewer:** the wide highlights camera sat 74 m from the action, so players were only about 70 pixels tall. It is now 54 m away (about 95 pixels). The full-match broadcast camera also stays closer: 40 to 50 m instead of 44 to 60 m, so players keep a steadier size. The ball is still always kept in shot.
+
 ## 0.47.2 (2026-10-09)
 
 Headlines: the Win chance on the match page is just the bar and the percentages
