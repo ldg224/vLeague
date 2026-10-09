@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.49.2 (2026-10-09)
+
+Headlines: a second yellow shows the yellow and the red card together everywhere (B-02)
+
+No database change. If anything goes wrong, `v0.49.1` is the version to go back to (`docs/RELEASING.md`).
+
+- **Fixed, timeline:** the two cards were being stacked in a narrow column on the match page's timeline, so you couldn't see both. They now sit together as one icon, the yellow with the red in front, on the timeline and on the line-up markers.
+- **Changed, match footage:** the referee's raised card and the card icon over his head show a yellow and a red together for a second yellow, and so does the caption that appears after it. The scrub bar already did this.
+- Card counts in the stats table are unchanged (a second yellow still counts as the red; the first yellow was already counted when it was shown).
+
 ## 0.49.1 (2026-10-09)
 
 Headlines: the timeline names who hit the bar, and second yellows show a yellow and a red card (B-11, B-02)

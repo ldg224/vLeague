@@ -209,7 +209,8 @@ async function run() {
     post: svg('Hit the woodwork', '<path d="M5 21V4h14v17" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>'),
     shot: svg('Shot on target', '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>'),
   };
-  const icon = e => ({ goal: ICONS.ball, card: e.card === 'yellow' ? ICONS.yellow : e.card === 'second_yellow' ? ICONS.yellow + ICONS.red : ICONS.red, woodwork: ICONS.post, shot: ICONS.shot, penalty: ICONS.ball }[e.type] || '•');
+  const SECOND = `<span class="cards2">${ICONS.yellow}${ICONS.red}</span>`;   // a second yellow: the yellow with the red in front of it
+  const icon = e => ({ goal: ICONS.ball, card: e.card === 'yellow' ? ICONS.yellow : e.card === 'second_yellow' ? SECOND : ICONS.red, woodwork: ICONS.post, shot: ICONS.shot, penalty: ICONS.ball }[e.type] || '•');
   function eventLi(e) {
     // Matches played before 0.49.1 saved a hit post or bar with no player or team: take them from the shot that hit it.
     if (e.type === 'woodwork' && !e.player) { const sh = [...data.events].reverse().find(x => x.type === 'shot' && x.t <= e.t && e.t - x.t < 4); if (sh) e = { ...e, player: sh.player, team: sh.team }; }
@@ -246,7 +247,7 @@ async function run() {
     const liveR = live() ? ratingsAt(data, t) : null;   // a live match: ratings as they stand now, from the events so far
     const badge = (icon, n) => (n ? icon + (n > 1 ? `<i>${n}</i>` : '') : '');
     const goals = id => ev.filter(e => e.type === 'goal' && e.scorer === id && !e.own_goal).length, assists = id => ev.filter(e => e.type === 'goal' && e.assist === id).length;
-    const cards = id => ev.filter(e => e.type === 'card' && e.player === id).map(e => (e.card === 'yellow' ? ICONS.yellow : e.card === 'second_yellow' ? ICONS.yellow + ICONS.red : ICONS.red)).join('');
+    const cards = id => ev.filter(e => e.type === 'card' && e.player === id).map(e => (e.card === 'yellow' ? ICONS.yellow : e.card === 'second_yellow' ? SECOND : ICONS.red)).join('');
     const side = c => {
       const team = data.teams[c === fx.home ? 'home' : 'away'];
       return {

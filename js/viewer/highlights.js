@@ -664,7 +664,7 @@ export class HighlightsRenderer {
       const f = fouls.find(f => f.player === c.player && c.t - f.t < 3) || { t: c.t, x: c.x, y: c.y };
       let up = f.t + 1.5;
       for (let t = f.t; t < f.t + 5; t += 0.1) { const r = this.refAt(plan, t); if (Math.hypot(r[0] - f.x, r[1] - f.y) < 3.5) { up = t + 0.6; break; } }
-      return { t: up, until: up + 3.8, colour: c.card === 'yellow' ? 'yellow' : 'red', player: c.player, foulT: f.t, e: c };
+      return { t: up, until: up + 3.8, colour: c.card === 'yellow' ? 'yellow' : 'red', second: c.card === 'second_yellow', player: c.player, foulT: f.t, e: c };
     });
   }
   refAt(plan, t) {
@@ -785,12 +785,15 @@ export class HighlightsRenderer {
       const shoulder = [bx + bw * 0.35, top + bh * 0.34], hand = [bx + bw * 0.55, top - bh * 0.28 * k];
       c.strokeStyle = '#1d212a'; c.lineWidth = Math.max(3, bw * 0.28); c.lineCap = 'round';
       c.beginPath(); c.moveTo(...shoulder); c.lineTo(...hand); c.stroke();
-      const cw = Math.max(8, bw * 0.5), ch = cw * 1.4;
-      c.fillStyle = col; c.fillRect(hand[0] - cw / 2, hand[1] - ch, cw, ch);
+      const cw = Math.max(8, bw * 0.5), ch = cw * 1.4, two = !!it.card.second;   // a second yellow: the yellow, then the red in front of it
+      if (two) { c.fillStyle = '#facc15'; c.fillRect(hand[0] - cw / 2 - cw * 0.45, hand[1] - ch + ch * 0.08, cw, ch); }
+      c.fillStyle = col; c.fillRect(hand[0] - cw / 2 + (two ? cw * 0.2 : 0), hand[1] - ch, cw, ch);
       // Big card icon floating above his head so it reads at any distance
       const iw = clamp(bw * 0.8, 24, 70), ih = iw * 1.4, ix = bx - iw / 2, iy = top - ih - Math.max(14, bh * 0.22) - (1 - k) * 20;
-      c.save(); c.shadowColor = col; c.shadowBlur = 30; c.fillStyle = col; c.beginPath(); c.roundRect(ix, iy, iw, ih, 4); c.fill(); c.restore();
-      c.strokeStyle = 'rgba(0,0,0,0.5)'; c.lineWidth = 2; c.strokeRect(ix, iy, iw, ih);
+      if (two) { c.save(); c.shadowColor = '#facc15'; c.shadowBlur = 24; c.fillStyle = '#facc15'; c.beginPath(); c.roundRect(ix - iw * 0.45, iy + ih * 0.06, iw, ih, 4); c.fill(); c.restore(); c.strokeStyle = 'rgba(0,0,0,0.5)'; c.lineWidth = 2; c.strokeRect(ix - iw * 0.45, iy + ih * 0.06, iw, ih); }
+      const rx = ix + (two ? iw * 0.2 : 0);
+      c.save(); c.shadowColor = col; c.shadowBlur = 30; c.fillStyle = col; c.beginPath(); c.roundRect(rx, iy, iw, ih, 4); c.fill(); c.restore();
+      c.strokeStyle = 'rgba(0,0,0,0.5)'; c.lineWidth = 2; c.strokeRect(rx, iy, iw, ih);
     } else {
       this.text('REF', bx, top - 10, { size: Math.max(10, bw * 0.45), weight: 900, align: 'center', colour: 'rgba(255,255,255,0.75)' });
     }
@@ -1052,13 +1055,18 @@ export class HighlightsRenderer {
       : clip.kind === 'red' ? `${ev.card === 'second_yellow' ? 'SECOND YELLOW' : 'RED CARD'}  ·  ${this.names[ev.player]}` : clip.kind === 'yellow' ? `YELLOW CARD  ·  ${this.names[ev.player]}`
       : `SO CLOSE!  ·  ${lastName(this.names[ev.player])}  ·  xG ${ev.xg?.toFixed(2)}`;
     const cardCol = clip.kind === 'red' ? '#ef4444' : clip.kind === 'yellow' ? '#facc15' : null;
+    const second = clip.kind === 'red' && ev.card === 'second_yellow';   // yellow and red together
     c.save(); c.globalAlpha = a;
-    c.font = `900 38px ${FONT}`; const w = c.measureText(text).width + 70 + (cardCol ? 50 : 0);
+    c.font = `900 38px ${FONT}`; const w = c.measureText(text).width + 70 + (cardCol ? 50 : 0) + (second ? 20 : 0);
     const x = W / 2 - w / 2, y = H - 240;
     this.pill(x, y, w, 76, 'rgba(6,26,56,0.9)', 14);
     c.fillStyle = this.limeGrad(x, y, x + w, y); c.fillRect(x, y + 70, w * easeOut(t / 0.6), 6);
-    if (cardCol) { c.fillStyle = cardCol; c.beginPath(); c.roundRect(x + 30, y + 14, 34, 48, 5); c.fill(); }
-    this.text(text, W / 2 + (cardCol ? 25 : 0), y + 51, { size: 38, weight: 900, align: 'center' });
+    if (cardCol) {
+      if (second) { c.fillStyle = '#facc15'; c.beginPath(); c.roundRect(x + 28, y + 14, 34, 48, 5); c.fill(); c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 2; c.stroke(); }
+      c.fillStyle = cardCol; c.beginPath(); c.roundRect(x + 30 + (second ? 20 : 0), y + (second ? 20 : 14), 34, 48, 5); c.fill();
+      if (second) { c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 2; c.stroke(); }
+    }
+    this.text(text, W / 2 + (cardCol ? 25 : 0) + (second ? 10 : 0), y + 51, { size: 38, weight: 900, align: 'center' });
     c.restore();
   }
   keeperName(ev) {
