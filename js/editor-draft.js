@@ -24,7 +24,7 @@ const OVERNIGHT = { days: [0, 1, 2, 3, 4, 5, 6], from: '22:00', to: '07:00' };
 
 import { gridOf, renderGrid, moveColumn } from './draft-grid.js';
 import { icon } from './icons.js';
-import { hasUnsavedInput } from './paint.js';
+import { hasUnsavedInput, snapshotInputs, restoreInputs } from './paint.js';
 
 export const draftView = () => '<h1>Draft</h1><div id="dr-root"><p class="quiet">Loading…</p></div>';
 
@@ -294,7 +294,9 @@ export async function mountDraft(ctx) {
     root.querySelectorAll('details.dr-fold').forEach(x => (x.open ? folded.add(x.dataset.k) : folded.delete(x.dataset.k)));
     S.players.forEach(p => pname.set(p.id, p.name));
     const y = window.scrollY;   // a redraw must not throw you back up the page
+    const snap = snapshotInputs(root);   // ...or lose what you were typing in another field
     root.innerHTML = `<div class="dr-ed">${picker()}${S.d ? visibleBar() + bar() + onClock() + autoPanel() + orderPanel() + settingsPanel() + quietPanel() + boardPanel() + clubsPanel() : ''}${newForm()}</div>`;
+    restoreInputs(root, snap);
     window.scrollTo(0, y);
     tick();
   }

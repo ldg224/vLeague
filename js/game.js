@@ -263,11 +263,17 @@ async function run() {
   // One scrolling page: the scoreboard, then the viewer, then what happened (stats, line-ups, timeline). Before kick-off, the preview.
   const liveChance = () => (live() ? chanceSection(winChance(season, fx, { sheets, live: spoilerHidden(fx, season) ? null : liveState(fx, season) })) : '');
   const below = () => `${liveChance()}${statsSection()}${lineupsSection()}${timelineSection()}`;
+  let lastHead = '', lastBelow = '', lastPage = '';
+  function pageHtml() {
+    const waiting = !data && ['live', 'ft'].includes(st());
+    return `<div class="gc"${sides()}>${head()}${data ? `${playerCard(st())}<nav class="gc-jump" aria-label="Jump to a section">${live() ? '<a href="#gc-chance">Win chance</a>' : ''}<a href="#gc-stats">Stats</a><a href="#gc-lineups">Line-ups</a><a href="#gc-timeline">Timeline</a></nav><div id="gc-below">${below()}</div>`
+      : `${waiting ? `<p class="quiet">${esc(fileError || 'Loading the match…')}</p>` : ''}${previewSection()}`}</div>`;
+  }
+  const pageKey = () => (data ? '' : pageHtml());
   function draw() {
     unmount();
-    const waiting = !data && ['live', 'ft'].includes(st());
-    main.innerHTML = `<div class="gc"${sides()}>${head()}${data ? `${playerCard(st())}<nav class="gc-jump" aria-label="Jump to a section">${live() ? '<a href="#gc-chance">Win chance</a>' : ''}<a href="#gc-stats">Stats</a><a href="#gc-lineups">Line-ups</a><a href="#gc-timeline">Timeline</a></nav><div id="gc-below">${below()}</div>`
-      : `${waiting ? `<p class="quiet">${esc(fileError || 'Loading the match…')}</p>` : ''}${previewSection()}`}</div>`;
+    main.innerHTML = lastPage = pageHtml();
+    lastHead = head(); lastBelow = data && live() ? below() : '';
     mount();
   }
 
@@ -291,9 +297,14 @@ async function run() {
       if (['live', 'ft'].includes(now)) await loadFile();
       draw();
     } else if (data) {
-      const h = document.querySelector('.gc-head'); if (h) h.outerHTML = head();
-      const b = document.getElementById('gc-below'); if (b && live()) b.innerHTML = below();
-    } else if (reload) draw();
+      // Swap a block only when it changed (the score ticking, a new event); an identical one is left alone, so a text selection or
+      // your place in the stats is never reset by the 5-second check. And not at all while something in it is selected.
+      const selected = window.getSelection?.(); const holding = el => Boolean(selected && !selected.isCollapsed && el?.contains(selected.anchorNode));
+      const h = document.querySelector('.gc-head'), hh = head();
+      if (h && hh !== lastHead && !holding(h)) { h.outerHTML = hh; lastHead = hh; }
+      const b = document.getElementById('gc-below');
+      if (b && live()) { const bb = below(); if (bb !== lastBelow && !holding(b)) { b.innerHTML = bb; lastBelow = bb; } }
+    } else if (reload) { if (pageKey() !== lastPage) draw(); }
   }
 
   await loadSheets();

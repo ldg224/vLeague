@@ -3,7 +3,7 @@
 // it shows the weekly cap used. The page shows once the office switches "Make page visible" on (0.32), even before the draft
 // starts: managers can read everything and build their queues, and only picking waits for a live draft. Updates the moment a
 // pick is made (realtime), with a 15 s poll as backup. Tap a player's name for their card; picks are confirmed in a small dialog.
-import { hasUnsavedInput } from './paint.js';
+import { hasUnsavedInput, snapshotInputs, restoreInputs } from './paint.js';
 import { enterPlace } from './shell.js';
 import { esc } from './member.js';
 import { icon } from './icons.js';
@@ -239,7 +239,9 @@ if (ctx) {
     function draw() {
       const y = window.scrollY, wraps = [...main.querySelectorAll('.dr-tablewrap')].map(w => w.scrollTop), side = main.querySelector('.dr-side')?.scrollTop || 0;
       const open = [...main.querySelectorAll('details.dr-team')].map(d => d.open), autoOpen = main.querySelector('.dr-autobox')?.open ?? true;
+      const snap = snapshotInputs(main);
       main.innerHTML = pageHtml(autoOpen);
+      restoreInputs(main, snap);   // a filter or search you typed survives a pick by someone else
       if (tab === 'values') main.querySelectorAll('details.dr-team').forEach((d, i) => { if (i in open) d.open = open[i]; });
       // A redraw (a refresh, a pick, a sort) must not throw you back to the top of a long table.
       main.querySelectorAll('.dr-tablewrap').forEach((w, i) => { w.scrollTop = wraps[i] || 0; });

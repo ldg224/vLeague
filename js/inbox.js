@@ -1,5 +1,6 @@
 // Inbox (0.5): read-only news for this club, from the league's season posts and the app's own news (crest reveals).
 // A post counts as read once it's opened; "Mark all read" clears the lot. Read state follows the account (inbox-data.js).
+import { snapshotInputs, restoreInputs } from './paint.js';
 import { enterPlace, badge } from './shell.js';
 import { esc, crestUrl, safeColour } from './member.js';
 import { db } from './auth.js';
@@ -107,6 +108,7 @@ if (ctx) {
 
   function draw() {
     const opened = new Set([...main.querySelectorAll('details.ib-post[open]')].map(d => d.dataset.id));
+    const snap = snapshotInputs(main);   // a half-typed press answer survives a reaction or a delete elsewhere in the list
     const unread = items.filter(i => !read.has(i.id)).length;
     badge('inbox', unread);
     main.innerHTML = `<div class="inbox">
@@ -122,6 +124,7 @@ if (ctx) {
         </details></li>`;
       }).join('')}</ul>` : '<div class="empty-state"><p>No messages yet. League news, club decisions and press questions land here.</p><a class="btn ghost" href="home.html">Back to Home</a></div>'}
     </div>`;
+    restoreInputs(main, snap);
   }
 
   main.addEventListener('toggle', e => {

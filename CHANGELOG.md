@@ -3,6 +3,18 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.53.1 (2026-10-10)
+
+Headlines: a full sweep of every page for things that wipe your work
+
+No database change. If anything goes wrong, `v0.53.0` is the version to go back to (`docs/RELEASING.md`).
+
+- **Fixed, Editor (every tab):** saving, deleting or any other action redraws the tab so it shows the new data, and that cleared anything you had typed in other fields on the same tab. What you typed elsewhere is now kept; the form or row you just used is cleared as normal.
+- **Fixed, Inbox:** pressing a reaction, deleting a post or a late load redrew the whole list and wiped a press answer you were typing. It's kept now.
+- **Fixed, Draft (managers and Editor):** a pick by someone else redrew the page and cleared a filter or search you had typed. It's kept now.
+- **Fixed, Game centre:** while a match was live the header and the stats under the viewer were swapped out every 5 seconds even when nothing had changed, which reset a text selection or your place. They're swapped only when they change, and not while you have text selected. Before kick-off, the preview redraws only when it changed.
+- Checked and left alone (nothing on a timer rebuilds them): My club (team sheet), Settings, Sign in, Set password, club set-up, and the footer suggestion form.
+
 ## 0.53.0 (2026-10-10)
 
 Headlines: pages no longer refresh themselves or wipe what you're working on

@@ -1,6 +1,7 @@
 // The league office's Editor. Clubs is one place per club: its manager account and phone, its details, requests to
 // approve or send back, and every registration it sent. The other tabs live in their own files.
 // The database checks everything again (supabase/migrations/0003_club_setup.sql); this page only asks.
+import { snapshotInputs, restoreInputs } from './paint.js';
 import { enter, clubs, chrome, esc, safeColour, crestUrl } from './member.js';
 import { db, sendPasswordReset } from './auth.js';
 import { loadSeason } from './dashboard-data.js';
@@ -65,8 +66,11 @@ function tab() {
   return TABS[t] ? t : 'clubs';   // the old Requests, Managers and Phones tabs are part of Clubs now
 }
 
+let lastTab = null;
 function render() {
   const t = tab();
+  const snap = lastTab === t ? snapshotInputs(main) : null;   // an action redraws the tab: keep what was typed in the other fields
+  lastTab = t;
   const pending = state.requests.filter(r => r.status === 'pending').length;
   const y = scrollY;
   main.innerHTML = `<nav class="ed-tabs" aria-label="Editor">${Object.entries(TABS).map(([k, label]) =>
@@ -78,6 +82,7 @@ function render() {
   if (t === 'test') mountTest({ db, esc, explain, clubs: state.clubs });
   if (t === 'draft') mountDraft({ db, esc, explain, clubs: state.clubs });
   if (t === 'news') mountNews({ db, esc, explain, clubs: state.clubs, season: state.season, deadlines: state.deadlines, accounts: state.accounts });
+  restoreInputs(main, snap);
 }
 
 
