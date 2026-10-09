@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.48.2 (2026-10-09)
+
+Headlines: line-up markers restyled to match the reference (S-21)
+
+No database change. If anything goes wrong, `v0.48.1` is the version to go back to (`docs/RELEASING.md`).
+
+- **Changed, match line-ups:** assists and goals are each a plain white circle with a dark icon (boot at the bottom left, ball at the bottom right, with a small count if more than one). A card sits in its own white pill on the left, above the boot. The rating is a bold pill at the top right, green, amber or red with dark text (blue with a star for the man of the match). The shirt number before the name is grey, and the surname is white. The marker circle is a little larger.
+
 ## 0.48.1 (2026-10-09)
 
 Headlines: shirt numbers show on every line-up marker, and only the man of the match gets the star (S-21)

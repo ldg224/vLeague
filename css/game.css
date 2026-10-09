@@ -108,25 +108,26 @@ html { scroll-behavior: smooth; }
 .pp-band { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-around; align-items: center; gap: 8px; }
 .pp-half.away .pp-band { flex-direction: column-reverse; }
 .pp-p { display: grid; justify-items: center; gap: 4px; width: 100%; max-width: 78px; }
-.pp-b { position: relative; width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .9);
+.pp-b { position: relative; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .9);
   background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--b) 78%, #fff), var(--b)); color: var(--t); font: 800 .9rem var(--font); font-variant-numeric: tabular-nums; box-shadow: 0 5px 12px rgba(0, 0, 0, .5); }
 .pp-p.motm .pp-b { border-color: #ffd54f; box-shadow: 0 0 0 3px rgba(255, 213, 79, .55), 0 5px 12px rgba(0, 0, 0, .5); }
 /* On a player's badge: the captain's gold C at the top left, cards at the top right, goals and assists at the bottom right. */
 .pp-c { position: absolute; top: -7px; left: -7px; width: 17px; height: 17px; display: grid; place-items: center; border-radius: 50%; background: #0b1626; border: 1.5px solid #ffd54f; color: #ffd54f; font: 800 .66rem/1 var(--font); font-style: normal; }
-.pp-cards { position: absolute; top: 50%; left: -10px; transform: translateY(-50%); display: inline-flex; flex-direction: column; gap: 1px; }
-.pp-cards svg { width: 13px; height: 17px; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .6)); }
-/* Rating pill top right, assists capsule bottom left, goals circle bottom right (S-21). */
-.pp-rt { position: absolute; top: -10px; right: -20px; display: inline-flex; align-items: center; gap: 2px; font: 800 .66rem/1 var(--font); min-width: 0; padding: 3px 6px; border-radius: 999px; box-shadow: 0 2px 6px rgba(0, 0, 0, .45); }
-.pp-rt svg { width: 10px; height: 10px; }
-.pp-ast, .pp-gl { position: absolute; bottom: -8px; display: inline-flex; align-items: center; justify-content: center; gap: 1px; box-shadow: 0 2px 6px rgba(0, 0, 0, .45); font: 800 .6rem/1 var(--font); }
-.pp-ast { left: -14px; padding: 2px 5px; border-radius: 999px; background: #fff; color: #0b1626; }
-.pp-gl { right: -9px; min-width: 20px; height: 20px; padding: 0 3px; border-radius: 999px; background: #0b1626; border: 1.5px solid #fff; color: #fff; }
-.pp-ast svg, .pp-gl svg { width: 14px; height: 14px; }
-.pp-ast i, .pp-gl i { font-style: normal; }
+.pp-cards { position: absolute; top: 4px; left: -13px; display: inline-flex; align-items: center; gap: 1px; padding: 3px 4px; border-radius: 999px; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .45); }
+.pp-cards svg { width: 10px; height: 14px; }
+/* Rating pill top right, a white circle each for assists (boot, bottom left) and goals (ball, bottom right), the card above the boot (S-21). */
+.pp-rt { position: absolute; top: -11px; right: -22px; display: inline-flex; align-items: center; gap: 2px; font: 800 .74rem/1 var(--font); min-width: 0; padding: 3px 7px; border-radius: 999px; color: #0b1626; box-shadow: 0 2px 6px rgba(0, 0, 0, .45); }
+.pp-rt svg { width: 11px; height: 11px; }
+.pp .rating.pp-rt.r-hi { background: #34c76f; color: #0b1626; } .pp .rating.pp-rt.r-mid { background: #f2b53a; color: #0b1626; } .pp .rating.pp-rt.r-lo { background: #ef6b6b; color: #0b1626; }
+.pp .rating.pp-rt.r-motm { background: #2f6fe0; color: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .45); }
+.pp-ast, .pp-gl { position: absolute; bottom: -7px; width: 21px; height: 21px; display: grid; place-items: center; border-radius: 50%; background: #fff; color: #0b1626; box-shadow: 0 2px 6px rgba(0, 0, 0, .45); }
+.pp-ast { left: -13px; } .pp-gl { right: -13px; }
+.pp-ast svg, .pp-gl svg { width: 15px; height: 15px; }
+.pp-ast i, .pp-gl i { position: absolute; top: -6px; right: -5px; min-width: 13px; height: 13px; padding: 0 2px; box-sizing: border-box; display: grid; place-items: center; border-radius: 7px; background: #0b1626; color: #fff; font: 800 .58rem/1 var(--font); font-style: normal; }
 .pp .rating.r-na { background: rgba(8, 18, 30, .85); color: #d6dfeb; border: 1px solid rgba(255, 255, 255, .28); }
 .pp-b.pp-s { font-size: .68rem; letter-spacing: -.02em; }
-.pp-no { color: #90caf9; font-weight: 900; margin-right: 1px; }   /* S-21: shirt number before the surname */
-.pp-n { max-width: 100%; padding: 2px 7px; border-radius: 6px; background: rgba(8, 18, 30, .86); color: #fff; font-size: .72rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pp-no { color: #aeb7c4; font-weight: 600; margin-right: 2px; }   /* S-21: shirt number before the surname */
+.pp-n { max-width: 100%; padding: 2px 7px; border-radius: 6px; background: rgba(8, 18, 30, .86); color: #fff; font-size: .76rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 640px) {
   .pp { flex-direction: column; min-height: 0; background: repeating-linear-gradient(0deg, #1b5a34 0 56px, #194f2e 56px 112px); }
   .pp-mid { left: 0; right: 0; top: 50%; bottom: auto; width: auto; height: 0; transform: translateY(-1px); }
