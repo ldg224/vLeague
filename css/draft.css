@@ -100,6 +100,11 @@
 .dr-side .dr-list .dr-p { grid-template-columns: 34px minmax(0, 1fr) auto; }
 .dr-side .dr-list .dr-p .rts { display: none; }
 .dr-side .dr-list .dr-p .val { display: none; }
+.dr-qsum { margin: 0 0 10px; font-size: .85rem; color: var(--muted); line-height: 1.4; }
+.dr-qsum b { color: var(--text); font-variant-numeric: tabular-nums; }
+.dr-qsum.over, .q-after.over { color: #e05555; }
+.dr-side .dr-p .q-after { grid-column: 2 / -1; grid-row: 2; font-size: .76rem; color: var(--faint); font-variant-numeric: tabular-nums; margin-top: -4px; }
+.dr-side .dr-p .q-after.over { font-weight: 600; }
 .dr-autobox { border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); padding: 10px 12px; }
 .dr-locked { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0 0; line-height: 1.4; } .dr-locked svg { flex: none; width: 1.1em; height: 1.1em; margin-top: .15em; }
 .dr-autobox summary { cursor: pointer; font-weight: 700; }

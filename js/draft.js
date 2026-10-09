@@ -84,10 +84,20 @@ if (ctx) {
     const playerRow = (p, extra = '', attrs = '') => `<li class="dr-p"${attrs}><span class="pos">${esc(p.position)}</span>
       <span class="nm"><button class="dr-name" data-player="${esc(p.id)}">${esc(p.name)}</button></span><span class="rts">${chip(p.offense)}${chip(p.defense)}</span><span class="val">${money(p.value)}</span>${extra}</li>`;
 
+    // What this club's squad is worth now.
+    const squadValue = () => players.filter(p => p.team === code).reduce((n, p) => n + (p.value || 0), 0);
+    // The queue with a running total (S-10): what the squad would be worth, and what is left under the cap, as each queued player is
+    // added in order. A guide only: other clubs take players and the queue may skip someone who no longer fits, so it can differ.
+    const afterText = total => (total > CAP ? `over the cap by ${money(total - CAP)}` : `${money(CAP - total)} left`);
+    function queueRunning(q, map) {
+      let run = squadValue();
+      return q.map(id => { run += map.get(id)?.value || 0; return run; });
+    }
+
     // How much of the weekly cap this club's squad uses (the draft shows it; it doesn't block a pick).
     function budget() {
       if (!code) return '';
-      const mine = players.filter(p => p.team === code), used = mine.reduce((n, p) => n + (p.value || 0), 0), pct = Math.min(100, used / CAP * 100);
+      const mine = players.filter(p => p.team === code), used = squadValue(), pct = Math.min(100, used / CAP * 100);
       const state = used > CAP ? ' over' : used >= CAP * 0.9 ? ' warn' : '';
       return `<div class="dr-budget${state}"><div class="dr-budget-text"><b>Weekly budget</b><span>${money(used)} of ${money(CAP)} used · ${used > CAP ? `${money(used - CAP)} over the cap` : `${money(CAP - used)} left`} · ${mine.length} player${mine.length === 1 ? '' : 's'}</span></div>
         <div class="dr-bar" role="progressbar" aria-label="Weekly budget used" aria-valuemin="0" aria-valuemax="${CAP}" aria-valuenow="${used}"><i style="width:${pct.toFixed(1)}%"></i></div></div>`;
@@ -177,10 +187,12 @@ if (ctx) {
     // Players: the queue and auto-pick on the left, every available player on the right.
     function queuePanel() {
       if (!code) return '<p class="empty">Your account isn’t linked to a club.</p>';
-      const map = byId(), q = queue();
+      const map = byId(), q = queue(), run = queueRunning(q, map);
+      const end = run.length ? run[run.length - 1] : null;
       return `<section class="dr-queue"><h2>My queue <small>${q.length}</small></h2>
+        ${end != null ? `<p class="dr-qsum${end > CAP ? ' over' : ''}">If your queue is picked in order, your squad is worth <b>${money(end)}</b>: ${afterText(end)}.</p>` : ''}
         ${myTurn() && q.length ? `<button class="dr-b pick big" data-pick="${esc(q[0])}"${blocked(map.get(q[0])) ? ` disabled title="${esc(blocked(map.get(q[0])))}"` : ''}>Pick now: ${esc(map.get(q[0])?.name)}</button>` : ''}
-        <ol class="dr-list" id="queue">${q.map((id, i) => playerRow(map.get(id), `<span class="mv"><button class="dr-b" data-up="${i}" aria-label="Move up"${i ? '' : ' disabled'}>${icon('chevron-up')}</button><button class="dr-b" data-down="${i}" aria-label="Move down"${i < q.length - 1 ? '' : ' disabled'}>${icon('chevron-down')}</button><button class="dr-b" data-rm="${i}" aria-label="Remove">${icon('x')}</button></span>`, ` draggable="true" data-i="${i}"`)).join('') || '<li class="empty">Add players with “+ Queue”. Drag or use the arrows to rank them.</li>'}</ol></section>`;
+        <ol class="dr-list" id="queue">${q.map((id, i) => playerRow(map.get(id), `<span class="q-after${run[i] > CAP ? ' over' : ''}" title="Your squad's value after this player if your queue is picked in order">${money(run[i])} · ${afterText(run[i])}</span><span class="mv"><button class="dr-b" data-up="${i}" aria-label="Move up"${i ? '' : ' disabled'}>${icon('chevron-up')}</button><button class="dr-b" data-down="${i}" aria-label="Move down"${i < q.length - 1 ? '' : ' disabled'}>${icon('chevron-down')}</button><button class="dr-b" data-rm="${i}" aria-label="Remove">${icon('x')}</button></span>`, ` draggable="true" data-i="${i}"`)).join('') || '<li class="empty">Add players with “+ Queue”. Drag or use the arrows to rank them.</li>'}</ol></section>`;
     }
     function autoPanel(open) {
       if (!code) return '';

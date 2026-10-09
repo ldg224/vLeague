@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.55.0 (2026-10-10)
+
+Headlines: the draft queue shows predicted money (S-10)
+
+No database change. If anything goes wrong, `v0.54.0` is the version to go back to (`docs/RELEASING.md`).
+
+- **Added, Draft → My queue (S-10):** under each queued player you now see what your squad would be worth, and how much of the weekly cap would be left, if your queue is picked in order up to that player. A line at the top of the queue gives the total for the whole queue. It turns red when a player would take you over the cap. It's a guide only, like the budget bar: other clubs take players, and the cap never blocks a pick.
+
 ## 0.54.0 (2026-10-10)
 
 Headlines: the draft's times are now active times
