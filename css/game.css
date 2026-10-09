@@ -80,8 +80,8 @@ html { scroll-behavior: smooth; }
 /* Icons (0.41.1): drawn SVGs instead of emoji. The man of the match's rating is blue. */
 .ico { width: 1.15em; height: 1.15em; flex: none; vertical-align: -.22em; }
 .cards2 { position: relative; display: inline-block; width: 1.5em; height: 1.25em; vertical-align: middle; }
-.cards2 svg { position: absolute; top: 0; width: 1.05em; height: 1.25em; }
-.cards2 svg:first-child { left: 0; transform: rotate(-10deg); } .cards2 svg:last-child { left: .42em; }
+.cards2 svg { position: absolute; width: 1.05em; height: 1.25em; }
+.cards2 svg:first-child { left: .4em; top: .12em; transform: rotate(10deg); } .cards2 svg:last-child { left: 0; top: 0; transform: rotate(-6deg); }   /* red in front at the upper left, yellow behind at the lower right */
 .gc-ev .ic { display: grid; place-items: center; align-self: center; }
 .gc-lu .nm { display: flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
 .gc-lu .sn { min-width: 1.5em; text-align: right; color: var(--faint); font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -118,7 +118,7 @@ html { scroll-behavior: smooth; }
 .pp-c { position: absolute; top: -7px; left: -7px; width: 17px; height: 17px; display: grid; place-items: center; border-radius: 50%; background: #0b1626; border: 1.5px solid #ffd54f; color: #ffd54f; font: 800 .66rem/1 var(--font); font-style: normal; }
 .pp-cards { position: absolute; top: 4px; left: -13px; display: inline-flex; align-items: center; gap: 1px; padding: 3px 4px; border-radius: 999px; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .45); }
 .pp-cards svg { width: 10px; height: 14px; }
-.pp-cards .cards2 { font-size: 11px; width: 17px; } .pp-cards .cards2 svg { width: 10px; height: 14px; position: absolute; }
+.pp-cards .cards2 { font-size: 13px; width: 20px; height: 17px; } .pp-cards .cards2 svg { width: 10px; height: 14px; position: absolute; }
 /* Rating pill top right, a white circle each for assists (boot, bottom left) and goals (ball, bottom right), the card above the boot (S-21). */
 .pp-rt { position: absolute; top: -11px; right: -22px; display: inline-flex; align-items: center; gap: 2px; font: 800 .74rem/1 var(--font); min-width: 0; padding: 3px 7px; border-radius: 999px; color: #0b1626; box-shadow: 0 2px 6px rgba(0, 0, 0, .45); }
 .pp-rt svg { width: 11px; height: 11px; }

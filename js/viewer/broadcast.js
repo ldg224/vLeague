@@ -11,7 +11,7 @@
 // (celebrations, REF CAM, replays in the next stoppage), so live viewers never get a spoiler.
 // `markers` lists goals, cards, half-time and full-time for a seek bar.
 
-import { HighlightsRenderer, W, H, makeCam, makeCamAt, clamp, lerp, easeOut, easeInOut, seg01, lastName, LIME, DARK } from './highlights.js';
+import { HighlightsRenderer, RED_AT, SECOND_EXTRA, W, H, makeCam, makeCamAt, clamp, lerp, easeOut, easeInOut, seg01, lastName, LIME, DARK } from './highlights.js';
 
 const REF_DT = 0.2;        // referee path sample step (sim seconds)
 const CAM_DT = 0.1;        // camera path sample step
@@ -82,7 +82,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
       const f = [...this.fouls].reverse().find(f => f.player === e.player && f.t <= e.t + 0.01 && e.t - f.t < 3) || { t: e.t, x: e.x, y: e.y };
       let up = f.t + 1.5;
       for (let t = f.t; t < f.t + 5; t += 0.1) { const r = this.refPos(t); if (Math.hypot(r[0] - f.x, r[1] - f.y) < 3.5) { up = t + 0.6; break; } }
-      return { t: Math.max(up, e.t), until: Math.max(up, e.t) + 3.8, colour: e.card === 'yellow' ? 'yellow' : 'red', second: e.card === 'second_yellow', player: e.player, e };
+      return { t: Math.max(up, e.t), until: Math.max(up, e.t) + 3.8 + (e.card === 'second_yellow' ? SECOND_EXTRA : 0), colour: e.card === 'yellow' ? 'yellow' : 'red', second: e.card === 'second_yellow', player: e.player, e };
     });
   }
   refPos(t) {
@@ -175,7 +175,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
       const start = shot ? Math.max(8, Math.min(12, g.t - (d.events.find(x => x.poss === g.poss)?.t ?? g.t - 8) + 1)) : 8;
       replay(g, 1, start, 1.5, ko && { from: g.t + 7.4, to: ko.t - 1 });
     }
-    for (const k of this.cards) shots.push({ kind: 'refcam', prio: 2, from: Math.max(k.e.t, k.t - 0.8), to: k.t + 3.2 });
+    for (const k of this.cards) shots.push({ kind: 'refcam', prio: 2, from: Math.max(k.e.t, k.t - 0.8), to: k.t + 3.2 + (k.second ? SECOND_EXTRA : 0) });
     for (const s of d.events.filter(e => e.type === 'shot' && e.outcome !== 'goal')) {
       // Penalties always, whatever the outcome; every save; woodwork and other big chances.
       const pen = s.subtype === 'penalty', save = s.outcome === 'saved';
@@ -344,7 +344,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
     }
     // Goal banners and card captions.
     for (const g of this.goals) { const s = t - g.t; if (s >= 0 && s < BANNER_HOLD + 0.6) this.goalBanner(g, s, BANNER_HOLD); }
-    for (const k of this.cards) { const s = t - k.t; if (s >= 0 && s < CARD_SHOW) this.lowerThird({ kind: k.colour, e: k.e }, s); }
+    for (const k of this.cards) { const s = t - k.t - (k.second ? RED_AT : 0); if (s >= 0 && s < CARD_SHOW) this.lowerThird({ kind: k.colour, e: k.e }, s); }
     for (const ps of this.kickoffs) { const s = t - ps.t; if (s >= 0 && s < 4.5) this.kickoffTag(ps, s); }
     const ft = seg01(t, this.t1 - 4, this.t1 - 3.4);
     if (ft > 0) this.momentPanel('FULL-TIME', [this.d.result.home, this.d.result.away], ft, true);

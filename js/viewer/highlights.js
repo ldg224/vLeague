@@ -185,6 +185,17 @@ function attackStart(d, e) {
 
 // Card moments need time after the foul for the referee to arrive and show the card (ref cam).
 export const CARD_AFTER = 6.5;
+// A second yellow plays out as two cards: the yellow goes up, comes down, the referee reaches into his pocket, then the red goes up.
+export const RED_AT = 2.75, SECOND_EXTRA = 2.6;   // seconds after the first card goes up that the red goes up; extra time the shot stays on him
+function secondCardPhase(s) {
+  if (s < 0) return { up: 0, col: null };
+  if (s < 0.25) return { up: easeOut(s / 0.25), col: 'yellow' };
+  if (s < 1.7) return { up: 1, col: 'yellow' };
+  if (s < 2.15) { const u = 1 - easeInOut((s - 1.7) / 0.45); return { up: u, col: u > 0.12 ? 'yellow' : null }; }
+  if (s < RED_AT) return { up: 0, col: null, reach: (s - 2.15) / (RED_AT - 2.15) };
+  if (s < RED_AT + 0.25) return { up: easeOut((s - RED_AT) / 0.25), col: 'red' };
+  return { up: 1, col: 'red' };
+}
 // Most of each kind of moment in one video, so it isn't wall-to-wall saves.
 const KIND_CAP = { save: 2, chance: 3, woodwork: 2, yellow: 2, red: 2, goal: 99 };
 
@@ -205,7 +216,7 @@ export function planHighlights(d, targetSeconds = 180) {
       const red = e.card !== 'yellow';
       const foul = [...d.events].reverse().find(f => f.type === 'foul' && f.player === e.player && f.t <= e.t + 0.01 && e.t - f.t < 3);
       const ft = foul ? foul.t : e.t;
-      cand.push({ kind: red ? 'red' : 'yellow', score: red ? 60 : 32, t: ft, t0: ft - 6, t1: ft + CARD_AFTER, e, foul });
+      cand.push({ kind: red ? 'red' : 'yellow', score: red ? 60 : 32, t: ft, t0: ft - 6, t1: ft + CARD_AFTER + (e.card === 'second_yellow' ? SECOND_EXTRA : 0), e, foul });
     }
   }
   const fixed = 4.5 + 4.5 + 3.5 + 9 + 5.5 + 4.5;   // intro, versus, half-time, full-time, motm, outro
@@ -664,7 +675,7 @@ export class HighlightsRenderer {
       const f = fouls.find(f => f.player === c.player && c.t - f.t < 3) || { t: c.t, x: c.x, y: c.y };
       let up = f.t + 1.5;
       for (let t = f.t; t < f.t + 5; t += 0.1) { const r = this.refAt(plan, t); if (Math.hypot(r[0] - f.x, r[1] - f.y) < 3.5) { up = t + 0.6; break; } }
-      return { t: up, until: up + 3.8, colour: c.card === 'yellow' ? 'yellow' : 'red', second: c.card === 'second_yellow', player: c.player, foulT: f.t, e: c };
+      return { t: up, until: up + 3.8 + (c.card === 'second_yellow' ? SECOND_EXTRA : 0), colour: c.card === 'yellow' ? 'yellow' : 'red', second: c.card === 'second_yellow', player: c.player, foulT: f.t, e: c };
     });
   }
   refAt(plan, t) {
@@ -779,21 +790,26 @@ export class HighlightsRenderer {
     c.fillStyle = LIME; c.fillRect(bx - bw / 2, top + bh * 0.3, bw, Math.max(2, bh * 0.04));   // collar trim
     c.fillStyle = '#e8b894'; c.beginPath(); c.arc(bx, top + bh * 0.16, bw * 0.34, 0, Math.PI * 2); c.fill();
     if (it.card) {
-      const col = it.card.colour === 'yellow' ? '#facc15' : '#ef4444';
-      const k = easeOut((tSim - it.card.t) / 0.25);
-      // Raised arm and the card in his hand
-      const shoulder = [bx + bw * 0.35, top + bh * 0.34], hand = [bx + bw * 0.55, top - bh * 0.28 * k];
+      const sc = it.card.second ? secondCardPhase(tSim - it.card.t) : null;   // a second yellow: yellow up, hand down, pocket, red up
+      const shown = sc ? sc.col : it.card.colour;                              // the card in his hand (none while he reaches)
+      const col = shown === 'yellow' ? '#facc15' : '#ef4444';
+      const k = sc ? sc.up : easeOut((tSim - it.card.t) / 0.25);
+      const shoulder = [bx + bw * 0.35, top + bh * 0.34];
+      let hand;
+      if (sc) {
+        const hip = [bx + bw * 0.42, top + bh * 0.66], raised = [bx + bw * 0.55, top - bh * 0.28], p = sc.reach ?? 0;
+        hand = [lerp(hip[0], raised[0], k) + bw * 0.1 * Math.sin(p * Math.PI), lerp(hip[1], raised[1], k) + bh * 0.05 * Math.sin(p * Math.PI * 3)];
+      } else hand = [bx + bw * 0.55, top - bh * 0.28 * k];
       c.strokeStyle = '#1d212a'; c.lineWidth = Math.max(3, bw * 0.28); c.lineCap = 'round';
       c.beginPath(); c.moveTo(...shoulder); c.lineTo(...hand); c.stroke();
-      const cw = Math.max(8, bw * 0.5), ch = cw * 1.4, two = !!it.card.second;   // a second yellow: the yellow, then the red in front of it
-      if (two) { c.fillStyle = '#facc15'; c.fillRect(hand[0] - cw / 2 - cw * 0.45, hand[1] - ch + ch * 0.08, cw, ch); }
-      c.fillStyle = col; c.fillRect(hand[0] - cw / 2 + (two ? cw * 0.2 : 0), hand[1] - ch, cw, ch);
-      // Big card icon floating above his head so it reads at any distance
-      const iw = clamp(bw * 0.8, 24, 70), ih = iw * 1.4, ix = bx - iw / 2, iy = top - ih - Math.max(14, bh * 0.22) - (1 - k) * 20;
-      if (two) { c.save(); c.shadowColor = '#facc15'; c.shadowBlur = 24; c.fillStyle = '#facc15'; c.beginPath(); c.roundRect(ix - iw * 0.45, iy + ih * 0.06, iw, ih, 4); c.fill(); c.restore(); c.strokeStyle = 'rgba(0,0,0,0.5)'; c.lineWidth = 2; c.strokeRect(ix - iw * 0.45, iy + ih * 0.06, iw, ih); }
-      const rx = ix + (two ? iw * 0.2 : 0);
-      c.save(); c.shadowColor = col; c.shadowBlur = 30; c.fillStyle = col; c.beginPath(); c.roundRect(rx, iy, iw, ih, 4); c.fill(); c.restore();
-      c.strokeStyle = 'rgba(0,0,0,0.5)'; c.lineWidth = 2; c.strokeRect(rx, iy, iw, ih);
+      if (shown) {
+        const cw = Math.max(8, bw * 0.5), ch = cw * 1.4;
+        c.fillStyle = col; c.fillRect(hand[0] - cw / 2, hand[1] - ch, cw, ch);
+        // Big card icon floating above his head so it reads at any distance
+        const iw = clamp(bw * 0.8, 24, 70), ih = iw * 1.4, ix = bx - iw / 2, iy = top - ih - Math.max(14, bh * 0.22) - (1 - k) * 20;
+        c.save(); c.shadowColor = col; c.shadowBlur = 30; c.fillStyle = col; c.beginPath(); c.roundRect(ix, iy, iw, ih, 4); c.fill(); c.restore();
+        c.strokeStyle = 'rgba(0,0,0,0.5)'; c.lineWidth = 2; c.strokeRect(ix, iy, iw, ih);
+      }
     } else {
       this.text('REF', bx, top - 10, { size: Math.max(10, bw * 0.45), weight: 900, align: 'center', colour: 'rgba(255,255,255,0.75)' });
     }
@@ -1010,7 +1026,7 @@ export class HighlightsRenderer {
     } else if (s.type === 'clip' && (clip.kind === 'yellow' || clip.kind === 'red')) {
       // Caption appears as the referee shows the card.
       const k = plan?.cards.find(x => x.e === ev);
-      const since = tSim - (k ? k.t : clip.t + 2);
+      const since = tSim - (k ? k.t + (k.second ? RED_AT : 0) : clip.t + 2);
       if (since >= 0 && since < 3.4) this.lowerThird(clip, since);
     } else if (s.type === 'clip') {
       const since = (tSim - clip.t) / s.speed;
@@ -1062,8 +1078,8 @@ export class HighlightsRenderer {
     this.pill(x, y, w, 76, 'rgba(6,26,56,0.9)', 14);
     c.fillStyle = this.limeGrad(x, y, x + w, y); c.fillRect(x, y + 70, w * easeOut(t / 0.6), 6);
     if (cardCol) {
-      if (second) { c.fillStyle = '#facc15'; c.beginPath(); c.roundRect(x + 28, y + 14, 34, 48, 5); c.fill(); c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 2; c.stroke(); }
-      c.fillStyle = cardCol; c.beginPath(); c.roundRect(x + 30 + (second ? 20 : 0), y + (second ? 20 : 14), 34, 48, 5); c.fill();
+      if (second) { c.fillStyle = '#facc15'; c.beginPath(); c.roundRect(x + 44, y + 20, 34, 48, 5); c.fill(); c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 2; c.stroke(); }
+      c.fillStyle = cardCol; c.beginPath(); c.roundRect(x + 30, y + 14, 34, 48, 5); c.fill();
       if (second) { c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 2; c.stroke(); }
     }
     this.text(text, W / 2 + (cardCol ? 25 : 0) + (second ? 10 : 0), y + 51, { size: 38, weight: 900, align: 'center' });

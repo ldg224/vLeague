@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.49.3 (2026-10-09)
+
+Headlines: the referee gives a second yellow in two steps, yellow then red, and the two cards look the same everywhere (B-02)
+
+No database change. If anything goes wrong, `v0.49.2` is the version to go back to (`docs/RELEASING.md`).
+
+- **Changed, match footage:** for a second yellow the referee raises the yellow, lowers his hand, reaches into his pocket and raises the red, with the camera staying on him (the shot is about 2.6 seconds longer). The "second yellow" caption appears when the red goes up. A first yellow or a straight red is unchanged.
+- **Changed, everywhere a second yellow is shown together:** the red card is in front at the upper left and the yellow behind it at the lower right, on the timeline, the line-up markers and the caption banner.
+
 ## 0.49.2 (2026-10-09)
 
 Headlines: a second yellow shows the yellow and the red card together everywhere (B-02)
