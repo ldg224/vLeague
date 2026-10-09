@@ -125,12 +125,13 @@ if (ctx) {
         closed: ['Closed', 'The draft has closed', 'Picks can’t be made now.', ''],
         done: ['Finished', 'The draft is finished', `All ${n} picks are done.`, ''],
       }[ph];
-      const quiet = d.quiet?.length ? (inQuiet() && ph === 'live' ? `${icon('pause')} Outside active times: the timer is paused until ${new Date(st.qs.quiet_until).toLocaleTimeString('en-AU', { timeZone: 'Australia/Melbourne', hour: 'numeric', minute: '2-digit' })}. You can still pick.` : `The pick timer runs ${describeQuiet(d.quiet)}, and is paused at other times. You can still pick whenever you’re online.`) : '';
-      const small = [rulesText() && `Roster rules: ${rulesText()}`, quiet].filter(Boolean);
+      // Each piece is escaped here (the pause icon is markup, so the line itself is not escaped as a whole: that printed the icon's code, B-12).
+      const quiet = d.quiet?.length ? (inQuiet() && ph === 'live' ? `${icon('pause')} Outside active times: the timer is paused until ${esc(new Date(st.qs.quiet_until).toLocaleTimeString('en-AU', { timeZone: 'Australia/Melbourne', hour: 'numeric', minute: '2-digit' }))}. You can still pick.` : `The pick timer runs ${esc(describeQuiet(d.quiet))}, and is paused at other times. You can still pick whenever you’re online.`) : '';
+      const small = [rulesText() && `Roster rules: ${esc(rulesText())}`, quiet].filter(Boolean);
       return `<section class="dr-status ph-${ph}${mine ? ' mine' : ''}${ph === 'live' && inQuiet() ? ' quiet' : ''}"><div class="dr-st-main"><div><span class="dr-st-tag">${B[0]}</span><p class="dr-st-name">${esc(d.name || 'Draft')}</p>
         <h1 class="page-title dr-st-big" tabindex="-1">${B[1]}</h1><p class="dr-st-sub">${B[2]}</p></div>
         ${B[3] ? `<div class="dr-clock">${B[3]}</div>` : ''}</div>
-        ${small.length ? `<p class="dr-st-small">${small.map(esc).join(' · ')}</p>` : ''}</section>${budget()}`;
+        ${small.length ? `<p class="dr-st-small">${small.join(' · ')}</p>` : ''}</section>${budget()}`;
     }
 
     // ---- the table of available players, with its filters and sort levels.

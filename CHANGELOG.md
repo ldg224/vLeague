@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.56.1 (2026-10-10)
+
+Headlines: the Draft page no longer shows code in its status bar (B-12)
+
+No database change. If anything goes wrong, `v0.56.0` is the version to go back to (`docs/RELEASING.md`).
+
+- **Fixed, Draft (B-12):** in the small print of the status bar, the timer note showed the pause icon's code (`<svg class="ic" ...>`) in front of "the timer is paused until...". It shows the icon now. The cause was the whole line being escaped, icon included.
+
 ## 0.56.0 (2026-10-10)
 
 Headlines: a complete examination of the draft: four database fixes, three page fixes, clearer emails, and a test suite
