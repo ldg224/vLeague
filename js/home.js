@@ -3,7 +3,7 @@
 // league-wide is on League; news is in Inbox (its unread count is on the Inbox tab).
 // League data still comes from the s3 site's season.json (dashboard-data.js) until fixtures move to Supabase (0.11).
 import { enterPlace, badge } from './shell.js';
-import { paint } from './paint.js';
+import { paint, quietly } from './paint.js';
 import { renderPitch } from './pitch.js';
 import { spoilerHidden, revealScore, fmtTime, fmtDay } from './prefs.js';
 import { clubs, esc, crestUrl } from './member.js';
@@ -257,7 +257,7 @@ if (ctx) {
     ctx.main.addEventListener('click', onClick);
     setInterval(tick, 20000);
     // Each minute: redraw, and fetch the locked sheets once the week's deadline passes.
-    setInterval(async () => { await refreshDeadlines(); render(); }, 60000);
+    setInterval(async () => { await refreshDeadlines(); quietly(render); }, 60000);
   }
   main.setAttribute('aria-busy', 'false');
 }

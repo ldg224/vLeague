@@ -3,7 +3,7 @@
 // a result stays behind "Show score" until revealed, and the table and top players leave hidden results out.
 // Redraws every 15 s, reloads every minute.
 import { enterPlace } from './shell.js';
-import { paint } from './paint.js';
+import { paint, quietly } from './paint.js';
 import { esc, clubs } from './member.js';
 import {
   loadSeason, matchUrl, kickoff, status, shownScore, liveMinute, byKickoff, activeWeek, ladder, leaders,
@@ -125,10 +125,10 @@ if (ctx) {
   else {
     season.fixtures ||= [];
     draw();
-    setInterval(() => { if (!document.hidden) draw(); }, 15000);
+    setInterval(() => { if (!document.hidden) quietly(draw); }, 15000);
     setInterval(async () => {
       if (document.hidden) return;
-      try { season = await loadSeason(); season.fixtures ||= []; draw(); } catch { /* keep the last copy */ }
+      try { season = await loadSeason(); season.fixtures ||= []; quietly(draw); } catch { /* keep the last copy */ }
     }, 60000);
   }
   main.setAttribute('aria-busy', 'false');

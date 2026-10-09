@@ -3,7 +3,7 @@
 // league news and the leaders. It redraws every 15 s so live scores tick on, and reloads the data every minute.
 import { currentUser, db } from './auth.js';
 import { VERSION } from './version.js';
-import { paint } from './paint.js';
+import { paint, quietly } from './paint.js';
 import { newsBody, safeColour as postColour } from './news-card.js';
 import {
   loadSeason, logoUrl, matchUrl, kickoff, status, shownScore, shownGoals, liveMinute,
@@ -305,7 +305,7 @@ async function refresh() {
   try {
     [season] = await Promise.all([loadSeason(), loadDeadlines(), loadPosts()]);
     season.fixtures ||= []; season.teams ||= []; season.players ||= [];
-    drawAll();
+    quietly(drawAll);
   } catch (e) {
     console.error(e);
     if (!season) {
@@ -335,5 +335,5 @@ currentUser().then(user => {
 });
 
 await refresh();
-setInterval(() => { if (season && !document.hidden) drawClock(); }, 15000);
+setInterval(() => { if (season && !document.hidden) quietly(drawClock); }, 15000);
 setInterval(() => { if (!document.hidden) refresh(); }, 60000);

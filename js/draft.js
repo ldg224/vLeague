@@ -3,6 +3,7 @@
 // it shows the weekly cap used. The page shows once the office switches "Make page visible" on (0.32), even before the draft
 // starts: managers can read everything and build their queues, and only picking waits for a live draft. Updates the moment a
 // pick is made (realtime), with a 15 s poll as backup. Tap a player's name for their card; picks are confirmed in a small dialog.
+import { hasUnsavedInput } from './paint.js';
 import { enterPlace } from './shell.js';
 import { esc } from './member.js';
 import { icon } from './icons.js';
@@ -255,7 +256,7 @@ if (ctx) {
         // ignored: reloading then wiped a queue being edited. And never reload with a save in flight.
         const open = await openDraft(undefined, true);
         if (!open) { if (!qSaves) location.reload(); return; }
-        const typing = document.activeElement?.matches?.('input,select'), before = sig(), mine = st.queue;
+        const sel = window.getSelection?.(), typing = document.activeElement?.matches?.('input,select,textarea') || hasUnsavedInput(main) || Boolean(sel && !sel.isCollapsed && main.contains(sel.anchorNode)), before = sig(), mine = st.queue;
         forgetPlayers();
         [st, players] = await Promise.all([loadAll(), loadPlayers({ fresh: true })]);
         if (qSaves) st.queue = mine;   // a save is in flight: what the server says now is out of date, so keep what I just set

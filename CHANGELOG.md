@@ -3,15 +3,18 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
-## 0.52.1 (2026-10-10)
+## 0.53.0 (2026-10-10)
 
 Headlines: pages no longer refresh themselves or wipe what you're working on
 
 No database change. If anything goes wrong, `v0.52.0` is the version to go back to (`docs/RELEASING.md`).
 
-- **Fixed, Draft:** the page reloaded itself whenever its background check couldn't reach the database for a moment (a weak connection, or the sign-in being renewed), because it mistook that for the draft being hidden. A queue being edited was lost. It now reloads only when the draft has truly been hidden, and never while a queue is saving.
+Why it happened: several pages check for live changes on a timer (new picks, scores, countdowns) and did it by rebuilding their whole contents each time, whether or not anything had changed, and one page reloaded itself when a check failed. That threw away anything you were in the middle of.
+
+- **Changed, every page that updates itself:** a timed update now never redraws a part of the page you are using: focus in a field, something typed and not saved, or text selected. It tries again on the next tick, so the page catches up as soon as you let go. (`js/paint.js`.)
+- **Fixed, Draft:** the page reloaded itself whenever its background check couldn't reach the database for a moment (a weak connection, or the sign-in being renewed), because it mistook that for the draft being hidden. A queue being edited was lost. It now reloads only when the draft has truly been hidden, and never while a queue is saving. It also holds off redrawing while you have something typed or selected.
 - **Fixed, Editor → Draft:** the page rebuilt itself every 15 seconds, even when nothing had changed, which cleared fields you had typed into but not saved and moved your place on the page. It now looks for changes quietly and only redraws when something really changed, and it leaves the page alone while anything is half-typed, a pick is selected for a swap, a preview is open or you're in a field. The countdown keeps ticking either way.
-- **Fixed, Home, Matches, League and the public dashboard:** these redrew themselves every 15 to 60 seconds whether or not anything changed, which dropped focus, text selections and anything you had open. They now redraw only when what they show has changed.
+- **Fixed, Home, Matches, League and the public dashboard:** they redrew every 15 to 60 seconds whether or not anything changed. They now redraw only when what they show has changed, and never under your hands.
 
 ## 0.52.0 (2026-10-10)
 

@@ -4,7 +4,7 @@
 // Scores follow the same rules as League: hidden before kick-off, live while it plays, and behind "Show score" with
 // spoiler-free results on. Redraws every 15 s, reloads every minute.
 import { enterPlace } from './shell.js';
-import { paint } from './paint.js';
+import { paint, quietly } from './paint.js';
 import { esc, clubs } from './member.js';
 import { loadSeason, matchUrl, kickoff, status, shownScore, liveMinute, liveState, byKickoff, activeWeek } from './dashboard-data.js';
 import { crest, teamOf, nameOf, fullNameOf, useClubs, day } from './places.js';
@@ -98,10 +98,10 @@ if (ctx) {
     season.fixtures ||= [];
     await loadSheets();
     draw();
-    setInterval(() => { if (!document.hidden) draw(); }, 15000);
+    setInterval(() => { if (!document.hidden) quietly(draw); }, 15000);
     setInterval(async () => {
       if (document.hidden) return;
-      try { season = await loadSeason(); season.fixtures ||= []; await loadSheets(); draw(); } catch { /* keep the last copy */ }
+      try { season = await loadSeason(); season.fixtures ||= []; await loadSheets(); quietly(draw); } catch { /* keep the last copy */ }
     }, 60000);
   }
   main.setAttribute('aria-busy', 'false');
