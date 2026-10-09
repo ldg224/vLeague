@@ -1,19 +1,20 @@
 // vLeague 0.46.0: the footer's "Suggest changes". Only a signed-in manager (or the office) may call it. It saves the
-// message in `suggestions` and makes a card on the league's Trello board: an issue goes to "Reported Issues" with the Bug
-// label, a suggestion to "Suggestions" with the Feature label, and both get "Player Reported". The Trello key and token are
+// message in `suggestions`, gives it a reference (B-nn for an issue, S-nn for a suggestion; 0.46.1) and makes a card on the
+// league's Trello board, in the INBOX list, titled "B-06: ...". An issue gets the Bug label, a suggestion the Suggestion
+// label, and both get "Form Response". The office then moves the card on from the INBOX. The Trello key and token are
 // Edge Function secrets (TRELLO_KEY, TRELLO_TOKEN); they never reach the website or this repo. Deploy: docs/BACKEND.md.
 //
-// POST { kind: 'issue' | 'suggestion', title, details? }  ->  { ok: true }  or  { error: "readable message" }
+// POST { kind: 'issue' | 'suggestion', title, details? }  ->  { ok: true, code: 'B-06' }  or  { error: "readable message" }
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const ORIGINS = ['https://ldg224.github.io', 'http://localhost:8767'];
 const PER_HOUR = 5;
 
-// The vLeague Work board (https://trello.com/b/RuJSt4r3/vleague-work): list and label ids.
-const LIST = { issue: '6ac882f2ef2524934da04cfd', suggestion: '6ac883085bf510bd37802ab6' };
+// The vLeague Work board (https://trello.com/b/RuJSt4r3/vleague-work): the INBOX list and the label ids.
+const INBOX = '6ac891395ce2898b916118a6';
 const LABELS = {
-  issue: ['6ac882f2ef2524934da04d03', '6ac88e01f4f88715dc7e0cad'],        // Bug + Player Reported
-  suggestion: ['6ac88dbfd231d9383f75cd22', '6ac88e01f4f88715dc7e0cad'],   // Feature + Player Reported
+  issue: ['6ac882f2ef2524934da04d03', '6ac897adcad7c64e3c5f00f1'],        // Bug + Form Response
+  suggestion: ['6ac88dc90140371bdd9bda8a', '6ac897adcad7c64e3c5f00f1'],   // Suggestion + Form Response
 };
 
 function cors(req: Request) {
@@ -54,8 +55,10 @@ Deno.serve(async req => {
   const { count } = await admin.from('suggestions').select('id', { count: 'exact', head: true }).eq('user_id', caller.user.id).gte('created_at', since);
   if ((count ?? 0) >= PER_HOUR) return reply({ error: 'That’s a lot in an hour. Try again a bit later.' }, 429);
 
+  const { data: code, error: codeError } = await admin.rpc('next_suggestion_code', { p_kind: kind });
+  if (codeError || !code) return reply({ error: 'It didn’t save. Try again.' }, 500);
   const { data: row, error: saveError } = await admin.from('suggestions')
-    .insert({ user_id: caller.user.id, club: me.club, kind, title, details: details || null }).select('id').single();
+    .insert({ user_id: caller.user.id, club: me.club, kind, title, details: details || null, code }).select('id').single();
   if (saveError || !row) return reply({ error: 'It didn’t save. Try again.' }, 500);
 
   const key = Deno.env.get('TRELLO_KEY'), token = Deno.env.get('TRELLO_TOKEN');
@@ -63,13 +66,13 @@ Deno.serve(async req => {
   const desc = `${details || '(no details)'}\n\n---\nSent from the vLeague site by ${who}.`;
   let card: { shortUrl?: string } | null = null;
   if (key && token) {
-    const params = new URLSearchParams({ key, token, idList: LIST[kind], name: title, desc, pos: 'bottom', idLabels: LABELS[kind].join(',') });
+    const params = new URLSearchParams({ key, token, idList: INBOX, name: `${code}: ${title}`, desc, pos: 'bottom', idLabels: LABELS[kind].join(',') });
     try {
       const r = await fetch('https://api.trello.com/1/cards', { method: 'POST', body: params });
       if (r.ok) card = await r.json();
     } catch { /* recorded below */ }
   }
   await admin.from('suggestions').update({ status: card ? 'sent' : 'failed', card_url: card?.shortUrl ?? null }).eq('id', row.id);
-  if (!card) return reply({ error: 'It was saved, but it didn’t reach the board. Tell the league office.' }, 502);
-  return reply({ ok: true });
+  if (!card) return reply({ error: `It was saved as ${code}, but it didn’t reach the board. Tell the league office.` }, 502);
+  return reply({ ok: true, code });
 });

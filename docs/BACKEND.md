@@ -97,7 +97,7 @@ on Supabase because it needs the service role key. Deploy or update it with
 
 **Edge Function `suggest`** (`supabase/functions/suggest/`, 0.46): the footer's "Suggest changes". Managers and the office
 only (checked on the server). It saves the message in the `suggestions` table (no one reads or writes that table from the
-website; migration `0035_suggestions.sql`), limits each person to 5 an hour, and makes a card on the Trello board. It needs
+website; migration `0035_suggestions.sql`), gives it a reference (B-nn for an issue, S-nn for a suggestion; `0036_suggestion_codes.sql`), limits each person to 5 an hour, and makes a card in the INBOX list of the Trello board with the Bug or Suggestion label plus Form Response. It needs
 two Edge Function secrets, `TRELLO_KEY` and `TRELLO_TOKEN` (never in the repo). Deploy:
 `python supabase/functions/deploy.py suggest`.
 

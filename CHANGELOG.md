@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.46.1 (2026-10-09)
+
+Headlines: Suggest changes numbers each submission (B-nn, S-nn) and lands it in the board's INBOX
+
+Database change: apply `supabase/migrations/0036_suggestion_codes.sql` and redeploy the `suggest` function (`docs/BACKEND.md`). If anything goes wrong, `v0.46.0` is the version to go back to (`docs/RELEASING.md`).
+
+- **Changed, Suggest changes:** each submission gets a reference, B-nn for an issue and S-nn for a suggestion, counting on from the cards already on the board. The card is titled with it (for example "B-06: Highlights freeze") and lands in the board's INBOX list with the Bug or Suggestion label plus Form Response. The thank-you message shows the reference.
+
 ## 0.46.0 (2026-10-09)
 
 Headlines: "Suggest changes" in the footer sends issues and suggestions to the league's Trello board

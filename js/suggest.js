@@ -31,13 +31,15 @@ function open() {
     if ((body.title || '').trim().length < 3) { msg.textContent = 'Give it a short title.'; return; }
     send.disabled = true;
     msg.textContent = 'Sending…';
+    let sent = '';
     try {
       const { data, error } = await (await db()).functions.invoke('suggest', { body });
       let problem = data?.error;
       if (error) problem = (await error.context?.json?.().catch(() => null))?.error || 'It didn’t send. Try again.';
       if (problem) { msg.textContent = problem; send.disabled = false; return; }
+      sent = data?.code || '';
     } catch { msg.textContent = 'It didn’t send. Try again.'; send.disabled = false; return; }
-    form.innerHTML = '<h2>Thank you</h2><p class="sg-sub">Sent to the league’s board.</p><div class="sg-btns"><button type="button" class="sg-b go" data-close>Close</button></div>';
+    form.innerHTML = `<h2>Thank you</h2><p class="sg-sub">Sent to the league’s board${sent ? ` as <b>${sent}</b>` : ''}.</p><div class="sg-btns"><button type="button" class="sg-b go" data-close>Close</button></div>`;
   });
   document.body.append(dlg);
   dlg.showModal();
