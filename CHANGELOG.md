@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.45.0 (2026-10-09)
+
+Headlines: More replays: penalties, saves and fouls | Live matches no longer slow before a goal
+
+Replays and live pace. No database change. If anything goes wrong, `v0.44.1` is the version to go back to (`docs/RELEASING.md`).
+
+- **Added, match viewer:** more replays in the broadcast view, all played in stoppages. Every penalty that is not scored is replayed (the run-up and the kick). Every save is replayed. Fouls that lead to a card, a penalty or a free kick within 30 m of goal are replayed once the referee has finished with the card. When several replays want the same stoppage, the lower-priority one now moves to just after the first instead of being dropped.
+- **Changed, match viewer:** replays now play at real time (1 second of replay = 1 second of play), not 0.7x slow motion.
+- **Changed, live matches:** a live match now plays at one steady speed. Before, the quiet stretches were wound through quickly and play dropped to normal speed shortly before each goal or card, which gave away that something was coming.
+
 ## 0.44.1 (2026-10-09)
 
 Headlines: Rewind a live match, then jump back to live | Fairer, steadier player ratings

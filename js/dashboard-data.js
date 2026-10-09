@@ -86,24 +86,13 @@ export function status(fx, s, now = new Date()) {
   return 'ft';
 }
 
-// While live, the match plays out over live_minutes. The moments that matter (the build-up to and aftermath of goals and cards)
-// play at true 1x; the quiet stretches between them are wound through quickly (ported from the s3 broadcast, 0.36). If the window
-// is as long as the match, it is one steady rate. Cached per fixture and window.
-const LEAD = 18, TAIL = 8;
+// While live, the match plays out over live_minutes at one steady rate, so the speed never changes ahead of a goal or card and
+// gives nothing away. Cached per fixture and window.
 function warp(fx, s) {
   const key = (s.live_minutes || 10) + ':' + fx.result.duration_t;
   if (fx._warp?.key === key) return fx._warp;
-  const periods = fx.result.periods || [], t0 = periods.length ? periods[0].start_t : 0, t1 = fx.result.duration_t, B = (s.live_minutes || 10) * 60, D = t1 - t0;
-  const win = [...(fx.result.goals || []), ...(fx.result.cards || [])].map(e => [Math.max(t0, e.t - LEAD), Math.min(t1, e.t + TAIL)]).sort((x, y) => x[0] - y[0]);
-  const merged = [];
-  for (const w of win) { const l = merged[merged.length - 1]; if (l && w[0] <= l[1]) l[1] = Math.max(l[1], w[1]); else merged.push([...w]); }
-  const A = merged.reduce((n, w) => n + w[1] - w[0], 0);
-  if (B >= D || A > 0.6 * B || !merged.length) return fx._warp = { key, B, segs: [{ s0: t0, s1: t1, w0: 0, w1: B, r: D / B }] };
-  const rest = (D - A) / (B - A), segs = []; let cur = t0, w = 0;
-  const add = (s0, s1, r) => { if (s1 - s0 > 1e-6) { segs.push({ s0, s1, w0: w, w1: w + (s1 - s0) / r, r }); w += (s1 - s0) / r; } };
-  for (const m of merged) { add(cur, m[0], rest); add(m[0], m[1], 1); cur = m[1]; }
-  add(cur, t1, rest);
-  return fx._warp = { key, B, segs };
+  const periods = fx.result.periods || [], t0 = periods.length ? periods[0].start_t : 0, t1 = fx.result.duration_t, B = (s.live_minutes || 10) * 60;
+  return fx._warp = { key, B, segs: [{ s0: t0, s1: t1, w0: 0, w1: B, r: (t1 - t0) / B }] };
 }
 // Seconds into the live window -> match-file time.
 export function liveSimTime(fx, s, now = new Date()) {
@@ -111,7 +100,7 @@ export function liveSimTime(fx, s, now = new Date()) {
   const g = W.segs.find(g => w <= g.w1) || W.segs[W.segs.length - 1];
   return g.s0 + (w - g.w0) * g.r;
 }
-// How fast the picture must run at match-file time t to stay on the live clock (1 in the key moments).
+// How fast the picture must run at match-file time t to stay on the live clock.
 export function liveSpeed(fx, s, t) {
   const W = warp(fx, s);
   if (t == null) t = liveSimTime(fx, s);

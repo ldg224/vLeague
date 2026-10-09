@@ -18,7 +18,7 @@ const CAM_DT = 0.1;        // camera path sample step
 const BANNER_HOLD = 5.4;   // goal banner stays up this long (then slides away over 0.5s)
 const CARD_SHOW = 3.4;     // card caption length
 const WIPE = 0.3;          // half-length of the replay wipe
-const REPLAY_RATE = 0.7;   // replays run slower than real time
+const REPLAY_RATE = 1;     // replays run at real time (no slow motion)
 
 // Keep the ball inside this box around the camera target (metres at the widest zoom): the
 // broadcast view never loses the ball, however fast play (or the playback) moves.
@@ -134,7 +134,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
 
   // ------------------------------------------------ director
   // Special shots, each only after its moment has happened:
-  //   goal      -> close-up on the scorer celebrating, then a slow-motion replay in the stoppage
+  //   goal      -> close-up on the scorer celebrating, then a replay in the stoppage
   //   card      -> REF CAM on the referee showing the card
   //   big chance (save, woodwork, a sitter missed) -> replay in the next stoppage, if it's long enough
   buildDirector() {
@@ -157,14 +157,15 @@ export class BroadcastRenderer extends HighlightsRenderer {
       for (let i = out.length - 2; i >= 0; i--) { const a = 1 - Math.exp(-CAM_DT / tau); out[i] = [lerp(out[i + 1][0], out[i][0], a), lerp(out[i + 1][1], out[i][1], a)]; }
       return { from, pts: out };
     };
-    const replay = (e, prio, before, after, stop) => {
+    // wide = a foul: the normal broadcast camera follows the replay, instead of the goal-end camera.
+    const replay = (e, prio, before, after, stop, wide = false) => {
       if (!stop) return;
       const s0 = stop.from, avail = stop.to - s0;
       let r1 = e.t + after, r0 = e.t - before;
       if ((r1 - r0) / REPLAY_RATE > avail) r0 = r1 - avail * REPLAY_RATE;
       if (r1 - r0 < 2.5) return;
       const goalX = (e.x ?? fr.ball(e.t)[0]) > 52.5 ? 105 : 0;
-      shots.push({ kind: 'replay', prio, from: s0, to: s0 + (r1 - r0) / REPLAY_RATE, r0, goalX, e, path: path(r0 - 1, r1 + 1, t => fr.ball(t)) });
+      shots.push({ kind: 'replay', prio, from: s0, to: s0 + (r1 - r0) / REPLAY_RATE, r0, r1, before, after, stop, wide, goalX, e, path: path(r0 - 1, r1 + 1, t => fr.ball(t)) });
     };
     for (const g of this.goals) {
       const scorer = d.players.findIndex(p => p.id === g.scorer);
@@ -176,11 +177,27 @@ export class BroadcastRenderer extends HighlightsRenderer {
     }
     for (const k of this.cards) shots.push({ kind: 'refcam', prio: 2, from: Math.max(k.e.t, k.t - 0.8), to: k.t + 3.2 });
     for (const s of d.events.filter(e => e.type === 'shot' && e.outcome !== 'goal')) {
-      const big = s.outcome === 'woodwork' || (s.outcome === 'saved' && s.xg >= 0.15) || s.xg >= 0.25;
+      // Penalties always, whatever the outcome; every save; woodwork and other big chances.
+      const pen = s.subtype === 'penalty', save = s.outcome === 'saved';
+      const big = pen || save || s.outcome === 'woodwork' || s.xg >= 0.25;
       if (!big) continue;
       const stop = stopAfter(s.t);
       if (!stop || stop[0] - s.t > 30) continue;   // replayed at the next stoppage, like TV
-      replay(s, 3, 3.5, 1.3, { from: stop[0] + 0.8, to: stop[1] - 0.8 });
+      const w = { from: stop[0] + 0.8, to: stop[1] - 0.8 };
+      if (pen) replay(s, 1, 6, 2, w);   // the run-up and the kick
+      else replay(s, save ? 2 : 3, 3.5, 1.3, w);
+    }
+    // Fouls that matter: those that lead to a card or a penalty, or to a free kick within 30 m of goal. The replay waits for the
+    // referee's card to finish. (A scored penalty is covered by its goal replay, which starts with the build-up.)
+    for (const f of d.events.filter(e => e.type === 'foul')) {
+      const next = d.events.find(e => e.t > f.t && e.t < f.t + 12 && ['penalty', 'free_kick'].includes(e.type));
+      const { x: fx, y: fy } = f;
+      const card = this.cards.find(k => k.e.player === f.player && k.e.t >= f.t && k.e.t < f.t + 12);
+      const near = next && Math.hypot(Math.min(fx, 105 - fx), fy - 34) < 30;
+      if (!(card || next?.type === 'penalty' || near)) continue;
+      const stop = stopAfter(f.t);
+      if (!stop || stop[0] - f.t > 3) continue;   // the whistle that stops play
+      replay(f, 3, 3, 1.5, { from: Math.max(stop[0] + 0.8, card ? card.t + 3.4 : 0), to: stop[1] - 0.8 }, true);
     }
     // Highest priority first; skip anything that clashes with a shot already on the schedule.
     // The half-time and full-time scorelines own their moments.
@@ -188,6 +205,13 @@ export class BroadcastRenderer extends HighlightsRenderer {
     if (P.length > 1) placed.push({ kind: 'panel', from: P[0].end_t - 4.5, to: P[0].end_t + 2 });
     for (const s of shots.sort((a, b) => a.prio - b.prio || a.from - b.from)) {
       if (s.to - s.from < 1.5) continue;
+      // Fill the stoppage: if a replay clashes with one already placed, move it to just after that one, shortening its lead-in
+      // to fit, as long as it still ends inside its own stoppage.
+      for (let clash; s.kind === 'replay' && (clash = placed.find(p => s.from < p.to + 0.5 && s.to > p.from - 0.5)) && clash.to + 0.5 < s.stop.to;) {
+        const from = clash.to + 0.5, r0 = Math.max(s.r0, s.r1 - (s.stop.to - from) * REPLAY_RATE);
+        if (s.r1 - r0 < 2.5) break;
+        Object.assign(s, { from, to: from + (s.r1 - r0) / REPLAY_RATE, r0, path: path(r0 - 1, s.r1 + 1, t => fr.ball(t)) });
+      }
       if (placed.some(p => s.from < p.to + 0.5 && s.to > p.from - 0.5)) continue;
       placed.push(s);
     }
@@ -213,6 +237,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
     if (sh?.kind === 'replay') {
       ts = sh.r0 + (t - sh.from) * REPLAY_RATE;
       const [bx, by] = this.pathAt(sh.path, ts), gs = sh.goalX === 105 ? 1 : -1;
+      if (sh.wide) { const [x, y, dist] = this.camAt(ts); cam = makeCam(x, y, dist, 28, 40); } else
       cam = makeCamAt([sh.goalX + gs * 13, clamp(lerp(34, by, 0.35), 24, 44), 7.5], [lerp(bx, sh.goalX, 0.3), lerp(by, 34, 0.3), 0.5], 48);
     } else if (sh?.kind === 'celebrate') {
       const [x, y] = this.pathAt(sh.path, t);
@@ -341,7 +366,9 @@ export class BroadcastRenderer extends HighlightsRenderer {
     this.pill(W - 290, 52, 220, 56, 'rgba(6,26,56,0.88)', 12);
     c.fillStyle = LIME; c.beginPath(); c.arc(W - 258, 80, 9, 0, Math.PI * 2); c.fill();
     this.text('REPLAY', W - 236, 91, { size: 30, weight: 900, spacing: 4 });
-    const e = sh.e, what = e.type === 'goal' ? `GOAL · ${lastName(this.names[e.scorer]).toUpperCase()}`
+    const e = sh.e, what = e.type === 'foul' ? `FOUL · ${lastName(this.names[e.player]).toUpperCase()}`
+      : e.subtype === 'penalty' ? `PENALTY · ${lastName(this.names[e.player]).toUpperCase()}`
+      : e.type === 'goal' ? `GOAL · ${lastName(this.names[e.scorer]).toUpperCase()}`
       : e.outcome === 'woodwork' ? `OFF THE WOODWORK · ${lastName(this.names[e.player]).toUpperCase()}`
       : e.outcome === 'saved' ? `GREAT SAVE · ${this.keeperName(e)}` : `SO CLOSE · ${lastName(this.names[e.player]).toUpperCase()}`;
     c.font = `700 26px Oswald, Figtree, system-ui, sans-serif`;
