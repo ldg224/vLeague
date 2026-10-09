@@ -39,7 +39,7 @@ function side(s, colour, cls, k) {
   return `<div class="pp-half ${cls}" style="--b:${esc(colour)};--t:${esc(onColour(colour))}">${bands.filter(Boolean).map(b => `<div class="pp-band">${b.sort((p, q) => p.across - q.across).map(({ x }) => {
     const r = s.rating?.(x.id), n = k.shirt?.(x.id), ev = s.extras?.(x.id) || {}, pos = x.slot || x.position || '';
     // On the marker: rating pill top right, captain C top left, cards on the left, assists bottom left, goals bottom right.
-    const pill = r ? `<span class="rating pp-rt ${r.cls}">${esc(r.value)}${r.value === 'N/A' ? '' : STAR}</span>` : '';
+    const pill = r ? `<span class="rating pp-rt ${r.cls}">${esc(r.value)}${r.motm ? STAR : ''}</span>` : '';
     return `<div class="pp-p${r?.motm ? ' motm' : ''}" title="${esc(x.name)}"><div class="pp-b${pos.length > 2 ? ' pp-s' : ''}">${esc(pos)}${pill}${ev.cards ? `<span class="pp-cards">${ev.cards}</span>` : ''}${ev.assists ? `<span class="pp-ast" title="Assists">${ev.assists}</span>` : ''}${ev.goals ? `<span class="pp-gl" title="Goals">${ev.goals}</span>` : ''}${s.captain === x.id ? '<i class="pp-c" title="Captain">C</i>' : ''}</div><div class="pp-n">${n == null || n === '' ? '' : `<b class="pp-no">${esc(n)}</b> `}${esc(surname(x.name))}</div></div>`;
   }).join('')}</div>`).join('')}</div>`;
 }

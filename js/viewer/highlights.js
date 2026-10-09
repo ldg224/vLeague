@@ -24,7 +24,7 @@ const seg01 = (t, a, b) => clamp((t - a) / (b - a), 0, 1);
 function loadImg(src) {
   return new Promise(res => { if (!src) return res(null); const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
 }
-const shirt = id => String(id).slice(-2);
+const shirt = id => String(Number(String(id).slice(-2)) || String(id).slice(-2));   // a test match's made-up ids end in the shirt number
 // A colour moved toward another by t (0 = a, 1 = b), as a hex string.
 const mixHex = (a, b, t) => { const n = s => parseInt(String(s).slice(1), 16), x = n(a), y = n(b), f = (p, q) => Math.round(p + (q - p) * t); return '#' + [16, 8, 0].map(sh => f(x >> sh & 255, y >> sh & 255).toString(16).padStart(2, '0')).join(''); };
 const LEAGUE_ASPECT = 116 / 158;   // the vLeague crest's width over its height (assets/brand/crest.svg viewBox)
@@ -921,6 +921,12 @@ export class HighlightsRenderer {
     this.line(cam, [[gx, GOAL_Y1, 0], [gx, GOAL_Y1, GOAL_H], [gx, GOAL_Y2, GOAL_H], [gx, GOAL_Y2, 0]], 5, '#ffffff');
   }
 
+  // The shirt number on a player's disc: the league's real number, or for a test match's made-up players the last two digits of the id.
+  shirtNo(id) {
+    this._no ||= new Map((this.season?.players || []).map(p => [String(p.id), p.number]));
+    const n = this._no.get(String(id));
+    return n == null || n === '' ? shirt(id) : String(n);
+  }
   drawPlayer(cam, it, holder) {
     const c = this.c, p = cam.p(it.x, it.y); if (!p) return;
     const side = it.i < this.nHome ? 0 : 1;
@@ -939,7 +945,7 @@ export class HighlightsRenderer {
     if (holder) { c.lineWidth = 3; c.strokeStyle = '#fff'; c.beginPath(); c.ellipse(p[0], p[1], r * 1.5, r * 0.6, 0, 0, Math.PI * 2); c.stroke(); }
     // shirt number
     const pl = this.d.players[it.i];
-    this.text(shirt(pl.id), bx, top + bh * 0.62, { size: Math.max(9, bw * 0.55), weight: 900, align: 'center', colour: onColour(col), base: 'middle' });
+    this.text(this.shirtNo(pl.id), bx, top + bh * 0.62, { size: Math.max(9, bw * 0.55), weight: 900, align: 'center', colour: onColour(col), base: 'middle' });
     if (holder) {
       const name = lastName(pl.name).toUpperCase(), fs = 24;
       c.font = `900 ${fs}px ${FONT}`; const w = c.measureText(name).width + 28;

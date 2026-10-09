@@ -62,7 +62,7 @@ async function run() {
   const pace = () => ((duration() || 5400) / ((season.live_minutes || 45) * 60));   // match seconds per real second at the broadcast's pace
 
   // The shirt (singlet) number comes from the player list; a test match's made-up players have none.
-  const shirt = id => (season.players || []).find(p => p.id === id)?.number;
+  const shirt = id => (season.players || []).find(p => String(p.id) === String(id))?.number ?? (fx.test ? String(Number(String(id).slice(-2))) : undefined);   // a test match's ids end in the shirt number
   const shirtHtml = id => { const n = shirt(id); return n == null || n === '' ? '' : `<span class="sn" title="Shirt number">${esc(n)}</span>`; };
 
   async function loadSheets() { try { const r = await (await db()).from('week_sheets').select('week, club, formation, captain, lineup').eq('week', fx.week); sheets = r.data || []; } catch { /* squads are used */ } }

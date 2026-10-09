@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.48.1 (2026-10-09)
+
+Headlines: shirt numbers show on every line-up marker, and only the man of the match gets the star (S-21)
+
+No database change. If anything goes wrong, `v0.48.0` is the version to go back to (`docs/RELEASING.md`).
+
+- **Fixed, match line-ups:** test matches (made-up players) showed no shirt number next to the name; they now show theirs (1 to 16). On the player circles in the broadcast and highlights, real matches now show each player's real shirt number instead of the last two digits of their id.
+- **Changed, match line-ups:** the star on the rating pill, and the blue, are for the man of the match only. Everyone else just has their rating number, in the usual green, amber or red.
+
 ## 0.48.0 (2026-10-09)
 
 Headlines: new player markers on the match line-up pitch: position in the club colour, rating, goals and assists in set places (S-21)
