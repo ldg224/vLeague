@@ -845,8 +845,10 @@ class Match:
                     else:
                         b.vz = -abs(b.vz) * 0.5
                         b.vx = -b.vx * 0.4
+                    shot = self.pending_shot
+                    shooter = next((q for q in self.players if shot and q.id == shot.get('player')), None) or b.last_touch
                     self._resolve_shot('woodwork')
-                    self.ev('woodwork', team=None, x=b.x, y=b.y, part='post' if near_post else 'bar')
+                    self.ev('woodwork', shooter, x=b.x, y=b.y, part='post' if near_post else 'bar')
                     b.flight = {'kind': 'deflection', 'kicker': b.last_touch, 'receiver': None, 'event': None, 't': self.t}
                     return
                 if GOAL_Y1 < yc < GOAL_Y2 and zc < GOAL_HEIGHT:

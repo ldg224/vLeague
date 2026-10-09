@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.49.1 (2026-10-09)
+
+Headlines: the timeline names who hit the bar, and second yellows show a yellow and a red card (B-11, B-02)
+
+No database change. If anything goes wrong, `v0.49.0` is the version to go back to (`docs/RELEASING.md`).
+
+- **Fixed, timeline (B-11):** when a player hit the post or the bar the timeline said "hits the bar" with no name and "To be decided" for the team, because the match engine saved the event with no player or team. It now saves the shooter, and matches already played are read the same way (the shot just before). It now reads, for example, "Smith hits the bar, Turtle".
+- **Changed, timeline and line-ups (B-02):** a second yellow shows a yellow and a red card together, and reads "Second yellow, sent off". I checked everywhere cards are shown: the timeline, scrub bar, highlights, red-card counts and suspensions already treated a second yellow as a red.
+
 ## 0.49.0 (2026-10-09)
 
 Headlines: the office can lock one auto-pick rule for the whole draft, which managers can't change

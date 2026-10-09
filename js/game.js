@@ -209,11 +209,13 @@ async function run() {
     post: svg('Hit the woodwork', '<path d="M5 21V4h14v17" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>'),
     shot: svg('Shot on target', '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>'),
   };
-  const icon = e => ({ goal: ICONS.ball, card: e.card === 'yellow' ? ICONS.yellow : ICONS.red, woodwork: ICONS.post, shot: ICONS.shot, penalty: ICONS.ball }[e.type] || '•');
+  const icon = e => ({ goal: ICONS.ball, card: e.card === 'yellow' ? ICONS.yellow : e.card === 'second_yellow' ? ICONS.yellow + ICONS.red : ICONS.red, woodwork: ICONS.post, shot: ICONS.shot, penalty: ICONS.ball }[e.type] || '•');
   function eventLi(e) {
+    // Matches played before 0.49.1 saved a hit post or bar with no player or team: take them from the shot that hit it.
+    if (e.type === 'woodwork' && !e.player) { const sh = [...data.events].reverse().find(x => x.type === 'shot' && x.t <= e.t && e.t - x.t < 4); if (sh) e = { ...e, player: sh.player, team: sh.team }; }
     const nm = i => (i ? data.byId[i]?.name || '' : ''), who = nm(e.player || e.scorer);
     const text = e.type === 'goal' ? `Goal! ${esc(nm(e.scorer))}${e.own_goal ? ' (own goal)' : ''}${e.assist ? ` ${ICONS.assist}${esc(nm(e.assist))}` : ''} <b>${e.score?.[0] ?? ''}–${e.score?.[1] ?? ''}</b>`
-      : e.type === 'card' ? `${e.card === 'yellow' ? 'Yellow card' : e.card === 'red' ? 'Red card' : 'Second yellow'}, ${esc(who)}`
+      : e.type === 'card' ? `${e.card === 'yellow' ? 'Yellow card' : e.card === 'red' ? 'Red card' : 'Second yellow, sent off'}, ${esc(who)}`
       : e.type === 'woodwork' ? `${esc(who)} hits the ${esc(e.part || 'frame')}` : e.type === 'penalty' ? `Penalty, ${esc(who)}` : `Shot on target, ${esc(who)} <small>xG ${(e.xg || 0).toFixed(2)}</small>`;
     return `<li class="tl-row ${e.team === fx.home ? 'h' : 'a'}" data-t="${e.t}"${live() ? '' : ' title="Watch this moment"'}><span class="min">${esc(e.minute)}'</span><span class="ic">${icon(e)}</span><span class="tx">${text} <small>${esc(nameOf(teamOf(season, e.team)))}</small></span></li>`;
   }
@@ -244,7 +246,7 @@ async function run() {
     const liveR = live() ? ratingsAt(data, t) : null;   // a live match: ratings as they stand now, from the events so far
     const badge = (icon, n) => (n ? icon + (n > 1 ? `<i>${n}</i>` : '') : '');
     const goals = id => ev.filter(e => e.type === 'goal' && e.scorer === id && !e.own_goal).length, assists = id => ev.filter(e => e.type === 'goal' && e.assist === id).length;
-    const cards = id => ev.filter(e => e.type === 'card' && e.player === id).map(e => (e.card === 'yellow' ? ICONS.yellow : ICONS.red)).join('');
+    const cards = id => ev.filter(e => e.type === 'card' && e.player === id).map(e => (e.card === 'yellow' ? ICONS.yellow : e.card === 'second_yellow' ? ICONS.yellow + ICONS.red : ICONS.red)).join('');
     const side = c => {
       const team = data.teams[c === fx.home ? 'home' : 'away'];
       return {
