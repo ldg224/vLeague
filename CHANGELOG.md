@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.60.2 (2026-10-10)
+
+Headlines: sharp names and numbers on shirts
+
+No database change. If anything goes wrong, `v0.60.1` is the version to go back to (`docs/RELEASING.md`).
+
+- **Fixed, match views:** names on the back of shirts were blurry and blocky up close (they were baked into a small picture and stretched). Names and numbers are now drawn as sharp text at full size, and long names shrink to fit.
+- **Fixed:** the number on the front, and on teams without a kit, sometimes came out in black instead of the kit's print colour. Front and back now use the same print colour.
+
 ## 0.60.1 (2026-10-10)
 
 Headlines: names on the back of the shirt, and kit uploads go live at once (S-23)

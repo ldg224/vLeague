@@ -977,18 +977,21 @@ export class HighlightsRenderer {
     const bx = p[0], bh = p[1] - top, bw = Math.max(12, bh * 0.42);
     const pl = this.d.players[it.i], no = this.shirtNo(pl.id), back = this.facingAway(cam, it, p);
     const g = c.createLinearGradient(bx - bw, 0, bx + bw, 0); g.addColorStop(0, col); g.addColorStop(1, shade(col, 0.55));
-    const sprite = kit?.sprite && (back && kit.back ? kit.back(lastName(pl.name).toUpperCase(), no) : kit.sprite);
-    if (sprite) {   // the club's own kit (S-23), clipped to the same body shape; from behind, the player's own name and number
+    const sprite = back ? kit?.back : kit?.sprite;
+    if (sprite) {   // the club's own kit (S-23), clipped to the same body shape, front or back
       c.save(); c.beginPath(); c.roundRect(bx - bw / 2, top + bh * 0.28, bw, bh * 0.72, bw / 2); c.clip();
       c.drawImage(sprite, bx - bw / 2, top + bh * 0.28, bw, bh * 0.72); c.restore();
     } else { c.fillStyle = g; c.beginPath(); c.roundRect(bx - bw / 2, top + bh * 0.28, bw, bh * 0.72, bw / 2); c.fill(); }
     c.fillStyle = '#f1c9a5'; c.beginPath(); c.arc(bx, top + bh * 0.16, bw * 0.34, 0, Math.PI * 2); c.fill();
     if (holder) { c.lineWidth = 3; c.strokeStyle = '#fff'; c.beginPath(); c.ellipse(p[0], p[1], r * 1.5, r * 0.6, 0, 0, Math.PI * 2); c.stroke(); }
-    // shirt number (the kit's back print already has it); without a kit, the name goes above it on the back
-    if (!(back && kit?.back)) {
-      if (back) this.text(lastName(pl.name).toUpperCase(), bx, top + bh * 0.43, { size: Math.max(6, bw * 0.2), weight: 800, align: 'center', colour: onColour(col), base: 'middle' });
-      this.text(no, bx, top + bh * 0.62, { size: Math.max(9, bw * 0.55), weight: 900, align: 'center', colour: onColour(col), base: 'middle' });
-    }
+    // The print, drawn at full size so it stays sharp: the number on the front; on the back the surname (shrunk to fit) over a big number.
+    const ink = kit?.ink || onColour(col);
+    if (back) {
+      const name = lastName(pl.name).toUpperCase();
+      c.font = `800 100px ${FONT}`; const fit = Math.min(bw * 0.17, (bw * 0.8 / c.measureText(name).width) * 100);
+      if (fit >= 5) this.text(name, bx, top + bh * 0.42, { size: fit, weight: 800, align: 'center', colour: ink, base: 'middle' });
+      this.text(no, bx, top + bh * 0.66, { size: Math.max(9, bw * 0.62), weight: 900, align: 'center', colour: ink, base: 'middle' });
+    } else this.text(no, bx, top + bh * 0.62, { size: Math.max(9, bw * 0.55), weight: 900, align: 'center', colour: ink, base: 'middle' });
     if (holder) {
       const name = lastName(pl.name).toUpperCase(), fs = 24;
       c.font = `900 ${fs}px ${FONT}`; const w = c.measureText(name).width + 28;
