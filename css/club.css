@@ -132,3 +132,6 @@
 .kitpick button b { font-weight: 700; }
 .kitpick button[aria-checked="true"] { border-color: var(--club, var(--blue-500)); background: color-mix(in srgb, var(--club, var(--blue-500)) 14%, var(--surface)); }
 .kitpick button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+/* The club header's manager and stadium: each stays whole when the line wraps (no line starting with a dot). */
+.cl-meta { white-space: nowrap; }

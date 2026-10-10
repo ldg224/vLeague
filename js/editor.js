@@ -35,7 +35,8 @@ function explain(error) {
 
 const when = t => (t ? new Date(t).toLocaleString('en-AU', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '');
 const crest = (path, code, cls = '') => (path
-  ? `<img class="${cls}" src="${esc(crestUrl(path))}" alt="">`
+  // An old request's crest may have been moved since (the club's final code renames its folder): fall back to the code badge.
+  ? `<img class="${cls}" src="${esc(crestUrl(path))}" alt="" onerror="const s=document.createElement('span');s.className='no-crest ${cls}';s.textContent=${esc(JSON.stringify(code || '?'))};this.replaceWith(s)">`
   : `<span class="no-crest ${cls}">${esc(code || '?')}</span>`);
 
 async function load() {

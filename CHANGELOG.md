@@ -3,6 +3,19 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.61.5 (2026-10-10)
+
+Headlines: DeepClean 1, signed-in pages (B-17)
+
+No database change. If anything goes wrong, `v0.61.4` is the version to go back to (`docs/RELEASING.md`).
+
+- **Fixed, Editor on phones:** the tab row (Clubs, Players, Fixtures, News, Draft, Test) made the whole page wider than the screen, so phones showed the Editor zoomed out. The tabs now scroll sideways and the page fits.
+- **Fixed, Home → Your season:** the form (and the last match) counted test matches, so a club with no real games showed "L W". Test matches are left out, as they already were from the table.
+- **Fixed, Matches:** a club that hasn't played said "No games yet" twice. Once now.
+- **Fixed, My club:** on phones the line under the club's name could start with a dot ("· Luke Grogan · FC Turtle Stadium"). The motto has its own line, and the manager and stadium never split.
+- **Fixed, Editor → Clubs:** six old set-up requests showed broken crest pictures (the crest moved when the club got its final code). They now show the club code instead.
+- **Fixed, League:** the page had no heading for screen readers.
+
 ## 0.61.4 (2026-10-10)
 
 Headlines: DeepClean 1, first pass (B-17): signed-out pages and the code

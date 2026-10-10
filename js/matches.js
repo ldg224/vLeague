@@ -26,7 +26,7 @@ if (ctx) {
   const loadSheets = async () => { try { const r = await (await db()).from('week_sheets').select('week, club, lineup').range(0, 999); sheets = r.data || []; } catch { /* the model falls back to squads */ } };
 
   const weeksList = () => [...new Set(season.fixtures.map(f => f.week))].filter(w => w != null).sort((a, b) => a - b);
-  const chips = form => `<span class="chips">${form.map(o => `<abbr class="res-${o}" title="${{ W: 'Won', D: 'Drew', L: 'Lost' }[o]}">${o}</abbr>`).join('') || '<i class="mc-none">No games yet</i>'}</span>`;
+  const chips = form => `<span class="chips">${form.map(o => `<abbr class="res-${o}" title="${{ W: 'Won', D: 'Drew', L: 'Lost' }[o]}">${o}</abbr>`).join('')}</span>`;   // no games: the line above already says so
   const rec = r => `${r.w}-${r.d}-${r.l}`;
 
   function side(code, fx, now, cls) {

@@ -80,7 +80,7 @@ if (ctx) {
       <header class="club-head">
         <img class="club-crest" src="${esc(crest)}" alt="" onerror="this.remove()">
         <div class="club-name"><h1>${esc(club.name)}</h1>
-          <p>${[club.motto && `<i>${esc(club.motto)}</i>`, manager && esc(manager), club.stadium && esc(club.stadium)].filter(Boolean).join(' · ')}</p></div>
+          <p>${club.motto ? `<i>${esc(club.motto)}</i><br>` : ''}${[manager, club.stadium].filter(Boolean).map(x => `<span class="cl-meta">${esc(x)}</span>`).join(' · ')}</p></div>
         <a class="edit-club" href="kits.html">Kits</a>
         <a class="edit-club" href="setup.html?edit">Edit club</a>
       </header>

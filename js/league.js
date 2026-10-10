@@ -92,7 +92,7 @@ if (ctx) {
     hidden = new Set(season.fixtures.filter(f => spoilerHidden(f, season)).map(f => f.id));
     seen = hidden.size ? { ...season, fixtures: season.fixtures.map(f => (hidden.has(f.id) ? { ...f, result: null } : f)) } : season;
     const scroll = main.querySelector('.weektabs')?.scrollLeft;
-    const painted = paint(main, `<div class="league">
+    const painted = paint(main, `<div class="league"><h1 class="sr-only" tabindex="-1">League</h1>
       <section class="sect table-sect"><div class="sect-head"><h2>Table</h2></div>${tableHtml(now)}</section>
       <section class="sect fixtures-sect"><div class="sect-head"><h2>Matches</h2></div>${fixturesHtml(now)}</section>
       <div class="leaders-sect">${leadersHtml(now)}</div>

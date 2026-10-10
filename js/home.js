@@ -138,7 +138,7 @@ function season(all, code, now) {
   const s = seenSeason(all, now), hidden = hiddenIds(all, now).length;
   const rows = ladder(s, now), r = rows.find(x => x.team.code === code);
   if (!r) return '';
-  const mineDone = finished(s, now).filter(f => f.home === code || f.away === code);
+  const mineDone = finished(s, now).filter(f => !f.test && (f.home === code || f.away === code));   // test matches aren't part of the season
   const form = mineDone.filter(f => !f.stage).slice(-5).map(f => outcome(f, code));
   const last = mineDone[mineDone.length - 1];
   let lastHtml = '';
