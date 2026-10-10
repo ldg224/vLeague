@@ -1,0 +1,3 @@
+# Python bytecode caches (made by running the engine and tests; never needed in the repo)
+__pycache__/
+*.pyc

@@ -1,4 +1,4 @@
-﻿# vLeague
+# vLeague
 
 Virtual football league app. Managers sign in and run their club; guests get a matchday dashboard; the league office runs everything from the Editor.
 
@@ -45,7 +45,7 @@ One version per push to the live site. Roll back by reverting forward (new patch
 - Database changes are new files in `supabase/migrations/`; never edit one that has already been applied. Re-run `supabase/tests/rls_check.py` after security-rule changes.
 - After changing any draft database function, run `python supabase/tests/draft/run.py` (rolled back, safe on the live project).
 - Match the existing code style; keep it dependency-free and buildless.
-- `__pycache__` files are currently tracked (there is no `.gitignore`). Don't add more, and ask before cleaning them up.
+- `.gitignore` keeps Python caches (`__pycache__/`, `*.pyc`) out of the repo (untracked 10 Oct 2026, B-17).
 
 ## Notes
 - This folder is its own git repo nested inside `C:\Claude` (the claude-workspace repo). Run git here with `git -C C:\Claude\Projects\vLeague ...`, and commit vLeague changes to the vLeague repo, not the workspace repo.
