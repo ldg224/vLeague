@@ -3,6 +3,17 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.61.4 (2026-10-10)
+
+Headlines: DeepClean 1, first pass (B-17): signed-out pages and the code
+
+No database change. If anything goes wrong, `v0.61.3` is the version to go back to (`docs/RELEASING.md`).
+
+- **Fixed, guest dashboard on phones:** the match list cut long names off ("Cranbourne U…", "Donald Trump …") and lined home names up unevenly. Phones now show each club's short name (Cranbourne, DT FC, Rangers…). The "v" between the teams sits level with the names (it sat low).
+- **Fixed, guest dashboard on phones:** the big next-match card split a club's name mid-word ("CRANBOURN / E UNITED FC"). Names now wrap between words.
+- **Fixed, Game centre:** the page had no heading for screen readers; it now has one ("FC Turtle v SKS FC").
+- **Removed:** code left over from removed features: an unused name re-roll function and nine unused style rules (old draft columns and mode picker, a recent-picks fold, an editor deadline row, a line-up events row, two setup bits and a login hint).
+
 ## 0.61.3 (2026-10-10)
 
 Headlines: last check that the old s3 site is retired (S-02)

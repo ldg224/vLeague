@@ -207,11 +207,3 @@ export function generate(count, existing = [], { mean = 5.5, spread = 1.3, names
   }
   return out;
 }
-
-// A replacement for one previewed player: a new name and new ratings, same position.
-export function reroll(player, taken, opts = {}) {
-  const n = namer(taken);
-  const name = n.next(opts.names);
-  if (!name) throw new Error('Ran out of unused names.');
-  return { ...player, name, ...rate(player.position, opts.mean, opts.spread) };
-}

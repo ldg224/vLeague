@@ -140,7 +140,7 @@ async function run() {
     const score = sc ? `<strong class="${s === 'live' ? 'is-live' : ''}">${sc.home}<i>–</i>${sc.away}</strong>` : `<strong class="ko">${k ? esc(fmtTime(k)) : 'TBA'}</strong>`;
     const goals = side => (data ? eventsTo(horizon()).filter(e => e.type === 'goal' && e.team === side) : (fx.result?.goals || []).filter(g => g.team === side && (s === 'ft' || g.t <= horizon())))
       .map(g => `<li>${esc(data ? data.byId[g.scorer]?.name || '' : g.scorer_name || '')}${g.own_goal ? ' (og)' : ''} <small>${esc(g.minute)}'</small></li>`).join('');
-    return `<section class="gc-head">${fx.test ? '<div class="gc-test" role="note"><b>TEST MATCH</b><span>Made-up players. Not part of the season.</span></div>' : ''}${scoreboard({ fx, season, look: lookInfo(season, fx), h: fullNameOf(h), a: fullNameOf(a), hColour: kitColour(fx.home), aColour: kitColour(fx.away),
+    return `<section class="gc-head"><h1 class="sr-only" tabindex="-1">${esc(fullNameOf(h))} v ${esc(fullNameOf(a))}</h1>${fx.test ? '<div class="gc-test" role="note"><b>TEST MATCH</b><span>Made-up players. Not part of the season.</span></div>' : ''}${scoreboard({ fx, season, look: lookInfo(season, fx), h: fullNameOf(h), a: fullNameOf(a), hColour: kitColour(fx.home), aColour: kitColour(fx.away),
       crests: [crest(h, 64), crest(a, 64)], score, state, goals: [goals(fx.home), goals(fx.away)],
       meta: `${k ? `${esc(day(k, now))}, ${esc(fmtTime(k))}` : ''}${sd ? ` · ${esc(sd)}` : ''}` })}</section>`;
   }

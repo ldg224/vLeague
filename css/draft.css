@@ -24,7 +24,6 @@
 .dr-tabs button[aria-selected="true"] { background: var(--club); color: var(--on-club); border-color: var(--club); }
 .dr-msg { min-height: 1.2em; margin: 0 0 8px; color: var(--muted); font-size: .88rem; }
 .draft h2 { font-size: 1.05rem; margin: 0 0 8px; }
-.dr-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 18px; }
 .dr-recent { list-style: none; margin: 0; padding: 0; font-size: .9rem; }
 .dr-recent li { padding: 8px 10px; border-bottom: 1px solid var(--line); }
 .dr-recent li.me, .dr-team.me { background: color-mix(in srgb, var(--club) 12%, transparent); }
@@ -44,14 +43,12 @@
 .dr-b.pick { background: var(--club); color: var(--on-club); border-color: var(--club); }
 .dr-b.big { width: 100%; padding: 12px; font-size: 1rem; margin-bottom: 10px; }
 .dr-auto { display: grid; gap: 10px; max-width: 520px; }
-.dr-mode { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--card); }
-.dr-mode small, .dr-min small { color: var(--muted); }
+.dr-min small { color: var(--muted); }
 .dr-min input { width: 90px; }
 .dr-team { border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 8px; overflow: hidden; }
 .dr-team summary { display: flex; justify-content: space-between; gap: 10px; padding: 12px 14px; cursor: pointer; }
 .dr-team summary span { color: var(--muted); }
 @media (max-width: 640px) {
-  .dr-cols { grid-template-columns: 1fr; }
   .dr-p { grid-template-columns: 38px minmax(0, 1fr) auto; }
   .dr-p .rts { display: none; }
   .dr-status { padding: 14px 16px; }
@@ -59,8 +56,6 @@
 }
 
 /* Board table and multi-level sorting (0.24) */
-.dr-recent-wrap { margin-bottom: 16px; }
-.dr-recent-wrap summary { cursor: pointer; font-weight: 700; margin-bottom: 8px; }
 .dr-sortbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px; }
 .dr-sortbar > span:first-child { font-weight: 700; font-size: .85rem; color: var(--muted); }
 .dr-chip { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; background: var(--card); overflow: hidden; }

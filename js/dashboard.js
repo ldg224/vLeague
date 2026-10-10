@@ -184,12 +184,14 @@ function row(fx, now) {
     postponed: () => '<span class="ft">Postponed</span>',
     tba: () => '<span class="ft">TBA</span>',
   }[st]();
+  // The club's short name on phones (when it has one), so rows don't end in "Cranbourne U…".
+  const nm = t => `<span class="nm"><span class="full">${esc(t.name)}</span>${t.short_name && t.short_name !== t.name ? `<span class="short">${esc(t.short_name)}</span>` : ''}</span>`;
   const mid = sc ? `<b>${sc.home}</b><b>${sc.away}</b>` : '<span class="v">v</span>';
   const win = side => (st === 'ft' && sc && (side === 'home' ? sc.home > sc.away : sc.away > sc.home) ? ' won' : '');
   const inner = `<span class="when">${left}</span>
-    <span class="team h${win('home')}"><span class="nm">${esc(h.name)}</span>${crest(h, 24)}</span>
+    <span class="team h${win('home')}">${nm(h)}${crest(h, 24)}</span>
     <span class="res${sc ? '' : ' none'}${st === 'live' ? ' is-live' : ''}">${mid}</span>
-    <span class="team a${win('away')}">${crest(a, 24)}<span class="nm">${esc(a.name)}</span></span>`;
+    <span class="team a${win('away')}">${crest(a, 24)}${nm(a)}</span>`;
   const label = `${h.name} ${sc ? `${sc.home}, ${a.name} ${sc.away}` : `against ${a.name}`}`;
   return (st === 'live' || st === 'ft')
     ? `<a class="fx is-${st}" href="${esc(matchUrl(fx))}" aria-label="${esc(label)}, ${st === 'live' ? 'live now' : 'full time'}">${inner}</a>`

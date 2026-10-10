@@ -89,10 +89,8 @@ body:not(.su-edit) .su-step-head { display: none; }
 .su-phone-crest { width: 72px; height: 72px; object-fit: contain; filter: drop-shadow(0 10px 26px color-mix(in srgb, var(--club) 40%, transparent)); }
 .su-phone-name { font: 700 1.35rem/1 var(--font-display); text-transform: uppercase; overflow-wrap: anywhere; }
 .su-phone-chip { margin-top: 4px; padding: 4px 10px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--club) 50%, transparent); color: var(--club-text); font-size: .75rem; font-weight: 600; }
-.su-phone-link { color: var(--club-text); font-size: .82rem; font-weight: 700; }
 .su-nocrest { display: grid; place-items: center; border-radius: 50%; background: var(--surface-raised); color: var(--muted); font: 700 1rem var(--font-display); }
 
-.su-chip { display: inline-block; width: 16px; height: 16px; border-radius: 5px; border: 1px solid rgba(var(--ink),.25); vertical-align: -3px; }
 
 /* Crest */
 .su-drop {

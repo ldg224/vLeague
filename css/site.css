@@ -158,7 +158,6 @@ a { color: var(--brand); }
 .quiet.back { justify-self: center; color: var(--muted); }
 .login-title { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 1.5rem; letter-spacing: .03em; text-transform: uppercase; text-align: center; }
 .login-lead { margin: 0 0 4px; color: var(--muted); font-size: .95rem; text-align: center; text-wrap: balance; overflow-wrap: anywhere; }
-.login-hint { margin: -4px 0 2px; color: var(--faint); font-size: .82rem; }
 .login-state { display: grid; gap: 14px; }
 .login-state[hidden] { display: none; }
 .login-state .btn { text-decoration: none; }
