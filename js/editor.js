@@ -209,8 +209,6 @@ const FIELDS = [
   { key: 'stadium', label: 'Stadium', type: 'text', max: 40, optional: true, show: c => (c.stadium ? esc(c.stadium) : dash) },
   { key: 'motto', label: 'Motto', type: 'text', max: 80, optional: true, show: c => (c.motto ? esc(c.motto) : dash) },
   { key: 'crest_path', label: 'Crest', type: 'crest', show: crestPic },
-  // S-04: shown on the club's team page. (Trophies come from Editor -> History.)
-  { key: 'history', label: 'History', type: 'longtext', max: 4000, optional: true, show: c => (c.history ? `<span class="ed-long">${esc(c.history.length > 160 ? `${c.history.slice(0, 160)}…` : c.history)}</span>` : dash) },
   { key: 'status', label: 'Status', type: 'status', show: c => esc(STATUS[c.status] || c.status) },
 ];
 
@@ -227,8 +225,6 @@ function openEditor(host, spec) {
       + (optional ? `<label class="ed-none-opt"><input type="checkbox" name="none"${set ? '' : ' checked'}> None</label>` : '');
   } else if (type === 'crest') {
     input = '<input type="file" name="v" accept="image/*" required aria-label="Crest picture"><img class="ed-crest-pic ed-preview-pic" alt="" hidden>';
-  } else if (type === 'longtext') {
-    input = `<textarea name="v" rows="8" ${max ? `maxlength="${max}"` : ''} aria-label="${esc(spec.label)}" class="ed-textarea">${esc(value)}</textarea>`;
   } else if (type === 'status') {
     input = `<select name="v" aria-label="Status">${Object.entries(STATUS).map(([k, l]) => `<option value="${k}"${k === value ? ' selected' : ''}>${l}</option>`).join('')}</select>`;
   } else {
@@ -257,8 +253,7 @@ function startClubEdit(btn) {
   openEditor(host, {
     kind: 'club', field: key, type: f.type, max: f.max, optional: f.optional, label: f.label,
     value: c[key] || '',
-    hint: key === 'code' ? 'Changes everywhere (fixtures, players, line-ups). Not possible once the club has results.'
-      : key === 'history' ? 'Shown on the team page. Blank lines start a new paragraph; **bold** and *italic* work.' : '',
+    hint: key === 'code' ? 'Changes everywhere (fixtures, players, line-ups). Not possible once the club has results.' : '',
   });
 }
 
@@ -297,7 +292,6 @@ async function clubPatch(c, key, form, submitter) {
     return { [key]: hex };
   }
   if (f.type === 'status') return { status: v.value };
-  if (f.type === 'longtext') { const t = String(v.value || '').replace(/\r/g, '').trim(); return { [key]: t || null }; }
   if (f.type === 'crest') {
     const { prepareCrest, uploadCrest } = await import('./crest.js');
     const { blob } = await prepareCrest(v.files[0]);

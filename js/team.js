@@ -2,12 +2,12 @@
 // The top is a band of the club's own home-kit fabric with the crest on its edge; the name, motto and last five results sit
 // below it on the page, so they read the same whatever the club's colours. The squad hangs in a dressing room: one shirt per
 // player in the club's home kit with their number on it. Then the trophy cabinet (from Editor -> History, history-data.js),
-// the kits, squad value against the weekly cap, club details, and the history text from Editor -> Clubs (clubs.history).
+// the kits, squad value against the weekly cap and club details. A club's history is its trophy cabinet (B-19).
 import { chrome, esc, clubs, safeColour } from './member.js';
 import { currentUser, myProfile } from './auth.js';
 import { paintClub } from './shell.js';
 import { loadSeason, finished, matchUrl } from './dashboard-data.js';
-import { crest, teamOf, useClubs, markdown } from './places.js';
+import { crest, teamOf, useClubs } from './places.js';
 import { prefs, spoilerHidden } from './prefs.js';
 import { clubSummary } from './match-model.js';
 import { loadKits } from './kits-data.js';
@@ -93,24 +93,30 @@ function render(club, team, season, kits, won) {
       ${capHtml(squad)}
       ${factsHtml(club)}
     </div>
-    ${club.history ? `<section class="tm-story" aria-labelledby="tm-story-h"><h2 id="tm-story-h">Club history</h2>${markdown(club.history)}</section>` : ''}
   </article>`;
 
+  // Draw straight away in the kit's colours; a custom (uploaded) home design then replaces them once its picture has loaded,
+  // so the band and the shirts show the club's real kit, not its average colour (B-17).
   drawFabric(home);
   drawShirts(home);
   drawKits(kits);
+  if (kits.home?.artUrl) {
+    const art = new Image(); art.crossOrigin = 'anonymous';
+    art.onload = () => { drawFabric(home, art); drawShirts(home, art); };
+    art.src = kits.home.artUrl;
+  }
 }
 
 // ---------- header ----------
 
 // The band is the club's home-kit fabric (its pattern and colours, no crest or print), stretched across the page.
-function drawFabric(design) {
+function drawFabric(design, art = null) {
   const cv = main.querySelector('.tm-fabric canvas'), d = cleanDesign({ ...design, text: { ...cleanDesign(design).text, name: '', number: '' } });
   cv.width = 1200; cv.height = 240;
   const ctx = cv.getContext('2d');
   // a slice of the unrolled shirt, drawn wide; patterns repeat so a slice reads as fabric
   const tmp = document.createElement('canvas'); tmp.width = 600; tmp.height = 408;
-  drawKit(tmp.getContext('2d'), { ...d, pattern: d.pattern === 'custom' ? 'plain' : d.pattern }, 600, 408);
+  drawKit(tmp.getContext('2d'), art ? d : { ...d, pattern: d.pattern === 'custom' ? 'plain' : d.pattern }, 600, 408, art ? { art } : {});
   ctx.drawImage(tmp, 150, 120, 300, 120, 0, 0, 1200, 240);
 }
 
@@ -163,8 +169,8 @@ function shirt(design, w, { art = null, number = '' } = {}) {
   cv.style.width = `${w}px`; cv.setAttribute('aria-hidden', 'true');
   return cv;
 }
-function drawShirts(home) {
-  for (const el of main.querySelectorAll('.tm-shirt')) el.replaceChildren(shirt(home, 64, { number: el.dataset.no }));
+function drawShirts(home, art = null) {
+  for (const el of main.querySelectorAll('.tm-shirt')) el.replaceChildren(shirt(home, 64, { art, number: el.dataset.no }));
 }
 
 // ---------- cabinet, kits, cap, details ----------

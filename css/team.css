@@ -76,8 +76,6 @@
 .tm-sw { display: inline-block; width: 22px; height: 22px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(var(--edge),.3); }
 
 .tm-cabinet + .tm-more { border-top: 0; padding-top: 0; }
-.tm-story { max-width: 68ch; padding-top: 26px; border-top: 1px solid var(--line); color: var(--text-soft); }
-.tm-story p { margin: 0 0 .8em; }
 
 @media (max-width: 899px) {
   .tm-id { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "crest titles" "now now"; }

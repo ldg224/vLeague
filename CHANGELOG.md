@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.67.1 (2026-10-10)
+
+Headlines: every custom kit shows again (B-17); trophy cabinet is a club’s history (B-19)
+
+Database change: migration `0051_kit_office_uploads.sql` (applied). If anything goes wrong, `v0.67.0` is the version to go back to (`docs/RELEASING.md`).
+
+- **Fixed (B-17):** whole-kit designs and logos uploaded by a league office account were saved but never shown, so the kit appeared in its average colours (three of FC Turtle’s four kits). Uploads now go live straight away whoever makes them, and the three stuck kits are live. The office can still reject a kit. On team pages, the header band and the players’ shirts now show a club’s uploaded home design too, not its average colour.
+- **Removed (B-19):** the Club history text on team pages and its field in Editor → Clubs. A club’s history is now its trophy cabinet (from Editor → History). Text already written is kept in the database, not deleted.
+
 ## 0.67.0 (2026-10-10)
 
 Headlines: team pages redesigned
