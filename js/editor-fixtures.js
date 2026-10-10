@@ -5,6 +5,7 @@
 //   logic lives in js/roster.js.
 import { loadSeason } from './dashboard-data.js';
 import * as R from './roster.js';
+import { icon } from './icons.js';
 const { melbourneToIso, toLocalInput, addDays, addMinutes, dateOf, timeOf, shiftIso, mondayOf, daysBetween, WEEK_MAX } = R;
 
 const ZONE = R.ZONE;
@@ -225,7 +226,7 @@ export async function mountFixtures(ctx) {
     const playing = new Set(list.flatMap(f => [f.home, f.away])), resting = active().filter(c => !playing.has(c.code));
     const warn = warnings(list), isOpen = open.has(w) || (nextUp === w && !open.has(-w));
     return `<details class="fx-round${locked ? ' is-locked' : ''}" data-week="${w}" ${isOpen ? 'open' : ''}>
-      <summary><b>${esc(L.label)}</b> <span>${esc(span)} · ${list.length ? `${done} of ${list.length} played` : 'no matches'}</span>${locked ? '<span class="ed-pill approved">Locked</span>' : ''}${r.counts_for_ladder === false && w !== TEST_WEEK ? '<span class="ed-pill warn">Not on the table</span>' : ''}</summary>
+      <summary>${w === TEST_WEEK ? '' : `<span class="fx-grip" role="button" tabindex="${locked ? -1 : 0}" draggable="${!locked}" data-grip="${w}" aria-disabled="${locked}" aria-label="Move ${esc(L.label)}: drag onto another round, or press the up and down arrow keys" title="${locked ? 'Locked: this round can’t be moved' : 'Drag to reorder the rounds'}">${icon('grip-vertical')}</span>`}<b>${esc(L.label)}</b> <span>${esc(span)} · ${list.length ? `${done} of ${list.length} played` : 'no matches'}</span>${locked ? '<span class="ed-pill approved">Locked</span>' : ''}${r.counts_for_ladder === false && w !== TEST_WEEK ? '<span class="ed-pill warn">Not on the table</span>' : ''}</summary>
       <div class="fx-body">
         <p class="fx-lock">${esc(lockText(w, list))}${locked ? ' <button class="btn ghost small" type="button" data-act="unlock">Unlock line-ups</button>' : ''}</p>
         ${list.map(f => matchRow(f, r)).join('') || '<p class="quiet">No matches yet. Add one below.</p>'}
@@ -536,6 +537,49 @@ export async function mountFixtures(ctx) {
       });
     }
   });
+
+  // ---------------------------------------------------------------- reordering rounds (0.62.1): drag a round by its handle onto
+  // another round to take its place (the rounds between shift along one), or focus the handle and press the up or down arrow.
+  // office_move_weeks() renumbers the matches, round settings and deadlines together; it refuses rounds with locked line-ups.
+  const order = () => model().weeks.filter(w => w !== TEST_WEEK);
+  async function moveRound(from, to) {
+    const map = R.mapReorder(order(), from, to);
+    if (!Object.keys(map).length) return;
+    const call = async m => (await ctx.db()).rpc('office_move_weeks', { p_map: m });
+    const ok = await run(`Move ${model().labels.get(from)?.label || `week ${from}`}`, tx => step(tx, () => call(map), () => call(R.invertMap(map))));
+    if (!ok) return;
+    for (const set of [open, setOpen]) { const now = [...set].map(w => (w < 0 ? -(map[-w] ?? -w) : map[w] ?? w)); set.clear(); now.forEach(w => set.add(w)); }   // open rounds stay open
+    draw();
+    root.querySelector(`[data-grip="${map[from]}"]`)?.focus();
+  }
+  let dragging = null;
+  root.addEventListener('dragstart', e => {
+    const g = e.target.closest?.('[data-grip]'); if (!g) return;
+    dragging = Number(g.dataset.grip);
+    e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(dragging));
+    g.closest('.fx-round').classList.add('is-dragging');
+  });
+  const clearDrag = () => root.querySelectorAll('.is-dragging, .is-over').forEach(x => x.classList.remove('is-dragging', 'is-over'));
+  root.addEventListener('dragend', () => { dragging = null; clearDrag(); });
+  root.addEventListener('dragover', e => {
+    const card = e.target.closest('.fx-round'); if (dragging === null || !card || Number(card.dataset.week) === TEST_WEEK) return;
+    e.preventDefault();
+    if (!card.classList.contains('is-over')) { root.querySelectorAll('.is-over').forEach(x => x.classList.remove('is-over')); card.classList.add('is-over'); }
+  });
+  root.addEventListener('drop', e => {
+    const card = e.target.closest('.fx-round'); if (dragging === null || !card) return;
+    e.preventDefault();
+    const from = dragging, to = Number(card.dataset.week); dragging = null; clearDrag();
+    if (to !== TEST_WEEK && to !== from) moveRound(from, to);
+  });
+  root.addEventListener('keydown', e => {
+    const g = e.target.closest?.('[data-grip]'); if (!g || g.getAttribute('aria-disabled') === 'true' || !['ArrowUp', 'ArrowDown'].includes(e.key)) return;
+    e.preventDefault();
+    const ws = order(), i = ws.indexOf(Number(g.dataset.grip)), j = i + (e.key === 'ArrowUp' ? -1 : 1);
+    if (j >= 0 && j < ws.length) moveRound(ws[i], ws[j]);
+  });
+  // The handle sits in the round's summary: pressing it mustn't open or close the round.
+  root.addEventListener('click', e => { if (e.target.closest('[data-grip]')) e.preventDefault(); }, true);
 
   root.addEventListener('toggle', e => {
     const d = e.target;

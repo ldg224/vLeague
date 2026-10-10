@@ -367,6 +367,15 @@
 .fx-round > summary b { font-size: 1.05rem; }
 .fx-round > summary span { color: var(--muted); font-size: .9rem; }
 .fx-round.is-locked { border-left: 3px solid var(--res-w, #22a55b); }
+/* The handle for dragging a round into another round's place (0.62.1). */
+.fx-round > summary { align-items: center; }
+.fx-grip { display: inline-grid; place-items: center; width: 28px; height: 32px; margin: -4px 0 -4px -6px; border-radius: var(--r-sm); color: var(--faint); cursor: grab; touch-action: none; }
+.fx-grip:hover { color: var(--text); background: var(--surface); }
+.fx-grip:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; color: var(--text); }
+.fx-grip[aria-disabled="true"] { opacity: .35; cursor: not-allowed; }
+.fx-grip .ic { width: 18px; height: 18px; }
+.fx-round.is-dragging { opacity: .45; }
+.fx-round.is-over { outline: 2px dashed var(--brand); outline-offset: 2px; }
 .fx-body { padding: 0 14px 12px; }
 .fx-lock { margin: 0 0 8px; color: var(--muted); font-size: .88rem; }
 .fx-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 0; border-top: 1px solid var(--line); }

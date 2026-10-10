@@ -287,6 +287,19 @@ export function pairWeek({ codes, fixtures, week = Infinity, rest = [], fixed = 
 }
 
 
+// Dragging a round onto another (Editor → Fixtures, 0.62.1): { old week: new week } for moving week `from` into week `to`'s
+// place, the weeks between shifting along one. Only weeks that change are in it; office_move_weeks() applies it in one go.
+export function mapReorder(weeks, from, to) {
+  const i = weeks.indexOf(from), j = weeks.indexOf(to);
+  if (i < 0 || j < 0 || i === j) return {};
+  const order = [...weeks]; order.splice(i, 1); order.splice(j, 0, from);
+  const map = {};
+  order.forEach((w, k) => { if (w !== weeks[k]) map[w] = weeks[k]; });
+  return map;
+}
+// The same move backwards, to put the weeks back.
+export const invertMap = map => Object.fromEntries(Object.entries(map).map(([a, b]) => [b, Number(a)]));
+
 // A new match's id: week and clubs, with a number on the end when that id is taken.
 export function freshId(week, home, away, taken) {
   const base = `w${week}-${home}-${away}`.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 36);

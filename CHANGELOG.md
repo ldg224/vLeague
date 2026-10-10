@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.62.1 (2026-10-10)
+
+Headlines: drag rounds to reorder them again (Editor → Fixtures)
+
+No database change (it uses `office_move_weeks()`, which is already there). If anything goes wrong, `v0.62.0` is the version to go back to (`docs/RELEASING.md`).
+
+- **Added back, Editor → Fixtures:** the six-dot handle on each round (taken out in the 0.40 rebuild). Drag a round by it onto another round to take its place; the rounds in between shift along one. Or focus the handle and press the up or down arrow. Matches, round settings and deadlines all move with the round, open rounds stay open, and a round with locked line-ups can't be moved (its handle is greyed out). Only whole rounds move: matches don't drag between rounds.
+
 ## 0.62.0 (2026-10-10)
 
 Headlines: press and media duties removed (S-03)
