@@ -20,6 +20,9 @@ Virtual football league app. Managers sign in and run their club; guests get a m
 - `docs/BACKEND.md`, `docs/DRAFT.md`, `js/sim/docs/`: backend, draft, and simulator details.
 - `CHANGELOG.md`: what changed in each version.
 
+## Design
+**Always load the `vleague-design` skill before any change to the site's HTML, CSS or page-rendering JS, and before planning UI work.** It holds the page pattern (based on the guest dashboard), tokens, football-specific rules and the list of "generated look" mistakes to avoid. Source: `C:\Claude\Skills\vleague-design\SKILL.md` (in the private workspace repo).
+
 ## Product decisions to respect (from the private PLAN.md)
 - A club's primary colour runs its whole page. The Editor and signed-out pages stay vLeague navy and blue.
 - Guests stay fully signed out; the dashboard signs out anyone who arrives signed in. No guest accounts.

@@ -3,6 +3,17 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.68.0 (2026-10-10)
+
+Headlines: a calmer Home built around your next match | sections across the app lose their boxes
+
+No database change. If anything goes wrong, `v0.67.1` is the version to go back to (`docs/RELEASING.md`).
+
+- **Changed, Home (S-15):** rebuilt on the guest dashboard's pattern. One band at the top, over the stadium in your club's colour, holds your next match: both crests, the kick-off time big, how long until kick-off and until your line-up locks, and one button (Pick your XI, Change your XI, or Watch live during the match). Match preview is a text link beside it. Once the week locks, both team sheets fold inside the band under "See line-ups". The separate club header is gone (your club is already in the band and the colours).
+- **Changed, Home (S-16):** Your season is two lines: position, points and form, then your last result. The full table stays on League.
+- **Changed, Home (S-17):** What's new and the club-changes notice are one thin strip above the match, one message at a time. You can close What's new (until the next version) and "Waiting for the league office". "Club changes sent back" stays until it's fixed.
+- **Changed, everywhere (S-11):** sections on My club, League, Inbox and Settings are flat, as on the guest dashboard: a bold heading over a thin line instead of a rounded box.
+
 ## 0.67.1 (2026-10-10)
 
 Headlines: every custom kit shows again (B-17); trophy cabinet is a club’s history (B-19)
