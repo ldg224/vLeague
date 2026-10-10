@@ -22,13 +22,14 @@
 .page-grid { display: grid; gap: 0 48px; align-items: start; }
 @media (min-width: 900px) { .page-grid { grid-template-columns: minmax(0, 1fr) 360px; } }
 
-/* The hero band: full width, the stadium at dusk under a navy panel tinted with the club's colour. It stays dark in both
+/* The hero band: full width, a photo (the stadium at dusk unless the page sets --hero-img / --hero-pos) under a navy panel
+   tinted with the club's colour. It stays dark in both
    themes, like the dashboard's board, so its text colours are fixed. */
 .hero { position: relative; isolation: isolate; margin: 0 calc(50% - 50vw) 32px; color: var(--white); text-align: center; }
 .hero::before {
   content: ''; position: absolute; inset: 0; z-index: -1;
   background: linear-gradient(180deg, color-mix(in srgb, var(--club, var(--navy)) 28%, rgba(6,26,56,.84)) 0%, rgba(6,26,56,.9) 60%, var(--hero-end, var(--bg)) 100%),
-    url('../assets/img/stadium-dusk.jpg') center 35% / cover no-repeat var(--navy);
+    var(--hero-img, url('../assets/img/stadium-dusk.jpg')) var(--hero-pos, center 35%) / cover no-repeat var(--navy);
 }
 .hero-in { max-width: 920px; margin: 0 auto; padding: 32px 16px 40px; }
 .hero a:not(.btn), .member.themed .member-main .hero a:not(.btn) { color: var(--blue-100); }

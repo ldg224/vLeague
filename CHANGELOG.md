@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.68.1 (2026-10-10)
+
+Headlines: a new background on Home every visit
+
+No database change. If anything goes wrong, `v0.68.0` is the version to go back to (`docs/RELEASING.md`).
+
+- **Changed, Home:** the band at the top shows one of nine football photos, picked at random each time you open Home (floodlit stadium, stands at sunset, a full crowd, empty seats, a kick, a challenge and two balls on grass). The photos are from Unsplash, resized for phones (150 to 550 KB each). Photos showing a real club's or brand's name were left out.
+
 ## 0.68.0 (2026-10-10)
 
 Headlines: a calmer Home built around your next match | sections across the app lose their boxes

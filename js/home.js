@@ -64,11 +64,19 @@ const sideOf = (c, code) => {
   const row = teamOf(c);
   return `<div class="hero-side${c === code ? ' us' : ''}" style="--c:${esc(safeColour(row.colour))}">${crest(c, 'hero-crest')}<p class="hero-name">${esc(nameOf(c))}</p></div>`;
 };
+// Home's backgrounds (0.68.1): one picked at random per visit, kept for the minute redraws. pos is the part of the photo to keep in view.
+const BACKDROPS = [
+  ['floodlights', 'center 40%'], ['roof-sunset', 'center 60%'], ['crowd', 'center 70%'], ['stadium-sky', 'center 65%'], ['seats', 'center 60%'],
+  ['kick', 'center 70%'], ['duel', '60% 30%'], ['ball-mist', 'center 55%'], ['ball-grass', 'center 55%'],
+];
+const [bgName, bgPos] = BACKDROPS[Math.floor(Math.random() * BACKDROPS.length)];
+// A full URL: browsers differ on whether a url() inside a custom property is relative to the page or to the stylesheet.
+const backdrop = `--hero-img:url('${new URL(`assets/img/home/${bgName}.jpg`, location.href).href}');--hero-pos:${bgPos}`;
 function hero(s, code, now) {
   const fx = current(s, code, now);
   if (!fx) {
     const done = s.fixtures.length && !s.fixtures.some(f => ['upcoming', 'tba'].includes(status(f, s, now)));
-    return `<section class="hero" aria-labelledby="hero-h"><div class="hero-in">
+    return `<section class="hero" style="${backdrop}" aria-labelledby="hero-h"><div class="hero-in">
       <h1 class="sr-only" id="hero-h">${esc(ctx.club.name)}</h1>
       <p class="hero-empty">${done ? 'Season finished' : 'No fixtures yet'}</p>
       <p class="hero-sub">${done ? '<a href="league.html">See the final table</a>' : 'The office adds them before the season starts.'}</p>
@@ -96,7 +104,7 @@ function hero(s, code, now) {
       act = `<a class="btn" href="club.html">${saved ? 'Change your XI' : 'Pick your XI'}</a>${preview}`;
     }
   }
-  return `<section class="hero" aria-labelledby="hero-h"><div class="hero-in">
+  return `<section class="hero" style="${backdrop}" aria-labelledby="hero-h"><div class="hero-in">
       <h1 class="sr-only" id="hero-h">${esc(ctx.club.name)}: ${st === 'live' ? 'live now' : 'next match'}</h1>
       <p class="hero-top"><span class="hero-stage">${esc(fx.round || `Week ${fx.week}`)}</span>${tag}</p>
       <div class="hero-fx">${sideOf(fx.home, code)}<div class="hero-mid">${mid}</div>${sideOf(fx.away, code)}</div>
@@ -188,7 +196,7 @@ function comingUp(s, code, now) {
 function render() {
   const { club, season: s, main } = ctx, now = new Date(), code = club.code;
   if (!s) {
-    paint(main, `${strip()}<section class="hero"><div class="hero-in"><h1 class="hero-empty">${esc(club.name)}</h1>
+    paint(main, `${strip()}<section class="hero" style="${backdrop}"><div class="hero-in"><h1 class="hero-empty">${esc(club.name)}</h1>
       <p class="hero-sub">The league data didn’t load. <a href="home.html">Try again</a></p></div></section>`);
     return;
   }
