@@ -135,3 +135,30 @@
 
 /* The club header's manager and stadium: each stays whole when the line wraps (no line starting with a dot). */
 .cl-meta { white-space: nowrap; }
+
+/* SUBMIT (0.63): the team sheet's one big action, in the club's own colour. Opens the round picker in place. */
+.ts-submit { display: grid; gap: 10px; margin: 0 0 16px; padding: 14px; border-radius: var(--r-md); background: color-mix(in srgb, var(--club, var(--blue-500)) 10%, var(--card)); border: 1px solid color-mix(in srgb, var(--club, var(--blue-500)) 40%, var(--line)); }
+.ts-submit-btn { width: 100%; min-height: 56px; padding: 12px 20px; border: 0; border-radius: var(--r-md); background: var(--club, var(--blue-500)); color: var(--on-club, #fff);
+  font: 700 1.35rem/1 var(--font-display); text-transform: uppercase; letter-spacing: .04em; cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .25) inset, 0 8px 24px color-mix(in srgb, var(--club, var(--blue-500)) 45%, transparent); transition: transform .12s, filter .12s; }
+.ts-submit-btn:hover { filter: brightness(1.08); }
+.ts-submit-btn:active { transform: translateY(1px); }
+.ts-submit-btn:disabled { opacity: .6; cursor: progress; }
+.ts-sub-line { margin: 0; font-size: .9rem; color: var(--muted); }
+.ts-sub-line b { color: var(--text); }
+.ts-sub-line::before { content: ''; display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; background: var(--faint); }
+.ts-sub-line.is-done::before { background: var(--res-w); } .ts-sub-line.is-todo::before { background: var(--amber); } .ts-sub-line.is-changed::before { background: var(--amber); }
+.ts-sub-msg { color: var(--text); font-weight: 600; }
+.ts-rounds { margin: 0; padding: 0; border: 0; display: grid; gap: 8px; }
+.ts-rounds legend { margin-bottom: 8px; padding: 0; font-weight: 700; color: var(--text); }
+.ts-round { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--card); cursor: pointer; }
+.ts-round.on { border-color: var(--club, var(--blue-500)); background: color-mix(in srgb, var(--club, var(--blue-500)) 16%, var(--card)); }
+.ts-round input { width: 20px; height: 20px; margin: 0; accent-color: var(--club, var(--blue-500)); }
+.ts-round-main { display: grid; gap: 2px; min-width: 0; }
+.ts-round-main span { color: var(--text); }
+.ts-round-main small { color: var(--muted); }
+.ts-round-state { display: grid; justify-items: end; gap: 2px; font-size: .82rem; color: var(--muted); text-align: right; }
+.ts-sub-warn { margin: 0; font-size: .88rem; color: var(--amber); }
+.ts-sub-actions { display: flex; align-items: center; gap: 14px; }
+.ts-sub-actions .ts-submit-btn { flex: 1; }
+@media (prefers-reduced-motion: reduce) { .ts-submit-btn { transition: none; } }

@@ -5,7 +5,7 @@ import { enterPlace } from './shell.js';
 import { esc, crestUrl } from './member.js';
 import { db } from './auth.js';
 import { SUPABASE_URL } from './config.js';
-import { finished, logoUrl } from './dashboard-data.js';
+import { finished, logoUrl, kickoff } from './dashboard-data.js';
 import { rating } from './places.js';
 import { prefsNow, spoilerHidden, revealScore } from './prefs.js';
 import { kitSprite, cleanDesign, kitName, FIELD_SLOTS } from './kit.js';
@@ -154,10 +154,11 @@ function suggestPieces(sheet, byId) {
 async function teamSheet(box, { club, squad, userId, season }) {
   const c = await db();
   const byId = new Map(squad.map(p => [String(p.id), p]));
-  const [rowRes, dlRes, kitRes] = await Promise.all([
+  const [rowRes, dlRes, kitRes, subRes] = await Promise.all([
     ok(c.from('team_sheets').select('*').eq('club', club.code).maybeSingle()),
     ok(c.from('deadlines').select('*').order('locks_at')),
     ok(c.from('club_kits').select('*').eq('club', club.code)),
+    ok(c.from('submitted_sheets').select('week, sheet, submitted_at').eq('club', club.code)),
   ]);
   const kitRows = (kitRes.error ? [] : kitRes.data || []).filter(k => FIELD_SLOTS.includes(k.slot));
   const kitsMade = Object.fromEntries(kitRows.map(k => [k.slot, cleanDesign(k.design)]));   // the club's outfield kits (none until the kits table exists)
@@ -172,9 +173,13 @@ async function teamSheet(box, { club, squad, userId, season }) {
   let savedAt = rowRes.data?.updated_at ? new Date(rowRes.data.updated_at) : null;
   let sel = null;   // { slot } or { player }: the first tap of a move
   let timer = null, saving = false, again = false, lockedKey = null;
+  // SUBMIT (0.63): the sheet submitted for each upcoming round. Without one, a round uses the latest draft, as before.
+  const submitted = new Map((subRes.error ? [] : subRes.data || []).map(s => [s.week, s]));
+  let picking = false, pickWeek = null, subBusy = false, subMsg = '';
 
   box.innerHTML = `<div class="ts">
     <div class="ts-bar"><p class="ts-deadline" id="deadline"></p><div class="ts-save" id="save" aria-live="polite"></div></div>
+    ${subRes.error ? '' : '<section class="ts-submit" id="submit" aria-label="Submit your team sheet"></section>'}
     <div class="ts-grid">
       <div class="ts-left">
         <div class="formations" role="radiogroup" aria-label="Formation">${Object.keys(FORMATIONS).map(f => `<button type="button" role="radio" data-f="${f}">${f}</button>`).join('')}</div>
@@ -283,6 +288,61 @@ async function teamSheet(box, { club, squad, userId, season }) {
     if (data) renderPitch($('.locked-pitch', el), { ...normaliseSheet(data, squad), players: season.players });
   }
 
+  // ----- submitting (0.63) -----
+  // The rounds this club plays that haven't locked, soonest first, each with its match.
+  const upcoming = (now = new Date()) => deadlines.filter(d => d.week !== 99 && !d.locked_at && new Date(d.locks_at) > now).map(d => {
+    const fx = (season?.fixtures || []).find(f => f.week === d.week && !f.postponed && (f.home === club.code || f.away === club.code));
+    return fx ? { week: d.week, locks: new Date(d.locks_at), fx } : null;
+  }).filter(Boolean).sort((a, b) => a.locks - b.locks);
+  const bodyOf = () => { const b = JSON.parse(JSON.stringify(sheet)); if (b.kit == null) delete b.kit; return b; };
+  const sameAsNow = s => s && JSON.stringify(normaliseSheet(s.sheet, squad)) === JSON.stringify(normaliseSheet(bodyOf(), squad));
+  const teamName = code => season?.teams?.find(x => x.code === code)?.name || code;
+  const filled = () => Object.keys(FORMATIONS[sheet.formation]).filter(s => sheet.lineup[s]).length;
+
+  function drawSubmit(now = new Date()) {
+    const el = $('#submit', box); if (!el) return;
+    const rounds = upcoming(now), next = rounds[0];
+    if (!next) { el.innerHTML = '<p class="ts-sub-line">No upcoming round to submit for yet.</p>'; return; }
+    const s = submitted.get(next.week), same = sameAsNow(s);
+    const line = s ? (same ? `<b>Submitted</b> for ${esc(wk(next.week))} · ${esc(tidy(dayTime.format(new Date(s.submitted_at))))}`
+      : `<b>Changed since you submitted</b> for ${esc(wk(next.week))}. Submit again to use these changes.`)
+      : `<b>Not submitted</b> for ${esc(wk(next.week))} yet. If you don’t, your latest saved sheet is used.`;
+    const cls = s ? (same ? 'is-done' : 'is-changed') : 'is-todo';
+    if (!picking) {
+      el.innerHTML = `<button type="button" class="ts-submit-btn" data-sub-open>Submit team sheet</button><p class="ts-sub-line ${cls}" role="status">${line}${subMsg ? ` <span class="ts-sub-msg">${esc(subMsg)}</span>` : ''}</p>`;
+      return;
+    }
+    pickWeek = rounds.some(r => r.week === pickWeek) ? pickWeek : next.week;
+    const xi = filled(), slots = Object.keys(FORMATIONS[sheet.formation]).length;
+    el.innerHTML = `<fieldset class="ts-rounds"><legend>Which round is this team sheet for?</legend>
+      ${rounds.map(r => {
+        const home = r.fx.home === club.code, opp = home ? r.fx.away : r.fx.home, k = kickoff(r.fx), sub = submitted.get(r.week);
+        return `<label class="ts-round${pickWeek === r.week ? ' on' : ''}"><input type="radio" name="sub-week" value="${r.week}" ${pickWeek === r.week ? 'checked' : ''}>
+          <span class="ts-round-main"><b>${esc(wk(r.week))}</b><span>${home ? 'v' : 'at'} ${esc(teamName(opp))}${k ? ` · ${esc(when(k, now))}` : ''}</span><small>Locks ${esc(when(r.locks, now))}</small></span>
+          <span class="ts-round-state">${sub ? `Submitted<button type="button" class="link-btn" data-withdraw="${r.week}">Withdraw</button>` : 'Not submitted'}</span></label>`;
+      }).join('')}</fieldset>
+      ${xi < slots ? `<p class="ts-sub-warn">Your XI has ${xi} of ${slots} players. Empty spots are filled automatically.</p>` : ''}
+      <div class="ts-sub-actions"><button type="button" class="ts-submit-btn" data-sub-go aria-label="Submit for ${esc(wk(pickWeek))}" ${subBusy ? 'disabled' : ''}>${subBusy ? 'Submitting…' : 'Submit'}</button><button type="button" class="link-btn" data-sub-cancel>Cancel</button></div>
+      ${subMsg ? `<p class="ts-sub-msg" role="alert">${esc(subMsg)}</p>` : ''}`;
+  }
+
+  async function submitFor(week) {
+    subBusy = true; subMsg = ''; drawSubmit();
+    const body = bodyOf();
+    const { data, error } = await ok(c.rpc('submit_team_sheet', { p_week: week, p_sheet: body }));
+    subBusy = false;
+    if (error) { subMsg = /locked|play in that round|deadline|linked|complete/.test(error.message) ? error.message : 'That didn’t submit. Check your connection and try again.'; drawSubmit(); return; }
+    submitted.set(week, { week, sheet: body, submitted_at: data || new Date().toISOString() });
+    picking = false; subMsg = week === upcoming()[0]?.week ? '' : `Also submitted for ${wk(week)}.`;   // the next round's line already says it
+    drawSubmit();
+    $('#submit .ts-submit-btn', box)?.focus();
+  }
+  async function withdraw(week) {
+    const { error } = await ok(c.rpc('withdraw_team_sheet', { p_week: week }));
+    if (error) { subMsg = /locked/.test(error.message) ? error.message : 'That didn’t withdraw. Try again.'; drawSubmit(); return; }
+    submitted.delete(week); subMsg = `Withdrawn: ${wk(week)} will use your latest saved sheet.`; drawSubmit();
+  }
+
   // ----- changes -----
 
   function changed() {
@@ -292,7 +352,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
     sheet.bench = benchOf(sheet.lineup, squad);
     if (state === 'saving') { again = true; return; }
     state = saved && JSON.stringify(sheet) === saved ? 'saved' : 'dirty';
-    drawSave();
+    drawSave(); if (!picking) drawSubmit();
     clearTimeout(timer);
     if (state === 'dirty') timer = setTimeout(save, 1200);
   }
@@ -358,8 +418,13 @@ async function teamSheet(box, { club, squad, userId, season }) {
     else if (st) { sheet.tactics[st.dataset.tac] = Number(st.dataset.v); changed(); drawTactics(); box.querySelector(`[data-tac="${st.dataset.tac}"][data-v="${st.dataset.v}"]`)?.focus(); }
     else if (t.closest('[data-kit]')) { sheet.kit = t.closest('[data-kit]').dataset.kit || null; changed(); drawKit(); box.querySelector(`[data-kit="${sheet.kit || ''}"]`)?.focus(); }
     else if (t.closest('[data-save]')) save();
+    else if (t.closest('[data-sub-open]')) { picking = true; subMsg = ''; drawSubmit(); $('#submit input[name="sub-week"]:checked', box)?.focus(); }
+    else if (t.closest('[data-sub-cancel]')) { picking = false; subMsg = ''; drawSubmit(); $('#submit .ts-submit-btn', box)?.focus(); }
+    else if (t.closest('[data-sub-go]')) submitFor(pickWeek);
+    else if (t.closest('[data-withdraw]')) { e.preventDefault(); withdraw(Number(t.closest('[data-withdraw]').dataset.withdraw)); }
   });
   box.addEventListener('change', e => {
+    if (e.target.name === 'sub-week') { pickWeek = Number(e.target.value); drawSubmit(); $('#submit input[name="sub-week"]:checked', box)?.focus(); return; }
     const s = e.target.closest('[data-piece]');
     if (s) { sheet[s.dataset.piece] = s.value || null; changed(); drawPitch(); }
   });
@@ -367,7 +432,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   // Leaving the page: send what's waiting rather than lose it.
   document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'dirty') save(); });
 
-  drawPitch(); drawPlayers(); drawPieces(); drawKit(); drawTactics(); drawSave(); drawDeadline(); drawLocked();
+  drawPitch(); drawPlayers(); drawPieces(); drawKit(); drawTactics(); drawSave(); drawDeadline(); drawLocked(); drawSubmit();
   if (state === 'new') save();
 
   // The deadline counts down; once one passes, read the deadlines again until the database has locked that week.
@@ -378,6 +443,6 @@ async function teamSheet(box, { club, squad, userId, season }) {
       const r = await ok(c.from('deadlines').select('*').order('locks_at'));
       if (!r.error) deadlines = r.data || [];
     }
-    drawDeadline(now); drawLocked(now);
+    drawDeadline(now); drawLocked(now); if (!picking) drawSubmit(now);
   }, 30000);
 }

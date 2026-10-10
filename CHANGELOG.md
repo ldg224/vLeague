@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.63.0 (2026-10-10)
+
+Headlines: a big SUBMIT button for team sheets
+
+Database change: migration `0048_submitted_sheets.sql` (applied). If anything goes wrong, `v0.62.1` is the version to go back to (`docs/RELEASING.md`).
+
+- **Added, My club → Team sheet:** a big **Submit team sheet** button in your club's colour, with a line saying whether the next round is submitted. Press it, pick the round (each upcoming round your club plays is listed with the opponent, kick-off and when it locks) and press Submit. You can submit ahead for later rounds, submit again after changes, or withdraw a submission, until that round locks.
+- **How it counts:** your sheet still saves as a draft while you edit, so nothing is lost. When a round locks, the sheet you submitted for it is used; if you didn't submit, your latest saved sheet is used, as before. If your XI isn't full, Submit tells you (empty spots are filled automatically).
+- **Database:** new `submitted_sheets` table (your own club only; written only through `submit_team_sheet()` and `withdraw_team_sheet()`, which check the round is yours and hasn't locked). Locking now prefers a submitted sheet; `week_sheets.submitted` records which was used.
+
 ## 0.62.1 (2026-10-10)
 
 Headlines: drag rounds to reorder them again (Editor → Fixtures)
