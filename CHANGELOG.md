@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.68.2 (2026-10-11)
+
+Headlines: Home is back to how it was before 0.68
+
+No database change. If anything goes wrong, `v0.68.1` is the version to go back to (`docs/RELEASING.md`).
+
+- **Changed, Home:** the 0.68.0 and 0.68.1 redesign is undone: the match band, the random photos and the notice strip are gone, and Home is laid out as in 0.67.1 again (club header, What's new note).
+- **Changed, everywhere:** sections on My club, League, Inbox and Settings are back in their boxes, as in 0.67.1.
+- **Removed:** the nine Home photos in `assets/img/home/`.
+
 ## 0.68.1 (2026-10-10)
 
 Headlines: a new background on Home every visit

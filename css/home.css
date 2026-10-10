@@ -1,77 +1,132 @@
-/* A manager's Home (0.5; rebuilt in 0.68, js/home.js), on the guest dashboard's pattern: one hero band for your match
-   (shared .hero in places.css), a closable notice strip above it, then Coming up and Your season as flat sections. */
+/* A manager's Home (0.5, js/home.js). Navy page; the club shows in the match card's glow, its crest
+   and the position stat. The match card runs full width; Your season and Coming up sit side by side on wide screens. */
 
-.member-main.home { padding-top: 0; }
+.member-main.wide:has(.hm-club) { padding-top: 24px; }
 
-/* The hero's match: crests and names either side, the kick-off time (or the score) big in the middle. */
-.hero-top { display: flex; justify-content: center; align-items: center; gap: 8px 16px; flex-wrap: wrap; margin: 0; color: var(--blue-100); font-size: .95rem; }
-.hero-stage { font: 500 1.05rem var(--font-display); letter-spacing: .06em; text-transform: uppercase; color: var(--white); }
-.hero-min { font: 700 1.2rem var(--font-display); color: var(--white); }
-.hero-fx { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: 16px; margin-top: 24px; }
-.hero-side { display: grid; justify-items: center; gap: 12px; min-width: 0; }
-.hero-side::after { content: ''; order: 2; width: 44px; height: 4px; border-radius: 2px; background: var(--c); }   /* the club's scarf stripe */
-.hero-crest { order: 1; width: 88px; height: 88px; object-fit: contain; }
-.hero-name { order: 3; margin: 0; font: 700 clamp(1.15rem, 2.6vw, 1.7rem)/1.15 var(--font-display); text-transform: uppercase; letter-spacing: .01em; overflow-wrap: break-word; color: var(--blue-100); }
-.hero-side.us .hero-name { color: var(--white); }
-.hero-mid { padding-top: 16px; }
-.hero-ko, .hero-score { display: block; font: 700 clamp(2.5rem, 7vw, 4.5rem)/1 var(--font-display); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.hero-score i { font-style: normal; color: var(--blue-300); margin: 0 .12em; }
-.hero-show { margin-top: 8px; padding: 8px 16px; border-radius: 999px; border: 1px solid rgba(255,255,255,.4); background: transparent; color: var(--white); font: 700 .9rem var(--font); cursor: pointer; }
-.hero-show:hover { border-color: var(--white); }
+.hm-club { display: flex; align-items: center; gap: 14px; margin: 0 0 20px; }
+.hm-club-crest { width: 52px; height: 52px; object-fit: contain; flex: none; filter: drop-shadow(0 8px 22px color-mix(in srgb, var(--club) 35%, transparent)); }
+.member-main .hm-club h1 { margin: 0; color: var(--text); font: 700 clamp(1.6rem, 5vw, 2.2rem)/1 var(--font-display); text-transform: uppercase; letter-spacing: .02em; }
+.hm-club p { margin: 4px 0 0; color: var(--muted); font-size: .9rem; font-style: italic; }
 
-.hero-act { display: flex; justify-content: center; align-items: center; gap: 16px 24px; flex-wrap: wrap; margin-top: 24px; }
-.hero-act .btn { width: auto; min-width: 200px; padding: 12px 24px; text-decoration: none; }
-.hero .hero-link { font-weight: 600; text-decoration: none; }
-.member-main .hero .hero-link:hover { color: var(--white); text-decoration: underline; }
+.hm-grid { display: grid; gap: 16px; margin-top: 16px; }
+@media (min-width: 760px) { .hm-grid:has(> :nth-child(2)) { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: start; } }
 
-/* Locked team sheets, folded inside the hero */
-.hero-xis { margin: 32px auto 0; max-width: 720px; padding-top: 16px; border-top: 1px solid rgba(144,202,249,.22); text-align: left; }
-.hero-xis summary { width: max-content; margin: 0 auto; cursor: pointer; font: 500 1rem var(--font-display); letter-spacing: .08em; text-transform: uppercase; color: var(--blue-200); }
-.hero-xis summary:hover { color: var(--white); }
-.hm-xis { display: grid; gap: 24px; align-items: start; margin-top: 16px; }
+.hm-card { padding: 18px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); min-width: 0; }
+.hm-card h2 {
+  display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 12px;
+  font: 700 .82rem var(--font); letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+}
+.hm-card h2 a { font: 600 .82rem var(--font); letter-spacing: 0; text-transform: none; text-decoration: none; }
+.hm-sub { margin: 10px 0 0; color: var(--faint); font-size: .85rem; }
+.hm-mini { width: 22px; height: 22px; object-fit: contain; flex: none; }
+
+/* The match card */
+.hm-match {
+  padding: 22px 18px; text-align: center;
+  background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--club) 20%, transparent), transparent 70%), var(--card-strong);
+  border-color: color-mix(in srgb, var(--club) 30%, var(--line));
+}
+.hm-label { margin: 0 0 18px; color: var(--club-text); font: 600 .78rem var(--font); letter-spacing: .1em; text-transform: uppercase; }
+.hm-none { margin: 6px 0; font: 700 1.5rem var(--font-display); text-transform: uppercase; color: var(--muted); }
+.hm-teams { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; }
+.hm-side { display: grid; justify-items: center; gap: 8px; min-width: 0; }
+.hm-side b { font: 700 1.05rem/1.1 var(--font-display); text-transform: uppercase; letter-spacing: .02em; overflow-wrap: anywhere; color: var(--muted); }
+.hm-side.us b { color: var(--text); }
+.hm-crest { width: 72px; height: 72px; object-fit: contain; }
+.hm-side.us .hm-crest { filter: drop-shadow(0 10px 26px color-mix(in srgb, var(--club) 45%, transparent)); }
+.hm-mid { display: grid; justify-items: center; gap: 2px; min-width: 84px; }
+.hm-when { color: var(--muted); font-size: .85rem; font-weight: 600; }
+.hm-ko { font: 700 1.9rem/1 var(--font-display); }
+.hm-score { font: 700 2.6rem/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.hm-score i { font-style: normal; margin: 0 6px; color: var(--faint); }
+.hm-live { padding: 2px 8px; border-radius: 6px; background: var(--live-bg); color: var(--live-fg); font: 700 .72rem var(--font); letter-spacing: .06em; }
+.hm-live.sm { padding: 1px 5px; font-size: .62rem; vertical-align: 1px; }
+.hm-show, .hm-hidden button {
+  padding: 6px 14px; border-radius: 999px; border: 1px solid rgba(var(--ink),.3); background: transparent; color: var(--text);
+  font: 700 .85rem var(--font); cursor: pointer;
+}
+.hm-show:hover, .hm-hidden button:hover { border-color: var(--text-strong); }
+.hm-hidden { display: flex; align-items: center; gap: 10px; margin: 12px 0 0; color: var(--faint); font-size: .85rem; }
+.hm-hidden button { padding: 4px 12px; font-size: .8rem; }
+.hm-foot { display: grid; justify-items: center; gap: 12px; margin-top: 20px; }
+.hm-lock { margin: 0; color: var(--muted); font-size: .9rem; }
+.hm-lock b { color: var(--text); font-variant-numeric: tabular-nums; }
+.hm-foot .btn { width: auto; min-width: 200px; padding-inline: 24px; text-decoration: none; }
+.member-main .hm-foot a.btn { color: var(--white); }
+.hm-foot .btn.ghost { border-color: color-mix(in srgb, var(--club) 55%, transparent); }
+
+/* Team sheets, revealed at the week's deadline (pitches drawn by js/pitch.js) */
+.hm-reveal { margin-top: 16px; }
+.hm-reveal h2 span { color: var(--faint); font-weight: 600; letter-spacing: .04em; }
+.hm-xis { display: grid; gap: 20px; align-items: start; }
 @media (min-width: 640px) { .hm-xis { grid-template-columns: 1fr 1fr; } }
-.hm-xi { margin: 0; display: grid; gap: 12px; min-width: 0; justify-items: center; }
+.hm-xi { margin: 0; display: grid; gap: 10px; min-width: 0; }
 .hm-xi figcaption { display: flex; align-items: center; gap: 8px; font-weight: 600; }
-.hm-xi:not(.us) figcaption b { color: var(--blue-100); }
+.hm-xi:not(.us) figcaption b { color: var(--muted); }
 .hm-pitch { width: 100%; max-width: 300px; }
-.hm-sub { margin: 0; color: var(--blue-100); font-size: .85rem; }
-.hm-mini { width: 24px; height: 24px; object-fit: contain; flex: none; }
 
-/* The notice strip: one line above the hero; "sent back" can't be closed until it's fixed. */
-.strip { display: flex; align-items: center; gap: 12px; margin: 16px 0; padding: 8px 8px 8px 16px; border-radius: var(--r-sm); background: var(--surface-raised); color: var(--text-soft); font-size: .9rem; }
-.strip p { flex: 1; margin: 0; min-width: 0; }
-.strip b { color: var(--text-strong); }
-.strip.back { box-shadow: inset 3px 0 0 var(--res-l); }
-.member-main .strip-act { flex: none; padding: 6px 12px; font-weight: 700; }
-.strip-x { flex: none; width: 32px; height: 32px; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--muted); font-size: 1.35rem; line-height: 1; cursor: pointer; }
-.strip-x:hover { color: var(--text); background: rgba(var(--ink),.08); }
-.strip + .hero { margin-top: 0; }
+/* Club changes with the league office */
+.hm-notice {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 16px; padding: 12px 16px;
+  border-radius: var(--r-md); border: 1px solid var(--line); background: var(--surface-raised); color: var(--muted); font-size: .92rem;
+}
+.hm-notice b { color: var(--text); }
+.hm-notice.back { box-shadow: inset 3px 0 0 var(--res-l); }
+.hm-notice a { flex: none; padding: 6px 14px; border-radius: 999px; background: var(--text-strong); font-weight: 700; font-size: .85rem; text-decoration: none; }
+.member-main .hm-notice a { color: var(--surface); }
 
-/* Your season, in two lines */
-.hm-sum { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 24px; margin: 16px 0 0; color: var(--muted); }
-.hm-sum strong { font: 700 1.35rem var(--font-display); color: var(--text-strong); font-variant-numeric: tabular-nums; margin-right: 4px; }
-.hm-last { margin: 12px 0 0; color: var(--muted); font-size: .9rem; }
-.hm-last a { font-weight: 600; }
-.hm-hidden { margin: 12px 0 0; color: var(--faint); font-size: .85rem; }
+/* W/D/L badges (shared result colours from site.css) */
+.hm-out { flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; font: 800 .75rem var(--font); color: #fff; text-decoration: none; }
+.hm-out.W { background: var(--res-w); } .hm-out.D { background: var(--res-d); } .hm-out.L { background: var(--res-l); }
 
-/* Coming up: rows like the dashboard's matches */
+/* Your season */
+.hm-season { display: grid; grid-template-columns: 1.3fr 1fr 1.3fr 1fr; gap: 8px; }
+.hm-stat { display: grid; gap: 2px; padding: 10px 8px; border-radius: var(--r-sm); background: var(--surface-raised); text-align: center; min-width: 0; }
+.hm-stat strong { font: 700 1.35rem/1.1 var(--font-display); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hm-stat span { color: var(--faint); font-size: .75rem; font-weight: 600; }
+.hm-stat.big { background: color-mix(in srgb, var(--club) 16%, var(--surface-raised)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--club) 35%, transparent); }
+.hm-stat.big strong { color: var(--club-text); }
+.hm-form { display: flex; align-items: center; gap: 5px; margin: 14px 0 0; }
+.hm-form .hm-k { margin-right: 6px; }
+
+.hm-k { color: var(--faint); font-size: .8rem; font-weight: 600; }
+.hm-lastline { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); text-decoration: none; min-width: 0; }
+.member-main .hm-lastline { color: var(--text); }
+.hm-lastline .hm-k { margin-right: 4px; }
+.hm-lastline strong { font: 700 1.1rem var(--font-display); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hm-lastline { flex-wrap: wrap; row-gap: 6px; }
+.hm-lastline .hm-k { white-space: nowrap; }
+.hm-lastline .hm-vs { color: var(--faint); font-size: .85rem; }
+.hm-lastline b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-lastline:hover b { text-decoration: underline; text-decoration-color: var(--faint); }
+
+/* Coming up */
 .hm-fix { list-style: none; margin: 0; padding: 0; }
-.hm-fix li + li { box-shadow: 0 -1px 0 var(--line); }
-.hm-fixlink { display: grid; grid-template-columns: 8em 24px minmax(0, 1fr) auto auto; align-items: center; gap: 12px; padding: 12px 8px; border-radius: var(--r-sm); }
-.member-main a.hm-fixlink, .member.themed .member-main a.hm-fixlink { color: var(--text); }
-.hm-fixlink:hover, .hm-fixlink:focus-visible { background: var(--surface); }
-.hm-fix .hm-wk { color: var(--muted); font-size: .85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-fix li { font-size: .92rem; }
+.hm-fixlink { display: grid; grid-template-columns: 6.2em 22px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 10px 6px; margin: 0 -6px; border-radius: var(--r-sm); color: inherit; }
+.member-main a.hm-fixlink { color: var(--text); }
+.hm-fixlink:hover, .hm-fixlink:focus-visible { background: var(--surface-hover); }
+.hm-fix li + li { border-top: 1px solid var(--line); }
+.hm-fix .hm-wk { color: var(--faint); font-size: .8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hm-fix b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hm-fix small { color: var(--faint); font-size: .75rem; font-weight: 600; }
-.hm-fix .hm-time { color: var(--accent-text); font-weight: 600; font-size: .85rem; font-variant-numeric: tabular-nums; }
+.hm-fix small { color: var(--faint); font-size: .72rem; font-weight: 700; }
+.hm-fix .hm-time { color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums; }
 
 @media (max-width: 480px) {
-  .hero-in { padding: 24px 16px 32px; }
-  .hero-fx { gap: 8px; margin-top: 16px; }
-  .hero-crest { width: 64px; height: 64px; }
-  .hero-mid { padding-top: 12px; }
-  .hero-sub, .hero-act { margin-top: 16px; }
   /* Coming up: the date gets its own line so club names have room (and at large text sizes). */
-  .hm-fixlink { grid-template-columns: 24px minmax(0, 1fr) auto auto; row-gap: 2px; }
+  .hm-fixlink { grid-template-columns: 22px minmax(0, 1fr) auto auto; row-gap: 2px; }
   .hm-fix .hm-wk { grid-column: 1 / -1; }
+  .hm-crest { width: 60px; height: 60px; }
+  .hm-ko { font-size: 1.6rem; }
+  .hm-card { padding: 16px 14px; }
 }
+
+/* What's new (0.33): the latest update, under the club name, always showing the main changes. */
+.hm-new { margin: -8px 0 16px; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); font-size: .88rem; }
+.hm-new-head { margin: 0; color: var(--muted); }
+.hm-new-head b { color: var(--text); }
+.hm-new small { color: var(--faint); }
+.hm-new-tag { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--club); color: var(--on-club); font: 700 .68rem var(--font); letter-spacing: .06em; text-transform: uppercase; }
+.hm-new ul { margin: 10px 0 8px; padding-left: 20px; color: var(--muted); }
+.hm-new li { padding: 2px 0; }
+.hm-new a { font-weight: 600; font-size: .82rem; }
