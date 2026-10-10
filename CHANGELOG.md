@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.61.2 (2026-10-10)
+
+Headlines: highlights show every goal, red card and penalty (B-14)
+
+No database change. If anything goes wrong, `v0.61.1` is the version to go back to (`docs/RELEASING.md`).
+
+- **Fixed, Highlights (B-14):** the video was held to about three minutes, so a busy match lost goals, red cards and penalties. Every goal, red card and penalty is now always in, however long that makes it (a 10-goal, 16-red test match runs about six minutes). Saves, chances, the woodwork and yellows still fill out a normal match to about three minutes.
+
 ## 0.61.1 (2026-10-10)
 
 Headlines: two line-up fixes (B-15, B-16)

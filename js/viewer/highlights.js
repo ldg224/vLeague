@@ -222,10 +222,17 @@ export function planHighlights(d, targetSeconds = 180) {
   const fixed = 4.5 + 4.5 + 3.5 + 9 + 5.5 + 4.5;   // intro, versus, half-time, full-time, motm, outro
   let budget = targetSeconds - fixed;
   const picked = [], used = {};
-  for (const c of cand.sort((a, b) => b.score - a.score)) {
+  // B-14: every goal, red card and penalty is always shown, however long that makes the video (a 9-9 game runs well past three
+  // minutes). Only the extras (saves, chances, woodwork, yellows) are fitted into what's left of the target length.
+  const must = c => c.kind === 'goal' || c.kind === 'red' || c.e.subtype === 'penalty';
+  for (const c of cand.filter(must).sort((a, b) => a.t - b.t)) {
+    if (picked.some(p => c.t >= p.t0 && c.t <= p.t1)) continue;   // already on screen in another clip
+    picked.push(c); budget -= c.t1 - c.t0; used[c.kind] = (used[c.kind] || 0) + 1;
+  }
+  for (const c of cand.filter(c => !must(c)).sort((a, b) => b.score - a.score)) {
     const len = c.t1 - c.t0;
     if ((used[c.kind] || 0) >= KIND_CAP[c.kind]) continue;
-    if (len > budget && picked.length) continue;
+    if (len > budget) continue;
     if (picked.some(p => c.t0 < p.t1 + 1 && c.t1 > p.t0 - 1)) continue;   // overlaps another clip
     picked.push(c); budget -= len; used[c.kind] = (used[c.kind] || 0) + 1;
   }
