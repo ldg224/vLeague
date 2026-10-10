@@ -184,6 +184,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
       <div class="ts-left">
         <div class="formations" role="radiogroup" aria-label="Formation">${Object.keys(FORMATIONS).map(f => `<button type="button" role="radio" data-f="${f}">${f}</button>`).join('')}</div>
         <div id="pitch" class="ts-pitch"></div>
+        <div class="ts-clear" id="clear"></div>
         <p class="ts-pick" id="pick" hidden></p>
       </div>
       <div class="ts-right">
@@ -209,6 +210,14 @@ async function teamSheet(box, { club, squad, userId, season }) {
     box.querySelector('.ts').classList.toggle('picking', Boolean(sel?.slot));
     $('#pls-title', box).textContent = sel?.slot ? `Pick for ${sel.slot}` : 'Players';
     if (sel) pick.innerHTML = `<span>${sel.slot ? `Pick a player for <b>${esc(sel.slot)}</b>` : `Pick a place for <b>${esc(p?.name || '')}</b>`}</span><button type="button" class="link-btn" data-cancel>Cancel</button>`;
+  }
+
+  // Clear all positions: everyone back to the list to redo the XI, with an undo until the next change.
+  let cleared = null;
+  function drawClear() {
+    $('#clear', box).innerHTML = cleared
+      ? `<span>Positions cleared.</span> <button type="button" class="link-btn" data-unclear>Undo</button>`
+      : `<button type="button" class="link-btn" data-clear${filled() ? '' : ' disabled'}>Clear all positions</button>`;
   }
 
   function drawPlayers() {
@@ -346,6 +355,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   // ----- changes -----
 
   function changed() {
+    cleared = null;   // any later change ends the undo
     // The captain and set-piece takers must be in the XI; the bench is everyone else.
     const inXI = new Set(Object.values(sheet.lineup));
     for (const [k] of PIECES) if (sheet[k] && !inXI.has(sheet[k])) sheet[k] = null;
@@ -383,7 +393,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   }
 
   function redraw(focus) {
-    drawPitch(); drawPlayers(); drawPieces(); drawKit();
+    drawPitch(); drawPlayers(); drawPieces(); drawKit(); drawClear();
     box.querySelector(focus)?.focus();
   }
 
@@ -398,6 +408,76 @@ async function teamSheet(box, { club, squad, userId, season }) {
     } else sel = { slot };
     redraw(`.pt-slot[data-slot="${slot}"]`);
   }
+
+  // DRAG AND DROP (S-01): drag a player from the list or a pitch spot onto a spot to place or swap them,
+  // or a pitch player onto the list to bench them. Pointer events, so it works by touch too; a tap still picks.
+  let drag = null, dragged = false;
+  const dropAt = (x, y) => { const el = document.elementFromPoint(x, y); return el?.closest('.pt-slot[data-slot]') || el?.closest('#players'); };
+  box.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    const from = e.target.closest('.pl, .pt-slot[data-slot]:not(.empty)');
+    if (!from || !box.contains(from)) return;
+    const slot = from.dataset.slot || null, id = slot ? sheet.lineup[slot] : from.dataset.id;
+    if (!id) return;
+    // By touch, the player list still scrolls: a drag from it starts with a short hold.
+    const hold = e.pointerType === 'touch' && !slot;
+    drag = { id, slot, x: e.clientX, y: e.clientY, ghost: null, over: null, pid: e.pointerId, armed: !hold };
+    if (hold) { const d = drag; setTimeout(() => { if (drag === d) { d.armed = true; from.classList.add('held'); } }, 300); }
+  });
+  box.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.pid) return;
+    if (!drag.ghost) {
+      if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 8) return;
+      if (!drag.armed) { drag = null; return; }   // moved before the hold: it's a scroll
+      box.querySelector('.held')?.classList.remove('held');
+      const p = byId.get(drag.id);
+      drag.ghost = Object.assign(document.createElement('div'), { className: 'ts-ghost', textContent: p?.name || '' });
+      document.body.append(drag.ghost); box.classList.add('dragging');
+      try { e.target.releasePointerCapture?.(e.pointerId); } catch {}
+    }
+    e.preventDefault();
+    drag.ghost.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+    drag.cx = e.clientX; drag.cy = e.clientY;
+    hover();
+    if (!drag.scroller) scrollNearEdge(drag);
+  });
+  function hover() {
+    const over = dropAt(drag.cx, drag.cy);
+    if (over !== drag.over) { drag.over?.classList.remove('drop'); over?.classList.add('drop'); drag.over = over; }
+  }
+  // Near the top or bottom of the screen the page scrolls, so a spot that's off screen can still be reached.
+  function scrollNearEdge(d) {
+    const EDGE = 50, step = () => {
+      if (drag !== d || !d.ghost) { d.scroller = null; return; }
+      const h = innerHeight, v = d.cy < EDGE ? -(EDGE - d.cy) : d.cy > h - EDGE ? EDGE - (h - d.cy) : 0;
+      if (v) { scrollBy(0, Math.round(v / 3)); hover(); }
+      d.scroller = requestAnimationFrame(step);
+    };
+    d.scroller = requestAnimationFrame(step);
+  }
+  // On touch, stop the page scrolling once a drag has started.
+  box.addEventListener('touchmove', e => { if (drag?.armed) e.preventDefault(); }, { passive: false });
+  const endDrag = e => {
+    if (!drag || e.pointerId !== drag.pid) return;
+    const d = drag; drag = null;
+    box.querySelector('.held')?.classList.remove('held');
+    if (!d.ghost) return;
+    cancelAnimationFrame(d.scroller);
+    d.ghost.remove(); box.classList.remove('dragging'); d.over?.classList.remove('drop');
+    dragged = true; setTimeout(() => { dragged = false; }, 0);
+    if (e.type === 'pointercancel') return;
+    const to = dropAt(e.clientX, e.clientY);
+    if (!to) return;
+    sel = null;
+    if (to.id === 'players') {   // back to the bench
+      if (!d.slot) return;
+      delete sheet.lineup[d.slot]; changed(); redraw();
+    } else if (to.dataset.slot !== d.slot) { place(to.dataset.slot, d.id); changed(); redraw(); }
+  };
+  box.addEventListener('pointerup', endDrag);
+  box.addEventListener('pointercancel', endDrag);
+  // A drag ends in a click on whatever it started on; that click shouldn't also pick.
+  box.addEventListener('click', e => { if (dragged) { e.stopPropagation(); e.preventDefault(); } }, true);
 
   box.addEventListener('click', e => {
     const t = e.target;
@@ -417,6 +497,12 @@ async function teamSheet(box, { club, squad, userId, season }) {
     else if (pr) { sheet.tactics = { ...PRESETS[pr.dataset.preset] }; changed(); drawTactics(); box.querySelector(`[data-preset="${pr.dataset.preset}"]`)?.focus(); }
     else if (st) { sheet.tactics[st.dataset.tac] = Number(st.dataset.v); changed(); drawTactics(); box.querySelector(`[data-tac="${st.dataset.tac}"][data-v="${st.dataset.v}"]`)?.focus(); }
     else if (t.closest('[data-kit]')) { sheet.kit = t.closest('[data-kit]').dataset.kit || null; changed(); drawKit(); box.querySelector(`[data-kit="${sheet.kit || ''}"]`)?.focus(); }
+    else if (t.closest('[data-clear]')) {
+      const was = { lineup: { ...sheet.lineup }, ...Object.fromEntries(PIECES.map(([k]) => [k, sheet[k]])) };
+      sheet.lineup = {}; sel = null; changed(); cleared = was; redraw('[data-unclear]');
+    } else if (t.closest('[data-unclear]')) {
+      Object.assign(sheet, cleared); cleared = null; changed(); redraw('[data-clear]');
+    }
     else if (t.closest('[data-save]')) save();
     else if (t.closest('[data-sub-open]')) { picking = true; subMsg = ''; drawSubmit(); $('#submit input[name="sub-week"]:checked', box)?.focus(); }
     else if (t.closest('[data-sub-cancel]')) { picking = false; subMsg = ''; drawSubmit(); $('#submit .ts-submit-btn', box)?.focus(); }
@@ -432,7 +518,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   // Leaving the page: send what's waiting rather than lose it.
   document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'dirty') save(); });
 
-  drawPitch(); drawPlayers(); drawPieces(); drawKit(); drawTactics(); drawSave(); drawDeadline(); drawLocked(); drawSubmit();
+  drawPitch(); drawPlayers(); drawPieces(); drawKit(); drawClear(); drawTactics(); drawSave(); drawDeadline(); drawLocked(); drawSubmit();
   if (state === 'new') save();
 
   // The deadline counts down; once one passes, read the deadlines again until the database has locked that week.

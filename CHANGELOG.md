@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.64.0 (2026-10-10)
+
+Headlines: drag and drop on the team sheet (S-01)
+
+No database change. If anything goes wrong, `v0.63.0` is the version to go back to (`docs/RELEASING.md`).
+
+- **Added, My club → Team sheet:** drag a player from the Players list onto a spot on the pitch to put them there, drag one pitch player onto another to swap them, or drag a pitch player back onto the Players list to bench them. It works with a mouse or by touch (on a phone, hold a name in the list for a moment, then drag). Drag near the top or bottom of the screen and the page scrolls, so you can reach a spot that's off screen. Tapping to pick still works as before.
+- **Added:** a **Clear all positions** button under the pitch puts everyone back in the Players list so you can redo your XI from scratch (with an **Undo**). While you drag, empty spots on the pitch light up so you can see where to drop.
+
 ## 0.63.0 (2026-10-10)
 
 Headlines: a big SUBMIT button for team sheets
