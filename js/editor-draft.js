@@ -15,6 +15,9 @@ const left = ms => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floo
 const minutesText = m => (m % 1440 === 0 ? `${m / 1440} day${m === 1440 ? '' : 's'}` : m % 60 === 0 ? `${m / 60} hour${m === 60 ? '' : 's'}` : `${m} minutes`);
 
 const POS = { GK: 'Goalkeepers', DEF: 'Defenders', MID: 'Midfielders', FWD: 'Forwards' };
+// "Pick for them" (0.61): how the office picks for the club on the clock. Every way keeps to the roster rules (database office_auto_pick).
+const PICK_HOWS = { rated: 'Highest-rated player who fits', value: 'Best-value player who fits', queue: 'Next in their queue', random: 'A random player who fits' };
+let pickHow = 'rated';
 const shuffle = a => a.map(x => [Math.random(), x]).sort((x, y) => x[0] - y[0]).map(x => x[1]);
 
 let selected = null, undoFrom = null, timer = null;
@@ -147,7 +150,7 @@ export async function mountDraft(ctx) {
         ${d.status === 'paused' ? '<button class="btn" data-act="resume">Resume</button>' : ''}
         ${d.status === 'live' ? `<span class="dr-extend"><button class="btn ghost" data-act="extend">Extend by</button><input class="dr-ext" type="number" min="1" value="60" aria-label="Minutes to add"> minutes</span>` : ''}</div>
       <details class="dr-more"><summary>More actions</summary><div class="ed-actions">
-        ${live ? '<button class="btn ghost" data-act="skip" title="Picks a random free player who fits the club’s open positions">Random pick for them</button>' : ''}
+        ${live ? `<span class="dr-pickfor"><button class="btn ghost" data-act="skip">Pick for them</button><select class="dr-how" aria-label="How to pick">${Object.entries(PICK_HOWS).map(([k, l]) => `<option value="${k}"${k === pickHow ? ' selected' : ''}>${l}</option>`).join('')}</select></span>` : ''}
         ${S.picks.length ? '<button class="btn ghost" data-act="undo">Undo last pick</button>' : ''}
         ${d.status !== 'setup' ? '<button class="btn ghost" data-act="reset">Reset to set-up</button>' : ''}
         ${live ? '<button class="btn ghost" data-act="finish">Finish now</button>' : ''}
@@ -489,7 +492,7 @@ export async function mountDraft(ctx) {
     if (act === 'pause') run(() => rpc('office_draft_control', { p_draft: d.id, p_action: 'pause' }), 'Paused.');
     if (act === 'resume') run(() => rpc('office_draft_control', { p_draft: d.id, p_action: 'resume' }), 'Resumed with a fresh timer.');
     if (act === 'extend') run(() => rpc('office_draft_control', { p_draft: d.id, p_action: 'extend', p_minutes: Math.max(1, Math.round(+root.querySelector('.dr-ext').value) || 1) }), 'Time added.');
-    if (act === 'skip') run(() => rpc('office_set_pick', { p_draft: d.id, p_player: null }), 'A random player was picked.');
+    if (act === 'skip') { pickHow = root.querySelector('.dr-how')?.value || 'rated'; run(() => rpc('office_auto_pick', { p_draft: d.id, p_how: pickHow }), `Picked: ${PICK_HOWS[pickHow].toLowerCase()} (a random player who fits if none did).`); }
     if (act === 'makepick') run(async () => { await rpc('office_set_pick', { p_draft: d.id, p_player: root.querySelector('.dr-pl').value }); undoFrom = null; }, 'Pick made.');
     if (act === 'rmpick') {
       const no = +b.dataset.no, k = S.picks.find(x => x.pick_no === no), o = S.order.find(x => x.pick_no === no);

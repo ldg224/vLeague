@@ -346,6 +346,8 @@
 .dr-main-act { align-items: center; }
 .dr-main-act .btn { min-width: 9em; }
 .dr-extend { display: inline-flex; align-items: center; gap: 8px; }
+.dr-pickfor { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dr-how { max-width: 100%; }
 .dr-more summary { cursor: pointer; color: var(--tint-text); font-weight: 600; }
 .dr-more .ed-actions { margin-top: 10px; }
 .dr-fold summary small { color: var(--faint); font-weight: 500; }

@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.61.0 (2026-10-10)
+
+Headlines: the office can pick for a club by a rule; the scoreboard shows the kit's colour
+
+Database change: migration `0047_draft_office_pick_how.sql` (applied). If anything goes wrong, `v0.60.3` is the version to go back to (`docs/RELEASING.md`).
+
+- **Added, Editor → Draft → More actions:** "Random pick for them" is now **Pick for them**, with a choice: the highest-rated player who fits (OVR, as on the Draft page), the best-value player who fits, the next in their queue, or a random player who fits. Every choice keeps to the roster rules and falls back to a random player who fits.
+- **Changed, Game centre scoreboard:** it now clearly shows the colour of the kit each team wears, the same colour as the stats: stronger team halves on the Derby look, and the team underlines in the kit colour on every look (with a thin outline so dark kits still show).
+- **Changed, My club → Kits:** an uploaded design's colour is now its commonest colour, not the average (the average of stripes or a texture was a muddy colour that isn't on the shirt). Designs uploaded before this keep their old colour until they're uploaded again.
+
 ## 0.60.3 (2026-10-10)
 
 Headlines: match views back to plain numbers (they were lagging)

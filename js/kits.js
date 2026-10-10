@@ -380,9 +380,15 @@ async function run(init) {
       const cv = document.createElement('canvas'); cv.width = TEX_W; cv.height = TEX_H;
       const g = cv.getContext('2d', { willReadFrequently: true }); g.fillStyle = '#ffffff'; g.fillRect(0, 0, TEX_W, TEX_H);
       g.imageSmoothingQuality = 'high'; g.drawImage(img, 0, 0, TEX_W, TEX_H);
-      const px = g.getImageData(TEX_W * 0.3, TEX_H * 0.25, TEX_W * 0.4, TEX_H * 0.5).data, sum = [0, 0, 0];
-      for (let i = 0; i < px.length; i += 16) for (let j = 0; j < 3; j++) sum[j] += px[i + j];
-      const main = '#' + sum.map(v => Math.round(v / (px.length / 16)).toString(16).padStart(2, '0')).join('');
+      // The kit's colour (used for the scoreboard, the stats and the clash check) is the commonest colour on the front, not the
+      // average: an average of stripes or a texture is a muddy colour that isn't on the shirt at all.
+      const px = g.getImageData(TEX_W * 0.3, TEX_H * 0.25, TEX_W * 0.4, TEX_H * 0.5).data, bins = new Map();
+      for (let i = 0; i < px.length; i += 16) {
+        const k = ((px[i] >> 4) << 8) | ((px[i + 1] >> 4) << 4) | (px[i + 2] >> 4), e = bins.get(k) || [0, 0, 0, 0];
+        e[0]++; e[1] += px[i]; e[2] += px[i + 1]; e[3] += px[i + 2]; bins.set(k, e);
+      }
+      const top = [...bins.values()].sort((x, y) => y[0] - x[0])[0];
+      const main = '#' + [top[1], top[2], top[3]].map(v => Math.round(v / top[0]).toString(16).padStart(2, '0')).join('');
       let blob = null;
       for (const q of [0.92, 0.82, 0.7]) { blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', q)); if (blob && blob.size <= ART_BYTES) break; }
       if (!blob || blob.size > ART_BYTES) throw new Error('That design is too big to upload. Save it as a JPG and try again.');
