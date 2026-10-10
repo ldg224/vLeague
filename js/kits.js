@@ -9,10 +9,10 @@ import { db } from './auth.js';
 import { SUPABASE_URL } from './config.js';
 import { contrast, isHex } from './club-colour.js';
 import { startTour, tourSeen } from './tour.js';
-import { SLOTS, PATTERNS, TEX_W, TEX_H, cleanDesign, startDesign, drawKit, drawKitFront, kitSprite, kitName } from './kit.js';
+import { SLOTS, PATTERNS, TEX_W, TEX_H, cleanDesign, startDesign, drawKit, drawKitFront, drawTemplate, kitSprite, kitName } from './kit.js';
 
 const THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-const LOGO_MAX = 384, LOGO_BYTES = 240 * 1024;
+const LOGO_MAX = 384, LOGO_BYTES = 240 * 1024, ART_BYTES = 1400 * 1024;
 const kitLogoUrl = path => (path ? `${SUPABASE_URL}/storage/v1/object/public/kits/${path}` : '');
 const image = url => new Promise(res => { if (!url) return res(null); const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
 const reduceMotion = () => document.documentElement.classList.contains('reduce-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -20,6 +20,11 @@ const STATUS = {
   pending: ['wait', 'Waiting for the office to approve your logo. Only you and the office can see it until then.'],
   approved: ['ok', 'Logo approved. Everyone can see it.'],
   rejected: ['bad', 'The office didn’t approve this logo. Upload a different one.'],
+};
+const ART_STATUS = {
+  pending: ['wait', 'Waiting for the office to approve your design. Only you and the office can see it until then.'],
+  approved: ['ok', 'Design approved. Everyone can see it.'],
+  rejected: ['bad', 'The office didn’t approve this design. Upload a different one.'],
 };
 const PALETTE = [
   ['#ffffff', 'White'], ['#e5e7eb', 'Silver'], ['#9ca3af', 'Grey'], ['#374151', 'Charcoal'], ['#0a0a0a', 'Black'], ['#e53935', 'Red'], ['#9b1c1c', 'Maroon'],
@@ -50,25 +55,27 @@ async function run(init) {
   const { main, office, rows } = init;
   let club = init.club;
   const c = await db();
-  let slot = 'home', tab = 'style', colourSlot = 0, kits = {}, imgs = { crest: null, logo: null }, logoBlob = null, logoPreview = '', saving = false, savedAt = '';
+  let slot = 'home', tab = 'style', colourSlot = 0, kits = {}, imgs = { crest: null, logo: null, art: null }, logoBlob = null, logoPreview = '', artBlob = null, artPreview = '', saving = false, savedAt = '';
   const hist = {};   // slot -> { past: [json], future: [json], last: json }
 
   // ------------------------------------------------------------ the state of the current kit
-  const blank = s => ({ design: startDesign(club, s), logo_path: null, logo_status: 'none', made: false, saved: null });
+  const blank = s => ({ design: startDesign(club, s), logo_path: null, logo_status: 'none', art_path: null, art_status: 'none', art: null, made: false, saved: null });
   const kit = () => (kits[slot] ||= blank(slot));
-  const dj = k => JSON.stringify(k.design) + '|' + (k.logo_path || '') + '|' + (k === kits[slot] && logoBlob ? 'new' : '');
+  const dj = k => JSON.stringify(k.design) + '|' + (k.logo_path || '') + '|' + (k.art_path || '') + '|' + (k === kits[slot] && logoBlob ? 'new' : '') + (k === kits[slot] && artBlob ? 'art' : '');
   const isDirty = k => (k.saved === null ? k.made : dj(k) !== k.saved);
   const dirty = () => isDirty(kit());
   const anyDirty = () => Object.values(kits).some(isDirty);
 
   async function load() {
-    const { data } = await c.from('club_kits').select('slot, design, logo_path, logo_status').eq('club', club.code);
-    kits = {}; logoBlob = null; logoPreview = '';
-    for (const r of data || []) { const k = { design: cleanDesign(r.design), logo_path: r.logo_path, logo_status: r.logo_status, made: true }; k.saved = dj(k); kits[r.slot] = k; }
+    const { data } = await c.from('club_kits').select('*').eq('club', club.code);
+    kits = {}; logoBlob = null; logoPreview = ''; artBlob = null; artPreview = '';
+    for (const r of data || []) { const k = { design: cleanDesign(r.design), logo_path: r.logo_path, logo_status: r.logo_status, art_path: r.art_path || null, art_status: r.art_status || 'none', made: true }; k.saved = dj(k); kits[r.slot] = k; }
     imgs.crest = await image(crestUrl(club.crest_path));
+    await Promise.all(Object.values(kits).map(async k => { k.art = await image(kitLogoUrl(k.art_path)); }));   // for the little pictures of every kit
   }
-  const loadLogo = async () => { imgs.logo = await image(logoPreview || kitLogoUrl(kit().logo_path)); };
-  const picture = (k, size = 96) => kitSprite(k.design, { crest: imgs.crest }, size).toDataURL();
+  // The current kit's pictures. Its club and the office see a new logo or design before the office approves it.
+  const loadLogo = async () => { [imgs.logo, imgs.art] = await Promise.all([image(logoPreview || kitLogoUrl(kit().logo_path)), artPreview ? image(artPreview) : kit().art]); };
+  const picture = (k, size = 96) => kitSprite(k.design, { crest: imgs.crest, art: k === kits[slot] ? imgs.art : k.art }, size).toDataURL();
 
   // ------------------------------------------------------------ undo and redo
   const H = () => (hist[slot] ||= { past: [], future: [], last: JSON.stringify(kit().design) });
@@ -112,7 +119,7 @@ async function run(init) {
     const pick = arr => arr[Math.floor(Math.random() * arr.length)], pal = PALETTE.map(p => p[0]).filter(h => h !== '#9ca3af');
     let cols = Math.random() < 0.55 ? pick(schemes())[1].slice() : null;
     if (!cols) for (let i = 0; i < 40; i++) { const m = pick(pal), s = pick(pal); if (contrast(m, s) > 2.2) { cols = [m, s, Math.random() < 0.5 ? s : pick([m, '#0a0a0a', '#ffffff'])]; break; } }
-    const pat = pick(PATTERNS.map(p => p[0]).filter(p => p !== 'plain' && p !== 'checks'));
+    const pat = pick(PATTERNS.map(p => p[0]).filter(p => p !== 'plain' && p !== 'checks' && p !== 'custom'));
     edit(d => { d.pattern = pat; if (cols) d.colours = cols; }, { now: true, panel: true });
   }
 
@@ -215,7 +222,7 @@ async function run(init) {
       },
       update() {
         if (!renderer) { if (flat) flatDraw(); return; }
-        const g = tc.getContext('2d'); g.clearRect(0, 0, TEX_W, TEX_H); drawKit(g, kit().design, TEX_W, TEX_H, { crest: imgs.crest, logo: imgs.logo }); tex.needsUpdate = true; kick();
+        const g = tc.getContext('2d'); g.clearRect(0, 0, TEX_W, TEX_H); drawKit(g, kit().design, TEX_W, TEX_H, imgs); tex.needsUpdate = true; kick();
       },
       view(s) { if (!renderer) return; goAz = s === 'back' ? Math.PI : 0; el = 0.1; spin = false; spinBtn()?.setAttribute('aria-pressed', 'false'); kick(); },
       zoom(f) { dist = Math.min(fit * 1.5, Math.max(fit * 0.5, dist * f)); idleAt = Date.now() + 4000; kick(); },
@@ -260,16 +267,31 @@ async function run(init) {
   function paintThumbs() {
     for (const cv of main.querySelectorAll('canvas[data-thumb]')) {
       const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height);
-      drawKitFront(g, { ...kit().design, pattern: cv.dataset.thumb, text: { name: '', number: '', colour: '' } }, {}, 11, 4, 62, 130, 'front');
+      drawKitFront(g, { ...kit().design, pattern: cv.dataset.thumb, text: { name: '', number: '', colour: '' } }, { art: imgs.art }, 11, 4, 62, 130, 'front');
     }
   }
   const swatch = (hex, name, on, attrs) => `<button type="button" class="kt-sw${on ? ' on' : ''}" ${attrs} style="--c:${hex}" aria-label="${esc(name)}" aria-pressed="${on}" title="${esc(name)}"></button>`;
+
+  // Design it in Photoshop (or anything): download the template, paint over it, upload the picture. It becomes the "Your own design" style.
+  function ownHtml(k) {
+    const st = ART_STATUS[k.art_status], has = !!(k.art_path || artPreview);
+    return `<section class="kt-own"><p class="kt-sub">Design it yourself <span>In Photoshop or any drawing app</span></p>
+      <ol class="kt-steps"><li><b>Download the template.</b> It’s the whole shirt laid out flat: the front in the middle, the back at both edges.</li>
+        <li><b>Paint over it</b> on a layer underneath, then hide the template layer.</li>
+        <li><b>Upload it here</b> as a PNG or JPG the same shape (${TEX_W * 2} × ${TEX_H * 2} is best).</li></ol>
+      <div class="kt-row"><button type="button" class="kt-btn" data-template="guide">Download template</button><button type="button" class="kt-btn quiet" data-template="kit">Download this kit as a start</button></div>
+      ${has ? `${artBlob ? '<p class="kt-pill wait">New design. It goes to the office to approve when you save.</p>' : st ? `<p class="kt-pill ${st[0]}">${esc(st[1])}</p>` : ''}
+        <div class="kt-row"><label class="kt-btn kt-file">Replace design<input type="file" accept="image/png,image/jpeg,image/webp" data-art hidden></label>${k.design.pattern !== 'custom' ? '<button type="button" class="kt-btn" data-pattern="custom">Wear my design</button>' : ''}<button type="button" class="kt-btn quiet" data-art-clear>Remove design</button></div>`
+      : '<label class="kt-drop" data-drop="art"><input type="file" accept="image/png,image/jpeg,image/webp" data-art hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V5m0 0-4 4m4-4 4 4M5 19h14"/></svg><b>Upload your design</b><span>Tap to choose it, or drop it here.</span></label>'}
+      <p class="kt-note">The crest, logo and print are still added on top (turn them off in Logo and Text). The office checks every design before everyone sees it; until then other clubs see a plain shirt in its main colour.</p></section>`;
+  }
 
   function panelHtml() {
     const k = kit(), d = k.design;
     if (tab === 'style') return `<h2 class="kt-h">Pick a look</h2>
       <div class="kt-tiles">${PATTERNS.map(([p, l]) => tile(p, l, d)).join('')}</div>
-      <div class="kt-row"><button type="button" class="kt-btn" data-surprise>Surprise me</button>${slot !== 'home' && kits.home?.made ? '<button type="button" class="kt-btn" data-copy="home">Copy my Home kit</button>' : ''}${slot !== 'away' && slot !== 'gk' && kits.away?.made ? '<button type="button" class="kt-btn" data-copy="away">Copy my Away kit</button>' : ''}<button type="button" class="kt-btn quiet" data-reset>Start over</button></div>`;
+      <div class="kt-row"><button type="button" class="kt-btn" data-surprise>Surprise me</button>${slot !== 'home' && kits.home?.made ? '<button type="button" class="kt-btn" data-copy="home">Copy my Home kit</button>' : ''}${slot !== 'away' && slot !== 'gk' && kits.away?.made ? '<button type="button" class="kt-btn" data-copy="away">Copy my Away kit</button>' : ''}<button type="button" class="kt-btn quiet" data-reset>Start over</button></div>
+      ${ownHtml(k)}`;
     if (tab === 'colours') {
       const cur = d.colours[colourSlot], used = colourSlot !== 1 || d.pattern !== 'plain';
       const clubCols = [club.colour, club.colour2].filter(isHex).map(h => h.toLowerCase());
@@ -348,6 +370,40 @@ async function run(init) {
       await loadLogo(); tab = 'logo'; edit(() => {}, { now: true, panel: true });
     } catch (e) { toast(e.message || String(e), true); }
   }
+  // A design painted on the template: fitted to the unrolled shirt (stretched if it isn't the template's shape, with a warning), and its
+  // main colour taken from the chest, so the clash check and anyone who can't see it yet get the right colour.
+  async function chooseArt(file) {
+    try {
+      if (!file || !/^image\//.test(file.type)) throw new Error('That isn’t a picture. Use a PNG or JPG.');
+      const url = URL.createObjectURL(file), img = await image(url); URL.revokeObjectURL(url);
+      if (!img) throw new Error('That picture couldn’t be read. Try a PNG or JPG.');
+      const off = Math.abs((img.naturalWidth / img.naturalHeight) / (TEX_W / TEX_H) - 1) > 0.04;
+      const cv = document.createElement('canvas'); cv.width = TEX_W; cv.height = TEX_H;
+      const g = cv.getContext('2d', { willReadFrequently: true }); g.fillStyle = '#ffffff'; g.fillRect(0, 0, TEX_W, TEX_H);
+      g.imageSmoothingQuality = 'high'; g.drawImage(img, 0, 0, TEX_W, TEX_H);
+      const px = g.getImageData(TEX_W * 0.3, TEX_H * 0.25, TEX_W * 0.4, TEX_H * 0.5).data, sum = [0, 0, 0];
+      for (let i = 0; i < px.length; i += 16) for (let j = 0; j < 3; j++) sum[j] += px[i + j];
+      const main = '#' + sum.map(v => Math.round(v / (px.length / 16)).toString(16).padStart(2, '0')).join('');
+      let blob = null;
+      for (const q of [0.92, 0.82, 0.7]) { blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', q)); if (blob && blob.size <= ART_BYTES) break; }
+      if (!blob || blob.size > ART_BYTES) throw new Error('That design is too big to upload. Save it as a JPG and try again.');
+      artBlob = blob; artPreview = URL.createObjectURL(blob);
+      const kk = kit(); kk.made = true; kk.art_status = 'none';
+      await loadLogo(); tab = 'style'; edit(d => { d.pattern = 'custom'; d.colours[0] = main; }, { now: true, panel: true });
+      if (off) toast(`Your picture isn’t the template’s shape, so it was stretched to fit. Use ${TEX_W * 2} × ${TEX_H * 2} to avoid this.`, true);
+    } catch (e) { toast(e.message || String(e), true); }
+  }
+  // The template to paint over, or this kit as it looks now (without the crest, logo and print the app adds), at twice the shirt's size.
+  async function download(what) {
+    const cv = document.createElement('canvas'); cv.width = TEX_W * 2; cv.height = TEX_H * 2;
+    const g = cv.getContext('2d');
+    if (what === 'guide') drawTemplate(g, cv.width, cv.height);
+    else drawKit(g, { ...kit().design, text: { name: '', number: '', colour: '' }, crest: { show: false } }, cv.width, cv.height, { art: imgs.art });
+    const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = what === 'guide' ? 'vleague-kit-template.png' : `${club.code.toLowerCase()}-${slot}-kit.png`;
+    document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
   function toast(t, bad) { const el = main.querySelector('#kt-bar .kt-state'); if (el) { el.textContent = t; el.classList.toggle('bad', !!bad); } }
 
   async function save() {
@@ -359,10 +415,17 @@ async function run(init) {
         const up = await c.storage.from('kits').upload(path, logoBlob, { contentType: 'image/png', upsert: false });
         if (up.error) throw up.error;
       }
-      const { data, error } = await c.from('club_kits').upsert({ club: club.code, slot, design: k.design, logo_path: path }, { onConflict: 'club,slot' }).select('slot, design, logo_path, logo_status').single();
+      let art = k.art_path;
+      if (artBlob) {
+        art = `${club.code.toLowerCase()}/${slot}-art-${Date.now().toString(36)}.jpg`;
+        const up = await c.storage.from('kits').upload(art, artBlob, { contentType: 'image/jpeg', upsert: false });
+        if (up.error) throw up.error;
+      }
+      const { data, error } = await c.from('club_kits').upsert({ club: club.code, slot, design: k.design, logo_path: path, art_path: art }, { onConflict: 'club,slot' }).select('*').single();
       if (error) throw error;
-      Object.assign(k, { design: cleanDesign(data.design), logo_path: data.logo_path, logo_status: data.logo_status, made: true });
-      logoBlob = null; logoPreview = ''; k.saved = dj(k);
+      Object.assign(k, { design: cleanDesign(data.design), logo_path: data.logo_path, logo_status: data.logo_status, art_path: data.art_path, art_status: data.art_status, made: true });
+      if (artBlob) k.art = imgs.art;
+      logoBlob = null; logoPreview = ''; artBlob = null; artPreview = ''; k.saved = dj(k);
       savedAt = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
       await loadLogo();
     } catch (e) { saving = false; refresh(); toast(`Couldn’t save: ${e.message || e}`, true); return; }
@@ -374,7 +437,7 @@ async function run(init) {
   main.addEventListener('click', async e => {
     const t = e.target;
     const s = t.closest('.kt-chips [data-slot]');
-    if (s) { if (s.dataset.slot === slot) return; commit(); slot = s.dataset.slot; logoBlob = null; logoPreview = ''; await loadLogo(); refresh(); return; }
+    if (s) { if (s.dataset.slot === slot) return; commit(); slot = s.dataset.slot; logoBlob = null; logoPreview = ''; artBlob = null; artPreview = ''; await loadLogo(); refresh(); return; }
     const tb = t.closest('[data-tab]'); if (tb) { tab = tb.dataset.tab; drawPanel(); main.querySelector('.kt-hint')?.classList.add('gone'); return; }
     const p = t.closest('[data-pattern]'); if (p) { edit(d => { d.pattern = p.dataset.pattern; }, { now: true, panel: true }); return; }
     const sw = t.closest('[data-colour]'); if (sw) { setColour(colourSlot, sw.dataset.colour); drawPanel(); return; }
@@ -392,6 +455,8 @@ async function run(init) {
     const sp = t.closest('[data-spot]'); if (sp) { const [, x, y] = LOGO_SPOTS[+sp.dataset.spot]; edit(d => { d.logo.x = x; d.logo.y = y; }, { now: true }); return; }
     const cpos = t.closest('[data-crestpos]'); if (cpos) { edit(d => { d.crest.pos = cpos.dataset.crestpos; }, { now: true, panel: true }); return; }
     if (t.closest('[data-logo-clear]')) { logoBlob = null; logoPreview = ''; const k = kit(); k.logo_path = null; k.logo_status = 'none'; imgs.logo = null; edit(() => {}, { now: true, panel: true }); return; }
+    const tp = t.closest('[data-template]'); if (tp) { download(tp.dataset.template); return; }
+    if (t.closest('[data-art-clear]')) { artBlob = null; artPreview = ''; const k = kit(); k.art_path = null; k.art_status = 'none'; k.art = null; imgs.art = null; edit(d => { if (d.pattern === 'custom') d.pattern = 'plain'; }, { now: true, panel: true }); return; }
     if (t.closest('[data-undo]')) { step(-1); return; }
     if (t.closest('[data-redo]')) { step(1); return; }
     if (t.closest('[data-save]')) { await save(); return; }
@@ -401,7 +466,7 @@ async function run(init) {
     if (t.closest('[data-tour]')) { tour(); return; }
     const ap = t.closest('[data-approve]');
     if (ap) {
-      await c.from('club_kits').update({ logo_status: ap.dataset.approve }).eq('club', ap.dataset.forClub).eq('slot', ap.dataset.forSlot); approvals();
+      await c.from('club_kits').update({ [`${ap.dataset.what}_status`]: ap.dataset.approve }).eq('club', ap.dataset.forClub).eq('slot', ap.dataset.forSlot); approvals();
       if (ap.dataset.forClub === club.code && !anyDirty()) { await load(); await loadLogo(); refresh(); }
     }
   });
@@ -422,6 +487,7 @@ async function run(init) {
     const t = e.target;
     if (t.matches('[data-crest]')) edit(d => { d.crest.show = t.checked; }, { now: true, panel: true });
     else if (t.matches('[data-logo]')) chooseLogo(t.files?.[0]);
+    else if (t.matches('[data-art]')) chooseArt(t.files?.[0]);
     else if (t.matches('[data-club]')) {
       if (anyDirty() && !confirm('You have unsaved changes. Switch club and lose them?')) { t.value = club.code; return; }
       club = rows.find(r => r.code === t.value); slot = 'home'; for (const k of Object.keys(hist)) delete hist[k];
@@ -430,8 +496,8 @@ async function run(init) {
     else if (t.matches('[data-hex], [data-kitname], [data-text]')) drawPanel();
   });
   for (const ev of ['dragover', 'drop']) main.addEventListener(ev, e => {
-    if (!e.target.closest('[data-drop]')) return;
-    e.preventDefault(); if (ev === 'drop') chooseLogo(e.dataTransfer?.files?.[0]);
+    const zone = e.target.closest('[data-drop]'); if (!zone) return;
+    e.preventDefault(); if (ev === 'drop') (zone.dataset.drop === 'art' ? chooseArt : chooseLogo)(e.dataTransfer?.files?.[0]);
   });
   main.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.target.matches('input[type=text]')) { e.preventDefault(); step(e.shiftKey ? 1 : -1); }
@@ -441,10 +507,11 @@ async function run(init) {
   // ------------------------------------------------------------ the office: logos waiting for approval
   async function approvals() {
     const box = document.getElementById('kt-approve'); if (!box) return;
-    const { data } = await c.from('club_kits').select('club, slot, logo_path').eq('logo_status', 'pending').order('updated_at');
-    box.innerHTML = `<h2>Logos waiting for approval</h2>${(data || []).length ? `<ul>${data.map(r => `<li><img src="${esc(kitLogoUrl(r.logo_path))}" alt="" width="64" height="64"><span><b>${esc(rows.find(x => x.code === r.club)?.name || r.club)}</b> · ${esc(SLOTS.find(s => s[0] === r.slot)?.[1] || r.slot)} kit</span>
-      <button type="button" class="kt-btn" data-approve="approved" data-for-club="${esc(r.club)}" data-for-slot="${esc(r.slot)}">Approve</button>
-      <button type="button" class="kt-btn quiet" data-approve="rejected" data-for-club="${esc(r.club)}" data-for-slot="${esc(r.slot)}">Reject</button></li>`).join('')}</ul>` : '<p class="quiet">Nothing waiting.</p>'}`;
+    const { data } = await c.from('club_kits').select('*').or('logo_status.eq.pending,art_status.eq.pending').order('updated_at');
+    const items = (data || []).flatMap(r => [r.logo_status === 'pending' && ['logo', 'Logo', r.logo_path, 64, 64, r], r.art_status === 'pending' && ['art', 'Whole-kit design', r.art_path, 128, 87, r]].filter(Boolean));
+    box.innerHTML = `<h2>Logos and designs waiting for approval</h2>${items.length ? `<ul>${items.map(([what, label, path, w, h, r]) => `<li><a href="${esc(kitLogoUrl(path))}" target="_blank" rel="noopener"><img src="${esc(kitLogoUrl(path))}" alt="${esc(label)}, open full size" width="${w}" height="${h}"></a><span><b>${esc(rows.find(x => x.code === r.club)?.name || r.club)}</b> · ${esc(SLOTS.find(s => s[0] === r.slot)?.[1] || r.slot)} kit · ${label}</span>
+      <button type="button" class="kt-btn" data-approve="approved" data-what="${what}" data-for-club="${esc(r.club)}" data-for-slot="${esc(r.slot)}">Approve</button>
+      <button type="button" class="kt-btn quiet" data-approve="rejected" data-what="${what}" data-for-club="${esc(r.club)}" data-for-slot="${esc(r.slot)}">Reject</button></li>`).join('')}</ul>` : '<p class="quiet">Nothing waiting.</p>'}`;
   }
 
   // ------------------------------------------------------------ the first-time tour (js/tour.js)

@@ -2,7 +2,8 @@
 // the middle), which the editor wraps round a 3D player and every flat view cuts down to a front (or back) picture.
 //   design = { v: 1, name, pattern, colours: [main, second, third], text: { name, number, colour },
 //              crest: { show, pos }, logo: { x, y, scale } }
-//   drawKit(ctx, design, w, h, imgs)           paints the unrolled shirt; imgs = { crest, logo } (loaded images, both optional)
+//   drawKit(ctx, design, w, h, imgs)           paints the unrolled shirt; imgs = { crest, logo, art } (loaded images, all optional)
+//   drawTemplate(ctx, w, h)                    the kit template to paint over in Photoshop: the unrolled shirt with its parts marked
 //   drawKitFront(ctx, design, imgs, x, y, w, h, side)   paints the shirt as seen from the front or back into a box of any shape
 //   kitSprite(design, imgs, size)              a small cached canvas of the front, for the 2D match views
 // The unrolled shirt has the same pixel density across and down (TEX_W x TEX_H matches the 3D body's circumference and height), so
@@ -17,6 +18,7 @@ export const kitName = (slot, design) => design?.name || SLOTS.find(s => s[0] ==
 export const PATTERNS = [
   ['plain', 'Plain'], ['hoops', 'Hoops'], ['stripes', 'Stripes'], ['pinstripe', 'Pinstripes'], ['halves', 'Halves'], ['quarters', 'Quarters'],
   ['sash', 'Sash'], ['chevron', 'Chevron'], ['checks', 'Checks'], ['band', 'Chest band'], ['diagonal', 'Diagonals'], ['fade', 'Fade'], ['bar', 'Centre bar'],
+  ['custom', 'Your own design'],   // a picture painted on the kit template (drawTemplate) and uploaded; without it, a plain shirt in the main colour
 ];
 export const TEX_W = 1024, TEX_H = 694;   // 2 pi r : (cylinder + caps) of the 3D body (radius .42, cylinder .95), so the density matches
 const FALLBACK = ['#1e88e5', '#ffffff', '#0a0f19'];
@@ -92,7 +94,8 @@ function paint(c, d, w, h) {
 
 export function drawKit(ctx, design, w, h, imgs = {}) {
   const d = cleanDesign(design);
-  paint(ctx, d, w, h);
+  if (d.pattern === 'custom' && imgs.art) ctx.drawImage(imgs.art, 0, 0, w, h);   // the club's own picture is the whole shirt, trim and all
+  else paint(ctx, d, w, h);
   const ink = d.text.colour || onColour(d.colours[0]);
   const front = 0.5, back = 0;
   // crest (small, on the chest) and logo (placed by the club), at the front. Both are drawn square, and the texture has the same
@@ -108,13 +111,58 @@ export function drawKit(ctx, design, w, h, imgs = {}) {
   if (d.text.name) for (const u of [back, back + 1]) { ctx.font = `800 ${h * 0.075}px Oswald, Arial Narrow, sans-serif`; ctx.fillText(d.text.name, u * w, h * 0.23); }
 }
 
+// ---------------------------------------------------------------- the kit template
+// A guide to paint over: the same unrolled shirt drawKit fills (any size with TEX_W : TEX_H, we hand out 2x), with the front in the middle,
+// the back split across the two edges (they join at the back seam), the domed top and bottom that curve over the shoulders and under, and
+// where the app adds the crest, chest number and back print. Left and right are as you look at the player, front and back alike.
+export const ZONES = {
+  side: [0.25, 0.75],      // the player's sides: between them is the front, outside them the back
+  dome: [0.235, 0.765],    // above / below these the shirt curves over the top and under the body (squeezed towards the middle)
+  head: 0.05,              // above this is under the head
+  trim: [0.045, 0.965],    // where the ready-made patterns put the collar and hem
+};
+export function drawTemplate(c, w, h) {
+  const s = h / TEX_H, X = u => u * w, Y = v => v * h, font = (px, wt = 700) => `${wt} ${px * s}px Arial, Helvetica, sans-serif`;
+  c.fillStyle = '#d9dee6'; c.fillRect(0, 0, w, h);                                   // back
+  c.fillStyle = '#f4f6f9'; c.fillRect(X(ZONES.side[0]), 0, X(ZONES.side[1] - ZONES.side[0]), h);   // front
+  c.fillStyle = 'rgba(30,60,110,.10)'; c.fillRect(0, 0, w, Y(ZONES.dome[0])); c.fillRect(0, Y(ZONES.dome[1]), w, h - Y(ZONES.dome[1]));
+  c.fillStyle = 'rgba(30,60,110,.22)'; c.fillRect(0, 0, w, Y(ZONES.head));
+  c.strokeStyle = 'rgba(30,60,110,.10)'; c.lineWidth = s;                          // a light grid, every 1/32 round and the same step down
+  for (let i = 1; i < 32; i++) { c.beginPath(); c.moveTo(X(i / 32), 0); c.lineTo(X(i / 32), h); c.stroke(); }
+  for (let y = w / 32; y < h; y += w / 32) { c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); }
+  const line = (x0, y0, x1, y1, col, dash = []) => { c.save(); c.strokeStyle = col; c.lineWidth = 2 * s; c.setLineDash(dash.map(n => n * s)); c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke(); c.restore(); };
+  for (const u of ZONES.side) line(X(u), 0, X(u), h, '#1e3a8a', [10, 6]);
+  line(X(0.5), 0, X(0.5), h, 'rgba(30,58,138,.45)', [3, 6]);
+  for (const v of ZONES.dome) line(0, Y(v), w, Y(v), 'rgba(30,58,138,.6)', [10, 6]);
+  for (const v of ZONES.trim) line(0, Y(v), w, Y(v), 'rgba(185,28,28,.55)', [4, 4]);
+  const box = (cx, cy, bw, bh, label) => {
+    c.save(); c.strokeStyle = '#b91c1c'; c.lineWidth = 2 * s; c.setLineDash([6 * s, 4 * s]); c.strokeRect(cx - bw / 2, cy - bh / 2, bw, bh); c.restore();
+    // the back's boxes are cut in half by the edges, so their labels sit inside the picture
+    c.fillStyle = '#b91c1c'; c.font = font(11); c.textBaseline = 'top'; c.textAlign = cx <= 0 ? 'left' : cx >= w ? 'right' : 'center';
+    c.fillText(label, cx <= 0 ? 6 * s : cx >= w ? w - 6 * s : cx, cy + bh / 2 + 4 * s);
+  };
+  const crest = h * 0.12;
+  box(X(0.5 + CREST_POS.left), Y(0.26) + crest / 2, crest, crest, 'Crest (if shown)');
+  box(X(0.425), Y(0.31), h * 0.07, h * 0.09, 'Number');
+  for (const u of [0, 1]) { box(X(u), Y(0.23), h * 0.42, h * 0.085, 'Back name (if set)'); box(X(u), Y(0.6), h * 0.36, h * 0.3, 'Back number (if set)'); }
+  const label = (t, x, y, px, col = '#1e3a8a', align = 'center') => { c.fillStyle = col; c.font = font(px, 800); c.textAlign = align; c.textBaseline = 'middle'; c.fillText(t, x, y); };
+  label('FRONT', X(0.5), Y(0.5), 46, 'rgba(30,58,138,.35)');
+  label('BACK', X(0.125), Y(0.88), 30, 'rgba(30,58,138,.35)'); label('BACK', X(0.875), Y(0.88), 30, 'rgba(30,58,138,.35)');
+  label('Player’s right side', X(0.25), Y(0.86), 12, '#1e3a8a'); label('Player’s left side', X(0.75), Y(0.86), 12, '#1e3a8a');
+  label('The two edges join at the back seam', X(0.5), Y(0.985), 11, '#1e3a8a');
+  label('Hidden under the head', X(0.5), Y(0.025), 11, '#1e3a8a');
+  label('Shoulders: curves over the top', X(0.5), Y(0.15), 12); label('Curves under the body', X(0.5), Y(0.88), 12);
+  label('Collar and hem lines on the ready-made patterns', X(0.985), Y(0.075), 10, '#b91c1c', 'right');
+  label(`vLeague kit template · ${w} × ${h} · paint the whole picture, hide this layer, save as PNG or JPG`, X(0.015), Y(0.075), 10, '#1e3a8a', 'left');
+}
+
 // ---------------------------------------------------------------- flat views
 // The unrolled shirt, drawn once per design and kept (a small cache), then seen from the front or the back by taking thin strips of it:
 // a strip at sideways position a (-1 to 1 across the body) comes from the part of the cylinder that faces you there, so the picture bends
 // round the body the way the 3D player does.
 const texCache = new Map();
 function texture(d, imgs) {
-  const key = `${JSON.stringify(d)}|${imgs.crest?.src || ''}|${imgs.logo?.src || ''}`;
+  const key = `${JSON.stringify(d)}|${imgs.crest?.src || ''}|${imgs.logo?.src || ''}|${imgs.art?.src || ''}`;
   let t = texCache.get(key);
   if (!t) {
     if (texCache.size > 40) texCache.clear();
@@ -146,7 +194,7 @@ export function drawKitFront(ctx, design, imgs, x, y, w, h, side = 'front') {
 // A small front-view sprite for the flat match views (cached by design). Pass loaded images to include the crest and an approved logo.
 const cache = new Map();
 export function kitSprite(design, imgs = {}, size = 128) {
-  const d = cleanDesign(design), key = `${size}|${JSON.stringify(d)}|${imgs.crest?.src || ''}|${imgs.logo?.src || ''}`;
+  const d = cleanDesign(design), key = `${size}|${JSON.stringify(d)}|${imgs.crest?.src || ''}|${imgs.logo?.src || ''}|${imgs.art?.src || ''}`;
   if (cache.has(key)) return cache.get(key);
   const out = document.createElement('canvas'); out.width = Math.round(size * 0.58); out.height = size;   // the match views draw a body about 0.58 wide to 1 tall
   drawKitFront(out.getContext('2d'), d, imgs, 0, 0, out.width, out.height, 'front');

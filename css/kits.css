@@ -73,6 +73,10 @@
 .kt-sub span { font-weight: 400; color: var(--faint); margin-left: 6px; font-size: .8rem; }
 .kt-note, .kt-tip { margin: 12px 0 0; font-size: .85rem; color: var(--muted); line-height: 1.45; }
 .kt-tip { margin: 8px 0 12px; }
+.kt-own { margin-top: 22px; padding-top: 4px; border-top: 1px solid var(--line); }
+.kt-own .kt-drop { margin-top: 12px; }
+.kt-steps { margin: 0 0 12px; padding-left: 1.3em; font-size: .88rem; line-height: 1.45; color: var(--muted); display: grid; gap: 4px; }
+.kt-steps b { color: var(--text, inherit); }
 
 .kt-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); font: 700 .88rem var(--font); cursor: pointer; text-decoration: none; }
 .kt-btn:hover { background: var(--surface-hover); }

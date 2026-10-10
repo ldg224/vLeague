@@ -4,6 +4,7 @@
 import { enterPlace } from './shell.js';
 import { esc, crestUrl } from './member.js';
 import { db } from './auth.js';
+import { SUPABASE_URL } from './config.js';
 import { finished, logoUrl } from './dashboard-data.js';
 import { rating } from './places.js';
 import { prefsNow, spoilerHidden, revealScore } from './prefs.js';
@@ -156,9 +157,13 @@ async function teamSheet(box, { club, squad, userId, season }) {
   const [rowRes, dlRes, kitRes] = await Promise.all([
     ok(c.from('team_sheets').select('*').eq('club', club.code).maybeSingle()),
     ok(c.from('deadlines').select('*').order('locks_at')),
-    ok(c.from('club_kits').select('slot, design').eq('club', club.code)),
+    ok(c.from('club_kits').select('*').eq('club', club.code)),
   ]);
-  const kitsMade = Object.fromEntries((kitRes.error ? [] : kitRes.data || []).filter(k => FIELD_SLOTS.includes(k.slot)).map(k => [k.slot, cleanDesign(k.design)]));   // the club's outfield kits (none until the kits table exists)
+  const kitRows = (kitRes.error ? [] : kitRes.data || []).filter(k => FIELD_SLOTS.includes(k.slot));
+  const kitsMade = Object.fromEntries(kitRows.map(k => [k.slot, cleanDesign(k.design)]));   // the club's outfield kits (none until the kits table exists)
+  const kitArt = Object.fromEntries(await Promise.all(kitRows.filter(k => k.art_path).map(k => new Promise(res => {   // its own whole-kit designs, approved or not
+    const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res([k.slot, i]); i.onerror = () => res([k.slot, null]); i.src = `${SUPABASE_URL}/storage/v1/object/public/kits/${k.art_path}`;
+  }))));
   let deadlines = dlRes.error ? [] : dlRes.data || [];   // no table yet (or it didn't load) = no deadline set
   let sheet = normaliseSheet(rowRes.data, squad);
   if (!rowRes.data && !rowRes.error) suggestPieces(sheet, byId);
@@ -225,7 +230,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
     $('#kitpick', box).innerHTML = made.length
       ? `<div class="kitpick" role="radiogroup" aria-label="Kit for the match">
           <button type="button" role="radio" data-kit="" aria-checked="${!sheet.kit}"><b>Automatic</b><small>Home kit; the away kit if the colours clash</small></button>
-          ${made.map(s => `<button type="button" role="radio" data-kit="${s}" aria-checked="${sheet.kit === s}"><img alt="" src="${kitSprite({ ...kitsMade[s], text: { name: '', number: '', colour: '' } }, {}, 64).toDataURL()}" width="30" height="52"><b>${esc(kitName(s, kitsMade[s]))}</b></button>`).join('')}</div>`
+          ${made.map(s => `<button type="button" role="radio" data-kit="${s}" aria-checked="${sheet.kit === s}"><img alt="" src="${kitSprite({ ...kitsMade[s], text: { name: '', number: '', colour: '' } }, { art: kitArt[s] }, 64).toDataURL()}" width="30" height="52"><b>${esc(kitName(s, kitsMade[s]))}</b></button>`).join('')}</div>`
       : '<p class="quiet">No kits designed yet. Your team plays in its club colours.</p>';
   }
 

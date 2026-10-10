@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.60.0 (2026-10-10)
+
+Headlines: design a kit in Photoshop (S-23)
+
+Database change: migration `0045_kit_art.sql` (applied). If anything goes wrong, `v0.59.0` is the version to go back to (`docs/RELEASING.md`).
+
+- **Added, My club → Kits → Style → Design it yourself:** download the kit template (2048 × 1388, the whole shirt laid flat with the front, back, sides, seam, shoulders and the crest, number and back-print spots marked), paint over it in Photoshop or any drawing app, and upload it. It becomes a new "Your own design" style, wrapped round the 3D player and worn in every match view. The crest, logo and print still go on top. "Download this kit as a start" gives your current kit at the same size to edit.
+- **Added:** uploaded designs are checked by the office like logos (the approval list now shows them, full size on a tap). Until then other clubs see a plain shirt in the design's main colour, picked from the chest automatically, so the away-kit clash check still works.
+- **Changed:** the kits upload limit is 1.5 MB (was 250 KB) and takes JPG as well as PNG and WebP.
+
 ## 0.59.0 (2026-10-10)
 
 Headlines: the kit editor, rebuilt (S-23)
