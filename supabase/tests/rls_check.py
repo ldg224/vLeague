@@ -157,44 +157,44 @@ SETUP_CHECKS = [
 ]
 
 
-# 0.6: line-up deadlines. Week 98/99 are test weeks; everything is rolled back. A version is "saved" at a set time by
+# 0.6: line-up deadlines. Weeks 97 and 98 are test weeks (99 belongs to the Editor Test page); everything is rolled back. A version is "saved" at a set time by
 # inserting into team_sheet_versions directly (pre runs with full rights).
 VER = "insert into public.team_sheet_versions (club, sheet, saved_at) values "
 DEADLINE_CHECKS = [
-    ('anon', 'guest can read deadlines', "insert into public.deadlines (week, locks_at) values (99, now() + interval '1 day');",
-     "select count(*) >= 1 as ok from public.deadlines where week = 99;"),
+    ('anon', 'guest can read deadlines', "insert into public.deadlines (week, locks_at) values (97, now() + interval '1 day');",
+     "select count(*) >= 1 as ok from public.deadlines where week = 97;"),
     ('anon', 'guest cannot set a deadline', '', {'error': 'row-level security'},
-     "insert into public.deadlines (week, locks_at) values (99, now());"),
+     "insert into public.deadlines (week, locks_at) values (97, now());"),
     ('manager', 'manager cannot set a deadline', '', {'error': 'row-level security'},
-     "insert into public.deadlines (week, locks_at) values (99, now());"),
+     "insert into public.deadlines (week, locks_at) values (97, now());"),
     ('office', 'office can set and move an open deadline', '',
-     """insert into public.deadlines (week, locks_at) values (99, now() + interval '1 day');
-        with u as (update public.deadlines set locks_at = now() + interval '2 days' where week = 99 returning 1) select count(*) = 1 as ok from u;"""),
+     """insert into public.deadlines (week, locks_at) values (97, now() + interval '1 day');
+        with u as (update public.deadlines set locks_at = now() + interval '2 days' where week = 97 returning 1) select count(*) = 1 as ok from u;"""),
     ('manager', "manager cannot read saved versions", VER + "('TUR', '{}', now());",
      "select count(*) = 0 as ok from public.team_sheet_versions;"),
     ('manager', 'saving a team sheet keeps a version', '',
      """update public.team_sheets set formation = '4-3-3' where club = 'TUR'; reset role;
         select count(*) >= 1 as ok from public.team_sheet_versions where club = 'TUR' and sheet->>'formation' = '4-3-3';"""),
     ('anon', 'a week locks with each club\u2019s last save before the deadline, and everyone can read it',
-     "insert into public.deadlines (week, locks_at) values (99, now() - interval '1 hour'); "
+     "insert into public.deadlines (week, locks_at) values (97, now() - interval '1 hour'); "
      + VER + """('TUR', '{"formation":"4-4-2","captain":"0015"}', now() - interval '3 hours'),
                 ('TUR', '{"formation":"3-5-2","captain":"0001"}', now() - interval '2 hours'),
                 ('TUR', '{"formation":"4-3-3","captain":"9999"}', now() - interval '30 minutes');
         select public.lock_due_weeks();""",
-     """select (select formation = '3-5-2' and captain = '0001' from public.week_sheets where week = 99 and club = 'TUR')
-          and (select locked_at is not null from public.deadlines where week = 99) as ok;"""),
+     """select (select formation = '3-5-2' and captain = '0001' from public.week_sheets where week = 97 and club = 'TUR')
+          and (select locked_at is not null from public.deadlines where week = 97) as ok;"""),
     ('anon', 'a deadline still to come locks nothing',
-     "insert into public.deadlines (week, locks_at) values (99, now() + interval '1 hour'); select public.lock_due_weeks();",
-     "select count(*) = 0 as ok from public.week_sheets where week = 99;"),
-    ('manager', 'manager cannot write a locked sheet', "insert into public.deadlines (week, locks_at) values (99, now() - interval '1 hour'); select public.lock_due_weeks();",
-     {'error': 'row-level security'}, "insert into public.week_sheets (week, club) values (99, 'LAU');"),
+     "insert into public.deadlines (week, locks_at) values (97, now() + interval '1 hour'); select public.lock_due_weeks();",
+     "select count(*) = 0 as ok from public.week_sheets where week = 97;"),
+    ('manager', 'manager cannot write a locked sheet', "insert into public.deadlines (week, locks_at) values (97, now() - interval '1 hour'); select public.lock_due_weeks();",
+     {'error': 'row-level security'}, "insert into public.week_sheets (week, club) values (97, 'LAU');"),
     ('manager', 'manager cannot lock weeks', '', {'error': 'permission denied'}, "select public.lock_due_weeks();"),
     ('office', 'office cannot move a locked week',
-     "insert into public.deadlines (week, locks_at) values (99, now() - interval '1 hour'); select public.lock_due_weeks();",
-     {'error': 'already locked'}, "update public.deadlines set locks_at = now() + interval '1 day' where week = 99;"),
+     "insert into public.deadlines (week, locks_at) values (97, now() - interval '1 hour'); select public.lock_due_weeks();",
+     {'error': 'already locked'}, "update public.deadlines set locks_at = now() + interval '1 day' where week = 97;"),
     ('office', 'office cannot delete a locked week',
-     "insert into public.deadlines (week, locks_at) values (99, now() - interval '1 hour'); select public.lock_due_weeks();",
-     {'error': 'already locked'}, "delete from public.deadlines where week = 99;"),
+     "insert into public.deadlines (week, locks_at) values (97, now() - interval '1 hour'); select public.lock_due_weeks();",
+     {'error': 'already locked'}, "delete from public.deadlines where week = 97;"),
 ]
 
 
@@ -336,7 +336,7 @@ PRESS_CHECKS = [
     ('manager', 'manager reads the question bank', '', "select count(*) >= 3 as ok from public.press_questions;"),
     ('manager', 'manager cannot edit the question bank', '', "with u as (update public.press_questions set text = 'zzzzzz' returning 1) select count(*) = 0 as ok from u;"),
     ('manager', 'manager reacts once per post and can change it', '',
-     "insert into public.reactions (target, emoji) values ('news:1', '👍'); update public.reactions set emoji = '🔥' where target = 'news:1'; select count(*) = 1 and min(emoji) = '🔥' as ok from public.reactions;"),
+     "insert into public.reactions (target, emoji) values ('news:1', '👍'); update public.reactions set emoji = '🔥' where target = 'news:1'; select count(*) = 1 and min(emoji) = '🔥' as ok from public.reactions where target = 'news:1' and user_id = auth.uid();"),
     ('manager', 'a second reaction row for the same post is refused', '', {'error': 'duplicate'},
      "insert into public.reactions (target, emoji) values ('news:1', '👍'), ('news:1', '🔥');"),
     ('manager', 'reaction must be one of the five', '', {'error': 'check'}, "insert into public.reactions (target, emoji) values ('news:1', '💩');"),
