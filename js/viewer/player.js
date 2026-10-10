@@ -3,6 +3,7 @@
 // sped up, match file). Renderers live in js/highlights.js and js/broadcast.js; this file only
 // plays them onto the page. Nothing here runs until a match is live or finished.
 
+import { kitSprite } from '../kit.js';
 import { liveSimTime, liveSpeed, clockAt, addedAt } from './data.js';
 import { esc, statusPill } from './ui.js';
 import { Replay } from './replay.js';
@@ -44,6 +45,22 @@ export function playerCard(st) {
   </section>`;
 }
 
+// Each side's kits as small front-view sprites for the flat match views (shirt numbers come from the players, so the design's own text is dropped).
+const loadImg = url => new Promise(res => { if (!url) return res(null); const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
+async function buildKitArt(wear) {
+  if (!wear) return null;
+  const art = {};
+  for (const side of ['home', 'away']) {
+    art[side] = {};
+    for (const role of ['field', 'gk']) {
+      const k = wear[side]?.[role]; if (!k) continue;
+      const logo = await loadImg(k.logoUrl);
+      art[side][role] = { main: k.main, sprite: kitSprite({ ...k.design, text: { name: '', number: '', colour: '' } }, { logo }) };
+    }
+  }
+  return art;
+}
+
 export class MatchPlayer {
   // ctx: { S, FX, st, data (the match file), timeline (element whose .tl-row[data-t] rows jump the video) }
   constructor(ctx) {
@@ -65,6 +82,7 @@ export class MatchPlayer {
       this.bc = await import('./broadcast.js').catch(() => null);
       const teams = this.S.teams.filter(t => t.code === this.FX.home || t.code === this.FX.away);
       this.assets = await this.hl.loadAssets(teams);
+      this.kitArt = await buildKitArt(this.kits);
     } catch (e) {
       this.hl = null;   // no graphics: tactical view still works
       console.warn('Match graphics unavailable', e);
@@ -83,7 +101,7 @@ export class MatchPlayer {
   renderer(view) {
     const have = this.r[view];
     if (have) { have.setScale(this.scale); return have; }   // a quality change only resizes the picture, it never rebuilds the camera plans
-    const opts = { season: this.S, fixture: this.FX, assets: this.assets, scale: this.scale };
+    const opts = { season: this.S, fixture: this.FX, assets: this.assets, scale: this.scale, kitArt: this.kitArt };
     return (this.r[view] = view === 'highlights' ? new this.hl.HighlightsRenderer(this.data, opts) : new this.bc.BroadcastRenderer(this.data, opts));
   }
   range() {   // [min, max] of the current view's time
@@ -126,6 +144,7 @@ export class MatchPlayer {
       : e.type === 'card' ? `${e.card === 'yellow' ? 'Yellow card' : e.card === 'second_yellow' ? 'Second yellow' : 'Red card'} · ${n[e.player]}` : e.type === 'woodwork' ? 'Off the woodwork!' : e.type === 'penalty' ? 'Penalty!' : `Offside · ${n[e.player]}`;
     const cap = this.$('#caption');
     this.tactical = new Replay(this.$('#pitch'), this.data, {
+      kitArt: this.kitArt,
       onFrame: t => {
         if (this.view !== 'tactical' || !this.tactical) return;   // the first frame is drawn inside the constructor
         this.t = t; if (this.st === "live") this.tactical.speed = liveSpeed(this.FX, this.S, t); this.syncUi();

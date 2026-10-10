@@ -1,0 +1,42 @@
+/* Kits (S-23): the controls on the left, a 3D player on the right. */
+.kits { display: grid; gap: 16px; }
+.kt-titlebar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.kt-titlebar .page-title { margin: 0; }
+.kt-club select { margin-left: 8px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; }
+.kt-grid { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 860px) { .kt-grid { grid-template-columns: minmax(0, 420px) minmax(0, 1fr); align-items: start; } .kt-stage { position: sticky; top: 16px; } }
+.kt-controls { display: grid; gap: 14px; }
+.kt-controls fieldset { margin: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); display: grid; gap: 10px; }
+.kt-controls legend { padding: 0 6px; font-weight: 700; font-size: .85rem; color: var(--muted); }
+.kt-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.kt-tabs button, .kt-patterns button { padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font: 600 .85rem var(--font); cursor: pointer; }
+.kt-tabs button[aria-selected="true"], .kt-patterns button[aria-pressed="true"] { background: var(--club, var(--blue-600)); border-color: transparent; color: var(--on-club, #fff); }
+.kt-tabs i { font-style: normal; font-size: .68rem; opacity: .75; }
+.kt-patterns { display: flex; flex-wrap: wrap; gap: 6px; }
+.kt-colours, .kt-text { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.kt-sw { display: grid; gap: 4px; font-size: .8rem; color: var(--muted); }
+.kt-sw input[type="color"] { width: 64px; height: 38px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); cursor: pointer; }
+.kt-text label { display: grid; gap: 4px; font-size: .8rem; color: var(--muted); }
+.kt-text input[type="text"] { width: 9rem; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; }
+.kt-check { display: flex; gap: 8px; align-items: center; }
+.kt-logo { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.kt-file { cursor: pointer; }
+.kt-note { margin: 0; font-size: .82rem; color: var(--muted); }
+.kt-controls input[type="range"] { width: 100%; }
+.kt-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.kt-saved { font-size: .9rem; color: var(--muted); }
+.kt-saved.bad { color: var(--err-text); }
+.kt-stage { display: grid; gap: 8px; }
+#kt-3d { width: 100%; aspect-ratio: 4 / 5; max-height: 70vh; border: 1px solid var(--line); border-radius: var(--r-md); background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--club, var(--blue-600)) 30%, var(--surface)), var(--surface)); cursor: grab; display: block; }
+#kt-3d:active { cursor: grabbing; }
+.kt-stage-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: .8rem; color: var(--faint); }
+.kt-approve { padding: 14px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); }
+.kt-approve ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.kt-approve li { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.kt-approve img { background: repeating-conic-gradient(#8884 0 25%, transparent 0 50%) 50% / 16px 16px; border-radius: 8px; }
+
+.kits .btn-ghost { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 600 .85rem var(--font); cursor: pointer; text-decoration: none; }
+.kits .btn { padding: 10px 18px; border: 0; border-radius: 999px; background: var(--club, var(--blue-600)); color: var(--on-club, #fff); font: 700 .95rem var(--font); cursor: pointer; }
+.kits .link-btn { padding: 0; border: 0; background: none; color: var(--brand); font: 700 .88rem var(--font); cursor: pointer; }
+.kt-name { display: grid; gap: 4px; font-size: .8rem; color: var(--muted); }
+.kt-name input { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; max-width: 16rem; }

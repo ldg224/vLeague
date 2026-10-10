@@ -3,6 +3,18 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.58.0 (2026-10-10)
+
+Headlines: kits. Design a club's shirts on a 3D player (S-23), and they show in the matches (S-20)
+
+Database change: migrations `0043_club_kits.sql` (the `club_kits` table and the `kits` logo bucket) and `0044_sheet_kit.sql` (the kit a team sheet picks). Apply both before releasing, or the Kits page and the kit picker can't save. If anything goes wrong, `v0.57.0` is the version to go back to (`docs/RELEASING.md`).
+
+- **Added, My club → Kits (S-23):** a kit editor. Four kits per club (home, away, goalkeeper, special): ten patterns (plain, hoops, stripes, pinstripes, halves, quarters, sash, chevron, checks, chest band), three colours, a name and number, the club crest on the chest, and an uploaded logo you can size and move. A 3D player shows the shirt live; drag to turn it, scroll or pinch to zoom, Front and Back buttons.
+- **Added, logos need the office's approval:** a new logo is seen only by its club and the office until the office approves it (a list at the bottom of the Kits page, which the office reaches by picking any club). Changing the logo sends it back for approval.
+- **Added, kit names:** every kit can be given a name ("Classic reds", "Third strip"). It shows on the Kits tabs and in the picker below.
+- **Added, My club → team sheet → Kit:** choose which kit the team wears: Automatic, or any of the club's home, away or special kits by name, with a small picture of each. The pick is saved with the line-up and locks with it at the deadline, so everyone sees it with the revealed line-ups.
+- **Added, kits in matches (S-20):** the Full match, Highlights and Tactical views and the line-up pitch use each side's kit. A team that picked a kit wears it. Otherwise the home side wears its home kit, and the away side its away kit when it has one and the colours clash with the home side (else its home kit). Goalkeepers wear the club's goalkeeper kit if there is one. A club with no kits looks exactly as before. Nothing is made up for a club that hasn't designed an away kit.
+
 ## 0.57.0 (2026-10-10)
 
 Headlines: a "Live now" filter on Matches (S-19) and live reactions on the Game centre (S-20A)

@@ -267,7 +267,8 @@ function buildTimeline(d, clips) {
 // frame(T) returns a canvas of W*scale × H*scale. Everything is drawn in W×H units on a scaled
 // context, so a smaller scale (e.g. 0.5 on phones) just renders fewer pixels. Export uses scale 1.
 export class HighlightsRenderer {
-  constructor(data, { season, fixture, assets, scale = 1 }) {
+  constructor(data, { season, fixture, assets, scale = 1, kitArt = null }) {
+    this.kitArt = kitArt;
     this.d = data; this.fr = new Frames(data); this.season = season; this.fx = fixture; this.A = assets;
     this.home = data.teams.home; this.away = data.teams.away;
     this.hc = safeColour(this.home.colour); this.ac = safeColour(this.away.colour);
@@ -815,11 +816,15 @@ export class HighlightsRenderer {
     }
   }
 
+  // The kit a player wears in this match (S-23): { main, sprite } or null (then the club colours and the old goalkeeper colours apply).
+  kitOf(it) { const A = this.kitArt?.[it.i < this.nHome ? 'home' : 'away']; return A ? (this.gkIdx.has(it.i) ? A.gk : A.field) || null : null; }
+
   // A fouled player lying on the grass.
   drawLying(cam, it) {
     const c = this.c, side = it.i < this.nHome ? 0 : 1;
     let col = side ? this.ac : this.hc;
     if (this.gkIdx.has(it.i)) col = side ? '#a855f7' : '#f5b042';
+    const kitL = this.kitOf(it); if (kitL) col = kitL.main;
     const a = it.lying.ang, hx = it.x + Math.cos(a) * 0.95, hy = it.y + Math.sin(a) * 0.95, fx = it.x - Math.cos(a) * 0.85, fy = it.y - Math.sin(a) * 0.85;
     const H0 = cam.p(hx, hy, 0.18), F0 = cam.p(fx, fy, 0.15), M = cam.p(it.x, it.y, 0.2);
     if (!H0 || !F0 || !M) return;
@@ -951,6 +956,7 @@ export class HighlightsRenderer {
     const side = it.i < this.nHome ? 0 : 1;
     let col = side ? this.ac : this.hc;
     if (this.gkIdx.has(it.i)) col = side ? '#a855f7' : '#f5b042';
+    const kit = this.kitOf(it); if (kit) col = kit.main;
     const r = Math.max(10, p[2] * 0.6);
     const head = cam.p(it.x, it.y, 1.85);
     const top = head ? head[1] : p[1] - r * 2;
@@ -959,7 +965,10 @@ export class HighlightsRenderer {
     // body: a short upright capsule, like a player figure seen from the stand
     const bx = p[0], bh = p[1] - top, bw = Math.max(12, bh * 0.42);
     const g = c.createLinearGradient(bx - bw, 0, bx + bw, 0); g.addColorStop(0, col); g.addColorStop(1, shade(col, 0.55));
-    c.fillStyle = g; c.beginPath(); c.roundRect(bx - bw / 2, top + bh * 0.28, bw, bh * 0.72, bw / 2); c.fill();
+    if (kit?.sprite) {   // the club's own kit (S-23), clipped to the same body shape
+      c.save(); c.beginPath(); c.roundRect(bx - bw / 2, top + bh * 0.28, bw, bh * 0.72, bw / 2); c.clip();
+      c.drawImage(kit.sprite, bx - bw / 2, top + bh * 0.28, bw, bh * 0.72); c.restore();
+    } else { c.fillStyle = g; c.beginPath(); c.roundRect(bx - bw / 2, top + bh * 0.28, bw, bh * 0.72, bw / 2); c.fill(); }
     c.fillStyle = '#f1c9a5'; c.beginPath(); c.arc(bx, top + bh * 0.16, bw * 0.34, 0, Math.PI * 2); c.fill();
     if (holder) { c.lineWidth = 3; c.strokeStyle = '#fff'; c.beginPath(); c.ellipse(p[0], p[1], r * 1.5, r * 0.6, 0, 0, Math.PI * 2); c.stroke(); }
     // shirt number

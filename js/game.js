@@ -19,6 +19,7 @@ import { byPlace, pitchHtml } from './lineup-pitch.js';
 import { ratingsAt } from './live-rating.js';
 import { icon } from './icons.js';
 import { liveReactions } from './reactions.js';
+import { loadKits, matchKits } from './kits-data.js';
 
 chrome();
 const main = document.getElementById('main');
@@ -66,7 +67,7 @@ async function run() {
   const shirt = id => (season.players || []).find(p => String(p.id) === String(id))?.number ?? (fx.test ? String(Number(String(id).slice(-2))) : undefined);   // a test match's ids end in the shirt number
   const shirtHtml = id => { const n = shirt(id); return n == null || n === '' ? '' : `<span class="sn" title="Shirt number">${esc(n)}</span>`; };
 
-  async function loadSheets() { try { const r = await (await db()).from('week_sheets').select('week, club, formation, captain, lineup').eq('week', fx.week); sheets = r.data || []; } catch { /* squads are used */ } }
+  async function loadSheets() { try { const r = await (await db()).from('week_sheets').select('week, club, formation, captain, lineup, kit').eq('week', fx.week); sheets = r.data || []; } catch { /* squads are used */ } }
 
   async function loadFile() {
     if (data || loadingFile || !['live', 'ft'].includes(st()) || !fx.result?.file) return;
@@ -124,7 +125,12 @@ async function run() {
   };
 
   // ---------------------------------------------------------------- the header
-  const kitColour = code => clubsRows.find(c => c.code === code)?.colour || teamOf(season, code)?.colour;
+  // What each side wears (S-23): their kit's main colour if they have designed one, else the club colour (as before).
+  const kitsAll = await loadKits();
+  const clubColour = code => clubsRows.find(c => c.code === code)?.colour || teamOf(season, code)?.colour;
+  const kitPicks = () => Object.fromEntries(sheets.filter(s => s.kit).map(s => [s.club, s.kit]));
+  let wear = matchKits(kitsAll, fx.home, fx.away, { [fx.home]: clubColour(fx.home), [fx.away]: clubColour(fx.away) }, kitPicks());
+  const kitColour = code => (code === fx.home ? wear.home.field?.main : code === fx.away ? wear.away.field?.main : null) || clubColour(code);
   const sameColour = (x, y) => !!x && !!y && String(x).toLowerCase() === String(y).toLowerCase();
   const pitchKit = { colour: code => kitColour(code), label: code => fullNameOf(teamOf(season, code)), shirt: id => shirt(id) };
   const sides = () => { const h = kitColour(fx.home), a = kitColour(fx.away); return h ? ` style="--hc:${esc(h)};${a && !sameColour(h, a) ? `--ac:${esc(a)}` : ''}"` : ''; };
@@ -192,7 +198,7 @@ async function run() {
   const unmount = () => { player?.destroy(); player = null; };
   function mount() {
     unmount();
-    if (data && document.getElementById('mp')) player = new MatchPlayer({ S: season, FX: fx, st: st(), data, timeline: null });
+    if (data && document.getElementById('mp')) player = new MatchPlayer({ S: season, FX: fx, st: st(), data, timeline: null, kits: wear });
   }
 
   // The highest-rated player of the match (both teams): the man of the match.
@@ -311,6 +317,7 @@ async function run() {
   }
 
   await loadSheets();
+  wear = matchKits(kitsAll, fx.home, fx.away, { [fx.home]: clubColour(fx.home), [fx.away]: clubColour(fx.away) }, kitPicks());   // now that the locked sheets (and the kits they picked) are in
   if (['live', 'ft'].includes(st())) await loadFile();
   draw();
   main.setAttribute('aria-busy', 'false');

@@ -7,6 +7,7 @@ import { db } from './auth.js';
 import { finished, logoUrl } from './dashboard-data.js';
 import { rating } from './places.js';
 import { prefsNow, spoilerHidden, revealScore } from './prefs.js';
+import { kitSprite, cleanDesign, kitName, FIELD_SLOTS } from './kit.js';
 import { renderPitch, FORMATIONS, TACTICS, STEPS, PRESETS, POS_ORDER, normaliseSheet, reshape, benchOf } from './pitch.js';
 
 const POS_NAME = { GK: 'Goalkeeper', DEF: 'Defender', MID: 'Midfielder', FWD: 'Forward' };
@@ -79,6 +80,7 @@ if (ctx) {
         <img class="club-crest" src="${esc(crest)}" alt="" onerror="this.remove()">
         <div class="club-name"><h1>${esc(club.name)}</h1>
           <p>${[club.motto && `<i>${esc(club.motto)}</i>`, manager && esc(manager), club.stadium && esc(club.stadium)].filter(Boolean).join(' · ')}</p></div>
+        <a class="edit-club" href="kits.html">Kits</a>
         <a class="edit-club" href="setup.html?edit">Edit club</a>
       </header>
       <div class="club-tabs" role="tablist" aria-label="My club">
@@ -151,10 +153,12 @@ function suggestPieces(sheet, byId) {
 async function teamSheet(box, { club, squad, userId, season }) {
   const c = await db();
   const byId = new Map(squad.map(p => [String(p.id), p]));
-  const [rowRes, dlRes] = await Promise.all([
+  const [rowRes, dlRes, kitRes] = await Promise.all([
     ok(c.from('team_sheets').select('*').eq('club', club.code).maybeSingle()),
     ok(c.from('deadlines').select('*').order('locks_at')),
+    ok(c.from('club_kits').select('slot, design').eq('club', club.code)),
   ]);
+  const kitsMade = Object.fromEntries((kitRes.error ? [] : kitRes.data || []).filter(k => FIELD_SLOTS.includes(k.slot)).map(k => [k.slot, cleanDesign(k.design)]));   // the club's outfield kits (none until the kits table exists)
   let deadlines = dlRes.error ? [] : dlRes.data || [];   // no table yet (or it didn't load) = no deadline set
   let sheet = normaliseSheet(rowRes.data, squad);
   if (!rowRes.data && !rowRes.error) suggestPieces(sheet, byId);
@@ -175,6 +179,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
       <div class="ts-right">
         <section class="sect pls-sect"><div class="sect-head"><h2 id="pls-title">Players</h2><button type="button" class="link-btn pls-close" data-cancel>Cancel</button></div><ul class="pls" id="players"></ul></section>
         <section class="sect"><div class="sect-head"><h2>Set pieces</h2></div><div class="pieces" id="pieces"></div></section>
+        <section class="sect"><div class="sect-head"><h2>Kit</h2><a class="link-btn" href="kits.html">Design kits</a></div><div id="kitpick"></div></section>
         <section class="sect"><div class="sect-head"><h2>Tactics</h2></div><div id="tactics"></div></section>
       </div>
     </div>
@@ -212,6 +217,16 @@ async function teamSheet(box, { club, squad, userId, season }) {
     const xi = Object.keys(FORMATIONS[sheet.formation]).map(slot => ({ slot, p: byId.get(sheet.lineup[slot]) })).filter(x => x.p);
     $('#pieces', box).innerHTML = PIECES.map(([key, label]) => `<label class="piece"><span>${label}</span>
       <select data-piece="${key}"><option value="">Not set</option>${xi.map(({ slot, p }) => `<option value="${esc(p.id)}"${String(sheet[key]) === String(p.id) ? ' selected' : ''}>${esc(p.name)} (${esc(slot)})</option>`).join('')}</select></label>`).join('');
+  }
+
+  // Which kit the team wears (S-23): automatic, or one of the club's own kits, each shown by the name the club gave it.
+  function drawKit() {
+    const made = FIELD_SLOTS.filter(s => kitsMade[s]);
+    $('#kitpick', box).innerHTML = made.length
+      ? `<div class="kitpick" role="radiogroup" aria-label="Kit for the match">
+          <button type="button" role="radio" data-kit="" aria-checked="${!sheet.kit}"><b>Automatic</b><small>Home kit; the away kit if the colours clash</small></button>
+          ${made.map(s => `<button type="button" role="radio" data-kit="${s}" aria-checked="${sheet.kit === s}"><img alt="" src="${kitSprite({ ...kitsMade[s], text: { name: '', number: '', colour: '' } }, {}, 64).toDataURL()}" width="26" height="52"><b>${esc(kitName(s, kitsMade[s]))}</b></button>`).join('')}</div>`
+      : '<p class="quiet">No kits designed yet. Your team plays in its club colours.</p>';
   }
 
   const word = (t, v) => (v === 0.5 ? 'Balanced' : v === 0 ? `Very ${t.lo.toLowerCase()}` : v === 1 ? `Very ${t.hi.toLowerCase()}` : v < 0.5 ? t.lo : t.hi);
@@ -282,7 +297,9 @@ async function teamSheet(box, { club, squad, userId, season }) {
     if (saving) { again = true; return; }
     saving = true; again = false; state = 'saving'; drawSave();
     const snap = JSON.stringify(sheet);
-    const { error } = await ok(c.from('team_sheets').upsert({ club: club.code, ...JSON.parse(snap), updated_by: userId }, { onConflict: 'club' }));
+    const body = JSON.parse(snap);
+    if (body.kit == null && !(rowRes.data && 'kit' in rowRes.data)) delete body.kit;   // until the kit column exists (migration 0044), a sheet without a kit pick saves exactly as before
+    const { error } = await ok(c.from('team_sheets').upsert({ club: club.code, ...body, updated_by: userId }, { onConflict: 'club' }));
     saving = false;
     if (error) { state = 'error'; drawSave(); return; }
     saved = snap; savedAt = new Date();
@@ -301,7 +318,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   }
 
   function redraw(focus) {
-    drawPitch(); drawPlayers(); drawPieces();
+    drawPitch(); drawPlayers(); drawPieces(); drawKit();
     box.querySelector(focus)?.focus();
   }
 
@@ -334,6 +351,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
     } else if (t.closest('[data-cancel]')) { sel = null; redraw(); }
     else if (pr) { sheet.tactics = { ...PRESETS[pr.dataset.preset] }; changed(); drawTactics(); box.querySelector(`[data-preset="${pr.dataset.preset}"]`)?.focus(); }
     else if (st) { sheet.tactics[st.dataset.tac] = Number(st.dataset.v); changed(); drawTactics(); box.querySelector(`[data-tac="${st.dataset.tac}"][data-v="${st.dataset.v}"]`)?.focus(); }
+    else if (t.closest('[data-kit]')) { sheet.kit = t.closest('[data-kit]').dataset.kit || null; changed(); drawKit(); box.querySelector(`[data-kit="${sheet.kit || ''}"]`)?.focus(); }
     else if (t.closest('[data-save]')) save();
   });
   box.addEventListener('change', e => {
@@ -344,7 +362,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   // Leaving the page: send what's waiting rather than lose it.
   document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'dirty') save(); });
 
-  drawPitch(); drawPlayers(); drawPieces(); drawTactics(); drawSave(); drawDeadline(); drawLocked();
+  drawPitch(); drawPlayers(); drawPieces(); drawKit(); drawTactics(); drawSave(); drawDeadline(); drawLocked();
   if (state === 'new') save();
 
   // The deadline counts down; once one passes, read the deadlines again until the database has locked that week.

@@ -6,7 +6,8 @@ import { onColour, safeColour } from './ui.js';
 const PAD = 30, SC = 10;   // canvas pixels: margin, per metre
 
 export class Replay {
-  constructor(canvas, data, { onFrame } = {}) {
+  constructor(canvas, data, { onFrame, kitArt = null } = {}) {
+    this.kitArt = kitArt;
     this.cv = canvas;
     this.ctx = canvas.getContext('2d');
     this.d = data;
@@ -83,7 +84,8 @@ export class Replay {
     c.save(); c.translate(PAD, PAD);
     const holder = a[4];
     this.d.players.forEach((p, k) => {
-      const x = lerp(6 + 2 * k) * SC, y = lerp(7 + 2 * k) * SC, col = this.cols[k < this.nHome ? 0 : 1];
+      const kit = this.kitArt?.[k < this.nHome ? 'home' : 'away']?.[p.slot === 'GK' ? 'gk' : 'field'];
+      const x = lerp(6 + 2 * k) * SC, y = lerp(7 + 2 * k) * SC, col = kit?.main || this.cols[k < this.nHome ? 0 : 1];
       c.beginPath(); c.arc(x, y, 12, 0, Math.PI * 2);
       const g = c.createRadialGradient(x - 4, y - 4, 2, x, y, 12);
       g.addColorStop(0, col); g.addColorStop(1, shade(col));

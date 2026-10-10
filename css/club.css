@@ -124,3 +124,11 @@
   .club-name p { font-size: .8rem; }
   .member-main .club-head .edit-club { padding: 6px 12px; font-size: .8rem; }
 }
+
+/* Kit picker on the team sheet (S-23) */
+.kitpick { display: grid; gap: 8px; }
+.kitpick button { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); color: var(--text); font: 600 .9rem var(--font); text-align: left; cursor: pointer; }
+.kitpick button small { display: block; font-weight: 400; color: var(--muted); font-size: .75rem; }
+.kitpick button b { font-weight: 700; }
+.kitpick button[aria-checked="true"] { border-color: var(--club, var(--blue-500)); background: color-mix(in srgb, var(--club, var(--blue-500)) 14%, var(--surface)); }
+.kitpick button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }

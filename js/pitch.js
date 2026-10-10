@@ -102,6 +102,7 @@ export function normaliseSheet(row, squad) {
   return {
     formation, lineup: full, tactics, bench: benchOf(full, squad),
     captain: pick(row?.captain), penalties: pick(row?.penalties), freekicks: pick(row?.freekicks), corners: pick(row?.corners),
+    kit: ['home', 'away', 'special'].includes(row?.kit) ? row.kit : null,   // the kit worn (S-23); null = automatic
   };
 }
 // Everyone not in the XI, goalkeepers first.
