@@ -2,12 +2,10 @@
 //   inboxItems(season, sbNews, code) -> [{ id, src: 's3' | 'sb', post|row, at: Date, pinned }], pinned first, then newest
 //   readIds(code), markRead(code, ids)  -> read state: this device plus the account's (prefs.js), so it follows you
 //   unreadCount(season, sbNews, code)   -> how many of the club's items are unread
-// Press conferences (0.30) are items too (src 'press', id press-<fixture>): from 24 h before kick-off until two days after,
-// pinned while open. Posts a manager has cleared (prefs.dismissed) never come back.
+// Posts a manager has cleared (prefs.dismissed) never come back. (Press conferences were items here until 0.62, S-03.)
 // season posts: live or closed, for 'all', 'teams' or a list of codes with this club in it.
 // sbNews: rows of the Supabase news table (crest reveals and posts), all of which every club sees.
-import { audienceOf, parseStamp, kickoff } from './dashboard-data.js';
-import { pressWindow } from './press-data.js';
+import { audienceOf, parseStamp } from './dashboard-data.js';
 import { prefsNow, rememberRead } from './prefs.js';
 
 const forClub = (post, code) => {
@@ -15,23 +13,13 @@ const forClub = (post, code) => {
   return a === 'all' || a === 'teams' || (Array.isArray(a) && a.includes(code));
 };
 
-const DAY = 864e5;
-function pressItems(season, code, now) {
-  return (season?.fixtures || []).filter(f => (f.home === code || f.away === code) && !f.postponed && !f.test).flatMap(f => {
-    const w = pressWindow(f, now), ko = kickoff(f);
-    if (w === 'open') return [{ id: `press-${f.id}`, src: 'press', fx: f, at: new Date(+ko - DAY), pinned: true, open: true }];
-    if (w === 'closed' && now - ko < 2 * DAY) return [{ id: `press-${f.id}`, src: 'press', fx: f, at: new Date(+ko - DAY), pinned: false, open: false }];
-    return [];
-  });
-}
-
-export function inboxItems(season, sbNews, code, now = new Date()) {
+export function inboxItems(season, sbNews, code) {
   const s3 = (season?.news || []).filter(p => (p.status === 'live' || p.status === 'closed') && forClub(p, code))
     .map(p => ({ id: `s3-${p.id}`, src: 's3', post: p, at: parseStamp(p.sent), pinned: Boolean(p.pinned) }));
   const sb = (sbNews || []).map(r => ({ id: `sb-${r.id}`, src: 'sb', row: r, at: r.created_at ? new Date(r.created_at) : null, pinned: Boolean(r.pinned || r.data?.pinned) }));
   const t = i => i.at?.getTime() || 0;
   const gone = new Set(prefsNow().dismissed);
-  return [...s3, ...sb, ...pressItems(season, code, now)].filter(i => !gone.has(i.id)).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || t(b) - t(a));
+  return [...s3, ...sb].filter(i => !gone.has(i.id)).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || t(b) - t(a));
 }
 
 const key = code => `vleague-inbox-read-${code}`;

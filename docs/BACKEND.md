@@ -42,8 +42,8 @@ makes invites and password resets work.
 | `user_settings` | Settings that follow an account (0.7): accent, spoiler-free results and revealed matches, clock, start page, email choices (`prefs` jsonb) | Yourself | Yourself |
 | `manager_phones` | Each manager's phone number (0.10), saved by the Inbox form through `save_my_phone()` | That club's manager and the office | Only through the function; the office can delete |
 | `players` | The league's players (0.11): name, position, offense and defense (1 to 10), club (empty = free agent), and `value`, the price worked out from the ratings | Everyone, guests too | League office |
-| `press_questions` | The press-conference question bank (0.30): each question has preset answers with a tone and four effects (fans, mood, team, opp, -3 to 3) | Signed-in users | League office |
-| `press_answers` | A club's chosen answers for a match. Written only by `save_press_answer()`: your own club's match, from 24 hours before kick-off until kick-off | Signed-in users (they are quoted) | Function above; the office |
+| `press_questions` | The press-conference question bank (0.30): each question has preset answers with a tone and four effects (fans, mood, team, opp, -3 to 3) **Unused since 0.62 (S-03, press duties removed); the table and its rows are kept.** | Signed-in users | League office |
+| `press_answers` | A club's chosen answers for a match. Written only by `save_press_answer()`: your own club's match, from 24 hours before kick-off until kick-off **Unused since 0.62 (S-03, press duties removed); the table and its rows are kept.** | Signed-in users (they are quoted) | Function above; the office |
 | `reactions` | One emoji per person per post (`news:<id>`, `press:<fixture>:<club>`) | Signed-in users | Each person their own |
 | `matches` (storage bucket) | Full match files `<fixture id>.json.gz` (0.14): private; readable by anyone only once the match has kicked off, by the office any time | See left | League office |
 | `email_log` | Every reminder email sent (account, kind, key), so none is sent twice | League office | Nobody directly; only `send-reminders` |

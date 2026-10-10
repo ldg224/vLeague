@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.62.0 (2026-10-10)
+
+Headlines: press and media duties removed (S-03)
+
+No database change (the press tables and their rows are kept, just no longer used). If anything goes wrong, `v0.61.5` is the version to go back to (`docs/RELEASING.md`).
+
+- **Removed, Inbox:** press conferences. Managers no longer get press questions before a match, and there are no answer meters or quotes. Reactions on league news stay.
+- **Removed, matches:** press answers no longer nudge a club's ratings (they could move them up to 3%). Every match is played on the players' own ratings.
+- **Changed, code:** the press code is gone; news reactions moved to their own small file (`js/news-reactions.js`).
+
 ## 0.61.5 (2026-10-10)
 
 Headlines: DeepClean 1, signed-in pages (B-17)

@@ -60,24 +60,7 @@
 .ib-toast { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; padding: 9px 14px; border-radius: var(--r-sm); background: var(--surface); color: var(--text-soft); font-size: .9rem; }
 .ib-undo { border: 0; background: transparent; color: var(--brand); font: 700 .9rem var(--font); text-decoration: underline; cursor: pointer; }
 
-/* Press conference and reactions (0.30) */
-.pr-q { margin: 0 0 14px; padding: 0; border: 0; display: grid; gap: 6px; }
-.pr-q legend { padding: 0; margin-bottom: 6px; font-weight: 700; color: var(--text); }
-.pr-a { display: block; width: 100%; text-align: left; padding: 10px 12px; min-height: 44px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface); color: var(--text-soft); font: 500 .92rem var(--font); cursor: pointer; }
-.pr-a i { display: block; font-style: normal; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--faint); margin-bottom: 2px; }
-.pr-a:hover { border-color: color-mix(in srgb, var(--club) 55%, transparent); }
-.pr-a.on { border-color: var(--club); background: color-mix(in srgb, var(--club) 16%, transparent); color: var(--text); }
-.pr-msg { min-height: 1.2em; color: var(--muted); font-size: .85rem; }
-.pr-meters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 6px 0; }
-.pr-meters > div { padding: 8px; border-radius: var(--r-sm); background: var(--surface); text-align: center; }
-.pr-meters span { display: block; font-size: .72rem; color: var(--faint); }
-.pr-meters b { font: 700 1.1rem var(--font-display); color: var(--muted); }
-.pr-meters b.up { color: #3fbf77; } .pr-meters b.down { color: #e5706b; }
-.pr-note { font-size: .8rem; color: var(--faint); }
-.pr-quote { margin: 12px 0 0; padding: 10px 12px; border-left: 3px solid var(--club); background: var(--surface); border-radius: 0 var(--r-sm) var(--r-sm) 0; }
-.pr-quote p { margin: 6px 0 0; }
-.pr-quote i { color: var(--faint); }
+/* Reactions on news (0.30) */
 .rx { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0; }
 .rx-b { display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); font: 600 .85rem var(--font); cursor: pointer; }
 .rx-b.on { border-color: var(--club); background: color-mix(in srgb, var(--club) 16%, transparent); color: var(--text); }
-@media (max-width: 640px) { .pr-meters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
