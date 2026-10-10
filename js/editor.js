@@ -9,6 +9,7 @@ import { prefs, setPref } from './prefs.js';
 import { playersView, mountPlayers } from './editor-players.js';
 import { fixturesView, mountFixtures } from './editor-fixtures.js';
 import { newsView, mountNews } from './editor-news.js';
+import { historyView, mountHistory } from './editor-history.js';
 import { testView, mountTest } from './editor-test.js';
 import { draftView, mountDraft } from './editor-draft.js';
 import { icon } from './icons.js';
@@ -16,7 +17,7 @@ import { icon } from './icons.js';
 chrome();
 const me = await enter('editor.html');
 const main = document.getElementById('main');
-const TABS = { clubs: 'Clubs', players: 'Players', fixtures: 'Fixtures', news: 'News', draft: 'Draft', test: 'Test' };
+const TABS = { clubs: 'Clubs', players: 'Players', fixtures: 'Fixtures', news: 'News', draft: 'Draft', history: 'History', test: 'Test' };
 // `open` is which club panels and submissions are expanded, kept across redraws so nothing snaps shut after an action.
 let state = { clubs: [], requests: [], accounts: [], phones: null, deadlines: null, locked: [], season: null, digest: true, open: new Set() };
 let firstLoad = true;
@@ -76,12 +77,13 @@ function render() {
   const y = scrollY;
   main.innerHTML = `<nav class="ed-tabs" aria-label="Editor">${Object.entries(TABS).map(([k, label]) =>
     `<a href="#${k}" ${k === t ? 'aria-current="page"' : ''}>${label}${k === 'clubs' && pending ? ` <span class="ed-count">${pending}</span>` : ''}</a>`).join('')}</nav>
-    <section id="view">${{ clubs: clubsView, players: playersView, fixtures: fixturesView, news: newsView, draft: draftView, test: testView }[t]()}</section>`;
+    <section id="view">${{ clubs: clubsView, players: playersView, fixtures: fixturesView, news: newsView, draft: draftView, history: historyView, test: testView }[t]()}</section>`;
   if (y) scrollTo(0, y);   // a redraw after an action keeps your place
   if (t === 'players') mountPlayers({ db, esc, explain, clubs: state.clubs });
   if (t === 'fixtures') mountFixtures({ db, esc, explain, clubs: state.clubs });
   if (t === 'test') mountTest({ db, esc, explain, clubs: state.clubs });
   if (t === 'draft') mountDraft({ db, esc, explain, clubs: state.clubs });
+  if (t === 'history') mountHistory({ db, esc, explain, clubs: state.clubs });
   if (t === 'news') mountNews({ db, esc, explain, clubs: state.clubs, season: state.season, deadlines: state.deadlines, accounts: state.accounts });
   restoreInputs(main, snap);
 }
@@ -207,9 +209,8 @@ const FIELDS = [
   { key: 'stadium', label: 'Stadium', type: 'text', max: 40, optional: true, show: c => (c.stadium ? esc(c.stadium) : dash) },
   { key: 'motto', label: 'Motto', type: 'text', max: 80, optional: true, show: c => (c.motto ? esc(c.motto) : dash) },
   { key: 'crest_path', label: 'Crest', type: 'crest', show: crestPic },
-  // S-04: shown on the club's team page. History is short text; honours one per line, "Championships: 1".
+  // S-04: shown on the club's team page. (Trophies come from Editor -> History.)
   { key: 'history', label: 'History', type: 'longtext', max: 4000, optional: true, show: c => (c.history ? `<span class="ed-long">${esc(c.history.length > 160 ? `${c.history.slice(0, 160)}…` : c.history)}</span>` : dash) },
-  { key: 'honours', label: 'Honours', type: 'honours', optional: true, show: c => (c.honours?.length ? c.honours.map(h => `${esc(h.name)}: ${esc(h.count)}`).join('<br>') : dash) },
   { key: 'status', label: 'Status', type: 'status', show: c => esc(STATUS[c.status] || c.status) },
 ];
 
@@ -226,9 +227,8 @@ function openEditor(host, spec) {
       + (optional ? `<label class="ed-none-opt"><input type="checkbox" name="none"${set ? '' : ' checked'}> None</label>` : '');
   } else if (type === 'crest') {
     input = '<input type="file" name="v" accept="image/*" required aria-label="Crest picture"><img class="ed-crest-pic ed-preview-pic" alt="" hidden>';
-  } else if (type === 'longtext' || type === 'honours') {
-    const v = type === 'honours' ? (value || []).map(h => `${h.name}: ${h.count}`).join('\n') : value;
-    input = `<textarea name="v" rows="${type === 'honours' ? 4 : 8}" ${max ? `maxlength="${max}"` : ''} aria-label="${esc(spec.label)}" class="ed-textarea">${esc(v)}</textarea>`;
+  } else if (type === 'longtext') {
+    input = `<textarea name="v" rows="8" ${max ? `maxlength="${max}"` : ''} aria-label="${esc(spec.label)}" class="ed-textarea">${esc(value)}</textarea>`;
   } else if (type === 'status') {
     input = `<select name="v" aria-label="Status">${Object.entries(STATUS).map(([k, l]) => `<option value="${k}"${k === value ? ' selected' : ''}>${l}</option>`).join('')}</select>`;
   } else {
@@ -258,8 +258,7 @@ function startClubEdit(btn) {
     kind: 'club', field: key, type: f.type, max: f.max, optional: f.optional, label: f.label,
     value: c[key] || '',
     hint: key === 'code' ? 'Changes everywhere (fixtures, players, line-ups). Not possible once the club has results.'
-      : key === 'history' ? 'Shown on the team page. Blank lines start a new paragraph; **bold** and *italic* work.'
-      : key === 'honours' ? 'One per line, for example “Championships: 1”.' : '',
+      : key === 'history' ? 'Shown on the team page. Blank lines start a new paragraph; **bold** and *italic* work.' : '',
   });
 }
 
@@ -299,16 +298,6 @@ async function clubPatch(c, key, form, submitter) {
   }
   if (f.type === 'status') return { status: v.value };
   if (f.type === 'longtext') { const t = String(v.value || '').replace(/\r/g, '').trim(); return { [key]: t || null }; }
-  if (f.type === 'honours') {
-    const honours = String(v.value || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => {
-      const m = l.match(/^(.+?)\s*[:×]\s*(\d+)$/) || [null, l, '1'];
-      const name = m[1].trim(), count = Number(m[2]);
-      if (name.length > 40) throw new Error(`“${name.slice(0, 20)}…” is too long (40 characters at most).`);
-      return { name, count };
-    });
-    if (honours.length > 20) throw new Error('20 honours at most.');
-    return { honours };
-  }
   if (f.type === 'crest') {
     const { prepareCrest, uploadCrest } = await import('./crest.js');
     const { blob } = await prepareCrest(v.files[0]);

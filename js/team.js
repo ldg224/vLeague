@@ -1,7 +1,8 @@
 // Team pages (S-04, 0.65): one page per club (team.html?c=CODE), open to guests like the Game centre.
 // The top is cut like the club's shirt (its two colours, a sash, the crest and the name across it) with the last five results;
 // below it the squad by position, squad value against the weekly cap, the club's kits, its details, and the history and
-// honours the league office writes in Editor → Clubs (clubs.history, clubs.honours, migration 0049).
+// story the league office writes in Editor → Clubs (clubs.history, migration 0049). Trophies won (0.66) sit in a cabinet under
+// the shirt, worked out from Editor → History (history-data.js).
 import { chrome, esc, clubs, safeColour } from './member.js';
 import { currentUser, myProfile } from './auth.js';
 import { paintClub } from './shell.js';
@@ -10,6 +11,7 @@ import { crest, teamOf, useClubs, markdown } from './places.js';
 import { prefs, spoilerHidden } from './prefs.js';
 import { clubSummary } from './match-model.js';
 import { loadKits } from './kits-data.js';
+import { loadHistory, cabinet, trophyUrl } from './history-data.js';
 import { kitSprite, kitName } from './kit.js';
 import { onColour } from './club-colour.js';
 import { POS_ORDER } from './pitch.js';
@@ -26,7 +28,7 @@ const KIT_ORDER = ['home', 'away', 'special', 'gk'];
 
 try {
   const user = await currentUser().catch(() => null);
-  const [rows, season, kits] = await Promise.all([clubs().catch(() => []), loadSeason().catch(() => null), loadKits()]);
+  const [rows, season, kits, hist] = await Promise.all([clubs().catch(() => []), loadSeason().catch(() => null), loadKits(), loadHistory()]);
   useClubs(rows);
   if (user) {
     const back = document.getElementById('back');
@@ -39,14 +41,14 @@ try {
   if (!club && !team) {
     main.innerHTML = `<h1 class="page-title" tabindex="-1">Team</h1><p class="empty">That club couldn’t be found. <a href="${user ? 'league.html' : 'dashboard.html'}">See the league</a></p>`;
   } else {
-    render(club || { code, name: team.name, colour: team.colour, honours: [] }, team, season, kits[code] || {});
+    render(club || { code, name: team.name, colour: team.colour }, team, season, kits[code] || {}, cabinet(hist, code));
   }
 } catch (e) {
   main.innerHTML = `<p class="empty">This team page didn’t load. ${esc(e.message || '')} <a href="team.html?c=${esc(code)}">Try again</a></p>`;
 }
 main.setAttribute('aria-busy', 'false');
 
-function render(club, team, season, kits) {
+function render(club, team, season, kits, won) {
   document.title = `${club.name} | vLeague`;
   const c1 = safeColour(club.colour), c2 = /^#[0-9a-f]{6}$/i.test(club.colour2 || '') ? club.colour2 : onColour(c1);
   const squad = (season?.players || []).filter(p => p.team === club.code)
@@ -69,6 +71,7 @@ function render(club, team, season, kits) {
         ${formHtml(last5, club.code, games.length - shown.length)}
       </div>
     </header>
+    ${cabinetHtml(won)}
     <div class="tm-grid">
       <section class="tm-squad" aria-labelledby="tm-squad-h">
         <h2 id="tm-squad-h">Squad</h2>
@@ -161,9 +164,18 @@ function factsHtml(club) {
 }
 
 function historyHtml(club) {
-  const honours = Array.isArray(club.honours) ? club.honours : [];
-  if (!club.history && !honours.length) return '';
+  if (!club.history) return '';
   return `<section class="tm-box tm-history" aria-labelledby="tm-hist-h"><h2 id="tm-hist-h">History</h2>
-    ${honours.length ? `<ul class="tm-honours">${honours.map(h => `<li><b>${esc(h.count)}</b><span>${esc(h.name)}</span></li>`).join('')}</ul>` : ''}
-    ${club.history ? `<div class="tm-story">${markdown(club.history)}</div>` : ''}</section>`;
+    <div class="tm-story">${markdown(club.history)}</div></section>`;
+}
+
+// The trophy cabinet: each trophy won once per competition and place, with how many times and which seasons. Winners first.
+function cabinetHtml(won) {
+  if (!won.length) return '';
+  return `<section class="tm-cabinet" aria-labelledby="tm-cab-h"><h2 id="tm-cab-h">Trophy cabinet</h2>
+    <ul>${won.map(w => `<li class="${w.place === 'winner' ? 'won' : 'runner'}">
+      <span class="tm-cup">${w.art ? `<img src="${esc(trophyUrl(w.art))}" alt="" loading="lazy">` : '<i aria-hidden="true"></i>'}${w.seasons.length > 1 ? `<b class="tm-times" aria-hidden="true">×${w.seasons.length}</b>` : ''}</span>
+      <span class="tm-cup-t"><b>${esc(w.comp.name)}</b> ${w.place === 'winner' ? 'winners' : 'runners-up'}${w.seasons.length > 1 ? ` (${w.seasons.length})` : ''}</span>
+      <small>${w.seasons.map(x => esc(x.name)).join(', ')}</small></li>`).join('')}</ul>
+    <a class="tm-cab-link" href="history.html">League history</a></section>`;
 }

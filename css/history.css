@@ -1,0 +1,83 @@
+/* History (0.66). Built like a clubhouse honours board: one dark board per trophy, seasons and champions lettered in gilt.
+   The boards are objects, so they keep their own colours in light and dark themes. The latest champions lead the page;
+   the roll of honour sits quietly underneath. Gilt is used only on the boards and the champions line. */
+
+.member-top .gc-back { margin-left: auto; color: var(--muted); font-weight: 600; text-decoration: none; font-size: .9rem; }
+.member-top .gc-back:hover { color: var(--text); }
+
+.hs {
+  --gilt: #d9b45a; --gilt-soft: #b89a55; --board: #071a36; --board-line: rgba(217,180,90,.28); --board-text: #f3ead6; --board-muted: #a9b4c6;
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 36px;
+}
+.member-main .hs-title { margin: 0; outline: none; font: 700 2.4rem/1 var(--font-display); text-transform: none; letter-spacing: 0; color: var(--text); }
+
+/* ---------- latest champions ---------- */
+.hs-hero { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px 32px; }
+.hs-hero-cup { width: 180px; height: 180px; object-fit: contain; filter: drop-shadow(0 18px 28px rgba(0,0,0,.45)); }
+.hs-hero-cup.none { display: block; width: 120px; height: 150px; border-radius: 14px 14px 46px 46px; background: linear-gradient(160deg, var(--gilt), #7a5f24); opacity: .5; }
+.hs-hero-k { margin: 0 0 8px; color: var(--muted); font-size: 1.05rem; }
+.member-main .hs-hero-name { margin: 0; font: 700 clamp(2.2rem, 6vw, 4.4rem)/1 var(--font-display); text-transform: none; letter-spacing: 0; color: var(--text); }
+.hs-hero-name .hs-team { gap: 16px; }
+.hs-hero-name .hs-team small { font: 500 1rem var(--font); margin-top: 6px; }
+
+/* ---------- the boards ---------- */
+.hs-boards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 22px; align-items: start; }
+.hs-board {
+  padding: 20px 24px 10px; border-radius: 6px; background: var(--board); color: var(--board-text);
+  box-shadow: inset 0 0 0 1px var(--board-line), inset 0 0 0 6px var(--board), inset 0 0 0 7px var(--board-line), 0 14px 30px rgba(0,0,0,.25);
+}
+.hs-board-head { display: flex; align-items: center; gap: 14px; padding-bottom: 12px; margin-bottom: 4px; border-bottom: 1px solid var(--board-line); }
+.hs-board-cup { width: 56px; height: 56px; object-fit: contain; flex: none; }
+.hs-board-cup.none { display: none; }
+.member-main .hs-board h2 { margin: 0; font: 700 1.6rem/1.1 var(--font-display); letter-spacing: .06em; text-transform: uppercase; color: var(--gilt); }
+.hs-board table { width: 100%; border-collapse: collapse; }
+.hs-board thead th { padding: 8px 8px 6px 0; text-align: left; font-size: .78rem; font-weight: 600; color: var(--board-muted); }
+.hs-board tbody th, .hs-board td { padding: 10px 8px 10px 0; text-align: left; vertical-align: middle; border-top: 1px solid rgba(217,180,90,.12); }
+.hs-season { font: 500 1rem var(--font-display); color: var(--board-muted); white-space: nowrap; width: 1%; padding-right: 18px !important; }
+.hs-board .hs-w .hs-team { color: var(--gilt); font: 700 1.15rem var(--font-display); letter-spacing: .04em; text-transform: uppercase; }
+.hs-board .hs-r .hs-team { color: var(--board-text); font-weight: 600; font-size: .92rem; }
+.hs-board .hs-team small { color: var(--board-muted); font: 500 .74rem var(--font); letter-spacing: 0; text-transform: none; }
+.hs-cell { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.hs-own { width: 30px; height: 30px; object-fit: contain; flex: none; }
+.hs-board .quiet { color: var(--board-muted); font-size: .85rem; }
+
+/* ---------- teams ---------- */
+.hs-team, .hs a.hs-team { display: inline-flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; min-width: 0; }
+a.hs-team:hover .hs-nm { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a.hs-team:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 4px; }
+.hs-board a.hs-team:focus-visible { outline-color: var(--gilt); }
+.hs-nm { min-width: 0; }
+.hs-team small { display: block; font-weight: 500; font-size: .78rem; color: var(--faint); }
+.hs-badge { display: grid; place-items: center; flex: none; width: var(--s, 28px); height: var(--s, 28px); border-radius: 50%; background: rgba(169,180,198,.18); color: var(--board-muted); font: 700 calc(var(--s, 28px) * .3) var(--font-display); letter-spacing: .02em; }
+
+/* ---------- notes and roll of honour: quiet ---------- */
+.member-main .hs-notes h2, .member-main .hs-roll h2 { margin: 0 0 12px; font: 700 1.4rem var(--font-display); text-transform: none; letter-spacing: 0; color: var(--text); }
+.hs-notes dl { display: grid; gap: 10px; margin: 0; max-width: 72ch; }
+.hs-notes dl div { display: grid; grid-template-columns: 7em minmax(0, 1fr); gap: 14px; }
+.hs-notes dt { font-weight: 600; color: var(--muted); }
+.hs-notes dd { margin: 0; color: var(--text-soft); }
+.hs-notes dd p { margin: 0 0 .5em; } .hs-notes dd p:last-child { margin: 0; }
+.hs-scroll { overflow-x: auto; }
+.hs-roll table { border-collapse: collapse; min-width: 100%; }
+.hs-roll th, .hs-roll td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: center; white-space: nowrap; }
+.hs-roll thead th { font-size: .82rem; color: var(--muted); font-weight: 600; }
+.hs-roll tbody th, .hs-roll thead th:first-child { text-align: left; padding-left: 0; }
+.hs-roll td { font-variant-numeric: tabular-nums; font-weight: 600; }
+.hs-roll .hs-total { font: 700 1.2rem var(--font-display); }
+
+@media (max-width: 640px) {
+  .member-main .hs-title { font-size: 2rem; }
+  .hs-hero { grid-template-columns: 96px minmax(0, 1fr); gap: 4px 16px; }
+  .hs-hero-cup { width: 96px; height: 96px; }
+  .hs-hero-cup.none { width: 72px; height: 90px; }
+  .member-main .hs-hero-name { font-size: clamp(1.7rem, 8vw, 2.4rem); }
+  .hs-hero-name .crest { --s: 30px !important; }
+  .hs-board { padding: 16px 16px 6px; }
+  .hs-board thead { display: none; }
+  .hs-board tbody tr { display: grid; grid-template-columns: minmax(0, 1fr); padding: 10px 0; border-top: 1px solid rgba(217,180,90,.12); }
+  .hs-board tbody th, .hs-board td { border: 0; padding: 2px 0; width: auto; }
+  .hs-board td.hs-r::before { content: 'Runner-up: '; color: var(--board-muted); font-size: .8rem; }
+  .hs-notes dl div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .hs-roll .hs-by { display: none; }   /* phones: club and title count only */
+  .hs-roll th, .hs-roll td { white-space: normal; }
+}

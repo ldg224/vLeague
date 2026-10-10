@@ -230,7 +230,7 @@ function drawTable(now = new Date()) {
     <thead><tr><th scope="col"><abbr title="Position">#</abbr></th><th scope="col" class="club">Club</th><th scope="col"><abbr title="Played">P</abbr></th><th scope="col" class="wide"><abbr title="Won">W</abbr></th><th scope="col" class="wide"><abbr title="Drawn">D</abbr></th><th scope="col" class="wide"><abbr title="Lost">L</abbr></th><th scope="col"><abbr title="Goal difference">GD</abbr></th><th scope="col"><abbr title="Points">Pts</abbr></th></tr></thead>
     <tbody>${rows.map(r => `<tr style="--c:${esc(safeColour(r.team.colour))}">
       <td class="pos">${r.rank}</td>
-      <th scope="row" class="club">${crest(r.team, 22)}<span>${esc(r.team.name)}</span></th>
+      <th scope="row" class="club"><a class="cl-link" href="team.html?c=${esc(r.team.code)}">${crest(r.team, 22)}<span>${esc(r.team.name)}</span></a></th>
       <td>${r.p}</td><td class="wide">${r.w}</td><td class="wide">${r.d}</td><td class="wide">${r.l}</td>
       <td>${r.gd > 0 ? '+' : ''}${r.gd}</td><td class="pts">${r.pts}</td></tr>`).join('')}</tbody>
   </table>${played ? formStrip(rows) : ''}`);

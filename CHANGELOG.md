@@ -3,6 +3,17 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.66.0 (2026-10-10)
+
+Headlines: league history, trophies and trophy cabinets
+
+Database change: migration `0050_league_history.sql` adds the history tables and a public `trophies` picture store (only the office uploads), and removes `clubs.honours` (never filled in; the cabinet replaces it). If anything goes wrong, `v0.65.0` is the version to go back to (`docs/RELEASING.md`).
+
+- **Added, History page** (`history.html`), open to everyone: built like a clubhouse honours board. The latest champions lead the page with their trophy; then one board per competition lists every season’s winner and runner-up, newest first, with season notes and a roll of honour (titles by club) below. Linked from League and the guest dashboard.
+- **Added, Editor → History:** add seasons, competitions (League, Grand Final, Christmas Cup…) and past teams. Each competition has a winner’s and a runner-up’s trophy picture (400 × 400 PNG), and any single award can have its own picture. Winners and runners-up can be a current club or a past team (kept by name, code and manager), so clubs that have left still get their credit.
+- **Added, team pages:** a **trophy cabinet** under the club’s header, worked out from the history (how many times, and which seasons).
+- **Removed:** the typed-in Honours field in Editor → Clubs (from 0.65.0); the cabinet replaces it. The club History text stays.
+
 ## 0.65.0 (2026-10-10)
 
 Headlines: a page for every team (S-04)
