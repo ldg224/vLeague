@@ -572,7 +572,7 @@ export class HighlightsRenderer {
     if (this.A.league) { c.save(); c.globalAlpha = k; c.shadowColor = 'rgba(66,165,245,.5)'; c.shadowBlur = 50; this.leagueFit((W / 2 - 110) + (220) / 2, (240) + (220) / 2, 220, 220); c.restore(); }
     this.text('vLEAGUE', W / 2, 560, { size: 90, weight: 900, align: 'center', spacing: 6, alpha: k });
     this.text('FULL MATCH REPLAY, LADDER AND STATS', W / 2, 640, { size: 30, weight: 800, align: 'center', colour: 'rgba(255,255,255,.7)', spacing: 4, alpha: easeOut((t - 0.5) / 0.6) });
-    this.text('ldg224.github.io/s3', W / 2, 700, { size: 40, weight: 900, align: 'center', colour: LIME, alpha: easeOut((t - 0.8) / 0.6) });
+    this.text('ldg224.github.io/vLeague', W / 2, 700, { size: 40, weight: 900, align: 'center', colour: LIME, alpha: easeOut((t - 0.8) / 0.6) });
     this.fadeOut(t, 4.5, 0.8);
   }
 

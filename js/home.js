@@ -1,7 +1,7 @@
 // A manager's Home (0.5): your club, right now. The match card (countdown, when the line-up locks, live score), a
 // notice while club changes are with the office, your season in numbers and your next matches. Everything
 // league-wide is on League; news is in Inbox (its unread count is on the Inbox tab).
-// League data still comes from the s3 site's season.json (dashboard-data.js) until fixtures move to Supabase (0.11).
+// League data comes from Supabase (dashboard-data.js loadSeason, since 0.12); only a local ?src= test copy reads a season.json file.
 import { enterPlace, badge } from './shell.js';
 import { paint, quietly } from './paint.js';
 import { renderPitch } from './pitch.js';

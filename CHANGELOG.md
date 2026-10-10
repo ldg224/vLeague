@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.61.3 (2026-10-10)
+
+Headlines: last check that the old s3 site is retired (S-02)
+
+No database change. If anything goes wrong, `v0.61.2` is the version to go back to (`docs/RELEASING.md`).
+
+- **Fixed, Highlights:** the closing card showed the old site's address (ldg224.github.io/s3). It now shows ldg224.github.io/vLeague.
+- **Checked (S-02):** nothing on the live site reads the old s3 site any more. League data, match files, crests and news all come from Supabase; the only use left is the `?src=` test copy, which works on localhost only. No links to the old site in pages, functions, emails or news.
+
 ## 0.61.2 (2026-10-10)
 
 Headlines: highlights show every goal, red card and penalty (B-14)
