@@ -951,6 +951,17 @@ export class HighlightsRenderer {
     const n = this._no.get(String(id));
     return n == null || n === '' ? shirt(id) : String(n);
   }
+  // Is this player running away from the camera (so we see his back)? He shrinks on screen as he moves. Standing or jogging across
+  // keeps whichever side we last saw, so shirts don't flicker front-back-front.
+  facingAway(cam, it, p) {
+    this._back ||= new Map();
+    const was = this._back.get(it.i) || false;
+    if (Math.hypot(it.vx, it.vy) < 1) return was;
+    const ahead = cam.p(it.x + it.vx * 0.5, it.y + it.vy * 0.5); if (!ahead) return was;
+    const k = ahead[2] / p[2] - 1, now = k < -0.01 ? true : k > 0.01 ? false : was;
+    this._back.set(it.i, now);
+    return now;
+  }
   drawPlayer(cam, it, holder) {
     const c = this.c, p = cam.p(it.x, it.y); if (!p) return;
     const side = it.i < this.nHome ? 0 : 1;
@@ -964,16 +975,20 @@ export class HighlightsRenderer {
     c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(p[0] + r * 0.4, p[1], r * 1.05, r * 0.42, 0, 0, Math.PI * 2); c.fill();
     // body: a short upright capsule, like a player figure seen from the stand
     const bx = p[0], bh = p[1] - top, bw = Math.max(12, bh * 0.42);
+    const pl = this.d.players[it.i], no = this.shirtNo(pl.id), back = this.facingAway(cam, it, p);
     const g = c.createLinearGradient(bx - bw, 0, bx + bw, 0); g.addColorStop(0, col); g.addColorStop(1, shade(col, 0.55));
-    if (kit?.sprite) {   // the club's own kit (S-23), clipped to the same body shape
+    const sprite = kit?.sprite && (back && kit.back ? kit.back(lastName(pl.name).toUpperCase(), no) : kit.sprite);
+    if (sprite) {   // the club's own kit (S-23), clipped to the same body shape; from behind, the player's own name and number
       c.save(); c.beginPath(); c.roundRect(bx - bw / 2, top + bh * 0.28, bw, bh * 0.72, bw / 2); c.clip();
-      c.drawImage(kit.sprite, bx - bw / 2, top + bh * 0.28, bw, bh * 0.72); c.restore();
+      c.drawImage(sprite, bx - bw / 2, top + bh * 0.28, bw, bh * 0.72); c.restore();
     } else { c.fillStyle = g; c.beginPath(); c.roundRect(bx - bw / 2, top + bh * 0.28, bw, bh * 0.72, bw / 2); c.fill(); }
     c.fillStyle = '#f1c9a5'; c.beginPath(); c.arc(bx, top + bh * 0.16, bw * 0.34, 0, Math.PI * 2); c.fill();
     if (holder) { c.lineWidth = 3; c.strokeStyle = '#fff'; c.beginPath(); c.ellipse(p[0], p[1], r * 1.5, r * 0.6, 0, 0, Math.PI * 2); c.stroke(); }
-    // shirt number
-    const pl = this.d.players[it.i];
-    this.text(this.shirtNo(pl.id), bx, top + bh * 0.62, { size: Math.max(9, bw * 0.55), weight: 900, align: 'center', colour: onColour(col), base: 'middle' });
+    // shirt number (the kit's back print already has it); without a kit, the name goes above it on the back
+    if (!(back && kit?.back)) {
+      if (back) this.text(lastName(pl.name).toUpperCase(), bx, top + bh * 0.43, { size: Math.max(6, bw * 0.2), weight: 800, align: 'center', colour: onColour(col), base: 'middle' });
+      this.text(no, bx, top + bh * 0.62, { size: Math.max(9, bw * 0.55), weight: 900, align: 'center', colour: onColour(col), base: 'middle' });
+    }
     if (holder) {
       const name = lastName(pl.name).toUpperCase(), fs = 24;
       c.font = `900 ${fs}px ${FONT}`; const w = c.measureText(name).width + 28;

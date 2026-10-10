@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.60.1 (2026-10-10)
+
+Headlines: names on the back of the shirt, and kit uploads go live at once (S-23)
+
+Database change: migration `0046_kit_auto_approve.sql` (applied). If anything goes wrong, `v0.60.0` is the version to go back to (`docs/RELEASING.md`).
+
+- **Added, match views:** a player running away from the camera shows the back of his shirt with his own surname and number, like a TV broadcast; running towards it or across, the front. Players standing still keep the side last shown, so shirts don't flicker. Works on every kit, including uploaded designs and teams with no kit yet. Long names shrink to fit the back.
+- **Changed, My club → Kits:** uploaded logos and whole-kit designs no longer wait for the office. They go live as soon as the club saves. The office's list at the bottom of the Kits page now shows recent uploads with a **Take down** button (and **Put back**).
+
 ## 0.60.0 (2026-10-10)
 
 Headlines: design a kit in Photoshop (S-23)

@@ -1,7 +1,7 @@
 // Kits (0.59, S-23 and S-20): design a club's home, away, goalkeeper and special kits on a 3D player.
 // Built for phones first: the player stays at the top while four tabs (Style, Colours, Text, Logo) change it, everything is a big
 // tap target, and there is a first-time tour. Undo and redo, "surprise me", copy from another kit, ready-made colour schemes, and a
-// logo you drag straight on the shirt. A logo goes live once the office approves it. Saved to Supabase club_kits (migration 0043).
+// logo you drag straight on the shirt. A logo or uploaded design goes live as soon as it's saved (0.60.1; the office can take one down). Saved to Supabase club_kits (migration 0043).
 // The shirt itself is drawn by js/kit.js, the same drawing the match views use. The office can pick any club.
 import { enterPlace } from './shell.js';
 import { esc, crestUrl, clubs } from './member.js';
@@ -17,14 +17,14 @@ const kitLogoUrl = path => (path ? `${SUPABASE_URL}/storage/v1/object/public/kit
 const image = url => new Promise(res => { if (!url) return res(null); const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
 const reduceMotion = () => document.documentElement.classList.contains('reduce-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches;
 const STATUS = {
-  pending: ['wait', 'Waiting for the office to approve your logo. Only you and the office can see it until then.'],
-  approved: ['ok', 'Logo approved. Everyone can see it.'],
-  rejected: ['bad', 'The office didn’t approve this logo. Upload a different one.'],
+  pending: ['wait', 'Saved. It shows everywhere the next time anyone loads a page.'],
+  approved: ['ok', 'Your logo is live. Everyone can see it.'],
+  rejected: ['bad', 'The league office took this logo down. Upload a different one.'],
 };
 const ART_STATUS = {
-  pending: ['wait', 'Waiting for the office to approve your design. Only you and the office can see it until then.'],
-  approved: ['ok', 'Design approved. Everyone can see it.'],
-  rejected: ['bad', 'The office didn’t approve this design. Upload a different one.'],
+  pending: ['wait', 'Saved. It shows everywhere the next time anyone loads a page.'],
+  approved: ['ok', 'Your design is live. Everyone can see it.'],
+  rejected: ['bad', 'The league office took this design down. Upload a different one.'],
 };
 const PALETTE = [
   ['#ffffff', 'White'], ['#e5e7eb', 'Silver'], ['#9ca3af', 'Grey'], ['#374151', 'Charcoal'], ['#0a0a0a', 'Black'], ['#e53935', 'Red'], ['#9b1c1c', 'Maroon'],
@@ -73,7 +73,7 @@ async function run(init) {
     imgs.crest = await image(crestUrl(club.crest_path));
     await Promise.all(Object.values(kits).map(async k => { k.art = await image(kitLogoUrl(k.art_path)); }));   // for the little pictures of every kit
   }
-  // The current kit's pictures. Its club and the office see a new logo or design before the office approves it.
+  // The current kit's pictures, including a new logo or design not saved yet.
   const loadLogo = async () => { [imgs.logo, imgs.art] = await Promise.all([image(logoPreview || kitLogoUrl(kit().logo_path)), artPreview ? image(artPreview) : kit().art]); };
   const picture = (k, size = 96) => kitSprite(k.design, { crest: imgs.crest, art: k === kits[slot] ? imgs.art : k.art }, size).toDataURL();
 
@@ -280,10 +280,10 @@ async function run(init) {
         <li><b>Paint over it</b> on a layer underneath, then hide the template layer.</li>
         <li><b>Upload it here</b> as a PNG or JPG the same shape (${TEX_W * 2} × ${TEX_H * 2} is best).</li></ol>
       <div class="kt-row"><button type="button" class="kt-btn" data-template="guide">Download template</button><button type="button" class="kt-btn quiet" data-template="kit">Download this kit as a start</button></div>
-      ${has ? `${artBlob ? '<p class="kt-pill wait">New design. It goes to the office to approve when you save.</p>' : st ? `<p class="kt-pill ${st[0]}">${esc(st[1])}</p>` : ''}
+      ${has ? `${artBlob ? '<p class="kt-pill wait">New design. Save to put it live.</p>' : st ? `<p class="kt-pill ${st[0]}">${esc(st[1])}</p>` : ''}
         <div class="kt-row"><label class="kt-btn kt-file">Replace design<input type="file" accept="image/png,image/jpeg,image/webp" data-art hidden></label>${k.design.pattern !== 'custom' ? '<button type="button" class="kt-btn" data-pattern="custom">Wear my design</button>' : ''}<button type="button" class="kt-btn quiet" data-art-clear>Remove design</button></div>`
       : '<label class="kt-drop" data-drop="art"><input type="file" accept="image/png,image/jpeg,image/webp" data-art hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V5m0 0-4 4m4-4 4 4M5 19h14"/></svg><b>Upload your design</b><span>Tap to choose it, or drop it here.</span></label>'}
-      <p class="kt-note">The crest, logo and print are still added on top (turn them off in Logo and Text). The office checks every design before everyone sees it; until then other clubs see a plain shirt in its main colour.</p></section>`;
+      <p class="kt-note">The crest, logo and print are still added on top (turn them off in Logo and Text). It goes live for everyone when you save.</p></section>`;
   }
 
   function panelHtml() {
@@ -313,13 +313,12 @@ async function run(init) {
     // logo
     const st = STATUS[k.logo_status], has = !!(k.logo_path || logoPreview);
     return `<h2 class="kt-h">Logo and crest</h2>
-      ${has ? `${logoBlob ? '<p class="kt-pill wait">New logo. It goes to the office to approve when you save.</p>' : st ? `<p class="kt-pill ${st[0]}">${esc(st[1])}</p>` : ''}
+      ${has ? `${logoBlob ? '<p class="kt-pill wait">New logo. Save to put it live.</p>' : st ? `<p class="kt-pill ${st[0]}">${esc(st[1])}</p>` : ''}
         <p class="kt-tip"><b>Drag the logo</b> on the shirt to move it.</p>
         <label class="kt-range"><span>Size</span><input type="range" min="8" max="34" value="${Math.round(d.logo.scale * 100)}" data-logo-scale aria-label="Logo size"></label>
         <p class="kt-sub">Quick places</p><div class="kt-ink">${LOGO_SPOTS.map(([n], i) => `<button type="button" class="kt-chipbtn" data-spot="${i}">${n}</button>`).join('')}</div>
         <div class="kt-row"><label class="kt-btn kt-file">Replace logo<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-logo hidden></label><button type="button" class="kt-btn quiet" data-logo-clear>Remove logo</button></div>`
-      : `<label class="kt-drop" data-drop><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-logo hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V5m0 0-4 4m4-4 4 4M5 19h14"/></svg><b>Add a logo</b><span>Tap to choose a picture, or drop one here.<br>PNG, JPG or WebP. A square picture with a clear background looks best.</span></label>
-        <p class="kt-note">Your logo is checked by the league office before everyone sees it. Until then only you and the office can.</p>`}
+      : `<label class="kt-drop" data-drop><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-logo hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V5m0 0-4 4m4-4 4 4M5 19h14"/></svg><b>Add a logo</b><span>Tap to choose a picture, or drop one here.<br>PNG, JPG or WebP. A square picture with a clear background looks best.</span></label>`}
       <p class="kt-sub">Club crest</p>
       <label class="kt-check"><input type="checkbox" data-crest ${d.crest.show ? 'checked' : ''}><span>Show the club crest on the chest</span></label>
       <div class="kt-ink" ${d.crest.show ? '' : 'hidden'}>${[['left', 'Left'], ['centre', 'Centre'], ['right', 'Right']].map(([v, n]) => `<button type="button" class="kt-chipbtn${d.crest.pos === v ? ' on' : ''}" data-crestpos="${v}" aria-pressed="${d.crest.pos === v}">${n}</button>`).join('')}</div>`;
@@ -504,14 +503,14 @@ async function run(init) {
   });
   window.addEventListener('beforeunload', e => { if (anyDirty()) { e.preventDefault(); e.returnValue = ''; } });
 
-  // ------------------------------------------------------------ the office: logos waiting for approval
+  // ------------------------------------------------------------ the office: recent uploads (they go live at once; the office can take one down)
   async function approvals() {
     const box = document.getElementById('kt-approve'); if (!box) return;
-    const { data } = await c.from('club_kits').select('*').or('logo_status.eq.pending,art_status.eq.pending').order('updated_at');
-    const items = (data || []).flatMap(r => [r.logo_status === 'pending' && ['logo', 'Logo', r.logo_path, 64, 64, r], r.art_status === 'pending' && ['art', 'Whole-kit design', r.art_path, 128, 87, r]].filter(Boolean));
-    box.innerHTML = `<h2>Logos and designs waiting for approval</h2>${items.length ? `<ul>${items.map(([what, label, path, w, h, r]) => `<li><a href="${esc(kitLogoUrl(path))}" target="_blank" rel="noopener"><img src="${esc(kitLogoUrl(path))}" alt="${esc(label)}, open full size" width="${w}" height="${h}"></a><span><b>${esc(rows.find(x => x.code === r.club)?.name || r.club)}</b> · ${esc(SLOTS.find(s => s[0] === r.slot)?.[1] || r.slot)} kit · ${label}</span>
-      <button type="button" class="kt-btn" data-approve="approved" data-what="${what}" data-for-club="${esc(r.club)}" data-for-slot="${esc(r.slot)}">Approve</button>
-      <button type="button" class="kt-btn quiet" data-approve="rejected" data-what="${what}" data-for-club="${esc(r.club)}" data-for-slot="${esc(r.slot)}">Reject</button></li>`).join('')}</ul>` : '<p class="quiet">Nothing waiting.</p>'}`;
+    const { data } = await c.from('club_kits').select('*').or('logo_path.not.is.null,art_path.not.is.null').order('updated_at', { ascending: false }).limit(30);
+    const items = (data || []).flatMap(r => [r.logo_path && ['logo', 'Logo', r.logo_path, r.logo_status, 64, 64, r], r.art_path && ['art', 'Whole-kit design', r.art_path, r.art_status, 128, 87, r]].filter(Boolean));
+    box.innerHTML = `<h2>Uploaded logos and designs</h2><p class="kt-note">These go live as soon as a club saves them. Take one down if it shouldn’t be there.</p>${items.length ? `<ul>${items.map(([what, label, path, status, w, h, r]) => { const down = status === 'rejected';
+      return `<li><a href="${esc(kitLogoUrl(path))}" target="_blank" rel="noopener"><img src="${esc(kitLogoUrl(path))}" alt="${esc(label)}, open full size" width="${w}" height="${h}"></a><span><b>${esc(rows.find(x => x.code === r.club)?.name || r.club)}</b> · ${esc(SLOTS.find(s => s[0] === r.slot)?.[1] || r.slot)} kit · ${label}${down ? ' · <b>taken down</b>' : ''}</span>
+      <button type="button" class="kt-btn${down ? '' : ' quiet'}" data-approve="${down ? 'approved' : 'rejected'}" data-what="${what}" data-for-club="${esc(r.club)}" data-for-slot="${esc(r.slot)}">${down ? 'Put back' : 'Take down'}</button></li>`; }).join('')}</ul>` : '<p class="quiet">Nothing uploaded yet.</p>'}`;
   }
 
   // ------------------------------------------------------------ the first-time tour (js/tour.js)
@@ -522,7 +521,7 @@ async function run(init) {
     { target: '.kt-tabs', tab: 'style', title: 'Four tabs', text: '<b>Style</b> picks the pattern, <b>Colours</b> changes the colours, <b>Text</b> names your kit and sets the back print, and <b>Logo</b> adds a picture. Everything changes the player straight away.' },
     { target: ['.kt-tile:nth-child(1)', '.kt-tile:nth-child(2)', '.kt-tile:nth-child(3)'], tab: 'style', title: 'Pick a look', text: 'Tap any pattern. The little pictures use your colours. Not sure? Press <b>Surprise me</b>.' },
     { target: '.kt-roles', tab: 'colours', title: 'Colours', text: 'Choose <b>Main</b>, <b>Second</b> or <b>Collar and hem</b>, then tap a colour. <b>Ready-made colours</b> below changes all three at once.' },
-    { target: ['.kt-drop', '.kt-tip'], tab: 'logo', title: 'Add a logo', text: 'Upload a picture, then <b>drag it on the shirt</b> to place it and use the slider to size it. The league office checks every logo before everyone sees it.' },
+    { target: ['.kt-drop', '.kt-tip'], tab: 'logo', title: 'Add a logo', text: 'Upload a picture, then <b>drag it on the shirt</b> to place it and use the slider to size it.' },
     { target: '.kt-bar', tab: 'style', title: 'Undo, redo and save', text: 'Made a mistake? <b>Undo</b>. When it looks right, press <b>Save this kit</b>.' },
     { target: '#kt-chips', title: 'Wearing it in a match', text: 'In <b>My club</b>, on your team sheet, there’s a <b>Kit</b> box where you choose which kit the team wears. Leave it on Automatic and we pick the away kit if the colours clash.' },
     { target: '.kt-help', title: 'You’re ready', text: 'That’s everything. Press <b>How it works</b> any time to see this again.' },

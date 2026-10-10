@@ -5,7 +5,7 @@
 //   drawKit(ctx, design, w, h, imgs)           paints the unrolled shirt; imgs = { crest, logo, art } (loaded images, all optional)
 //   drawTemplate(ctx, w, h)                    the kit template to paint over in Photoshop: the unrolled shirt with its parts marked
 //   drawKitFront(ctx, design, imgs, x, y, w, h, side)   paints the shirt as seen from the front or back into a box of any shape
-//   kitSprite(design, imgs, size)              a small cached canvas of the front, for the 2D match views
+//   kitSprite(design, imgs, size, side)        a small cached canvas of the front (or back), for the 2D match views
 // The unrolled shirt has the same pixel density across and down (TEX_W x TEX_H matches the 3D body's circumference and height), so
 // a round logo is round on the 3D player and in every flat view. Pure canvas, so every view draws the same shirt.
 import { isHex, onColour } from './club-colour.js';
@@ -108,7 +108,12 @@ export function drawKit(ctx, design, w, h, imgs = {}) {
     ctx.font = `900 ${h * 0.08}px Oswald, Arial Narrow, sans-serif`; ctx.fillText(d.text.number, (front - 0.075) * w, h * 0.31);
     for (const u of [back, back + 1]) { ctx.font = `900 ${h * 0.3}px Oswald, Arial Narrow, sans-serif`; ctx.fillText(d.text.number, u * w, h * 0.6); }
   }
-  if (d.text.name) for (const u of [back, back + 1]) { ctx.font = `800 ${h * 0.075}px Oswald, Arial Narrow, sans-serif`; ctx.fillText(d.text.name, u * w, h * 0.23); }
+  if (d.text.name) {   // long names shrink to stay on the flat of the back (about a fifth of the way round)
+    ctx.font = `800 ${h * 0.075}px Oswald, Arial Narrow, sans-serif`;
+    const fit = Math.min(1, (w * 0.2) / ctx.measureText(d.text.name).width);
+    ctx.font = `800 ${h * 0.075 * fit}px Oswald, Arial Narrow, sans-serif`;
+    for (const u of [back, back + 1]) ctx.fillText(d.text.name, u * w, h * 0.23);
+  }
 }
 
 // ---------------------------------------------------------------- the kit template
@@ -193,11 +198,11 @@ export function drawKitFront(ctx, design, imgs, x, y, w, h, side = 'front') {
 
 // A small front-view sprite for the flat match views (cached by design). Pass loaded images to include the crest and an approved logo.
 const cache = new Map();
-export function kitSprite(design, imgs = {}, size = 128) {
-  const d = cleanDesign(design), key = `${size}|${JSON.stringify(d)}|${imgs.crest?.src || ''}|${imgs.logo?.src || ''}|${imgs.art?.src || ''}`;
+export function kitSprite(design, imgs = {}, size = 128, side = 'front') {
+  const d = cleanDesign(design), key = `${size}|${side}|${JSON.stringify(d)}|${imgs.crest?.src || ''}|${imgs.logo?.src || ''}|${imgs.art?.src || ''}`;
   if (cache.has(key)) return cache.get(key);
   const out = document.createElement('canvas'); out.width = Math.round(size * 0.58); out.height = size;   // the match views draw a body about 0.58 wide to 1 tall
-  drawKitFront(out.getContext('2d'), d, imgs, 0, 0, out.width, out.height, 'front');
+  drawKitFront(out.getContext('2d'), d, imgs, 0, 0, out.width, out.height, side);
   if (cache.size > 200) cache.clear();
   cache.set(key, out);
   return out;
