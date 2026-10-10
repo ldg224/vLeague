@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.67.0 (2026-10-10)
+
+Headlines: team pages redesigned
+
+No database change. If anything goes wrong, `v0.66.0` is the version to go back to (`docs/RELEASING.md`).
+
+- **Changed, team pages:** a new design. The top is a band of the club’s own home-kit fabric with the crest on its edge, and the name, motto, manager and stadium, last five results and ladder position sit below it on the page, so they read clearly whatever the club’s colours. The squad hangs in a dressing room: one shirt per player in the club’s home kit (or its colours) with their number on it, then the trophy cabinet, kits, weekly cap and club details.
+- **Fixed, team pages:** the diagonal sash covered the club name and text on some clubs; very bright club colours filled the whole header; crests sat in a hard square box; the trophy cabinet’s shelf cut through its captions; the code and short name repeated the name.
+
 ## 0.66.0 (2026-10-10)
 
 Headlines: league history, trophies and trophy cabinets

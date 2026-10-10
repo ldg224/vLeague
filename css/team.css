@@ -1,113 +1,101 @@
-/* Team pages (S-04). The hero is cut like the club's shirt: its primary colour with a sash in the second colour, the crest,
-   and the name set big across it. Everything below stays quiet, in the site's own surfaces. --c1/--c2/--on1 come from team.js. */
+/* Team pages (redesigned 0.67). A band of the club's home-kit fabric with the crest on its edge; every word sits on the page
+   background, so any club colour reads. The squad hangs as shirts on rails (the one bold thing); the rest stays plain:
+   sections divided by headings and rules, not boxes. --c1/--c2/--on1 come from team.js. */
 
 .member-top .gc-back { margin-left: auto; color: var(--muted); font-weight: 600; text-decoration: none; font-size: .9rem; }
 .member-top .gc-back:hover { color: var(--text); }
 
-.tm { display: grid; gap: 28px; }
+.tm { display: grid; grid-template-columns: minmax(0, 1fr); gap: 40px; }
+.tm h2 { margin: 0 0 14px; font: 700 1.35rem/1.1 var(--font-display); color: var(--text); }
+.member-main .tm-name { margin: 0; outline: none; font: 700 clamp(2.4rem, 6vw, 4.6rem)/.95 var(--font-display); text-transform: none; letter-spacing: 0; color: var(--text); overflow-wrap: anywhere; }
 
-/* ---------- the shirt ---------- */
-.tm-hero { position: relative; overflow: hidden; border-radius: var(--r-md); background: var(--c1); color: var(--on1); isolation: isolate; }
-.tm-sash {
-  position: absolute; inset: 0; z-index: -1;
-  background: linear-gradient(118deg, transparent 0 58%, var(--on1) 58% 58.6%, var(--c2) 58.6% 70%, var(--on1) 70% 70.6%, transparent 70.6%);
-  opacity: .9;
-}
-.tm-hero-in { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "crest name" "crest motto" "form form"; column-gap: 24px; padding: 32px 32px 26px; }
-.tm-crest { grid-area: crest; align-self: center; }
-.tm-crest .crest { box-shadow: 0 10px 28px rgba(0,0,0,.28); }
-.tm .tm-name {
-  grid-area: name; color: inherit; text-transform: none; align-self: end; margin: 0; outline: none;
-  font: 700 clamp(2.6rem, 7.5vw, 5.6rem)/.92 var(--font-display); letter-spacing: -.01em;
-  overflow-wrap: anywhere; text-wrap: balance;
-}
-.tm .tm-motto { color: inherit; grid-area: motto; margin: 10px 0 0; font-style: italic; font-size: 1.05rem; opacity: .85; max-width: 48ch; }
-
-/* last five, oldest first, each one a link to the match */
-.tm-form { grid-area: form; display: flex; gap: 8px; margin: 26px 0 0; padding: 0; list-style: none; flex-wrap: wrap; }
-.tm-res {
-  display: grid; grid-template-columns: auto auto; grid-template-areas: "o s" "o v"; column-gap: 10px; align-items: center;
-  padding: 7px 14px 7px 8px; border-radius: 10px; background: rgba(6,12,24,.55); color: #fff; text-decoration: none;
-  backdrop-filter: blur(4px); transition: background .12s;
-}
+/* ---------- header: fabric band, crest on its edge, words on the page ---------- */
+.tm-head { display: grid; }
+.tm-fabric { height: 76px; border-radius: var(--r-md) var(--r-md) 0 0; overflow: hidden; background: var(--c1); box-shadow: inset 0 -4px 0 var(--c2); }
+.tm-fabric canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
+.tm-id { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "crest titles now"; column-gap: 28px; align-items: end; padding: 0 4px; }
+.tm-crest { grid-area: crest; margin-top: -54px; filter: drop-shadow(0 10px 18px rgba(0,0,0,.35)); }
+.tm-titles { grid-area: titles; padding-top: 18px; min-width: 0; }
+.tm-motto { margin: 10px 0 0; font-style: italic; color: var(--text-soft); font-size: 1.05rem; max-width: 52ch; }
+.tm-about { margin: 6px 0 0; color: var(--muted); }
+.tm-now { grid-area: now; display: grid; justify-items: end; gap: 8px; padding-top: 18px; }
+.tm-rank { margin: 0; color: var(--muted); font-size: .9rem; text-align: right; }
+.tm-rank b { color: var(--text); }
+.tm-form { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.tm-res { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 8px; color: #fff; font: 700 1rem var(--font-display); text-decoration: none; }
 .tm a.tm-res { color: #fff; }
-.tm-res:hover { background: rgba(6,12,24,.75); }
-.tm-res:focus-visible { outline: 2px solid var(--on1); outline-offset: 2px; }
-.tm-res b { grid-area: o; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 7px; font: 700 1rem var(--font-display); }
-.tm-res.res-W, .tm-res.res-D, .tm-res.res-L { background: rgba(6,12,24,.55); }
-.tm-res.res-W b { background: var(--res-w); } .tm-res.res-D b { background: var(--res-d); } .tm-res.res-L b { background: var(--res-l); }
-.tm-res span { color: inherit; grid-area: s; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
-.tm-res small { grid-area: v; font-size: .75rem; opacity: .8; line-height: 1.1; }
-.tm-form-none { grid-area: form; margin: 22px 0 0; opacity: .85; }
+.tm-res:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.tm-form-none { margin: 0; color: var(--muted); font-size: .9rem; }
 
-/* ---------- below the shirt ---------- */
-.tm-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 28px; align-items: start; }
-.tm-side { display: grid; gap: 18px; }
-.tm h2 { margin: 0 0 10px; font: 700 1.25rem var(--font-display); letter-spacing: .01em; }
-.tm-record { margin: -4px 0 14px; color: var(--muted); }
-.tm-box { padding: 18px 20px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); }
+/* ---------- the dressing room ---------- */
+.tm-rail { margin: 0 0 6px; }
+.tm-rail h3 { margin: 0 0 4px; font-size: .9rem; font-weight: 600; color: var(--muted); }
+.tm-rail ul {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 14px 10px; margin: 0; padding: 16px 0 18px; list-style: none;
+  background: linear-gradient(var(--line), var(--line)) 0 6px / 100% 3px no-repeat;   /* the rail the shirts hang from */
+}
+.tm-pl { display: grid; justify-items: center; text-align: center; gap: 3px; min-width: 0; }
+.tm-shirt { display: block; height: 66px; }
+.tm-shirt canvas { display: block; filter: drop-shadow(0 6px 8px rgba(0,0,0,.3)); }
+.tm-pl b { font-weight: 600; font-size: .92rem; line-height: 1.25; overflow-wrap: anywhere; }
+.tm-rt { font-size: .74rem; color: var(--faint); white-space: nowrap; }
+.tm-rt .rt { min-width: 1.6em; padding: 0 4px; font-size: .74rem; }
+.tm-pl small { font-size: .74rem; color: var(--faint); font-variant-numeric: tabular-nums; }
 
-.tm-squad h3 { padding-left: 10px; border-left: 3px solid var(--c1); margin: 18px 0 4px; font-size: .9rem; font-weight: 700; color: var(--muted); }
-.tm-squad h3:first-of-type { margin-top: 0; }
-.tm-players { margin: 0; padding: 0; list-style: none; }
-.tm-players li { display: grid; grid-template-columns: 2.6em minmax(0, 1fr) auto 5.5em; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
-.tm-no { font: 700 1.2rem var(--font-display); color: var(--text-soft); text-align: right; font-variant-numeric: tabular-nums; }
-.tm-pl { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tm-rt { font-size: .8rem; color: var(--faint); white-space: nowrap; }
-.tm-rt abbr { text-decoration: none; }
-.tm-val { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); font-size: .9rem; }
+/* ---------- trophy cabinet ---------- */
+.tm-sect-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.tm-sect-head a { font-size: .9rem; font-weight: 600; }
+.tm-cabinet ul { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 22px 34px; margin: 0; padding: 0 0 14px; list-style: none; border-bottom: 3px solid var(--line); }
+.tm-cabinet li { display: grid; justify-items: center; text-align: center; width: 140px; gap: 2px; }
+.tm-cup { position: relative; display: grid; place-items: end center; height: 112px; }
+.tm-cup img { width: 108px; height: 108px; object-fit: contain; filter: drop-shadow(0 10px 14px rgba(0,0,0,.45)); }
+.tm-cup i { display: block; width: 52px; height: 72px; border-radius: 8px 8px 22px 22px; background: rgba(var(--ink),.12); }
+.tm-cabinet li.runner .tm-cup img { width: 72px; height: 72px; }
+.tm-cabinet li.runner .tm-cup i { width: 36px; height: 50px; }
+.tm-times { position: absolute; right: -12px; top: 4px; min-width: 26px; padding: 2px 7px; border-radius: 999px; background: var(--surface-raised); box-shadow: inset 0 0 0 1px var(--line); color: var(--text); font: 700 .85rem var(--font-display); }
+.tm-cup-t { display: grid; margin-top: 8px; font-size: .84rem; color: var(--muted); line-height: 1.3; }
+.tm-cup-t b { color: var(--text); font-size: .95rem; }
+.tm-cabinet small { color: var(--faint); font-size: .76rem; line-height: 1.3; }
 
-.tm-cap p { margin: 0 0 10px; color: var(--muted); }
-.tm-cap p b { color: var(--text); font-size: 1.1rem; }
-.tm-bar { height: 10px; border-radius: 999px; background: rgba(var(--ink),.08); overflow: hidden; }
-.tm-bar i { display: block; height: 100%; border-radius: inherit; background: var(--c1); }
+/* ---------- kits, cap, details: three plain columns ---------- */
+.tm-more { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr); gap: 28px 40px; padding-top: 26px; border-top: 1px solid var(--line); }
+.tm-kits ul { display: flex; flex-wrap: wrap; gap: 10px 18px; margin: 0; padding: 0; list-style: none; }
+.tm-kits li { display: grid; justify-items: center; gap: 6px; font-size: .82rem; color: var(--muted); text-align: center; max-width: 92px; }
+.tm-kit canvas { display: block; filter: drop-shadow(0 6px 8px rgba(0,0,0,.3)); }
+.tm-cap-n { margin: 0 0 10px; color: var(--muted); }
+.tm-cap-n b { color: var(--text); font: 700 1.6rem var(--font-display); margin-right: 4px; }
+.tm-bar { height: 8px; border-radius: 999px; background: rgba(var(--ink),.1); overflow: hidden; }
+.tm-bar i { display: block; height: 100%; border-radius: inherit; background: var(--brand); }
 .tm-cap.warn .tm-bar i { background: var(--amber); }
 .tm-cap.over .tm-bar i { background: var(--res-l); }
-
-/* kits hang side by side, like on pegs */
-.tm-kits { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; padding: 0; list-style: none; }
-.tm-kits li { display: grid; justify-items: center; gap: 4px; font-size: .8rem; color: var(--muted); text-align: center; max-width: 84px; }
-.tm-kit canvas { display: block; height: auto; filter: drop-shadow(0 4px 8px rgba(0,0,0,.3)); }
-
-.tm-facts { display: grid; gap: 8px; margin: 0; }
-.tm-facts div { display: grid; grid-template-columns: 7.5em minmax(0, 1fr); gap: 10px; }
+.tm-cap-left { margin: 8px 0 0; font-size: .88rem; color: var(--muted); }
+.tm-facts dl { display: grid; gap: 10px; margin: 0; }
+.tm-facts dl div { display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 10px; align-items: center; }
 .tm-facts dt { color: var(--muted); }
-.tm-facts dd { margin: 0; font-weight: 600; display: flex; gap: 6px; align-items: center; }
-.tm-sw { display: inline-block; width: 22px; height: 22px; border-radius: 6px; box-shadow: inset 0 0 0 1px rgba(var(--edge),.25); }
+.tm-facts dd { margin: 0; font-weight: 600; display: flex; gap: 6px; }
+.tm-sw { display: inline-block; width: 22px; height: 22px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(var(--edge),.3); }
 
-.tm-story { max-width: 62ch; color: var(--text-soft); }
-.tm-story p { margin: 0 0 .8em; } .tm-story p:last-child { margin-bottom: 0; }
-
-/* trophy cabinet: a lit shelf under the shirt */
-.tm-cabinet {
-  position: relative; padding: 18px 22px 16px; border-radius: var(--r-md); border: 1px solid var(--line);
-  background: linear-gradient(to bottom, transparent calc(100% - 46px), rgba(var(--ink),.06) calc(100% - 46px)), radial-gradient(90% 80% at 50% 0%, color-mix(in srgb, var(--c1) 22%, transparent), transparent 70%), var(--surface);
-}
-.tm-cabinet ul { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 18px 28px; margin: 4px 0 0; padding: 0; list-style: none; }
-.tm-cabinet li { display: grid; justify-items: center; text-align: center; width: 132px; gap: 2px; }
-.tm-cup { position: relative; display: grid; place-items: end center; height: 104px; }
-.tm-cup img { width: 100px; height: 100px; object-fit: contain; filter: drop-shadow(0 10px 14px rgba(0,0,0,.5)); }
-.tm-cup i { display: block; width: 52px; height: 72px; border-radius: 8px 8px 22px 22px; background: rgba(var(--ink),.1); }
-.tm-cabinet li.runner .tm-cup img { width: 66px; height: 66px; }
-.tm-cabinet li.runner .tm-cup i { width: 36px; height: 50px; }
-.tm-times { position: absolute; right: -10px; top: 6px; padding: 1px 7px; border-radius: 999px; background: var(--c1); color: var(--on1); font: 700 .85rem var(--font-display); }
-.tm-cup-t { margin-top: 6px; font-size: .88rem; line-height: 1.25; }
-.tm-cabinet small { color: var(--faint); font-size: .76rem; line-height: 1.3; }
-.tm-cab-link { position: absolute; right: 22px; top: 20px; font-size: .88rem; font-weight: 600; }
+.tm-cabinet + .tm-more { border-top: 0; padding-top: 0; }
+.tm-story { max-width: 68ch; padding-top: 26px; border-top: 1px solid var(--line); color: var(--text-soft); }
+.tm-story p { margin: 0 0 .8em; }
 
 @media (max-width: 899px) {
-  .tm-grid { grid-template-columns: minmax(0, 1fr); }
+  .tm-id { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "crest titles" "now now"; }
+  .tm-now { justify-items: start; padding-top: 16px; }
+  .tm-rank { text-align: left; }
+  .tm-more { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .tm-kits { grid-column: 1 / -1; }
 }
 @media (max-width: 560px) {
-  .tm-hero-in { grid-template-areas: "crest" "name" "motto" "form"; grid-template-columns: minmax(0, 1fr); padding: 22px 16px 18px; row-gap: 14px; }
-  .tm-crest .crest { --s: 72px !important; }
-  .tm .tm-name { font-size: clamp(2.2rem, 13vw, 3.4rem); }
-  .tm .tm-motto { margin: 0; }
-  .tm-form { margin-top: 6px; gap: 6px; }
-  .tm-res { padding: 6px 10px 6px 6px; column-gap: 8px; }
-  .tm-players li { grid-template-columns: 2.2em minmax(0, 1fr) auto; }
-  .tm-val { display: none; }
-  .tm-cabinet ul { gap: 14px 12px; justify-content: space-between; }
+  .tm { gap: 32px; }
+  .tm-fabric { height: 60px; }
+  .tm-id { grid-template-columns: minmax(0, 1fr); grid-template-areas: "crest" "titles" "now"; padding: 0; }
+  .tm-crest { margin-top: -40px; }
+  .tm-crest .crest { --s: 92px !important; }
+  .tm-titles { padding-top: 10px; }
+  .member-main .tm-name { font-size: clamp(2rem, 10vw, 2.8rem); }
+  .tm-rail ul { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 6px; }
+  .tm-more { grid-template-columns: minmax(0, 1fr); }
+  .tm-cabinet ul { gap: 18px 12px; }
   .tm-cabinet li { width: calc(50% - 6px); }
 }
-@media (prefers-reduced-motion: reduce) { .tm-res { transition: none; } }
