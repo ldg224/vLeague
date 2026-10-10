@@ -5,7 +5,7 @@
 
 import { kitSprite } from '../kit.js';
 import { liveSimTime, liveSpeed, clockAt, addedAt } from './data.js';
-import { esc, statusPill, onColour } from './ui.js';
+import { esc, statusPill } from './ui.js';
 import { Replay } from './replay.js';
 import { icon } from '../icons.js';
 
@@ -55,9 +55,7 @@ async function buildKitArt(wear) {
     for (const role of ['field', 'gk']) {
       const k = wear[side]?.[role]; if (!k) continue;
       const [logo, shirt] = await Promise.all([loadImg(k.logoUrl), loadImg(k.artUrl)]);
-      // Front and back pictures with no print: each player's own name and number are drawn on top as sharp text, in the kit's print colour.
-      const imgs = { logo, art: shirt }, plain = { ...k.design, text: { name: '', number: '', colour: '' } };
-      art[side][role] = { main: k.main, ink: k.design.text.colour || onColour(k.main), sprite: kitSprite(plain, imgs, 256), back: kitSprite(plain, imgs, 256, 'back') };
+      art[side][role] = { main: k.main, sprite: kitSprite({ ...k.design, text: { name: '', number: '', colour: '' } }, { logo, art: shirt }) };
     }
   }
   return art;

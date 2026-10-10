@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.60.3 (2026-10-10)
+
+Headlines: match views back to plain numbers (they were lagging)
+
+No database change. If anything goes wrong, `v0.60.2` is the version to go back to (`docs/RELEASING.md`).
+
+- **Removed, match views:** names on the back of shirts (0.60.1, 0.60.2) made matches lag badly. The match views are back to how they were in 0.60.0: each club's kit, including uploaded designs, with the player's number on top. Uploads still go live at once (0.60.1).
+
 ## 0.60.2 (2026-10-10)
 
 Headlines: sharp names and numbers on shirts
