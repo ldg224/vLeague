@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.61.1 (2026-10-10)
+
+Headlines: two line-up fixes (B-15, B-16)
+
+No database change. If anything goes wrong, `v0.61.0` is the version to go back to (`docs/RELEASING.md`).
+
+- **Fixed, Game centre line-ups (B-16):** a player sent off for a second yellow showed a yellow card and the yellow-and-red together. He now shows just the yellow-and-red. The timeline still lists both cards at their minutes.
+- **Fixed, Game centre line-ups (B-15):** the little count on the goals and assists badges (for two or more) was dark navy and got lost on phones against dark kits and the pitch. It's now dark on a bright gold disc with a white ring, a little bigger.
+
 ## 0.61.0 (2026-10-10)
 
 Headlines: the office can pick for a club by a rule; the scoreboard shows the kit's colour

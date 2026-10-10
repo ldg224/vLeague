@@ -127,7 +127,7 @@ html { scroll-behavior: smooth; }
 .pp-ast, .pp-gl { position: absolute; bottom: -7px; width: 21px; height: 21px; display: grid; place-items: center; border-radius: 50%; background: #fff; color: #0b1626; box-shadow: 0 2px 6px rgba(0, 0, 0, .45); }
 .pp-ast { left: -13px; } .pp-gl { right: -13px; }
 .pp-ast svg, .pp-gl svg { width: 15px; height: 15px; }
-.pp-ast i, .pp-gl i { position: absolute; top: -6px; right: -5px; min-width: 13px; height: 13px; padding: 0 2px; box-sizing: border-box; display: grid; place-items: center; border-radius: 7px; background: #0b1626; color: #fff; font: 800 .58rem/1 var(--font); font-style: normal; }
+.pp-ast i, .pp-gl i { position: absolute; top: -6px; right: -5px; min-width: 13px; height: 13px; padding: 0 2px; box-sizing: border-box; display: grid; place-items: center; border-radius: 7px; background: #ffd54f; color: #1a1200; box-shadow: 0 0 0 1.5px #fff; font: 800 .62rem/1 var(--font); font-style: normal; }   /* B-15: bright, so it reads on any kit or pitch */
 .pp .rating.r-na { background: rgba(8, 18, 30, .85); color: #d6dfeb; border: 1px solid rgba(255, 255, 255, .28); }
 .pp-b.pp-s { font-size: .68rem; letter-spacing: -.02em; }
 .pp-no { color: #aeb7c4; font-weight: 600; margin-right: 2px; }   /* S-21: shirt number before the surname */

@@ -254,7 +254,10 @@ async function run() {
     const liveR = live() ? ratingsAt(data, t) : null;   // a live match: ratings as they stand now, from the events so far
     const badge = (icon, n) => (n ? icon + (n > 1 ? `<i>${n}</i>` : '') : '');
     const goals = id => ev.filter(e => e.type === 'goal' && e.scorer === id && !e.own_goal).length, assists = id => ev.filter(e => e.type === 'goal' && e.assist === id).length;
-    const cards = id => ev.filter(e => e.type === 'card' && e.player === id).map(e => (e.card === 'yellow' ? ICONS.yellow : e.card === 'second_yellow' ? SECOND : ICONS.red)).join('');
+    const cards = id => {   // B-16: a second yellow shows as the yellow-and-red alone, not the first yellow as well
+      const own = ev.filter(e => e.type === 'card' && e.player === id), sent = own.some(e => e.card === 'second_yellow');
+      return own.filter(e => !(sent && e.card === 'yellow')).map(e => (e.card === 'yellow' ? ICONS.yellow : e.card === 'second_yellow' ? SECOND : ICONS.red)).join('');
+    };
     const side = c => {
       const team = data.teams[c === fx.home ? 'home' : 'away'];
       return {
