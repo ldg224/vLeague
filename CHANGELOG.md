@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.57.0 (2026-10-10)
+
+Headlines: a "Live now" filter on Matches (S-19) and live reactions on the Game centre (S-20A)
+
+No database change. If anything goes wrong, `v0.56.2` is the version to go back to (`docs/RELEASING.md`).
+
+- **Added, Matches (S-19):** a "Live now" button beside "My club only". It only appears while a game is live, and shows every live game across all rounds. It switches itself off when nothing is live.
+- **Added, Game centre (S-20A):** while a match is live, a small bar (heart, fire, clap, goal, wow) sits bottom right. Tapping one floats it up the screen for everyone watching that match, guests included. Nothing is stored and there is no chat. Each person is limited to about four taps a second, and the reactions are hidden for anyone with reduced motion on.
+
 ## 0.56.2 (2026-10-10)
 
 Headlines: predicted money works the way you described (S-10)

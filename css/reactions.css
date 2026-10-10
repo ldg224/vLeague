@@ -1,0 +1,12 @@
+/* Live reactions (S-20A): a small bar bottom right, emoji floating up from it. Only on a live match. */
+.lr { position: fixed; right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); z-index: 30; display: grid; justify-items: end; pointer-events: none; }
+.lr-sky { position: relative; width: 56px; height: 0; }
+.lr-fly { position: absolute; right: 12px; bottom: 0; font-size: 1.7rem; line-height: 1; animation: lr-up var(--d, 3s) ease-out forwards; will-change: transform, opacity; }
+@keyframes lr-up { from { transform: translate(0, 0) scale(.6); opacity: 1; } to { transform: translate(var(--x, 0), -42vh) scale(1.15); opacity: 0; } }
+.lr-bar { pointer-events: auto; display: flex; gap: 2px; padding: 4px; border: 1px solid var(--line); border-radius: 999px; background: var(--bar-strong); backdrop-filter: blur(6px); }
+.lr-bar button { width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; font-size: 1.3rem; line-height: 1; cursor: pointer; transition: transform .1s, background .1s; }
+.lr-bar button:hover { background: var(--surface-hover); }
+.lr-bar button:active { transform: scale(1.25); }
+.lr-bar button:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
+.reduce-motion .lr-bar button { transition: none; }
+@media (prefers-reduced-motion: reduce) { .lr-fly { animation: none; display: none; } }

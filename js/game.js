@@ -18,6 +18,7 @@ import { playerCard, MatchPlayer } from './viewer/player.js';
 import { byPlace, pitchHtml } from './lineup-pitch.js';
 import { ratingsAt } from './live-rating.js';
 import { icon } from './icons.js';
+import { liveReactions } from './reactions.js';
 
 chrome();
 const main = document.getElementById('main');
@@ -271,6 +272,7 @@ async function run() {
   }
   const pageKey = () => (data ? '' : pageHtml());
   function draw() {
+    liveReactions(fx.id, live());
     unmount();
     main.innerHTML = lastPage = pageHtml();
     lastHead = head(); lastBelow = data && live() ? below() : '';
@@ -292,6 +294,7 @@ async function run() {
   async function poll(reload) {
     if (reload) { try { season = await loadSeason(); fx = fxOf(season) || fx; } catch { /* keep the last copy */ } }
     const now = st();
+    liveReactions(fx.id, now === 'live');
     if (now !== was || (['live', 'ft'].includes(now) && !data)) {
       was = now;
       if (['live', 'ft'].includes(now)) await loadFile();

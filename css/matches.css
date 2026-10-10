@@ -51,3 +51,8 @@
 .mc-filter { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font: 600 .85rem var(--font); cursor: pointer; }
 .mc-filter[aria-pressed="true"] { background: var(--club, var(--blue-600)); border-color: transparent; color: var(--on-club, #fff); }
 .mc-filter:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+/* Live now toggle (S-19): only drawn while a game is live */
+.mc-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mc-live { display: inline-flex; align-items: center; gap: 7px; }
+.mc-live .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }

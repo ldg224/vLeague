@@ -20,6 +20,7 @@ if (ctx) {
   await prefs().catch(() => null);
   const { main } = ctx, mine = ctx.club?.code;
   let onlyMine = false; try { onlyMine = !!mine && localStorage.getItem('vleague-matches-mine') === '1'; } catch { /* storage blocked */ }
+  let onlyLive = false;   // S-19: the "Live now" toggle (only offered while a game is live)
   let season = ctx.season, week = null, sheets = [], hidden = new Set(), seen = season;
   const stadium = code => rows.find(c => c.code === code)?.stadium || '';
   const loadSheets = async () => { try { const r = await (await db()).from('week_sheets').select('week, club, lineup').range(0, 999); sheets = r.data || []; } catch { /* the model falls back to squads */ } };
@@ -67,24 +68,27 @@ if (ctx) {
     seen = hidden.size ? { ...season, fixtures: season.fixtures.map(f => (hidden.has(f.id) ? { ...f, result: null } : f)) } : season;
     if (!weeks.length) { paint(main, '<h1 class="page-title" tabindex="-1">Matches</h1><p class="empty">No fixtures yet.</p>'); return; }
     if (!weeks.includes(week)) week = activeWeek(season, now);
+    const liveNow = season.fixtures.filter(f => status(f, season, now) === 'live');
+    if (!liveNow.length) onlyLive = false;
     const scroll = main.querySelector('.weektabs')?.scrollLeft;
     const groups = new Map();
-    for (const f of season.fixtures.filter(f => f.week === week && (!onlyMine || f.home === mine || f.away === mine)).sort(byKickoff)) {
+    for (const f of season.fixtures.filter(f => (onlyLive ? liveNow.includes(f) : f.week === week) && (!onlyMine || f.home === mine || f.away === mine)).sort(byKickoff)) {
       const k = kickoff(f), key = k ? k.toDateString() : 'tba';
       if (!groups.has(key)) groups.set(key, { label: k ? day(k, now) : 'Date to be confirmed', items: [] });
       groups.get(key).items.push(f);
     }
-    const painted = paint(main, `<div class="matches"><div class="mc-titlebar"><h1 class="page-title" tabindex="-1">Matches</h1>${mine ? `<button type="button" class="mc-filter" data-mine aria-pressed="${onlyMine}">My club only</button>` : ''}</div>
-      ${weekBar(weeks.map(w => `<button type="button" role="tab" data-week="${esc(w)}" aria-selected="${w === week}">${esc(season.rounds?.[w]?.short || w)}</button>`).join(''), 'Rounds')}
-      <p class="mc-round">${esc(season.rounds?.[week]?.label || `Week ${week}`)}</p>
-      ${groups.size ? '' : `<p class="empty">${onlyMine ? 'Your club isn’t playing this round. <button type="button" class="link-btn" data-mine>Show every match</button>' : 'No matches in this round yet.'}</p>`}${[...groups.values()].map(g => `<h2 class="day">${esc(g.label)}</h2><div class="mcs">${g.items.map(f => card(f, now)).join('')}</div>`).join('')}</div>`);
-    if (painted) wireWeekBar(main, scroll);
+    const painted = paint(main, `<div class="matches"><div class="mc-titlebar"><h1 class="page-title" tabindex="-1">Matches</h1><span class="mc-filters">${liveNow.length ? `<button type="button" class="mc-filter mc-live" data-live aria-pressed="${onlyLive}"><span class="dot"></span>Live now</button>` : ''}${mine ? `<button type="button" class="mc-filter" data-mine aria-pressed="${onlyMine}">My club only</button>` : ''}</span></div>
+      ${onlyLive ? '' : weekBar(weeks.map(w => `<button type="button" role="tab" data-week="${esc(w)}" aria-selected="${w === week}">${esc(season.rounds?.[w]?.short || w)}</button>`).join(''), 'Rounds')}
+      <p class="mc-round">${onlyLive ? 'Live now, every round' : esc(season.rounds?.[week]?.label || `Week ${week}`)}</p>
+      ${groups.size ? '' : `<p class="empty">${onlyLive ? 'Nothing live right now.' : onlyMine ? 'Your club isn’t playing this round. <button type="button" class="link-btn" data-mine>Show every match</button>' : 'No matches in this round yet.'}</p>`}${[...groups.values()].map(g => `<h2 class="day">${esc(g.label)}</h2><div class="mcs">${g.items.map(f => card(f, now)).join('')}</div>`).join('')}</div>`);
+    if (painted && !onlyLive) wireWeekBar(main, scroll);
   }
 
   main.classList.add('league-main');
   main.addEventListener('click', async e => {
     const show = e.target.closest('[data-reveal]');
     if (show) { e.preventDefault(); await revealScore([show.dataset.reveal]); draw(); return; }
+    if (e.target.closest('[data-live]')) { onlyLive = !onlyLive; draw(); return; }
     if (e.target.closest('[data-mine]')) { onlyMine = !onlyMine; try { localStorage.setItem('vleague-matches-mine', onlyMine ? '1' : '0'); } catch { /* storage blocked */ } draw(); return; }
     if (weekBarArrow(main, e)) return;
     const b = e.target.closest('.weektabs button');
