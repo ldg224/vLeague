@@ -3,6 +3,21 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.59.0 (2026-10-10)
+
+Headlines: the kit editor, rebuilt (S-23)
+
+No database change. If anything goes wrong, `v0.58.0` is the version to go back to (`docs/RELEASING.md`).
+
+- **Changed, My club → Kits:** a new design, built for phones first. The player stands on a spotlit stage in your club colour with the kit's name huge behind it, like a kit launch. On a phone the player and the four tabs (Style, Colours, Text, Logo) stay pinned at the top while you scroll, so you never lose sight of the shirt or have to scroll back up to switch. On a computer they sit side by side.
+- **Fixed, logos looked squashed:** the shirt drawing now has the same detail across and down, so a round logo is round on the player, in the kit pictures and in matches. Uploaded logos are fitted into a square, never stretched.
+- **Added, drag the logo on the shirt** to place it, plus a size slider and quick places (left chest, centre, right chest, belly). The crest can go left, centre or right.
+- **Added:** pattern tiles drawn in your own colours; 13 patterns (new: diagonals, fade, centre bar; halves now split down the middle); a colour palette with your club colours first, any colour or a hex code, and ready-made colour schemes; Swap Main and Second; Surprise me; Copy my Home kit (or with the colours swapped) for a new kit; Start over; Undo and Redo (also Ctrl+Z); unsaved-changes warnings; and the player turns once all the way round when you save.
+- **Added, a first-time tour** (like the Draft's) that shows every part of the page; "How it works" runs it again.
+- **Added, the office banner:** the league office can design any club's kits and approve logos, and the page now says so. Managers can only change their own club's kits (the database refuses anything else).
+- **Fixed:** the office's Approve button switched kits instead of approving; the editor now works without 3D (an older phone shows the front and back side by side); the save bar no longer covers the menu on phones.
+- **Changed, matches:** kits in the match views are drawn from the same front view as the editor, so patterns and logos look the same everywhere.
+
 ## 0.58.0 (2026-10-10)
 
 Headlines: kits. Design a club's shirts on a 3D player (S-23), and they show in the matches (S-20)

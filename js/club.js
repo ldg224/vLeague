@@ -225,7 +225,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
     $('#kitpick', box).innerHTML = made.length
       ? `<div class="kitpick" role="radiogroup" aria-label="Kit for the match">
           <button type="button" role="radio" data-kit="" aria-checked="${!sheet.kit}"><b>Automatic</b><small>Home kit; the away kit if the colours clash</small></button>
-          ${made.map(s => `<button type="button" role="radio" data-kit="${s}" aria-checked="${sheet.kit === s}"><img alt="" src="${kitSprite({ ...kitsMade[s], text: { name: '', number: '', colour: '' } }, {}, 64).toDataURL()}" width="26" height="52"><b>${esc(kitName(s, kitsMade[s]))}</b></button>`).join('')}</div>`
+          ${made.map(s => `<button type="button" role="radio" data-kit="${s}" aria-checked="${sheet.kit === s}"><img alt="" src="${kitSprite({ ...kitsMade[s], text: { name: '', number: '', colour: '' } }, {}, 64).toDataURL()}" width="30" height="52"><b>${esc(kitName(s, kitsMade[s]))}</b></button>`).join('')}</div>`
       : '<p class="quiet">No kits designed yet. Your team plays in its club colours.</p>';
   }
 
