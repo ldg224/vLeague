@@ -1,0 +1,97 @@
+/* Team pages (S-04). The hero is cut like the club's shirt: its primary colour with a sash in the second colour, the crest,
+   and the name set big across it. Everything below stays quiet, in the site's own surfaces. --c1/--c2/--on1 come from team.js. */
+
+.member-top .gc-back { margin-left: auto; color: var(--muted); font-weight: 600; text-decoration: none; font-size: .9rem; }
+.member-top .gc-back:hover { color: var(--text); }
+
+.tm { display: grid; gap: 28px; }
+
+/* ---------- the shirt ---------- */
+.tm-hero { position: relative; overflow: hidden; border-radius: var(--r-md); background: var(--c1); color: var(--on1); isolation: isolate; }
+.tm-sash {
+  position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(118deg, transparent 0 58%, var(--on1) 58% 58.6%, var(--c2) 58.6% 70%, var(--on1) 70% 70.6%, transparent 70.6%);
+  opacity: .9;
+}
+.tm-hero-in { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "crest name" "crest motto" "form form"; column-gap: 24px; padding: 32px 32px 26px; }
+.tm-crest { grid-area: crest; align-self: center; }
+.tm-crest .crest { box-shadow: 0 10px 28px rgba(0,0,0,.28); }
+.tm .tm-name {
+  grid-area: name; color: inherit; text-transform: none; align-self: end; margin: 0; outline: none;
+  font: 700 clamp(2.6rem, 7.5vw, 5.6rem)/.92 var(--font-display); letter-spacing: -.01em;
+  overflow-wrap: anywhere; text-wrap: balance;
+}
+.tm .tm-motto { color: inherit; grid-area: motto; margin: 10px 0 0; font-style: italic; font-size: 1.05rem; opacity: .85; max-width: 48ch; }
+
+/* last five, oldest first, each one a link to the match */
+.tm-form { grid-area: form; display: flex; gap: 8px; margin: 26px 0 0; padding: 0; list-style: none; flex-wrap: wrap; }
+.tm-res {
+  display: grid; grid-template-columns: auto auto; grid-template-areas: "o s" "o v"; column-gap: 10px; align-items: center;
+  padding: 7px 14px 7px 8px; border-radius: 10px; background: rgba(6,12,24,.55); color: #fff; text-decoration: none;
+  backdrop-filter: blur(4px); transition: background .12s;
+}
+.tm a.tm-res { color: #fff; }
+.tm-res:hover { background: rgba(6,12,24,.75); }
+.tm-res:focus-visible { outline: 2px solid var(--on1); outline-offset: 2px; }
+.tm-res b { grid-area: o; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 7px; font: 700 1rem var(--font-display); }
+.tm-res.res-W, .tm-res.res-D, .tm-res.res-L { background: rgba(6,12,24,.55); }
+.tm-res.res-W b { background: var(--res-w); } .tm-res.res-D b { background: var(--res-d); } .tm-res.res-L b { background: var(--res-l); }
+.tm-res span { color: inherit; grid-area: s; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.tm-res small { grid-area: v; font-size: .75rem; opacity: .8; line-height: 1.1; }
+.tm-form-none { grid-area: form; margin: 22px 0 0; opacity: .85; }
+
+/* ---------- below the shirt ---------- */
+.tm-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+.tm-side { display: grid; gap: 18px; }
+.tm h2 { margin: 0 0 10px; font: 700 1.25rem var(--font-display); letter-spacing: .01em; }
+.tm-record { margin: -4px 0 14px; color: var(--muted); }
+.tm-box { padding: 18px 20px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); }
+
+.tm-squad h3 { padding-left: 10px; border-left: 3px solid var(--c1); margin: 18px 0 4px; font-size: .9rem; font-weight: 700; color: var(--muted); }
+.tm-squad h3:first-of-type { margin-top: 0; }
+.tm-players { margin: 0; padding: 0; list-style: none; }
+.tm-players li { display: grid; grid-template-columns: 2.6em minmax(0, 1fr) auto 5.5em; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.tm-no { font: 700 1.2rem var(--font-display); color: var(--text-soft); text-align: right; font-variant-numeric: tabular-nums; }
+.tm-pl { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tm-rt { font-size: .8rem; color: var(--faint); white-space: nowrap; }
+.tm-rt abbr { text-decoration: none; }
+.tm-val { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); font-size: .9rem; }
+
+.tm-cap p { margin: 0 0 10px; color: var(--muted); }
+.tm-cap p b { color: var(--text); font-size: 1.1rem; }
+.tm-bar { height: 10px; border-radius: 999px; background: rgba(var(--ink),.08); overflow: hidden; }
+.tm-bar i { display: block; height: 100%; border-radius: inherit; background: var(--c1); }
+.tm-cap.warn .tm-bar i { background: var(--amber); }
+.tm-cap.over .tm-bar i { background: var(--res-l); }
+
+/* kits hang side by side, like on pegs */
+.tm-kits { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; padding: 0; list-style: none; }
+.tm-kits li { display: grid; justify-items: center; gap: 4px; font-size: .8rem; color: var(--muted); text-align: center; max-width: 84px; }
+.tm-kit canvas { display: block; height: auto; filter: drop-shadow(0 4px 8px rgba(0,0,0,.3)); }
+
+.tm-facts { display: grid; gap: 8px; margin: 0; }
+.tm-facts div { display: grid; grid-template-columns: 7.5em minmax(0, 1fr); gap: 10px; }
+.tm-facts dt { color: var(--muted); }
+.tm-facts dd { margin: 0; font-weight: 600; display: flex; gap: 6px; align-items: center; }
+.tm-sw { display: inline-block; width: 22px; height: 22px; border-radius: 6px; box-shadow: inset 0 0 0 1px rgba(var(--edge),.25); }
+
+.tm-honours { display: flex; flex-wrap: wrap; gap: 10px 22px; margin: 0 0 12px; padding: 0; list-style: none; }
+.tm-honours li { display: flex; align-items: baseline; gap: 8px; }
+.tm-honours b { font: 700 1.9rem/1 var(--font-display); }
+.tm-story { max-width: 62ch; color: var(--text-soft); }
+.tm-story p { margin: 0 0 .8em; } .tm-story p:last-child { margin-bottom: 0; }
+
+@media (max-width: 899px) {
+  .tm-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  .tm-hero-in { grid-template-areas: "crest" "name" "motto" "form"; grid-template-columns: minmax(0, 1fr); padding: 22px 16px 18px; row-gap: 14px; }
+  .tm-crest .crest { --s: 72px !important; }
+  .tm .tm-name { font-size: clamp(2.2rem, 13vw, 3.4rem); }
+  .tm .tm-motto { margin: 0; }
+  .tm-form { margin-top: 6px; gap: 6px; }
+  .tm-res { padding: 6px 10px 6px 6px; column-gap: 8px; }
+  .tm-players li { grid-template-columns: 2.2em minmax(0, 1fr) auto; }
+  .tm-val { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .tm-res { transition: none; } }

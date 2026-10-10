@@ -118,3 +118,5 @@ a.fx:hover { background: var(--surface); }
 /* A club with no match this week is named under the day groups. */
 .byes { display: flex; flex-wrap: wrap; gap: 8px 16px; padding: 4px 2px 8px; }
 .bye { display: inline-flex; align-items: center; gap: 8px; color: var(--muted, inherit); }
+.ladder a.cl { color: inherit; text-decoration: none; }
+.ladder a.cl:hover .nm { text-decoration: underline; }

@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.65.0 (2026-10-10)
+
+Headlines: a page for every team (S-04)
+
+Database change: migration `0049_club_history.sql` adds `clubs.history` and `clubs.honours`. If anything goes wrong, `v0.64.0` is the version to go back to (`docs/RELEASING.md`).
+
+- **Added, team pages** (`team.html?c=CODE`), open to everyone, guests too. The top is cut like the club’s shirt: its colours with a sash in the second colour, the crest, the name and motto, and the last five results (each opens the match). Below: the squad by position with shirt numbers, ratings and values; the squad’s value against the $125,000 weekly cap; the club’s kits; its details (code, short name, colours, stadium, manager); and its history and honours. Results you haven’t revealed stay hidden (spoiler-free).
+- **Added, Editor → Clubs:** **History** (short text; **bold** and *italic* work) and **Honours** (one per line, for example “Championships: 1”) for each club, shown on its team page.
+- **Changed:** club names in the League table open their team page, and My club has a **Team page** button.
+
 ## 0.64.0 (2026-10-10)
 
 Headlines: drag and drop on the team sheet (S-01)
