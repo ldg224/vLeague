@@ -86,13 +86,9 @@ if (ctx) {
 
     // What this club's squad is worth now.
     const squadValue = () => players.filter(p => p.team === code).reduce((n, p) => n + (p.value || 0), 0);
-    // The queue with a running total (S-10): what the squad would be worth, and what is left under the cap, as each queued player is
-    // added in order. A guide only: other clubs take players and the queue may skip someone who no longer fits, so it can differ.
+    // S-10: the full club value = players already picked + players in the queue, against the cap. A guide only: other clubs take
+    // players and the queue may skip someone who no longer fits, so what you end up with can differ.
     const afterText = total => (total > CAP ? `over the cap by ${money(total - CAP)}` : `${money(CAP - total)} left`);
-    function queueRunning(q, map) {
-      let run = squadValue();
-      return q.map(id => { run += map.get(id)?.value || 0; return run; });
-    }
 
     // How much of the weekly cap this club's squad uses (the draft shows it; it doesn't block a pick).
     function budget() {
@@ -188,12 +184,12 @@ if (ctx) {
     // Players: the queue and auto-pick on the left, every available player on the right.
     function queuePanel() {
       if (!code) return '<p class="empty">Your account isn’t linked to a club.</p>';
-      const map = byId(), q = queue(), run = queueRunning(q, map);
-      const end = run.length ? run[run.length - 1] : null;
+      const map = byId(), q = queue();
+      const picked = squadValue(), queued = q.reduce((n, id) => n + (map.get(id)?.value || 0), 0), end = picked + queued;
       return `<section class="dr-queue"><h2>My queue <small>${q.length}</small></h2>
-        ${end != null ? `<p class="dr-qsum${end > CAP ? ' over' : ''}">If your queue is picked in order, your squad is worth <b>${money(end)}</b>: ${afterText(end)}.</p>` : ''}
+        ${q.length ? `<p class="dr-qsum${end > CAP ? ' over' : ''}">Club value with your queue: <b>${money(end)}</b> of ${money(CAP)} <span>(${money(picked)} picked + ${money(queued)} queued)</span>. ${afterText(end)}.</p>` : ''}
         ${myTurn() && q.length ? `<button class="dr-b pick big" data-pick="${esc(q[0])}"${blocked(map.get(q[0])) ? ` disabled title="${esc(blocked(map.get(q[0])))}"` : ''}>Pick now: ${esc(map.get(q[0])?.name)}</button>` : ''}
-        <ol class="dr-list" id="queue">${q.map((id, i) => playerRow(map.get(id), `<span class="q-after${run[i] > CAP ? ' over' : ''}" title="Your squad's value after this player if your queue is picked in order">${money(run[i])} · ${afterText(run[i])}</span><span class="mv"><button class="dr-b" data-up="${i}" aria-label="Move up"${i ? '' : ' disabled'}>${icon('chevron-up')}</button><button class="dr-b" data-down="${i}" aria-label="Move down"${i < q.length - 1 ? '' : ' disabled'}>${icon('chevron-down')}</button><button class="dr-b" data-rm="${i}" aria-label="Remove">${icon('x')}</button></span>`, ` draggable="true" data-i="${i}"`)).join('') || '<li class="empty">Add players with “+ Queue”. Drag or use the arrows to rank them.</li>'}</ol></section>`;
+        <ol class="dr-list" id="queue">${q.map((id, i) => playerRow(map.get(id), `<span class="mv"><button class="dr-b" data-up="${i}" aria-label="Move up"${i ? '' : ' disabled'}>${icon('chevron-up')}</button><button class="dr-b" data-down="${i}" aria-label="Move down"${i < q.length - 1 ? '' : ' disabled'}>${icon('chevron-down')}</button><button class="dr-b" data-rm="${i}" aria-label="Remove">${icon('x')}</button></span>`, ` draggable="true" data-i="${i}"`)).join('') || '<li class="empty">Add players with “+ Queue”. Drag or use the arrows to rank them.</li>'}</ol></section>`;
     }
     function autoPanel(open) {
       if (!code) return '';
@@ -305,10 +301,13 @@ if (ctx) {
       const p = byId().get(id); if (!p) return;
       const k = st.picks.find(x => x.player === id), queued = st.queue.includes(id), why = !p.team && myTurn() ? blocked(p) : '';
       const status = p.team ? `Picked by <b>${esc(nameOf(p.team))}</b>${k ? ` (pick ${k.pick_no})` : ''}` : 'Available';
+      // S-10: what your squad would be worth with this player added.
+      const used = squadValue(), after = used + (p.value || 0);
+      const worth = !p.team && code ? `<p class="dr-line">Your squad <b>${money(used)}</b> → <b class="${after > CAP ? 'over' : ''}">${money(after)}</b> of ${money(CAP)} with ${esc(p.name)}${after > CAP ? ' <span class="over">(over the cap)</span>' : ` (${afterText(after)})`}</p>` : '';
       const acts = [!p.team && code ? `<button class="dr-b" data-close="queue"${queued ? ' disabled' : ''}>${queued ? 'In your queue' : '+ Queue'}</button>` : '',
         !p.team && myTurn() ? `<button class="dr-b pick" data-close="pick"${why ? ` disabled title="${esc(why)}"` : ''}>Pick</button>` : ''].join('');
       const r = await sheet(`<h2>${esc(p.name)}</h2><p class="dr-sub1">${esc(p.position)}${p.number != null ? ` · #${esc(p.number)}` : ''} · ${status}</p>${bigRatings(p)}
-        ${why ? `<p class="dr-line over">${esc(why)}</p>` : ''}<div class="dr-btns"><button class="dr-b" data-close="">Close</button>${acts}</div>`);
+        ${worth}${why ? `<p class="dr-line over">${esc(why)}</p>` : ''}<div class="dr-btns"><button class="dr-b" data-close="">Close</button>${acts}</div>`);
       if (r === 'queue') await addToQueue(id); else if (r === 'pick') await pickPlayer(id);
     }
     const csvCell = v => (/[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));

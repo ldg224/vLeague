@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.56.2 (2026-10-10)
+
+Headlines: predicted money works the way you described (S-10)
+
+No database change. If anything goes wrong, `v0.56.1` is the version to go back to (`docs/RELEASING.md`).
+
+- **Changed, Draft → My queue (S-10):** the running total under every queued player is gone. The queue now shows one line with your full club value: players already picked plus players in the queue, against the weekly cap, with the cap left (or over by). For example "Club value with your queue: $98,500 of $125,000 ($61,000 picked + $37,500 queued). $26,500 left."
+- **Added, Draft → player card (S-10):** tapping a player who is still available now shows what your squad would be worth if you added them, and the cap left, in the card.
+
 ## 0.56.1 (2026-10-10)
 
 Headlines: the Draft page no longer shows code in its status bar (B-12)
