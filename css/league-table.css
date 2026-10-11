@@ -66,4 +66,4 @@
 
 /* The toggle buttons wrap onto a second line on a phone instead of scrolling out of sight. */
 .tb-pills.sc-toggle { flex-wrap: wrap; overflow: visible; }
-@media (max-width: 399px) { .tb-pills.sc-toggle a, .tb-pills.sc-toggle button, .fx-modes.sc-toggle a { padding-inline: 12px; } }
+@media (max-width: 399px) { .tb-pills.sc-toggle a, .tb-pills.sc-toggle button, .fx-modes.sc-toggle a { padding-inline: 10px; } }

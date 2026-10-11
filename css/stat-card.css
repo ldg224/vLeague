@@ -140,8 +140,8 @@
 .sc-toggle { display: flex; gap: 8px; }
 /* The toggle buttons used on the Stats, Overview table and Fixtures tabs (links or buttons). */
 .sc-toggle a, .sc-toggle button {
-  flex: none; display: inline-flex; align-items: center; height: 32px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--tab-accent, var(--blue-700)); background: transparent;
-  color: var(--tab-accent, var(--blue-700)); font: 400 var(--fs-s) var(--font-display, var(--font)); font-stretch: 125%; text-transform: uppercase; text-decoration: none; white-space: nowrap; cursor: pointer;
+  flex: none; display: inline-flex; align-items: center; height: 28px; padding: 0 11px; border-radius: 999px; border: 1px solid var(--tab-accent, var(--blue-700)); background: transparent;
+  color: var(--tab-accent, var(--blue-700)); font: 400 var(--fs-xs) var(--font-display, var(--font)); font-stretch: 125%; text-transform: uppercase; text-decoration: none; white-space: nowrap; cursor: pointer;
 }
 .sc-toggle a[aria-current="true"], .sc-toggle button[aria-pressed="true"] { background: var(--tab-accent, var(--blue-700)); color: #fff; }
 :root:not([data-theme="light"]) .sc-toggle a[aria-current="true"], :root:not([data-theme="light"]) .sc-toggle button[aria-pressed="true"] { color: var(--blue-900, #0d47a1); }
