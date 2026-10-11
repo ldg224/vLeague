@@ -67,3 +67,17 @@
 /* The toggle buttons wrap onto a second line on a phone instead of scrolling out of sight. */
 .tb-pills.sc-toggle { flex-wrap: wrap; overflow: visible; }
 @media (max-width: 399px) { .tb-pills.sc-toggle a, .tb-pills.sc-toggle button, .fx-modes.sc-toggle a { padding-inline: 10px; } }
+
+/* The wide Archivo of the Fixtures tab and the card titles, so the table matches (user, 11 Oct 2026): headings in small wide capitals, positions,
+   numbers and points in the wide face, club names in a slightly wide 700. Phones keep the club names at normal width so they still fit. */
+.tb { font-family: var(--font-display, var(--font)); }
+.tb thead th { font-weight: 700; font-stretch: 125%; text-transform: uppercase; letter-spacing: .06em; }
+.tb .tb-pos { font-weight: 700; font-stretch: 125%; }
+.tb td { font-weight: 600; font-stretch: 112%; }
+.tb .tb-pts { font-weight: 900; font-stretch: 125%; }
+.tb tbody .tb-club { font-weight: 700; font-stretch: 106%; }
+.tb-form abbr { font-family: var(--font-display, var(--font)); font-weight: 900; font-stretch: 125%; }
+.tb-none { font-stretch: 100%; }
+@media (max-width: 639px) { .tb tbody .tb-club { font-stretch: 100%; } .tb td { font-stretch: 100%; } .tb .tb-pts { font-stretch: 112%; } .tb thead th { letter-spacing: .02em; } }
+@media (max-width: 639px) { .tb-form abbr { font-stretch: 100%; } .tb .tb-pos { font-stretch: 100%; } .tb .tb-pts { font-stretch: 100%; } }
+@media (max-width: 399px) { .tb-form abbr { width: 16px; height: 16px; } .tb thead th { letter-spacing: 0; font-stretch: 100%; } }
