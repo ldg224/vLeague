@@ -10,7 +10,7 @@
 // that record is the current season's card (shown once, with its winners once they are set; until then the card is the in-progress one). The newest name's heading is in vLeague blue, the earlier names' in green.
 // The current season comes from the league page (its name and whether it is live); its winner and runner-up show "To be decided" until the grand
 // final has a result. Past seasons come from History (Editor, History: js/history-data.js): for each competition that has an award in that season,
-// the winner (with the competition's trophy picture) and the runner-up, a current club by its crest and name or a past team by its code badge.
+// the winner (with the competition's trophy picture) and the runner-up, a current club by its crest and name or a past team by its logo (its code on a badge until it has one).
 // opts = { current: { label, live }, final: grandFinal(...) | null, history: loadHistory() | null, club(code) -> { name, short_name }, crest(code, px) -> html,
 //          trophy(path) -> url, hiddenCount }
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -49,7 +49,8 @@ function pastCard(season, h, o) {
     if (!a) return '<span class="ss-tbd">Not recorded</span>';
     if (a.club) return who(a.club, o);
     const p = h.past.find(x => x.id === a.past_team) || { name: 'Unknown team' };
-    return `<span class="ss-team"><span class="ss-badge" aria-hidden="true">${esc(p.code || initials(p.name))}</span><b>${esc(p.name)}</b></span>`;
+    const face = p.crest_path ? `<img class="ss-logo" src="${esc(o.trophy(p.crest_path))}" alt="" loading="lazy">` : `<span class="ss-badge" aria-hidden="true">${esc(p.code || initials(p.name))}</span>`;
+    return `<span class="ss-team">${face}<b>${esc(p.name)}</b></span>`;
   };
   const picture = (a, comp) => {
     const path = a.art_path || comp.winner_art;

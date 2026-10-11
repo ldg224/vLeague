@@ -84,3 +84,11 @@ test('the current season recorded in History shows once: in progress until it ha
   assert.equal((won.match(/<h3>Season 1<\/h3>/g) || []).length, 2);
   assert.doesNotMatch(won, /In progress/); assert.match(won, /<crest SKS 28>/);
 });
+
+test('a past team shows its logo once it has one, and its code on a badge until then', () => {
+  const withLogo = { ...history, past: [{ ...history.past[0], crest_path: 'pcf.png' }] };
+  const html = seasonsView(o({ history: withLogo }));
+  assert.match(html, /<img class="ss-logo" src="\/t\/pcf\.png"[^>]*><b>Pectorial Flys<\/b>/);
+  assert.doesNotMatch(html, /ss-badge/);
+  assert.match(seasonsView(o()), /<span class="ss-badge" aria-hidden="true">PCF<\/span>/);
+});

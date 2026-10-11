@@ -1,7 +1,7 @@
 // Editor -> History (0.66): the league's past seasons, for history.html and the team pages' trophy cabinets.
 //   League names: the names the league has run under, oldest first (0053). an earlier name can have seasons of its own after a rebrand.
 //   Competitions: the trophies a season can have, each with a default picture for the winner and the runner-up.
-//   Past teams: clubs that have left (name, code, manager), so they can still be credited.
+//   Past teams: clubs that have left (name, code, manager and a logo), so they can still be credited. The logo goes in the `trophies` bucket like a trophy picture.
 //   Seasons: for each competition, who won and who was runner-up (a current club or a past team), and that award's own
 //   picture if that year's trophy looked different. Every change saves straight away. Tables: 0050_league_history.sql.
 import { trophyUrl } from './history-data.js';
@@ -70,6 +70,7 @@ export async function mountHistory(ctx) {
     return `<section class="hi-sect"><h2>Past teams</h2>
       <p class="quiet">Clubs that have left the league, so their wins still count.</p>
       ${past.length ? `<ul class="hi-list">${past.map(p => `<li class="hi-past" data-past="${p.id}">
+        <span class="hi-art">${pic(p.crest_path, `${p.name} logo`)}<span>Logo<br>${upload('data-past-logo', p.crest_path ? 'Change' : 'Add')}${p.crest_path ? ' · <button type="button" class="link-btn" data-past-logo-clear>Remove</button>' : ''}</span></span>
         <input data-past-f="name" value="${esc(p.name)}" maxlength="40" required aria-label="Team name" placeholder="Name">
         <input data-past-f="code" value="${esc(p.code || '')}" maxlength="4" aria-label="Code" placeholder="Code" class="hi-code">
         <input data-past-f="manager_name" value="${esc(p.manager_name || '')}" maxlength="40" aria-label="Manager name" placeholder="Manager">
@@ -130,6 +131,9 @@ export async function mountHistory(ctx) {
       else if (el.matches('[data-comp-art]')) {
         root.querySelector('.hi-msg').textContent = 'Uploading…';
         await run(client.from('history_competitions').update({ [el.dataset.compArt]: await uploadTrophy(el.files[0]) }).eq('id', comp.dataset.comp), 'Picture saved.');
+      } else if (el.matches('[data-past-logo]')) {
+        root.querySelector('.hi-msg').textContent = 'Uploading…';
+        await run(client.from('history_past_teams').update({ crest_path: await uploadTrophy(el.files[0]) }).eq('id', pastRow.dataset.past), 'Logo saved.');
       } else if (el.matches('[data-past-f]')) {
         const k = el.dataset.pastF, val = k === 'code' ? t(el.value).toUpperCase() : t(el.value);
         if (k === 'code' && val && !/^[A-Z0-9]{2,4}$/.test(val)) { root.querySelector('.hi-msg').textContent = 'A code is 2 to 4 letters or numbers.'; return; }
@@ -159,6 +163,7 @@ export async function mountHistory(ctx) {
       if (confirm(`Delete ${l.name}?`)) await run(client.from('history_leagues').delete().eq('id', l.id), `Deleted ${l.name}.`);
     } else if (b.matches('[data-lmove]')) await swap(leagues, leagues.findIndex(x => x.id === Number(b.closest('[data-league]').dataset.league)), Number(b.dataset.lmove), 'history_leagues');
     else if (b.matches('[data-comp-clear]')) await run(client.from('history_competitions').update({ [b.dataset.compClear]: null }).eq('id', comp.dataset.comp), 'Picture removed.');
+    else if (b.matches('[data-past-logo-clear]')) await run(client.from('history_past_teams').update({ crest_path: null }).eq('id', pastRow.dataset.past), 'Logo removed.');
     else if (b.matches('[data-award-clear]')) {
       const a = awardOf(Number(seas.dataset.season), Number(comp.dataset.comp), comp.dataset.place);
       await run(client.from('history_awards').update({ art_path: null }).eq('id', a.id), 'Using the usual picture.');

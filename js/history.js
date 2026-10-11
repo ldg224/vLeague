@@ -46,7 +46,7 @@ function render(rows, h) {
     }
     const p = h.past.find(x => x.id === a.past_team) || { name: 'Unknown team' };
     const note = `Former club${p.manager_name ? `, managed by ${esc(p.manager_name)}` : ''}`;
-    return { key: `p:${p.id}`, name: p.name, html: `<span class="hs-team past"><span class="hs-badge" style="--s:${size}px" aria-hidden="true">${esc(p.code || initials(p.name))}</span><span class="hs-nm">${esc(p.name)}<small>${note}</small></span></span>` };
+    return { key: `p:${p.id}`, name: p.name, html: `<span class="hs-team past">${p.crest_path ? `<img class="hs-badge" style="--s:${size}px;object-fit:contain;background:none" src="${esc(trophyUrl(p.crest_path))}" alt="" loading="lazy">` : `<span class="hs-badge" style="--s:${size}px" aria-hidden="true">${esc(p.code || initials(p.name))}</span>`}<span class="hs-nm">${esc(p.name)}<small>${note}</small></span></span>` };
   };
   const cup = (path, cls) => (path ? `<img class="${cls}" src="${esc(trophyUrl(path))}" alt="" loading="lazy">` : `<span class="${cls} none" aria-hidden="true"></span>`);
 
