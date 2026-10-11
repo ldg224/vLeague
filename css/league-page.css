@@ -173,13 +173,15 @@
 .lg-content { display: grid; gap: 16px; align-content: start; flex: 1; }
 .lg-card {
   min-width: 0; padding: 16px 20px 20px;
-  background: var(--sheen), var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
+  background: var(--sheen), var(--fabric) center / cover no-repeat, var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
 }
 /* A faint sheen on every card so the dark greys aren't plain (user, 11 Oct 2026): a soft glow from one random corner and a slow
    fall to a touch darker, in white or (now and then) the club colour. Each card gets its own angle, spot and tint from js/league.js
    (always the same ones for the same card). Dark theme only: on light the layers are empty. */
-.lg { --sheen: linear-gradient(transparent, transparent), linear-gradient(transparent, transparent); }
+.lg { --sheen: linear-gradient(transparent, transparent), linear-gradient(transparent, transparent); --fabric: linear-gradient(transparent, transparent); }
 :root:not([data-theme="light"]) .lg {
+  /* Under the sheen, white silk (assets/img/fabric.png, made from the user's fabric picture, 0.8 to 5.8% white) so the grey boxes have folds. */
+  --fabric: url("../assets/img/fabric.png");
   --sheen:
     radial-gradient(110% 80% at var(--gx, 15%) var(--gy, 0%), color-mix(in oklab, var(--gt, #fff) 5%, transparent), transparent 62%),
     linear-gradient(var(--ga, 160deg), color-mix(in oklab, var(--gt, #fff) 2.5%, transparent) 0%, transparent 50%, color-mix(in oklab, #000 9%, transparent) 100%);

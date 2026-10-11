@@ -172,10 +172,14 @@
   border: 2px solid transparent;
   background-image:
     var(--sheen),
+    var(--fabric),
     linear-gradient(var(--surface), var(--surface)),
     conic-gradient(from var(--ang), var(--ring) 0 55%, color-mix(in oklab, var(--ring) 40%, #fff) 66%, #fff 72%, color-mix(in oklab, var(--ring) 40%, #fff) 78%, var(--ring) 89% 100%) ;
-  background-origin: padding-box, padding-box, padding-box, border-box;
-  background-clip: padding-box, padding-box, padding-box, border-box;
+  background-size: auto, auto, cover, auto, auto;
+  background-position: 0 0, 0 0, center, 0 0, 0 0;
+  background-repeat: repeat, repeat, no-repeat, repeat, repeat;
+  background-origin: padding-box, padding-box, padding-box, padding-box, border-box;
+  background-clip: padding-box, padding-box, padding-box, padding-box, border-box;
   box-shadow: 0 0 14px color-mix(in oklab, var(--ring) 38%, transparent), 0 0 2px color-mix(in oklab, var(--ring) 60%, transparent);
   animation: sc-shine 7s linear infinite;
 }
