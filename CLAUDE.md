@@ -47,6 +47,7 @@ One version per push to the live site. Roll back by reverting forward (new patch
 - Standing permission (user, 11 Oct 2026): push without asking to the `revamp` branch of `ldg224/vLeague` and to `main` of the preview repo (`git push preview revamp:main`). A release to the live site (vLeague `main`, tags, `gh release`) still waits for the user's go.
 - Database changes are new files in `supabase/migrations/`; never edit one that has already been applied. Re-run `supabase/tests/rls_check.py` after security-rule changes.
 - After changing any draft database function, run `python supabase/tests/draft/run.py` (rolled back, safe on the live project).
+- **No redraws under someone's hand** (user, 11 Oct 2026, after the live site kept refreshing mid-use): on the league page every write to the page goes through `paint()` (`js/paint.js`), and every timed or background refresh (a poll, a live tick, data arriving late) goes through `quietly()`, which skips while a press, tap, key, open menu, typed field or text selection is in progress and tries again next tick. Never set `innerHTML` of a whole view from a timer, never `location.reload()`. New live pieces (the match page's live view, the Draft tab) must do the same.
 - Match the existing code style; keep it dependency-free and buildless.
 - `.gitignore` keeps Python caches (`__pycache__/`, `*.pyc`) out of the repo (untracked 10 Oct 2026, B-17).
 

@@ -16,6 +16,7 @@ import { countedFixtures, totals, rank, PLAYER_CARDS, TEAM_CARDS } from './seaso
 import { statCard, statPage, wireStatPage, initialsCrest } from './stat-card.js';
 import { demoSeason } from './demo-season.js';
 import { tableRows, tableCard, rowTops, reshuffle } from './league-table.js';
+import { paint, quietly } from './paint.js';
 import { spoilerHidden, revealScore, fmtTime } from './prefs.js';
 import { fixturesView, parseSub, roundWidget } from './league-fixtures.js';
 import { winChance, percents } from './match-model.js';
@@ -173,15 +174,23 @@ if (ctx) {
     const data = totals(played());
     return ['rating', 'scorers', 'assists'].map(id => { const c = PLAYER_CARDS.find(x => x.id === id); return statCard(c, rank(data.players, c, 3), sctx, { kind: 'player' }); }).join('');
   };
-  const rerender = () => {
-    if (!current) return;
-    const y = scrollY;
-    main.innerHTML = VIEWS[current[0]](current[2], current[1]);
-    sheen(main);
-    scrollTo(0, y);
+  // One way to put a view on the page. paint() draws only when the HTML really changed, so a timed refresh that finds nothing new touches
+  // nothing; and a timed one (`timed`) also waits while the person is pressing, typing, selecting or has a menu open (js/paint.js), trying
+  // again on the next tick. This is what stops the page redrawing under someone's hand.
+  const draw = (html, timed = false) => {
+    const y = scrollY, did = timed ? quietly(() => paint(main, html)) : paint(main, html);
+    if (did) { sheen(main); scrollTo(0, y); }
+    return did;
   };
+  const rerender = (timed = false) => (current ? draw(VIEWS[current[0]](current[2], current[1]), timed) : false);
 
-  clubs().then(rows => { stadiums = Object.fromEntries(rows.filter(c => c.stadium).map(c => [c.code, c.stadium])); if (current?.[0] === 'fixtures' || current?.[0] === 'overview') rerender(); }).catch(() => {});
+  // The grounds arrive a moment after the page: draw them in when nobody is mid-tap, trying again a few times if someone is.
+  clubs().then(rows => {
+    stadiums = Object.fromEntries(rows.filter(c => c.stadium).map(c => [c.code, c.stadium]));
+    let tries = 0;
+    const put = () => { if (['fixtures', 'overview'].includes(current?.[0]) && !rerender(true) && ++tries < 8) setTimeout(put, 1500); };
+    put();
+  }).catch(() => {});
 
   main.addEventListener('click', async e => {
     const step = e.target.closest('[data-wround]');
@@ -204,7 +213,7 @@ if (ctx) {
     }
   });
   // A live match moves on its own: the Fixtures tab redraws every 15 seconds while one is showing.
-  setInterval(() => { if (!document.hidden && ['fixtures', 'overview'].includes(current?.[0]) && main.querySelector('.fx-row.is-live')) rerender(); }, 15000);
+  setInterval(() => { if (!document.hidden && ['fixtures', 'overview'].includes(current?.[0]) && main.querySelector('.fx-row.is-live')) rerender(true); }, 15000);
 
   const VIEWS = {
     overview: () => `<div class="lg-cols">
@@ -231,8 +240,7 @@ if (ctx) {
     // Each view gets the season picked in the header (WR-05); they all show the current one until a past season exists.
     onTab: (id, picked, sub) => {
       current = [id, picked, sub];
-      main.innerHTML = VIEWS[id](sub, picked);
-      sheen(main);
+      draw(VIEWS[id](sub, picked));
       // "Back" on a full list returns to the tab it was opened from (Overview or Stats), else to the Stats tab.
       main.querySelector('.sp-back')?.addEventListener('click', e => { if (moved) { e.preventDefault(); history.back(); } });
     },

@@ -5,8 +5,22 @@
 const shown = new WeakMap();
 let hands = false;   // true while a timed update runs (see quietly)
 
-// Is someone using this part of the page right now: focus in a field, something typed and not saved, or text selected?
+// Is a finger or the mouse button down, or did the person just press, tap or type something? A redraw between the press and the release
+// swallows the click (the button they pressed is gone), and one a moment after a tap makes the page jump under their hand.
+let pressed = false, lastTouch = 0;
+const CALM_MS = 1500;
+if (typeof document !== 'undefined' && document.addEventListener) {
+  const touch = () => { lastTouch = Date.now(); };
+  document.addEventListener('pointerdown', () => { pressed = true; touch(); }, true);
+  for (const t of ['pointerup', 'pointercancel']) document.addEventListener(t, () => { pressed = false; touch(); }, true);
+  for (const t of ['keydown', 'wheel', 'touchmove']) document.addEventListener(t, touch, { capture: true, passive: true });
+}
+
+// Is someone using this part of the page right now: focus in a field, something typed and not saved, text selected, a menu open,
+// or a press or tap in the last moment?
 function inUse(el) {
+  if (pressed || Date.now() - lastTouch < CALM_MS) return true;
+  if (el.querySelector('[aria-expanded="true"], .sp-menu:not([hidden])') || document.querySelector('.lg-season-menu:not([hidden])')) return true;
   const a = document.activeElement;
   if (a && el.contains(a) && a.matches?.('input, textarea, select')) return true;
   if (hasUnsavedInput(el)) return true;
