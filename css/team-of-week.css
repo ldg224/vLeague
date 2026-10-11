@@ -43,15 +43,8 @@
 .tw-lines { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; stroke: color-mix(in oklab, var(--text) 11%, transparent); stroke-width: 1.5; pointer-events: none; }
 .tw-line { position: relative; list-style: none; margin: 0; padding: 0; display: flex; justify-content: space-around; align-items: flex-start; gap: 4px; min-height: 66px; }
 .tw-p { display: grid; justify-items: center; gap: 4px; flex: 1 1 0; min-width: 0; max-width: 25%; }
-.tw-av { position: relative; display: grid; place-items: center; width: 48px; height: 50px; }
-.tw-pill {
-  width: 30px; height: 44px; border-radius: 999px;
-  background: linear-gradient(transparent 40%, color-mix(in oklab, var(--on) 28%, transparent) 40% 56%, transparent 56%), var(--c);
-  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--c) 65%, var(--text));
-}
-.tw-kit { display: block; width: 32px; height: 46px; }
-.tw-kit img { display: block; width: 100%; height: 100%; object-fit: contain; border-radius: 999px; }
-.tw-p.is-mine .tw-pill, .tw-p.is-mine .tw-kit { box-shadow: 0 0 0 2px var(--club-accent, var(--c)); }
+.tw-av { position: relative; display: grid; place-items: center; width: 52px; height: 48px; }
+.tw-p.is-mine .tw-av .crest { filter: drop-shadow(0 0 0 var(--club-accent, var(--c))) drop-shadow(0 0 3px var(--club-accent, transparent)); }
 .tw-r {
   position: absolute; top: -4px; right: -4px; display: inline-flex; align-items: center; gap: 2px; min-width: 30px; height: 20px; padding: 0 6px; justify-content: center;
   border-radius: 999px; font: 700 var(--fs-xs)/1 var(--font); font-variant-numeric: tabular-nums;
@@ -60,7 +53,6 @@
 .tw-r.is-lo { background: var(--amber); color: #0a0f19; }
 .tw-r.is-star { background: var(--blue-600, #1e88e5); color: #fff; }
 .tw-star { width: 11px; height: 11px; fill: currentColor; }
-.tw-crest { position: absolute; right: -2px; bottom: -2px; display: grid; place-items: center; border-radius: 50%; background: var(--surface-sunk); }
 .tw-n {
   max-width: 100%; text-align: center; font: 600 var(--fs-s)/1.2 var(--font); color: var(--text-strong);
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;

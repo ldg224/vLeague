@@ -59,7 +59,7 @@ test('the card: opens on the latest round, arrows by button, a menu newest first
   const one = teamOfWeekCard(fixtures, ctx, { week: 1 });
   assert.equal((one.match(/<li class="tw-p/g) || []).length, 11);
   assert.equal((one.match(/is-star/g) || []).length, 1);                      // one star
-  assert.match(one, /is-mine/); assert.match(one, /<crest AAA 18>/);
+  assert.match(one, /is-mine/); assert.match(one, /<crest AAA 44>/);
   assert.match(one, /Player \d+ · 8\.9/);                                      // the menu says who was player of the week
 });
 
