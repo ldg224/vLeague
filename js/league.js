@@ -3,7 +3,8 @@
 // Seasons WR-24, News WR-25, Draft WR-27). Until then a tab shows where its content will go.
 // Local preview (screenshots only, never on the live site): http://localhost:8767/league.html?preview&club=%23c8102e&theme=light&office
 // Made-up results to look at the stats pages before a match is played: add `&demo` (six rounds) or `&demo=3` (three; 0 for none).
-// Works on localhost and for the office only; it is never real data and the pages say so.
+// Works on localhost and for the office only; it is never real data and the pages say so. `&now=2026-10-16T12:00` picks the moment the demo is viewed at
+// (default: after every demo match), to see upcoming matches.
 import { enterPlace, paintClub } from './shell.js';
 import { mountFrame } from './frame.js';
 import { esc, crestUrl, clubs } from './member.js';
@@ -15,7 +16,8 @@ import { countedFixtures, totals, rank, PLAYER_CARDS, TEAM_CARDS } from './seaso
 import { statCard, statPage, wireStatPage, initialsCrest } from './stat-card.js';
 import { demoSeason } from './demo-season.js';
 import { tableRows, tableCard, rowTops, reshuffle } from './league-table.js';
-import { spoilerHidden, revealScore } from './prefs.js';
+import { spoilerHidden, revealScore, fmtTime } from './prefs.js';
+import { fixturesView, parseSub } from './league-fixtures.js';
 import { VERSION } from './version.js';
 
 const params = new URLSearchParams(location.search);
@@ -125,18 +127,35 @@ if (ctx) {
 
   // ---- The table (WR-11 to WR-14) ----
   let tableFilter = 'all';
-  const tableNow = () => (demo != null ? new Date('2027-01-01T00:00:00') : new Date());   // demo matches are dated in the coming days: treat them as played
+  const tableNow = () => (demo != null ? new Date(params.get('now') || '2027-01-01T00:00:00') : new Date());   // demo matches are dated in the coming days: treat them as played (or pick the moment: &now=2026-10-16T12:00)
   const tableHtml = () => {
     if (!season) return tableCard([], sctx, { filter: tableFilter });
     const now = tableNow(), counted = season.fixtures.filter(f => f.result && !f.test && !f.exhibition && !f.stage);
     const hiddenIds = counted.filter(f => spoilerHidden(f, season, now)).map(f => f.id);
     return tableCard(tableRows(season, { filter: tableFilter, now, hidden: new Set(hiddenIds) }), { ...sctx, mine: ctx.club?.code }, { filter: tableFilter, hiddenCount: hiddenIds.length });
   };
+  // ---- The Fixtures tab (WR-15 to WR-17) ----
+  let current = null;   // the tab on screen: [id, picked, sub]
+  const fixturesHtml = sub => {
+    const now = tableNow(), { mode, arg } = parseSub(sub);
+    const hidden = new Set(season ? season.fixtures.filter(f => f.result && !f.test && spoilerHidden(f, season, now)).map(f => f.id) : []);
+    return fixturesView(season, { ...sctx, now, hidden, mine: ctx.club?.code, time: fmtTime }, { mode, arg });
+  };
+  const rerender = () => {
+    if (!current) return;
+    const y = scrollY;
+    main.innerHTML = VIEWS[current[0]](current[2], current[1]);
+    sheen(main);
+    scrollTo(0, y);
+  };
+
   main.addEventListener('click', async e => {
-    const pill = e.target.closest('[data-tfilter]'), all = e.target.closest('[data-reveal-all]');
+    const pill = e.target.closest('[data-tfilter]'), all = e.target.closest('[data-reveal-all]'), go2 = e.target.closest('[data-fxgo]');
+    if (go2?.getAttribute('href')) { e.preventDefault(); go(go2.getAttribute('href')); return; }   // week, round, club and view changes replace the entry, so Back leaves the tab
     if (!pill && !all) return;
     if (pill) tableFilter = pill.dataset.tfilter;
     if (all) await revealScore(season.fixtures.filter(f => f.result && spoilerHidden(f, season, tableNow())).map(f => f.id)).catch(() => {});
+    if (current?.[0] === 'fixtures') { rerender(); return; }
     const el = main.querySelector('.lg-table');
     if (el) {
       const before = rowTops(el);
@@ -147,6 +166,8 @@ if (ctx) {
       reshuffle(fresh, before);
     }
   });
+  // A live match moves on its own: the Fixtures tab redraws every 15 seconds while one is showing.
+  setInterval(() => { if (!document.hidden && current?.[0] === 'fixtures' && main.querySelector('.fx-row.is-live')) rerender(); }, 15000);
 
   const VIEWS = {
     overview: () => `<div class="lg-cols">
@@ -163,7 +184,7 @@ if (ctx) {
           ${card('This round')}
         </aside>
       </div>`,
-    fixtures: () => card('Fixtures'),
+    fixtures: sub => fixturesHtml(sub),
     stats,
     seasons: () => card('Seasons'),
     news: () => card('News'),
@@ -176,6 +197,7 @@ if (ctx) {
     crest: preview ? params.get('crest') || '' : ctx.club?.crest_path ? crestUrl(ctx.club.crest_path) : '',
     // Each view gets the season picked in the header (WR-05); they all show the current one until a past season exists.
     onTab: (id, picked, sub) => {
+      current = [id, picked, sub];
       main.innerHTML = VIEWS[id](sub, picked);
       sheen(main);
       // "Back" on a full list returns to the tab it was opened from (Overview or Stats), else to the Stats tab.
