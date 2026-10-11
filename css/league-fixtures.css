@@ -1,19 +1,14 @@
 /* The Fixtures tab (WR-15 to WR-17). Redone 11 Oct 2026 (the first version was bland and left a wide screen empty).
    A row is a little match ticket: each side's club colour as a slim edge, the score in a plate (the winner in full strength, the loser
-   stepped back), a slim win-chance bar on matches still to play, the ground on wide screens. Beside the list a spotlight card shows the
-   next match. Widths follow the card itself (container queries), not the window, so the two-column layout and a phone both come out right. */
+   stepped back), a slim win-chance bar on matches still to play, the ground on wide screens. The list uses the full width (the spotlight card
+   was dropped, user 11 Oct 2026). Widths follow the card itself (container queries), not the window. */
 .fx-card { container: fx / inline-size; padding-bottom: 8px; }
-.fx-row, .fx-spot { --hc: var(--hd); --ac: var(--ad); }
-:root[data-theme="light"] .fx-row, :root[data-theme="light"] .fx-spot { --hc: var(--hl); --ac: var(--al); }
+.fx-row { --hc: var(--hd); --ac: var(--ad); }
+:root[data-theme="light"] .fx-row { --hc: var(--hl); --ac: var(--al); }
 
-.fx-modes { display: flex; gap: 8px; margin: 0 0 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.fx-modes { overflow-x: auto; scrollbar-width: none; margin: 0 0 12px; padding-bottom: 2px; }   /* the buttons are the shared .sc-toggle (css/stat-card.css) */
 .fx-modes::-webkit-scrollbar { display: none; }
-.fx-modes a {
-  flex: none; display: inline-flex; align-items: center; height: 32px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line);
-  color: var(--text); font: 600 var(--fs-s) var(--font); text-decoration: none; white-space: nowrap;
-}
-.fx-modes a[aria-current="true"] { background: var(--text-strong); border-color: var(--text-strong); color: var(--surface); }
-.fx-modes a:focus-visible, .fx-arrow:focus-visible, .fx-clubs a:focus-visible, .fx-row a:focus-visible, .fx-spot-card:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.fx-arrow:focus-visible, .fx-clubs a:focus-visible, .fx-row a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 .fx-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 10px; }
 .fx-head.is-team { justify-content: center; margin-top: 8px; }
@@ -78,11 +73,9 @@ a.fx-arrow { text-decoration: none; }
 .fx-ko { border: 1px solid var(--line); font: 600 var(--fs-m)/1.2 var(--font); color: var(--text-strong); padding-block: 4px; }
 .fx-chance { display: flex; gap: 2px; width: 84px; height: 4px; overflow: hidden; border-radius: 2px; }
 .fx-chance i { display: block; min-width: 3px; }
-.fx-chance .ch, .fx-spot .fx-chance .ch { background: var(--hc); }
+.fx-chance .ch { background: var(--hc); }
 .fx-chance .cd { background: var(--line); }
-.fx-chance .ca, .fx-spot .fx-chance .ca { background: var(--ac); }
-.fx-chance.is-big { width: 100%; height: 8px; border-radius: 4px; }
-.fx-chance.is-big .cd { background: color-mix(in oklab, var(--text) 18%, transparent); }
+.fx-chance .ca { background: var(--ac); }
 
 .fx-venue { display: none; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font: 400 var(--fs-s) var(--font); }
 .fx-res { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 5px; color: #fff; font: 700 var(--fs-xs) var(--font); text-decoration: none; }
@@ -95,7 +88,7 @@ a.fx-arrow { text-decoration: none; }
   .fx-row.with-res a { grid-template-columns: 54px minmax(0, 1fr) 112px minmax(0, 1fr) minmax(0, 128px) 28px; }
   .fx-venue { display: block; padding-left: 6px; }
 }
-/* narrow (a phone, or the list squeezed beside the spotlight): short names, the tag under the score */
+/* narrow (a phone): short names, the tag under the score */
 @container fx (max-width: 560px) {
   .fx-day { padding-inline: 16px; margin-inline: -16px; }
   .fx-full { display: none; } .fx-short { display: inline; }
@@ -111,35 +104,4 @@ a.fx-arrow { text-decoration: none; }
   .fx-res:empty { display: none; }
 }
 @container fx (max-width: 400px) { .fx-name { font-size: var(--fs-s); } }
-
-/* ---- the spotlight ---- */
-.fx-cols .lg-side { align-content: start; }
-@media (min-width: 992px) { .fx-cols .lg-side { position: sticky; top: 16px; align-self: start; } }
-.fx-spot {
-  background:
-    linear-gradient(100deg, color-mix(in oklab, var(--hc) 15%, transparent) 0, transparent 46%, transparent 54%, color-mix(in oklab, var(--ac) 15%, transparent) 100%),
-    var(--sheen), var(--surface);
-}
-.fx-spot-card { display: grid; gap: 18px; color: inherit; text-decoration: none; border-radius: var(--r-sm); }
-.fx-spot-teams { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: 8px; }
-.fx-spot-team { display: grid; justify-items: center; gap: 6px; text-align: center; min-width: 0; }
-.fx-spot-team b { font: 600 var(--fs-m)/1.25 var(--font); color: var(--text-strong); overflow-wrap: anywhere; }
-.fx-spot-team.is-mine b { color: var(--club-accent, var(--text-strong)); }
-.fx-spot-team small { color: var(--muted); font: 400 var(--fs-s) var(--font); }
-.fx-spot-team .crest { --s: 56px !important; }
-.fx-spot-mid { display: grid; justify-items: center; gap: 4px; padding-top: 12px; text-align: center; }
-.fx-spot-time { font: 700 var(--fs-xl)/1.1 var(--font); font-variant-numeric: tabular-nums; color: var(--text-strong); white-space: nowrap; }
-.fx-spot-time.is-live { color: var(--res-l); }
-.fx-spot-day { color: var(--text-soft); font: 400 var(--fs-s) var(--font); }
-.fx-spot-in { margin-top: 2px; padding: 2px 10px; border-radius: 999px; background: color-mix(in oklab, var(--tab-accent, var(--blue-700)) 16%, transparent); color: var(--tab-accent, var(--blue-700)); font: 600 var(--fs-s) var(--font); }
-.fx-spot-chance { display: grid; gap: 6px; }
-.fx-spot-pcts { display: flex; justify-content: space-between; align-items: baseline; color: var(--muted); font: 400 var(--fs-s) var(--font); }
-.fx-spot-pcts b { font: 700 var(--fs-m) var(--font); color: var(--text-strong); font-variant-numeric: tabular-nums; }
-.fx-spot-ground { margin: 14px 0 0; text-align: center; color: var(--muted); font: 400 var(--fs-s) var(--font); }
-.fx-spot-form { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font: 400 var(--fs-s) var(--font); }
-.fx-spot .crest { position: relative; display: inline-grid; place-items: center; width: var(--s); height: var(--s); flex: none; }
-.fx-spot .crest img { width: 100%; height: 100%; object-fit: contain; }
-.fx-spot .crest i { display: none; }
-.fx-spot .crest.none i { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--c); color: var(--on, #fff); font: 700 calc(var(--s) * .34)/1 var(--font-display); font-style: normal; }
-@media (max-width: 991px) { .fx-cols .lg-side { order: -1; } .fx-spot-team .crest { --s: 48px !important; } }
-@media (min-width: 640px) and (max-width: 991px) { .fx-spot > :not(.lg-card-head) { max-width: 560px; margin-inline: auto; } .fx-spot-card { width: 100%; } }
+.fx-modes.sc-toggle { flex-wrap: wrap; overflow: visible; }   /* wraps on a phone instead of scrolling out of sight */

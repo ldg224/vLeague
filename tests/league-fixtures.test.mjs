@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 globalThis.location ??= { hostname: '', search: '', href: 'http://localhost/' };   // dashboard-data.js reads location when it loads
-const { fixturesView, byDate, byRound, byTeam, rowHtml, spotlight, untilText, dayLabel, rangeLabel, weekOfDate, defaultDate, parseSub, fixturesAddress, rounds } = await import('../js/league-fixtures.js');
+const { fixturesView, byDate, byRound, byTeam, rowHtml, dayLabel, rangeLabel, weekOfDate, defaultDate, parseSub, fixturesAddress, rounds } = await import('../js/league-fixtures.js');
 
 const NOW = new Date('2026-10-14T12:00:00');   // a Wednesday
 const teams = ['AAA', 'BBB', 'CCC', 'DDD'].map(c => ({ code: c, name: `${c} United`, short_name: c, colour: '#336699' }));
@@ -37,12 +37,14 @@ test('dates: day names, week ranges and the week to open on', () => {
 });
 
 test('addresses: every view has its own', () => {
-  assert.equal(fixturesAddress('date'), '#fixtures');
+  assert.equal(fixturesAddress('round'), '#fixtures');                     // By round is the default view
+  assert.equal(fixturesAddress('date'), '#fixtures/date');
   assert.equal(fixturesAddress('date', '2026-10-12'), '#fixtures/date/2026-10-12');
   assert.equal(fixturesAddress('round', 8), '#fixtures/round/8');
   assert.equal(fixturesAddress('team', 'AAA'), '#fixtures/team/AAA');
   assert.deepEqual(parseSub('round/8'), { mode: 'round', arg: '8' });
-  assert.deepEqual(parseSub(''), { mode: 'date', arg: null });
+  assert.deepEqual(parseSub(''), { mode: 'round', arg: null });
+  assert.deepEqual(parseSub('date/2026-10-12'), { mode: 'date', arg: '2026-10-12' });
   assert.deepEqual(parseSub('team/AAA'), { mode: 'team', arg: 'AAA' });
 });
 
@@ -102,10 +104,14 @@ test('By team: that club\'s whole season with result letters, defaulting to your
   assert.equal(count(aaa, /data-fxgo[^>]* title=/g), 4);              // the club strip lists all four clubs
 });
 
-test('the tab: three mode pills, a hidden-results line, and an empty state', () => {
-  const html = fixturesView(season, ctx({ hidden: new Set(['x', 'y']) }), { mode: 'round' });
-  assert.match(html, /By date[\s\S]*By round[\s\S]*By team/);
+test('the tab: By round is the default, three toggle buttons, a hidden-results line, and an empty state', () => {
+  const html = fixturesView(season, ctx({ hidden: new Set(['x', 'y']) }), {});
+  assert.match(html, /By round[\s\S]*By date[\s\S]*By team/);
+  assert.match(html, /class="fx-modes sc-toggle"/);
   assert.match(html, /aria-current="true">By round/);
+  assert.match(html, /href="#fixtures" data-fxgo aria-current="true">By round/);
+  assert.match(fixturesView(season, ctx(), { mode: 'date' }), /aria-current="true">By date/);
+  assert.ok(!html.includes('fx-spot') && !html.includes('lg-cols'));                    // the full width, no side card
   assert.match(html, /2 results hidden[\s\S]*data-reveal-all/);
   assert.match(fixturesView({ ...season, fixtures: [] }, ctx(), {}), /No fixtures yet/);
   assert.match(fixturesView(null, ctx(), {}), /No fixtures yet/);
@@ -141,29 +147,3 @@ test('a match still to play carries the win-chance bar, the ground shows for the
   assert.equal(count(rowHtml(season.fixtures[4], season, ctx(), {}), /fx-chance/g), 0);   // a postponed match has no chance bar
 });
 
-test('the spotlight: your next match with form, else the next league match, else nothing', () => {
-  const mine = spotlight(season, ctx({ mine: 'CCC' }));
-  assert.match(mine, /<h2>Your next match<\/h2>/);
-  assert.match(mine, /CCC United/);
-  assert.match(mine, /fx-spot-time">19:30/);
-  assert.match(mine, /Today/);
-  assert.match(mine, /in 8 h|in 7 h/);
-  assert.match(mine, /<b>50%<\/b><span>Win chance<\/span><b>25%<\/b>/);
-  assert.match(mine, /Alpha Park|fx-spot-card/);
-  const league = spotlight(season, ctx());
-  assert.match(league, /<h2>Next match<\/h2>/);
-  assert.ok(!league.includes('Your form'));
-  assert.match(spotlight(season, ctx({ mine: 'AAA' })), /Your form[\s\S]*res-W/);                // AAA has a result behind it
-  const over = { ...season, fixtures: season.fixtures.filter(f => f.result) };
-  assert.equal(spotlight(over, ctx({ now: new Date('2027-01-01T00:00:00') })), '');            // every match has been played
-  assert.match(fixturesView(season, ctx(), {}), /lg-cols fx-cols[\s\S]*<aside class="lg-side">/);
-});
-
-test('untilText: minutes, hours, days', () => {
-  const t = new Date('2026-10-14T12:00:00'), at = mins => new Date(t.getTime() + mins * 60000);
-  assert.equal(untilText(at(-3), t), 'Kicking off');
-  assert.equal(untilText(at(25), t), 'in 25 min');
-  assert.equal(untilText(at(5 * 60), t), 'in 5 h');
-  assert.equal(untilText(at(24 * 60), t), 'tomorrow');
-  assert.equal(untilText(at(3 * 24 * 60), t), 'in 3 days');
-});

@@ -80,7 +80,7 @@ function chips(form) {
 export function tableCard(rows, ctx, { filter = 'all', filters = true, hiddenCount = 0, title = 'Table' } = {}) {
   const zones = zonesFor(rows.length), anyPlayed = rows.some(r => r.p > 0);
   const pills = filters
-    ? `<nav class="tb-pills" aria-label="Table filter">${FILTERS.map(([key, label]) => `<button type="button" data-tfilter="${key}"${key === filter ? ' aria-pressed="true"' : ' aria-pressed="false"'}>${esc(label)}</button>`).join('')}</nav>`
+    ? `<nav class="tb-pills sc-toggle" aria-label="Table filter">${FILTERS.map(([key, label]) => `<button type="button" data-tfilter="${key}"${key === filter ? ' aria-pressed="true"' : ' aria-pressed="false"'}>${esc(label)}</button>`).join('')}</nav>`
     : '';
   const body = rows.map(r => {
     const club = ctx.club(r.team.code), zone = !anyPlayed ? '' : r.rank <= zones.finals ? 'finals' : zones.spoon && r.rank === rows.length ? 'spoon' : '';

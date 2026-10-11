@@ -4,14 +4,8 @@
 .lg-table { --z-finals: var(--res-w); --z-spoon: #a8743d; padding-bottom: 8px; }
 :root:not([data-theme="light"]) .lg-table { --z-spoon: #c9935a; }
 
-.tb-pills { display: flex; gap: 8px; margin: 0 0 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.tb-pills { overflow-x: auto; scrollbar-width: none; margin: 0 0 12px; padding-bottom: 2px; }   /* the buttons are the shared .sc-toggle (css/stat-card.css) */
 .tb-pills::-webkit-scrollbar { display: none; }
-.tb-pills button {
-  flex: none; height: 32px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: transparent;
-  color: var(--text); font: 600 var(--fs-s) var(--font); cursor: pointer;
-}
-.tb-pills button[aria-pressed="true"] { background: var(--text-strong); border-color: var(--text-strong); color: var(--surface); }
-.tb-pills button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .tb-hidden { margin: 0 0 8px; color: var(--muted); font-size: var(--fs-s); }
 .tb-hidden button { border: 0; background: none; padding: 0; color: var(--tab-accent, var(--blue-700)); font: 600 var(--fs-s) var(--font); cursor: pointer; text-decoration: underline; }
 
@@ -69,3 +63,7 @@
 
 /* Full club names need room: with the two-column layout still narrow (640 to 1179 px) the goals for and against column steps aside. */
 @media (min-width: 640px) and (max-width: 1179px) { .t-pm { display: none; } }
+
+/* The toggle buttons wrap onto a second line on a phone instead of scrolling out of sight. */
+.tb-pills.sc-toggle { flex-wrap: wrap; overflow: visible; }
+@media (max-width: 399px) { .tb-pills.sc-toggle a, .tb-pills.sc-toggle button, .fx-modes.sc-toggle a { padding-inline: 12px; } }
