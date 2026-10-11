@@ -48,7 +48,7 @@
   .tb th, .tb td { padding: 0 4px; }
   .tb .tb-pos { width: 30px; }
   .tb-form { gap: 2px; }
-  .tb-form abbr { width: 16px; height: 16px; border-radius: 4px; font-size: 10px; }
+  .tb-form abbr { width: 17px; height: 17px; border-radius: 4px; }
   .tb .tb-club span { gap: 8px; }
 }
 
@@ -61,5 +61,5 @@
   .tb .tb-club span { gap: 6px; }
   .tb .tb-club .crest { width: 20px; height: 20px; }
   .tb-form { gap: 2px; }
-  .tb-form abbr { width: 15px; height: 15px; font-size: 9px; }
+  .tb-form abbr { width: 17px; height: 17px; }
 }
