@@ -1,10 +1,10 @@
-// The league page's frame (website revamp, WR-03): the header card (crest, name, season, Club / Settings / Editor) and the
+﻿// The league page's frame (website revamp, WR-03): the header card (crest, name, season, Club / Settings / Editor) and the
 // row of tabs, modelled on FotMob's league page. Each tab has its own address (league.html#table), so refresh, the back
 // button and shared links land on the right tab.
 //   mountFrame(el, { office, draft, crest, onTab }) -> draws the frame into el and calls onTab(id) now and on every change
 //   TABS                                       -> the tabs in order
 import { esc } from './member.js';
-import { icon } from './icons.js';
+import { icon } from './icons8.js';
 
 export const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -32,7 +32,7 @@ export function mountFrame(el, { office = false, draft = false, crest = '', onTa
       </div>
       <nav class="lg-tools" aria-label="Your club and account">
         <a class="lg-tool is-club" href="club.html">${crest ? `<img class="lg-tool-crest" src="${esc(crest)}" alt="" onerror="this.replaceWith(document.createRange().createContextualFragment(this.dataset.alt))" data-alt="${esc(icon('shield'))}">` : icon('shield')}<span>Club</span></a>
-        <a class="lg-tool" href="settings.html">${icon('settings-2')}<span>Settings</span></a>
+        <a class="lg-tool" href="settings.html">${icon('settings')}<span>Settings</span></a>
         ${office ? `<a class="lg-tool" href="editor.html">${icon('pencil')}<span>Editor</span></a>` : ''}
       </nav>
     </div>
