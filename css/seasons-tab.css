@@ -2,6 +2,7 @@
 .ss { display: grid; gap: 4px; align-content: start; }
 .ss-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
 .ss-head h3 { margin: 0; font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; letter-spacing: .01em; color: var(--text-strong); }
+.ss-sub { margin: -2px 0 6px; color: var(--muted); font: 400 var(--fs-s) var(--font); }
 .ss-pill {
   flex: none; display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line);
   color: var(--muted); font: 600 var(--fs-s) var(--font);

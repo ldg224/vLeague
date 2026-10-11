@@ -5,6 +5,9 @@
 //                                        { hiddenFinal: true } when it is played but the viewer has hidden it; null while it is still to come
 //   seasonsView(opts)                   the tab
 //
+// The league has run under more than one name (History, League names): previous seasons are grouped by the name they ran under, newest name first, and the
+// current season sits first in the newest name's group. When there is more than one name each card says its number overall, counting every season ever
+// recorded (two seasons under the old name, then the rebrand's Season 1, is Season 3 overall).
 // The current season comes from the league page (its name and whether it is live); its winner and runner-up show "To be decided" until the grand
 // final has a result. Past seasons come from History (Editor, History: js/history-data.js): for each competition that has an award in that season,
 // the winner (with the competition's trophy picture) and the runner-up, a current club by its crest and name or a past team by its code badge.
@@ -32,19 +35,17 @@ function who(code, o) {
 const row = (label, html, cup = '') => `<div class="ss-row"><dt>${label}</dt><dd>${html}${cup}</dd></div>`;
 const pending = '<span class="ss-tbd">To be decided</span>';
 
-function currentCard(o) {
-  const f = o.final, decided = f?.winner;
-  const comp = o.history?.comps?.[0]?.name || 'League';
-  const cup = path => (path ? `<img class="ss-cup" src="${esc(o.trophy(path))}" alt="" loading="lazy">` : '');
-  const art = o.history?.comps?.[0]?.winner_art;
+const overallLine = n => (n ? `<p class="ss-sub">Season ${n} overall</p>` : '');
+
+function currentCard(o, overall) {
+  const f = o.final, decided = f?.winner;   // (no trophy picture and no competition name here: those belong to the seasons recorded in History)
   return `<section class="lg-card ss is-current" aria-label="${esc(o.current.label)}"><header class="ss-head"><h3>${esc(o.current.label)}</h3>`
     + `${o.current.live && !decided ? '<span class="ss-pill is-live">In progress</span>' : '<span class="ss-pill">Finished</span>'}</header>`
-    + `<p class="ss-comp">${esc(comp)}</p><dl class="ss-rows">`
-    + row('Winner', decided ? who(f.winner, o) : pending, decided ? cup(art) : '')
-    + row('Runner-up', decided ? who(f.runnerUp, o) : pending) + '</dl></section>';
+    + `${overallLine(overall)}<p class="ss-comp">League</p><dl class="ss-rows">`
+    + row('Winner', decided ? who(f.winner, o) : pending) + row('Runner-up', decided ? who(f.runnerUp, o) : pending) + '</dl></section>';
 }
 
-function pastCard(season, h, o) {
+function pastCard(season, h, o, overall) {
   const at = (comp, place) => h.awards.find(a => a.season === season.id && a.competition === comp.id && a.place === place);
   const side = a => {
     if (!a) return '<span class="ss-tbd">Not recorded</span>';
@@ -59,15 +60,22 @@ function pastCard(season, h, o) {
   const comps = h.comps.filter(c => at(c, 'winner') || at(c, 'runner_up'));
   const body = comps.map(c => `<p class="ss-comp">${esc(c.name)}</p><dl class="ss-rows">${row('Winner', side(at(c, 'winner')), at(c, 'winner') ? picture(at(c, 'winner'), c) : '')}${row('Runner-up', side(at(c, 'runner_up')))}</dl>`).join('');
   return `<section class="lg-card ss" aria-label="${esc(season.name)}"><header class="ss-head"><h3>${esc(season.name)}</h3><span class="ss-pill">Finished</span></header>`
-    + `${body || '<p class="ss-comp">No winners recorded yet</p>'}</section>`;
+    + `${overallLine(overall)}${body || '<p class="ss-comp">No winners recorded yet</p>'}</section>`;
 }
 
 export function seasonsView(o) {
-  const h = o.history, past = h ? h.seasons : [];
+  const h = o.history, seasons = h ? h.seasons : [], leagues = h?.leagues || [];
   const hid = o.hiddenCount ? `<p class="tb-hidden">${o.hiddenCount} result${o.hiddenCount === 1 ? '' : 's'} hidden, so the final isn’t shown. <button type="button" data-reveal-all>Show all</button></p>` : '';
-  const cards = currentCard({ ...o, final: o.final?.hiddenFinal ? null : o.final });
-  return `<div class="sc-section"><div class="sc-head"><h2 class="sc-title">Seasons</h2></div>${hid}`
-    + `<div class="sc-group"><div class="sc-grid">${cards}</div></div>`
-    + (past.length ? `<div class="sc-group"><h3>Previous seasons</h3><div class="sc-grid">${past.map(s => pastCard(s, h, o)).join('')}</div></div>` : '')
-    + '</div>';
+  const newest = leagues.at(-1), rank = l => (l ? leagues.indexOf(l) : leagues.length - 1);
+  const leagueOf = s => leagues.find(l => l.id === s.league) || newest;   // a season with no league counts as the newest name
+  // Number overall: oldest name first, then the order the office set within a name (a higher sort is more recent).
+  const order = [...seasons].sort((a, b) => rank(leagueOf(a)) - rank(leagueOf(b)) || a.sort - b.sort || a.id - b.id);
+  const overall = s => (leagues.length > 1 ? order.indexOf(s) + 1 : 0);
+  const current = currentCard({ ...o, final: o.final?.hiddenFinal ? null : o.final }, leagues.length > 1 ? seasons.length + 1 : 0);
+  const cardsOf = l => seasons.filter(s => leagueOf(s) === l).map(s => pastCard(s, h, o, overall(s)));
+  const group = (title, cards) => `<div class="sc-group">${title ? `<h3>${esc(title)}</h3>` : ''}<div class="sc-grid">${cards.join('')}</div></div>`;
+  const groups = leagues.length
+    ? [...leagues].reverse().map(l => [l, l === newest ? [current, ...cardsOf(l)] : cardsOf(l)]).filter(([, cards]) => cards.length).map(([l, cards]) => group(l.name, cards))
+    : [group('', [current, ...seasons.map(s => pastCard(s, h, o, 0))])];
+  return `<div class="sc-section"><div class="sc-head"><h2 class="sc-title">Seasons</h2></div>${hid}${groups.join('')}</div>`;
 }

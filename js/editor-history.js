@@ -1,4 +1,5 @@
 // Editor -> History (0.66): the league's past seasons, for history.html and the team pages' trophy cabinets.
+//   League names: the names the league has run under, oldest first (0053). Seasons 1 and 2 ran under an earlier name; after the rebrand the count restarted.
 //   Competitions: the trophies a season can have, each with a default picture for the winner and the runner-up.
 //   Past teams: clubs that have left (name, code, manager), so they can still be credited.
 //   Seasons: for each competition, who won and who was runner-up (a current club or a past team), and that award's own
@@ -17,19 +18,22 @@ export async function mountHistory(ctx) {
   const { esc, explain } = ctx;
   const client = await ctx.db();
   const need = r => { if (r.error) throw new Error(explain(r.error)); return r.data || []; };
-  let comps, seasons, past, awards;
+  let comps, seasons, past, awards, leagues;
   try {
-    [comps, seasons, past, awards] = await Promise.all([
+    [comps, seasons, past, awards, leagues] = await Promise.all([
       client.from('history_competitions').select('*').order('sort').order('id'),
       client.from('history_seasons').select('*').order('sort', { ascending: false }).order('id', { ascending: false }),
       client.from('history_past_teams').select('*').order('name'),
       client.from('history_awards').select('*'),
+      client.from('history_leagues').select('*').order('sort').order('id'),
     ].map(p => p.then(need)));
   } catch (e) {
-    root.innerHTML = `<p class="empty">History didn’t load. ${esc(e.message)}${/history_/.test(e.message) ? ' (Has migration 0050 been applied?)' : ''}</p>`;
+    root.innerHTML = `<p class="empty">History didn’t load. ${esc(e.message)}${/history_/.test(e.message) ? ' (Have migrations 0050 and 0053 been applied?)' : ''}</p>`;
     return;
   }
   const clubs = [...ctx.clubs].sort((a, b) => a.name.localeCompare(b.name));
+  const newest = leagues.at(-1);   // a season with no league counts as the most recent name
+  const leagueOf = s => leagues.find(l => l.id === s.league) || newest;
   const awardOf = (s, c, place) => awards.find(a => a.season === s && a.competition === c && a.place === place);
   const pic = (path, alt = '') => (path ? `<img class="hi-pic" src="${esc(trophyUrl(path))}" alt="${esc(alt)}">` : '<span class="hi-pic none" aria-hidden="true"></span>');
 
@@ -38,6 +42,18 @@ export async function mountHistory(ctx) {
     ${past.length ? `<optgroup label="Past teams">${past.map(p => `<option value="p:${p.id}"${a?.past_team === p.id ? ' selected' : ''}>${esc(p.name)}${p.code ? ` (${esc(p.code)})` : ''}</option>`).join('')}</optgroup>` : ''}</select>`;
 
   const upload = (attrs, label) => `<label class="link-btn hi-up">${label}<input type="file" accept="image/png" ${attrs} hidden></label>`;
+
+  function leaguesHtml() {
+    const count = l => seasons.filter(x => leagueOf(x)?.id === l.id).length;
+    return `<section class="hi-sect"><h2>League names</h2>
+      <p class="quiet">The names the league has run under, oldest first. Each season belongs to one, and the Seasons tab groups the previous seasons by it. After a rebrand, add the new name last: the season being played now is numbered after every season recorded here.</p>
+      <ul class="hi-list">${leagues.map((l, i) => `<li class="hi-comp" data-league="${l.id}">
+        <input class="hi-name" data-league-name value="${esc(l.name)}" maxlength="40" aria-label="League name">
+        <span class="quiet">${count(l)} season${count(l) === 1 ? '' : 's'}${i === leagues.length - 1 ? ' · current name' : ''}</span>
+        <span class="hi-acts"><button type="button" class="link-btn" data-lmove="-1" ${i ? '' : 'disabled'} aria-label="Move earlier">↑</button><button type="button" class="link-btn" data-lmove="1" ${i < leagues.length - 1 ? '' : 'disabled'} aria-label="Move later">↓</button>
+        <button type="button" class="link-btn danger" data-league-del>Delete</button></span></li>`).join('')}</ul>
+      <form class="hi-add" data-add="league"><input name="name" maxlength="40" required placeholder="New league name, e.g. vLeague" aria-label="New league name"><button class="btn small">Add league name</button></form></section>`;
+  }
 
   function compsHtml() {
     return `<section class="hi-sect"><h2>Competitions</h2>
@@ -63,11 +79,13 @@ export async function mountHistory(ctx) {
 
   function seasonsHtml() {
     return `<section class="hi-sect"><h2>Seasons</h2>
-      <form class="hi-add" data-add="season"><input name="name" maxlength="40" required placeholder="e.g. Season 1" aria-label="New season name"><button class="btn small">Add season</button></form>
+      <form class="hi-add" data-add="season"><input name="name" maxlength="40" required placeholder="e.g. Season 1" aria-label="New season name">
+        <select name="league" aria-label="Ran under">${leagues.slice().reverse().map(l => `<option value="${l.id}">${esc(l.name)}</option>`).join('')}</select><button class="btn small">Add season</button></form>
       ${!seasons.length ? '<p class="empty">No seasons yet.</p>' : !comps.length ? '<p class="empty">Add a competition above to record winners.</p>' : ''}
-      ${seasons.map((s, i) => `<details class="hi-season" data-season="${s.id}"${i === 0 ? ' open' : ''}><summary><b>${esc(s.name)}</b><span class="quiet">${comps.map(c => awardOf(s.id, c.id, 'winner')).filter(Boolean).length} of ${comps.length} winners set</span></summary>
+      ${seasons.map((s, i) => `<details class="hi-season" data-season="${s.id}"${i === 0 ? ' open' : ''}><summary><b>${esc(s.name)}</b><span class="quiet">${esc(leagueOf(s)?.name || '')} · ${comps.map(c => awardOf(s.id, c.id, 'winner')).filter(Boolean).length} of ${comps.length} winners set</span></summary>
         <div class="hi-season-in">
           <label class="hi-sname">Name <input data-season-name value="${esc(s.name)}" maxlength="40"></label>
+          <label class="hi-sname">Ran under <select data-season-league>${leagues.slice().reverse().map(l => `<option value="${l.id}"${leagueOf(s)?.id === l.id ? ' selected' : ''}>${esc(l.name)}</option>`).join('')}</select></label>
           ${comps.map(c => `<div class="hi-award-c"><h3>${esc(c.name)}</h3>${PLACES.map(([pl, l]) => {
             const a = awardOf(s.id, c.id, pl), def = pl === 'winner' ? c.winner_art : c.runner_art;
             return `<div class="hi-award" data-comp="${c.id}" data-place="${pl}">${pic(a?.art_path || def, `${c.name} ${l.toLowerCase()} trophy`)}
@@ -80,7 +98,7 @@ export async function mountHistory(ctx) {
   }
 
   const open = new Set([...root.querySelectorAll('.hi-season[open]')].map(d => d.dataset.season));
-  root.innerHTML = `<p class="hi-msg" role="status">${esc(msg)}</p>${seasonsHtml()}${compsHtml()}${pastHtml()}`;
+  root.innerHTML = `<p class="hi-msg" role="status">${esc(msg)}</p>${seasonsHtml()}${leaguesHtml()}${compsHtml()}${pastHtml()}`;
   if (openSeason) open.add(String(openSeason));
   if (open.size) for (const d of root.querySelectorAll('.hi-season')) d.open = open.has(d.dataset.season);
   msg = ''; openSeason = null;
@@ -94,8 +112,9 @@ export async function mountHistory(ctx) {
     e.preventDefault();
     const f = e.target, kind = f.dataset.add, v = n => t(f.elements[n]?.value);
     if (kind === 'comp') await run(client.from('history_competitions').insert({ name: v('name'), sort: (comps.at(-1)?.sort ?? 0) + 1 }), `Added ${v('name')}.`);
+    if (kind === 'league') await run(client.from('history_leagues').insert({ name: v('name'), sort: (leagues.at(-1)?.sort ?? 0) + 1 }), `Added ${v('name')}.`);
     if (kind === 'season') {
-      const r = await client.from('history_seasons').insert({ name: v('name'), sort: (seasons[0]?.sort ?? 0) + 1 }).select('id').single();
+      const r = await client.from('history_seasons').insert({ name: v('name'), sort: (seasons[0]?.sort ?? 0) + 1, league: Number(v('league')) || null }).select('id').single();
       if (!r.error) openSeason = r.data?.id;
       await run(Promise.resolve(r), `Added ${v('name')}.`);
     }
@@ -105,7 +124,9 @@ export async function mountHistory(ctx) {
   root.onchange = async e => {
     const el = e.target, comp = el.closest('[data-comp]'), seas = el.closest('[data-season]'), pastRow = el.closest('[data-past]');
     try {
-      if (el.matches('[data-comp-name]')) await run(client.from('history_competitions').update({ name: t(el.value) }).eq('id', comp.dataset.comp), 'Saved.');
+      if (el.matches('[data-league-name]')) await run(client.from('history_leagues').update({ name: t(el.value) }).eq('id', el.closest('[data-league]').dataset.league), 'Saved.');
+      else if (el.matches('[data-season-league]')) await run(client.from('history_seasons').update({ league: Number(el.value) }).eq('id', seas.dataset.season), 'Saved.');
+      else if (el.matches('[data-comp-name]')) await run(client.from('history_competitions').update({ name: t(el.value) }).eq('id', comp.dataset.comp), 'Saved.');
       else if (el.matches('[data-comp-art]')) {
         root.querySelector('.hi-msg').textContent = 'Uploading…';
         await run(client.from('history_competitions').update({ [el.dataset.compArt]: await uploadTrophy(el.files[0]) }).eq('id', comp.dataset.comp), 'Picture saved.');
@@ -132,7 +153,12 @@ export async function mountHistory(ctx) {
   root.onclick = async e => {
     const b = e.target.closest('button'); if (!b || b.type === 'submit' || b.form) return;
     const comp = b.closest('[data-comp]'), seas = b.closest('[data-season]'), pastRow = b.closest('[data-past]');
-    if (b.matches('[data-comp-clear]')) await run(client.from('history_competitions').update({ [b.dataset.compClear]: null }).eq('id', comp.dataset.comp), 'Picture removed.');
+    if (b.matches('[data-league-del]')) {
+      const l = leagues.find(x => x.id === Number(b.closest('[data-league]').dataset.league)), n = seasons.filter(x => leagueOf(x)?.id === l.id).length;
+      if (n) { root.querySelector('.hi-msg').textContent = `${l.name} has ${n} season${n === 1 ? '' : 's'}. Move them to another name first.`; return; }
+      if (confirm(`Delete ${l.name}?`)) await run(client.from('history_leagues').delete().eq('id', l.id), `Deleted ${l.name}.`);
+    } else if (b.matches('[data-lmove]')) await swap(leagues, leagues.findIndex(x => x.id === Number(b.closest('[data-league]').dataset.league)), Number(b.dataset.lmove), 'history_leagues');
+    else if (b.matches('[data-comp-clear]')) await run(client.from('history_competitions').update({ [b.dataset.compClear]: null }).eq('id', comp.dataset.comp), 'Picture removed.');
     else if (b.matches('[data-award-clear]')) {
       const a = awardOf(Number(seas.dataset.season), Number(comp.dataset.comp), comp.dataset.place);
       await run(client.from('history_awards').update({ art_path: null }).eq('id', a.id), 'Using the usual picture.');
