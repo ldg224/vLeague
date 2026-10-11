@@ -21,6 +21,10 @@ const KEEPER = 'GK';
 const NOTE_MIN = `Players with at least ${MIN_MINUTES} minutes played`, NOTE_GK = `Goalkeepers with at least ${MIN_MINUTES} minutes in goal`;
 
 // League matches with a result: not a Test match, not an exhibition round.
+// Where a player plays: from the formation slot he was last picked in (GK, LB, LCB, CDM, LCM, LW, ST...).
+export const lineOf = slot => (slot === KEEPER ? 'GK' : /B$/.test(slot || '') ? 'DEF' : /(^|[LR])ST$|^[LR]W$|^CF$/.test(slot || '') ? 'FWD' : 'MID');
+export const POSITIONS = [['all', 'All'], ['FWD', 'Forwards'], ['MID', 'Midfielders'], ['DEF', 'Defenders'], ['GK', 'Goalkeepers']];
+
 export const countedFixtures = list => list.filter(f => f.result?.players && !f.test && !f.exhibition);
 
 const blank = (keys, extra) => Object.assign(Object.fromEntries(keys.map(k => [k, 0])), extra);
@@ -39,6 +43,7 @@ export function totals(fixtures) {
         id, name: s.name, team: s.team, apps: 0, ratingSum: 0, gkMin: 0, saves: 0, conceded: 0, cs: 0,
       })).get(id);
       row.team = s.team;   // the club it last played for
+      row.pos = lineOf(s.slot);
       row.apps++;
       row.ratingSum += s.r || 0;
       for (const k of PLAYER_SUMS) row[k] += s[k] || 0;
@@ -141,6 +146,40 @@ export const TEAM_CARDS = [
   { id: 'tyc', group: 'Discipline', title: 'Yellow cards', value: r => r.yellow_cards, dp: 0 },
   { id: 'trc', group: 'Discipline', title: 'Red cards', value: r => r.red_cards, dp: 0 },
 ];
+
+// ---------- what a card says about its leader (the banner on the full page) ----------
+// say(value text) finishes the sentence "<name> ...": "Theo Archer is the top scorer with 5 goals". sub(row) is the line under a name
+// in the full list; without one it is the number of matches.
+const pl = (v, one, many = `${one}s`) => `${v} ${Number(v) === 1 ? one : many}`;
+const SAY = {
+  scorers: v => `is the top scorer with ${pl(v, 'goal')}`, assists: v => `has the most assists with ${v}`,
+  ga: v => `has the most goals and assists with ${v}`, rating: v => `is the top rated player, averaging ${v}`,
+  minutes: v => `has played the most minutes, ${v}`, g90: v => `scores the most goals per 90 minutes with ${v}`,
+  xg: v => `has the highest xG with ${v}`, xg90: v => `has the highest xG per 90 minutes with ${v}`,
+  sh90: v => `takes the most shots per 90 minutes with ${v}`, sot90: v => `has the most shots on target per 90 minutes with ${v}`,
+  kp: v => `has created the most chances with ${v}`, pc90: v => `completes the most passes per 90 minutes with ${v}`,
+  cr: v => `has delivered the most crosses with ${v}`, dr: v => `has won the most dribbles with ${v}`,
+  tk90: v => `wins the most tackles per 90 minutes with ${v}`, int90: v => `makes the most interceptions per 90 minutes with ${v}`,
+  clr90: v => `makes the most clearances per 90 minutes with ${v}`, blk90: v => `makes the most blocks per 90 minutes with ${v}`,
+  cs: v => `has the most clean sheets with ${v}`, savepct: v => `has the best save percentage with ${v}`,
+  sv90: v => `makes the most saves per 90 minutes with ${v}`, gc90: v => `concedes the fewest goals per 90 minutes with ${v}`,
+  fl90: v => `commits the most fouls per 90 minutes with ${v}`, yc: v => `has the most yellow cards with ${v}`, rc: v => `has the most red cards with ${v}`,
+  trating: v => `have the best average rating, ${v}`, tgoals: v => `score the most goals per match with ${v}`,
+  tconceded: v => `concede the fewest goals per match with ${v}`, tposs: v => `have the most possession with ${v}`,
+  tcs: v => `have the most clean sheets with ${v}`, txg: v => `have the highest xG with ${v}`, txgdiff: v => `have the best xG difference, ${v}`,
+  tsot: v => `have the most shots on target per match with ${v}`, tbig: v => `have created the most big chances with ${v}`,
+  tpc: v => `complete the most passes per match with ${v}`, tcr: v => `deliver the most crosses per match with ${v}`,
+  tcor: v => `have won the most corners with ${v}`, txga: v => `have conceded the lowest xG, ${v}`,
+  ttk: v => `have won the most tackles with ${v}`, tint: v => `have made the most interceptions with ${v}`,
+  tclr: v => `make the most clearances per match with ${v}`, tsv: v => `make the most saves per match with ${v}`,
+  tfl: v => `commit the most fouls per match with ${v}`, tyc: v => `have the most yellow cards with ${v}`, trc: v => `have the most red cards with ${v}`,
+};
+const SUB = {
+  scorers: r => `${(r.xg || 0).toFixed(1)} xG`, assists: r => pl(r.kp || 0, 'chance created', 'chances created'),
+  ga: r => `${pl(r.g || 0, 'goal')}, ${pl(r.a || 0, 'assist')}`,
+};
+for (const c of [...PLAYER_CARDS, ...TEAM_CARDS]) { c.say = SAY[c.id]; c.sub = SUB[c.id]; }
+export const matchesOf = r => pl(r.apps ?? r.p ?? 0, 'match', 'matches');
 
 // ---------- ranking ----------
 const round = (v, dp) => Math.round(v * 10 ** dp) / 10 ** dp;

@@ -12,7 +12,7 @@ import { crest as crestHtml, useClubs } from './places.js';
 import { loadKits } from './kits-data.js';
 import { kitSprite, startDesign } from './kit.js';
 import { countedFixtures, totals, rank, PLAYER_CARDS, TEAM_CARDS } from './season-stats.js';
-import { statCard, statList, initialsCrest } from './stat-card.js';
+import { statCard, statPage, wireStatPage, initialsCrest } from './stat-card.js';
 import { demoSeason } from './demo-season.js';
 import { VERSION } from './version.js';
 
@@ -73,20 +73,27 @@ if (ctx) {
   };
   const played = () => (!season ? [] : demo != null ? countedFixtures(season.fixtures) : countedFixtures(finished(season)));
   const KINDS = { player: PLAYER_CARDS, team: TEAM_CARDS };
-  let moved = 0;   // in-page address changes so far, so "Back" can go back to the tab you came from
-  addEventListener('hashchange', () => { moved++; });
+  // Address changes made by the page itself replace the entry (a stat switched, a position picked), so "Back" still goes to where the
+  // full page was opened from: `moved` counts the changes that added an entry.
+  let moved = 0, replacing = false;
+  addEventListener('hashchange', () => { if (!replacing) moved++; replacing = false; });
+  const go = href => { replacing = true; location.replace(href); };
 
   const grid = (kind, data) => {
     const groups = [...new Set(KINDS[kind].map(c => c.group))];
     return groups.map(g => `<div class="sc-group"><h3>${esc(g)}</h3><div class="sc-grid">${KINDS[kind].filter(c => c.group === g)
       .map(c => statCard(c, rank(data[kind === 'team' ? 'teams' : 'players'], c, 3), sctx, { kind })).join('')}</div></div>`).join('');
   };
-  const stats = sub => {
+  const stats = (sub, picked) => {
     const data = totals(played());
-    const found = ['player', 'team'].map(kind => [kind, KINDS[kind].find(c => c.id === sub)]).find(x => x[1]);
+    const [cardId, position = 'all'] = sub.split('/');
+    const found = ['player', 'team'].map(kind => [kind, KINDS[kind].find(c => c.id === cardId)]).find(x => x[1]);
     if (found) {
-      const [kind, c] = found;
-      return statList(c, rank(data[kind === 'team' ? 'teams' : 'players'], c), sctx, { kind, back: '#stats' });
+      const [kind, c] = found, rows = kind === 'team' ? data.teams : data.players;
+      return statPage(c, rank(kind === 'team' || position === 'all' ? rows : rows.filter(r => r.pos === position), c), sctx, {
+        kind, title: kind === 'team' ? 'Team stats' : 'Player stats', back: '#stats', cards: KINDS[kind], position,
+        seasonLine: `vLeague · ${picked?.label || 'Season 1'} · ${played().length} ${played().length === 1 ? 'match' : 'matches'} played`,
+      });
     }
     const note = demo != null ? `<p class="sc-demo"><b>Demo data</b> ${realClubs ? 'Real clubs and kits, made-up players and results' : 'Made-up clubs, players and results'}, ${demo} ${demo === 1 ? 'round' : 'rounds'} (try <code>demo=0</code> to <code>demo=6</code>). Not real.</p>` : '';
     if (!data.players.length && demo == null) {
@@ -118,6 +125,7 @@ if (ctx) {
     draft: () => card('Draft'),
   };
 
+  wireStatPage(main, { go });
   mountFrame(document.getElementById('frame'), {
     office,
     crest: preview ? params.get('crest') || '' : ctx.club?.crest_path ? crestUrl(ctx.club.crest_path) : '',
@@ -125,7 +133,7 @@ if (ctx) {
     onTab: (id, picked, sub) => {
       main.innerHTML = VIEWS[id](sub, picked);
       // "Back" on a full list returns to the tab it was opened from (Overview or Stats), else to the Stats tab.
-      main.querySelector('.sc-back')?.addEventListener('click', e => { if (moved) { e.preventDefault(); history.back(); } });
+      main.querySelector('.sp-back')?.addEventListener('click', e => { if (moved) { e.preventDefault(); history.back(); } });
     },
   });
 }

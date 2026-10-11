@@ -126,7 +126,14 @@ export function mountFrame(el, { office = false, draft = false, crest = '', onTa
   addEventListener('scroll', () => { if (!menu.hidden) openMenu(false); }, { passive: true });
   paintSeason();
   const relayout = () => place(strip.querySelector('[aria-current]'), false);
-  addEventListener('hashchange', () => { show(true); scrollTo(0, 0); });
+  // A new tab or a new stat starts at the top; switching position or season on the same stat page keeps your place.
+  let shown = here();
+  addEventListener('hashchange', () => {
+    const now = here();
+    show(true);
+    if (now.id !== shown.id || now.sub.split('/')[0] !== shown.sub.split('/')[0]) scrollTo(0, 0);
+    shown = now;
+  });
   addEventListener('resize', relayout);
   document.fonts?.ready.then(relayout);
   show(false);
