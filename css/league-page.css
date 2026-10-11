@@ -212,7 +212,7 @@
 /* One column (under 992 px): the page's order of importance, not the columns': this round, the table, the leaders, Team of the week. */
 @media (max-width: 991px) {
   .lg-cols > .lg-main, .lg-cols > .lg-side { display: contents; }
-  .lg-side > .fx-widget { order: 1; } .lg-main > .lg-table { order: 2; } .lg-main > .lg-trio { order: 3; } .lg-side > .lg-empty { order: 4; }
+  .lg-side > .fx-widget { order: 1; } .lg-main > .lg-table { order: 2; } .lg-main > .lg-trio { order: 3; } .lg-side > .tw, .lg-side > .lg-empty { order: 4; }
 }
 /* The round widget in the narrow column: the Fixtures rows, rounds stepped by the arrows. */
 .fx-widget .fx-head { margin-top: 0; }

@@ -18,7 +18,8 @@ import { demoSeason } from './demo-season.js';
 import { tableRows, tableCard, rowTops, reshuffle } from './league-table.js';
 import { paint, quietly } from './paint.js';
 import { spoilerHidden, revealScore, fmtTime } from './prefs.js';
-import { fixturesView, parseSub, roundWidget } from './league-fixtures.js';
+import { fixturesView, parseSub, roundWidget, rounds } from './league-fixtures.js';
+import { teamOfWeekCard } from './team-of-week.js';
 import { winChance, percents } from './match-model.js';
 import { VERSION } from './version.js';
 
@@ -169,6 +170,13 @@ if (ctx) {
     return { ...sctx, now, hidden, mine: ctx.club?.code, time: fmtTime, chance, venue: code => stadiums?.[code] || '' };
   };
   const fixturesHtml = sub => fixturesView(season, fixturesCtx(), parseSub(sub));
+  // Team of the week (WR-21): the best XI of a round, from the matches the viewer may see (results hidden by spoiler-free mode stay out).
+  let twWeek = null;   // the round shown (null = the latest played)
+  const teamHtml = () => {
+    if (!season) return teamOfWeekCard([], sctx);
+    const now = tableNow(), all = played(), seen = all.filter(f => !spoilerHidden(f, season, now)), labels = new Map(rounds(season).map(r => [r.week, r.label]));
+    return teamOfWeekCard(seen, { ...sctx, mine: ctx.club?.code }, { week: twWeek, labelOf: w => labels.get(w) || `Round ${w}`, hiddenCount: all.length - seen.length });
+  };
   // The three leader cards under the table (WR-19): the top three of each stat, each with its ">" link to the full list.
   const leaders = () => {
     const data = totals(played());
@@ -193,6 +201,14 @@ if (ctx) {
   }).catch(() => {});
 
   main.addEventListener('click', async e => {
+    const menuBtn = e.target.closest('[data-twmenu]'), twPick = e.target.closest('[data-tw]');
+    if (menuBtn) { const menu = menuBtn.nextElementSibling, open = menu.hidden; menu.hidden = !open; menuBtn.setAttribute('aria-expanded', String(open)); if (open) (menu.querySelector('[aria-checked="true"]') || menu.firstElementChild)?.focus(); return; }
+    if (twPick) {
+      const dir = twPick.dataset.dir;
+      twWeek = Number(twPick.dataset.tw); rerender();
+      (dir && main.querySelector(`.tw-arrow[data-dir="${dir}"]`) || main.querySelector('[data-twmenu]'))?.focus({ preventScroll: true });   // focus stays where the person was
+      return;
+    }
     const step = e.target.closest('[data-wround]');
     if (step) { widgetWeek = Number(step.dataset.wround); rerender(); main.querySelector('.fx-widget [data-wround]')?.focus({ preventScroll: true }); return; }
     const pill = e.target.closest('[data-tfilter]'), all = e.target.closest('[data-reveal-all]'), go2 = e.target.closest('[data-fxgo]');
@@ -212,6 +228,19 @@ if (ctx) {
       reshuffle(fresh, before);
     }
   });
+  // The round menu closes on Escape, a tap elsewhere or a scroll, and the arrow keys move through it.
+  const closeTw = () => main.querySelectorAll('.tw-menu:not([hidden])').forEach(m => { m.hidden = true; m.previousElementSibling.setAttribute('aria-expanded', 'false'); });
+  document.addEventListener('click', e => { if (!e.target.closest('.tw-pick')) closeTw(); });
+  addEventListener('scroll', closeTw, { passive: true });
+  document.addEventListener('keydown', e => {
+    const menu = main.querySelector('.tw-menu:not([hidden])');
+    if (!menu) return;
+    if (e.key === 'Escape') { closeTw(); main.querySelector('[data-twmenu]')?.focus(); return; }
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    e.preventDefault();
+    const items = [...menu.querySelectorAll('button')], i = items.indexOf(document.activeElement);
+    items[(i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length].focus();
+  });
   // A live match moves on its own: the Fixtures tab redraws every 15 seconds while one is showing.
   setInterval(() => { if (!document.hidden && ['fixtures', 'overview'].includes(current?.[0]) && main.querySelector('.fx-row.is-live')) rerender(true); }, 15000);
 
@@ -223,7 +252,7 @@ if (ctx) {
         </div>
         <aside class="lg-side">
           ${roundWidget(season, fixturesCtx(), widgetWeek)}
-          ${card('Team of the week')}
+          ${teamHtml()}
         </aside>
       </div>`,
     fixtures: sub => fixturesHtml(sub),
