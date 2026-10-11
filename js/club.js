@@ -1,7 +1,7 @@
 // My club: the club's information (facts, matches, best rated), then the team sheet as a form. Each row opens a menu: the starting XI
 // (formation, pitch, players), captain and set-piece takers, tactics, kit. Saved to Supabase team_sheets; the deadline it counts for
 // comes from deadlines, and Submit stores the sheet for a round. At a deadline the database copies each club's sheet for that week.
-import { enterPlace } from './shell.js';
+import { enterPlace, styleCards } from './shell.js';
 import { esc, crestUrl } from './member.js';
 import { db } from './auth.js';
 import { SUPABASE_URL } from './config.js';
@@ -79,6 +79,7 @@ if (ctx) {
     } else {
       await teamSheet($('#sheet'), { club, squad, userId: me.user.id, season });
     }
+    styleCards();
   }
   main.setAttribute('aria-busy', 'false');
 }

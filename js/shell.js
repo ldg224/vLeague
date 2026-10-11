@@ -2,6 +2,7 @@
 // visitor in (or sends them on), wires the top bar and footer, paints the club's colour and band, draws the nav, and
 // loads the club row, the league data and the account's settings together.
 import { onColour, accentFor, glowFor, topoFor } from './club-colour.js';
+import { sheen, pinClock } from './silk.js';
 import { enter, chrome, safeColour, esc, crestUrl } from './member.js';
 import { prefs } from './prefs.js';
 import { db } from './auth.js';
@@ -47,8 +48,8 @@ function drawSubFrame(place, me, club) {
   // The contour lines and the silk fade in once their pictures are loaded, as on the league page (js/league.js).
   if (!document.body.classList.contains('topo-ready')) {
     Promise.all(['assets/img/topo.png', 'assets/img/fabric.png'].map(src => { const i = new Image(); i.src = src; return i.decode().catch(() => {}); }))
-      .then(() => requestAnimationFrame(() => document.body.classList.add('topo-ready')));
-    setTimeout(() => document.body.classList.add('silk-seen'), 3500);
+      .then(() => requestAnimationFrame(() => { document.body.classList.add('topo-ready'); requestAnimationFrame(pinClock); }));
+    setTimeout(() => { document.body.classList.add('silk-seen'); pinClock(); }, 3500);
   }
 }
 
@@ -84,3 +85,6 @@ export async function enterPlace(place) {
   const team = club && season ? season.teams.find(t => t.code === club.code) || null : null;
   return { me, club, season, team, prefs: settings, main: document.getElementById('main') };
 }
+
+// Every card on the page gets its own splash and silk phase, as on the league page. Call after the page has drawn its cards.
+export const styleCards = () => sheen(document);
