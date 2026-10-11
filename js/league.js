@@ -29,34 +29,31 @@ if (ctx) {
   const main = ctx.main;
   main.removeAttribute('aria-busy');
 
-  // A card waiting for its content: the title it will have, and what will go in it.
-  const card = (title, note, extra = '') => `<section class="lg-card${extra}">
-      <div class="lg-card-head"><h2>${esc(title)}</h2></div>
-      <p class="lg-soon">${esc(note)}</p>
-    </section>`;
+  // A card waiting for its content: just its title for now.
+  const card = title => `<section class="lg-card lg-empty"><div class="lg-card-head"><h2>${esc(title)}</h2></div></section>`;
 
   const VIEWS = {
     overview: () => `<div class="lg-cols">
         <div class="lg-main">
-          ${card('Table', 'The table, with your club marked.')}
+          ${card('Table')}
           <div class="lg-trio">
-            ${card('Top rated', 'Best average match rating.')}
-            ${card('Top scorers', 'Most goals.')}
-            ${card('Top assists', 'Most assists.')}
+            ${card('Top rated')}
+            ${card('Top scorers')}
+            ${card('Top assists')}
           </div>
         </div>
         <aside class="lg-side">
-          ${card('Team of the week', 'The best XI of the round, by match rating.')}
-          ${card('This round', 'The round’s matches, day by day.')}
+          ${card('Team of the week')}
+          ${card('This round')}
         </aside>
       </div>`,
-    table: () => card('Table', 'The full table with form and each club’s next opponent.'),
-    fixtures: () => card('Fixtures', 'Every match by date, by round or by club.'),
-    'player-stats': () => card('Player stats', 'Top scorers, assists, ratings and more, in cards you can open for the full list.'),
-    'team-stats': () => card('Team stats', 'The same for clubs: goals, possession, clean sheets and more.'),
-    seasons: () => card('Seasons', 'Each season’s winner and runner-up.'),
-    news: () => card('News', 'League news and messages for your club.'),
-    draft: () => card('Draft', 'The draft board while a draft is on.'),
+    table: () => card('Table'),
+    fixtures: () => card('Fixtures'),
+    'player-stats': () => card('Player stats'),
+    'team-stats': () => card('Team stats'),
+    seasons: () => card('Seasons'),
+    news: () => card('News'),
+    draft: () => card('Draft'),
   };
 
   mountFrame(document.getElementById('frame'), {
