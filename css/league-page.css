@@ -38,12 +38,13 @@
 .lg-crest { width: 56px; height: 56px; flex: none; }
 .lg-name { display: grid; justify-items: start; gap: 2px; min-width: 0; }
 .lg-title {
-  margin: 0; font: 500 2rem/1 var(--font-display); font-stretch: 70%; letter-spacing: .01em; color: var(--text-strong);
+  margin: 0; font: 900 1.75rem/1 var(--font-display); font-stretch: 125%; letter-spacing: 0; color: var(--text-strong);
 }
-.lg-title b { font-weight: 800; }
+.lg-title b { font-weight: 900; }
 .font-old { --font: 'Figtree', system-ui, sans-serif; --font-display: 'Oswald', 'Arial Narrow', sans-serif; }
-.font-old .lg-title { font-stretch: normal; }
+.font-old .lg-title { font-stretch: normal; font-weight: 500; font-size: 2rem; }
 .font-old .lg-title b { font-weight: 700; }
+.font-old .lg-card-head h2 { font: 600 1.1875rem/1.3 var(--font); font-stretch: normal; text-transform: none; }
 .lg-season {
   display: inline-flex; align-items: center; gap: 2px; margin-left: -6px; padding: 4px 6px;
   border: 0; border-radius: var(--r-sm); background: none; cursor: pointer;
@@ -97,7 +98,11 @@
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
 }
 .lg-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-.lg-card-head h2 { margin: 0; font: 600 1.1875rem/1.3 var(--font); color: var(--text-strong); }
+.lg-card-head h2 {
+  /* Archivo Expanded Black, as on vLeague's own graphics ("GAME WEEK TIMELINE"). */
+  margin: 0; font: 900 1.0625rem/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; letter-spacing: .01em;
+  color: var(--text-strong);
+}
 .lg-soon { margin: 0; padding: 24px 0 8px; font-size: .875rem; color: var(--muted); }
 
 .lg-cols, .lg-main, .lg-side { display: grid; gap: 16px; align-content: start; min-width: 0; }
@@ -115,7 +120,7 @@
   .lg-head { padding: 16px 16px 14px; gap: 12px; flex-wrap: wrap; }
   .lg-crest { width: 44px; height: 44px; }
   .lg-id { gap: 12px; }
-  .lg-title { font-size: 1.5rem; }
+  .lg-title { font-size: 1.4rem; }
   .lg-tool { height: 36px; padding: 0 12px; gap: 6px; }
   .lg-tabs-in { padding: 0 4px; }
   .lg-tabs a { height: 48px; padding: 0 12px; }
@@ -126,3 +131,6 @@
   .lg-tools { width: 100%; flex-wrap: nowrap; }
   .lg-tool { flex: 1 1 0; justify-content: center; min-width: 0; padding: 0 8px; }
 }
+/* The three stat-leader cards sit side by side in a narrow column: a smaller title so "TOP SCORERS" stays on one line. */
+.lg-trio .lg-card-head h2 { font-size: .9375rem; }
+@media (min-width: 992px) and (max-width: 1179px) { .lg-trio .lg-card-head h2 { font-size: .8125rem; } .lg-trio .lg-card { padding-inline: 16px; } }
