@@ -88,11 +88,11 @@ const rate90 = (id, group, title, key, extra = {}) => ({ id, group, title, value
 const gk = { qualifies: r => keeperMin(r) >= MIN_MINUTES, note: NOTE_GK };
 
 export const PLAYER_CARDS = [
-  count('scorers', 'Top stats', 'Top scorers', 'g'),
-  count('assists', 'Top stats', 'Top assists', 'a'),
-  { id: 'ga', group: 'Top stats', title: 'Goals + assists', value: r => r.g + r.a, dp: 0 },
-  { id: 'rating', group: 'Top stats', title: 'Top rated', value: rating, dp: 1, qualifies: r => r.min >= MIN_MINUTES, note: NOTE_MIN },
-  count('minutes', 'Top stats', 'Minutes played', 'min'),
+  count('scorers', 'Pinned', 'Top scorers', 'g'),
+  count('assists', 'Pinned', 'Top assists', 'a'),
+  { id: 'ga', group: 'Pinned', title: 'Goals + assists', value: r => r.g + r.a, dp: 0 },
+  { id: 'rating', group: 'Pinned', title: 'Top rated', value: rating, dp: 1, qualifies: r => r.min >= MIN_MINUTES, note: NOTE_MIN },
+  count('minutes', 'Pinned', 'Minutes played', 'min'),
 
   rate90('g90', 'Attack', 'Goals per 90', 'g', { dp: 2 }),
   { id: 'xg', group: 'Attack', title: 'xG', value: r => r.xg, dp: 2 },
@@ -122,11 +122,11 @@ export const PLAYER_CARDS = [
 
 const mean = (id, group, title, key, extra = {}) => ({ id, group, title, value: r => perMatch(r, key), dp: 1, ...extra });
 export const TEAM_CARDS = [
-  { id: 'trating', group: 'Top stats', title: 'Average rating', value: r => r.ratingSum / r.p, dp: 2 },
-  mean('tgoals', 'Top stats', 'Goals per match', 'gf', { dp: 2 }),
-  mean('tconceded', 'Top stats', 'Goals conceded per match', 'ga', { dp: 2, low: true, zero: true }),
-  { id: 'tposs', group: 'Top stats', title: 'Possession', value: r => r.possession / r.p, dp: 0, unit: '%' },
-  { id: 'tcs', group: 'Top stats', title: 'Clean sheets', value: r => r.cs, dp: 0 },
+  { id: 'trating', group: 'Pinned', title: 'Average rating', value: r => r.ratingSum / r.p, dp: 2 },
+  mean('tgoals', 'Pinned', 'Goals per match', 'gf', { dp: 2 }),
+  mean('tconceded', 'Pinned', 'Goals conceded per match', 'ga', { dp: 2, low: true, zero: true }),
+  { id: 'tposs', group: 'Pinned', title: 'Possession', value: r => r.possession / r.p, dp: 0, unit: '%' },
+  { id: 'tcs', group: 'Pinned', title: 'Clean sheets', value: r => r.cs, dp: 0 },
 
   { id: 'txg', group: 'Attack', title: 'xG', value: r => r.xg, dp: 1 },
   { id: 'txgdiff', group: 'Attack', title: 'xG difference', value: r => r.xg - r.xga, dp: 1, zero: true, signed: true },

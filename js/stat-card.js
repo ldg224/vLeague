@@ -57,7 +57,8 @@ export function statCard(card, ranked, ctx, { kind = 'player' } = {}) {
   const body = top.length
     ? `<ol class="sc-rows">${top.map((x, i) => row(x, card, ctx, kind, i === 0, i === 0)).join('')}</ol>`
     : empty(card);
-  return `<section class="lg-card sc${top.length ? '' : ' is-empty'}" aria-label="${esc(card.title)}"><div class="lg-card-head"><h2>${esc(card.title)}</h2>${more}</div>${body}</section>`;
+  const lead = top.length ? ` has-lead" style="${clubStyle(ctx.club(clubOf(top[0].row, kind)))}` : '';
+  return `<section class="lg-card sc${top.length ? '' : ' is-empty'}${lead}" aria-label="${esc(card.title)}"><div class="lg-card-head"><h2>${esc(card.title)}</h2>${more}</div>${body}</section>`;
 }
 
 // ---------- the full page ----------

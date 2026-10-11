@@ -81,7 +81,7 @@ if (ctx) {
 
   const grid = (kind, data) => {
     const groups = [...new Set(KINDS[kind].map(c => c.group))];
-    return groups.map(g => `<div class="sc-group"><h3>${esc(g)}</h3><div class="sc-grid">${KINDS[kind].filter(c => c.group === g)
+    return groups.map(g => `<div class="sc-group${g === 'Pinned' ? ' is-pinned' : ''}"><h3>${esc(g)}</h3><div class="sc-grid">${KINDS[kind].filter(c => c.group === g)
       .map(c => statCard(c, rank(data[kind === 'team' ? 'teams' : 'players'], c, 3), sctx, { kind })).join('')}</div></div>`).join('');
   };
   const stats = (sub, picked) => {
