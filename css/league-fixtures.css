@@ -53,6 +53,7 @@
   color: transparent; opacity: .22;
 }
 .fx-ghost b { font-weight: inherit; }
+.fx-ghost .fx-code { display: none; }
 .fx-ghost.is-home { left: 0; padding-left: 14px; text-align: left; -webkit-text-stroke: 1.5px var(--hc); -webkit-mask-image: linear-gradient(90deg, #000 28%, transparent 100%); mask-image: linear-gradient(90deg, #000 28%, transparent 100%); }
 .fx-ghost.is-away { right: 0; padding-right: 14px; text-align: right; -webkit-text-stroke: 1.5px var(--ac); -webkit-mask-image: linear-gradient(270deg, #000 28%, transparent 100%); mask-image: linear-gradient(270deg, #000 28%, transparent 100%); }
 
@@ -120,17 +121,17 @@
 @container fx (max-width: 560px) {
   .fx-day { padding-inline: 16px; margin-inline: -16px; }
   .fx-row { margin-inline: -16px; }
-  .fx-full { display: none; } .fx-short { display: inline; }
   .fx-row a { grid-template-columns: minmax(0, 1fr) 112px minmax(0, 1fr); row-gap: 3px; padding: 10px 24px; min-height: 92px; }
   .fx-card .fx-team .crest { --s: 34px !important; }
   .fx-team, .fx-team.is-home { flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 5px; }
   .fx-team .crest { order: -1; }
   .fx-team .fx-reds { order: 3; }
-  .fx-name { max-width: 100%; font-size: var(--fs-s); font-stretch: 100%; line-height: 1.2; }
+  .fx-name { max-width: 100%; white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: var(--fs-s); font-stretch: 100%; line-height: 1.2; }   /* the full name, over two lines if it needs them */
   .fx-score, .fx-ko { min-width: 0; gap: 8px; padding: 5px 12px; border-radius: 12px; font-size: var(--fs-l); }
   .fx-score i { font-size: var(--fs-m); }
   .fx-chance, .fx-pcts { width: 100px; }
-  .fx-ghost { font-size: 40px; opacity: .24; }
+  .fx-ghost { font-size: 40px; letter-spacing: -.02em; opacity: .26; padding: 0; text-align: center; -webkit-mask-image: none; mask-image: none; }
+  .fx-ghost .fx-full, .fx-ghost .fx-short { display: none; } .fx-ghost .fx-code { display: inline; }   /* just the club's code, hollow, behind each side */
   .fx-tag { grid-row: 2; grid-column: 2; justify-self: center; line-height: 1.2; margin-top: 2px; }
   .fx-tag:empty { display: none; }
   .fx-row.with-res .fx-tag { display: none; }

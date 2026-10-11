@@ -85,10 +85,11 @@ function team(fx, side, ctx, live, hid, edge) {
   return side === 'home' ? `<span class="fx-team is-home${edge}">${name}${marks}${crest}</span>` : `<span class="fx-team is-away${edge}">${crest}${marks}${name}</span>`;
 }
 
-// The club's name in huge hollow capitals behind its half of the row (decoration only; the real name is in the foreground).
+// The club's name in huge hollow capitals behind its half of the row (decoration only; the real name is in the foreground). A phone gets the club's
+// code instead, which is short enough to show whole.
 const ghost = (code, side, ctx) => {
   const club = ctx.club(code);
-  return `<span class="fx-ghost is-${side}" aria-hidden="true"><b class="fx-full">${esc(club?.name || code)}</b><b class="fx-short">${esc(club?.short_name || club?.name || code)}</b></span>`;
+  return `<span class="fx-ghost is-${side}" aria-hidden="true"><b class="fx-full">${esc(club?.name || code)}</b><b class="fx-short">${esc(club?.short_name || club?.name || code)}</b><b class="fx-code">${esc(code)}</b></span>`;
 };
 
 // opts.forTeam: a club code, to show that club's result letter (W, D, L) at the row's end.
