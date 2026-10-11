@@ -11,13 +11,13 @@
 // a plain capsule in the club colour.
 // Look: FotMob's stat pages in vLeague's own style (css/stat-card.css): on the full page a banner in the leader's club colour says who
 // leads, and every player is shown in their club's kit with the club crest on the corner.
-import { onColour, isHex } from './club-colour.js';
+import { onColour, isHex, accentFor } from './club-colour.js';
 import { format, matchesOf, POSITIONS } from './season-stats.js';
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ESC[c]);
 const colourOf = club => (isHex(club?.colour) ? club.colour : '#64748b');
-const clubStyle = club => { const c = colourOf(club); return `--c:${c};--on:${onColour(c)}`; };
+const clubStyle = club => { const c = colourOf(club); return `--c:${c};--on:${onColour(c)};--cl:${accentFor(c, 'light')};--cd:${accentFor(c, 'dark')}`; };
 const svg = d => `<svg class="sc-chev" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${d}"/></svg>`;
 const CHEVRON = svg('m9 6 6 6-6 6'), BACK = svg('m15 6-6 6 6 6'), CARET = svg('m6 9 6 6 6-6'), TICK = svg('m5 12.5 4.5 4.5L19 7.5');
 
@@ -92,9 +92,9 @@ export function statPage(card, ranked, ctx, { kind = 'player', title = 'Stats', 
     : '';
   const rows = ranked.length
     ? `<ol class="sc-rows is-full">${ranked.map(x => {
-      const club = ctx.club(clubOf(x.row, kind)), sub = [kind === 'team' ? '' : clubName(club), card.sub ? card.sub(x.row) : matchesOf(x.row)].filter(Boolean).join(' · ');
+      const club = ctx.club(clubOf(x.row, kind)), sub = card.sub ? card.sub(x.row) : matchesOf(x.row), team = kind === 'team' ? '' : `<span class="sc-club">${esc(clubName(club))}</span>`;
       return `<li class="sc-row" data-rank="${x.rank}" style="${clubStyle(club)}"><span class="sp-rank">${x.rank}</span>${face(x.row, ctx, kind, 40)}`
-        + `<span class="sc-who"><b class="sc-name">${esc(kind === 'team' ? club?.name || x.row.code : x.row.name)}</b><span class="sc-sub">${esc(sub)}</span></span>`
+        + `<span class="sc-who"><b class="sc-name">${esc(kind === 'team' ? club?.name || x.row.code : x.row.name)}</b><span class="sc-sub">${team}${team && sub ? ' · ' : ''}${esc(sub)}</span></span>`
         + `<span class="sc-val">${esc(format(x.value, card))}</span></li>`;
     }).join('')}</ol>`
     : (position !== 'all' ? empty(card, 'Nobody in this position qualifies yet.', 'No players to show') : empty(card));

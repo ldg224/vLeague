@@ -52,7 +52,7 @@ test('the full page has the top bar, a banner in the leading club colour that sa
   const ranked = rank([player('Ana', 5), player('Bea', 3, 'WHT'), player('Cy', 3), player('Di', 1)], scorers);
   const html = statPage(scorers, ranked, ctx, pageOpts);
   assert.ok(html.includes('class="sp-top"') && html.includes('Player stats'));
-  assert.match(html, /class="sp-banner" style="--c:#c8102e;--on:#ffffff"/);
+  assert.match(html, /class="sp-banner" style="--c:#c8102e;--on:#ffffff[;"]/);
   assert.ok(html.includes('<b>Ana</b> is the top scorer with 5 goals'));
   assert.ok(html.includes('vLeague · Season 1 · 6 matches played'));
   assert.equal(count(html, /<li class="sc-row" data-rank=/g), 4);

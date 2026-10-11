@@ -19,7 +19,9 @@
 .sc-row:first-child { border-top: 0; }
 .sc-who { display: grid; gap: 2px; min-width: 0; flex: 1; }
 .sc-name { font-weight: 600; font-size: var(--fs-m); color: var(--text-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sc-club { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: var(--fs-s); }
+.sc-club { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--cd, var(--muted)); font-weight: 600; font-size: var(--fs-s); }
+:root[data-theme="light"] .sc-club { color: var(--cl, var(--muted)); }
+.sc-sub .sc-club { display: inline; overflow: visible; }
 .sc-rank { width: 20px; flex: none; text-align: center; color: var(--muted); font: 600 var(--fs-s) var(--font); font-variant-numeric: tabular-nums; }
 
 /* vLeague's own pill player, in the club's colour, with a kit band. */
