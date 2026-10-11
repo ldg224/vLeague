@@ -66,7 +66,7 @@ const hues = (ctx, fx) => ['home', 'away'].map(side => {
 
 const bar = p => `<i class="ch" style="flex:${Math.max(p.h, 1)}"></i><i class="cd" style="flex:${Math.max(p.d, 1)}"></i><i class="ca" style="flex:${Math.max(p.a, 1)}"></i>`;
 const chanceBar = p => (p
-  ? `<span class="fx-chance" role="img" aria-label="Win chance: home ${p.h} percent, draw ${p.d} percent, away ${p.a} percent" title="Win chance: ${p.h}% · ${p.d}% · ${p.a}%">${bar(p)}</span><span class="fx-pcts" aria-hidden="true"><b>${p.h}%</b><b>${p.a}%</b></span>`
+  ? `<span class="fx-chance" role="img" aria-label="Win chance: home ${p.h} percent, draw ${p.d} percent, away ${p.a} percent" title="Win chance: ${p.h}% · ${p.d}% · ${p.a}%">${bar(p)}</span><span class="fx-pcts" aria-hidden="true"><b class="ph">${p.h}%</b><b class="pd">${p.d}%</b><b class="pa">${p.a}%</b></span>`
   : '');
 
 // ---------- one match row ----------
@@ -81,7 +81,7 @@ function team(fx, side, ctx, live, hid, edge) {
   const reds = hid ? 0 : live ? live.reds[side] : redCount(fx, code);
   const marks = reds ? `<span class="fx-reds" aria-label="${reds === 1 ? 'Sent off' : `${reds} sent off`}">${'<i></i>'.repeat(Math.min(reds, 3))}</span>` : '';
   const name = `<span class="fx-name${ctx.mine === code ? ' is-mine' : ''}"><b class="fx-full">${esc(club?.name || code)}</b><b class="fx-short">${esc(club?.short_name || club?.name || code)}</b></span>`;
-  const crest = ctx.crest(code, 40);
+  const crest = ctx.crest(code, 32);
   return side === 'home' ? `<span class="fx-team is-home${edge}">${name}${marks}${crest}</span>` : `<span class="fx-team is-away${edge}">${crest}${marks}${name}</span>`;
 }
 
