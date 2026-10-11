@@ -83,7 +83,7 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
         const top = mx[k] ?? mn[k], n = code ? have(k) : null, full = n != null && n >= top;
         return `<span class="dr-rchip pos-${k}${full ? ' full' : ''}" title="${esc(`${k}: ${mn[k] != null && mn[k] !== mx[k] ? `at least ${mn[k]}, ` : ''}${mx[k] != null ? `at most ${mx[k]}` : ''}`)}"><b>${k}</b>${n != null ? `${n}/${top}` : top}</span>`;
       });
-      return chips.length ? `<span class="dr-roster"><span class="dr-roster-l">${code ? 'Your roster' : 'Roster'}</span>${chips.join('')}</span>` : '';
+      return chips.length ? `<span class="dr-roster">${chips.join('')}</span>` : '';
     };
     const blocked = p => {
       if (!p) return '';
@@ -104,13 +104,15 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
     const afterText = total => (total > CAP ? `over the cap by ${money(total - CAP)}` : `${money(CAP - total)} left`);
 
     // How much of the weekly cap this club's squad uses (the draft shows it; it doesn't block a pick).
-    function budget() {
-      if (!code) return '';
-      const mine = players.filter(p => p.team === code), used = squadValue(), pct = Math.min(100, used / CAP * 100);
-      const state = used > CAP ? ' over' : used >= CAP * 0.9 ? ' warn' : '';
-      return `<div class="dr-budget${state}"><div class="dr-budget-text"><b>Your squad</b><span>${mine.length} player${mine.length === 1 ? '' : 's'}, <b>${money(used)}</b> of ${money(CAP)} a week</span>`
-        + `<span class="dr-budget-left">${used > CAP ? `${money(used - CAP)} over the cap` : `${money(CAP - used)} left`}</span></div>`
-        + `<div class="dr-bar" role="progressbar" aria-label="Weekly budget used" aria-valuemin="0" aria-valuemax="${CAP}" aria-valuenow="${used}"><i style="width:${pct.toFixed(1)}%"></i></div></div>`;
+    // Your club's strip at the foot of the hero: the roster (how many of each position you have, of the most allowed) and the weekly budget on one
+    // line, the budget bar under it. With no club: just the roster limits.
+    function youStrip() {
+      const chips = rosterChips();
+      if (!code) return chips ? `<div class="dr-you"><div class="dr-you-top"><b class="dr-you-l">Roster limits</b>${chips}</div></div>` : '';
+      const used = squadValue(), pct = Math.min(100, used / CAP * 100), state = used > CAP ? ' over' : used >= CAP * 0.9 ? ' warn' : '';
+      return `<div class="dr-you dr-budget${state}"><div class="dr-you-top"><b class="dr-you-l">Your squad</b>${chips}`
+        + `<span class="dr-you-money"><b>${money(used)}</b> of ${money(CAP)}</span></div>`
+        + `<div class="dr-bar" role="progressbar" aria-label="Weekly budget used: ${money(used)} of ${money(CAP)}, ${used > CAP ? `${money(used - CAP)} over` : `${money(CAP - used)} left`}" aria-valuemin="0" aria-valuemax="${CAP}" aria-valuenow="${used}"><i style="width:${pct.toFixed(1)}%"></i></div></div>`;
     }
 
     // Active times: the pick timer runs only inside them (drafts.quiet holds them; 0040) (managers can still pick). The clock shows ACTIVE time left, frozen while it's quiet.
@@ -136,17 +138,16 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
         done: ['Finished', 'The draft is finished', `All ${n} picks are done.`, ''],
       }[ph];
       // Each piece is escaped here (the pause icon is markup, so the line itself is not escaped as a whole: that printed the icon's code, B-12).
-      const quiet = d.quiet?.length && inQuiet() && ph === 'live' ? `<span class="dr-paused">${icon('pause')} Timer paused until ${esc(new Date(st.qs.quiet_until).toLocaleTimeString('en-AU', { timeZone: 'Australia/Melbourne', hour: 'numeric', minute: '2-digit' }))}</span>` : '';
-      const small = [rosterChips(), quiet].filter(Boolean);
+      const paused = d.quiet?.length && inQuiet() && ph === 'live' ? `<span class="dr-paused">${icon('pause')}Timer paused until ${esc(new Date(st.qs.quiet_until).toLocaleTimeString('en-AU', { timeZone: 'Australia/Melbourne', hour: 'numeric', minute: '2-digit' }))}</span>` : '';
       const made = st.picks.length, face = t && ['live', 'paused'].includes(ph) ? crest(t.club, 56) : '<img class="dr-st-crest" src="assets/brand/crest.svg" alt="">';
       const go = mine ? '<button class="dr-go" data-tab="players" type="button">Choose a player</button>' : '';
       const ghost = t && ['live', 'paused'].includes(ph) ? `<span class="dr-hollow" aria-hidden="true" style="--gl:${esc(colourOf(t.club, 'light'))};--gd:${esc(colourOf(t.club, 'dark'))}">${esc(nameOf(t.club))}</span>` : '';
       return `<section class="lg-card dr-status ph-${ph}${mine ? ' mine' : ''}${ph === 'live' && inQuiet() ? ' quiet' : ''}">${ghost}
         <div class="dr-st-main"><div class="dr-st-who">${face}<div class="dr-st-text"><p class="dr-st-line"><span class="dr-st-tag">${B[0]}</span><span class="dr-st-name">${esc(d.name || 'Draft')}</span></p>
-          <h1 class="dr-st-big" tabindex="-1">${B[1]}</h1><p class="dr-st-sub">${B[2]}</p>${go}</div></div>
+          <h1 class="dr-st-big" tabindex="-1">${B[1]}</h1><p class="dr-st-sub">${B[2]}</p>${paused}${go}</div></div>
           ${B[3] ? `<div class="dr-clock">${B[3]}</div>` : ''}</div>
-        ${n ? `<div class="dr-track" role="img" aria-label="${made} of ${n} picks made"><i style="width:${(made / n * 100).toFixed(2)}%"></i></div><p class="dr-track-l"><b>${made}</b> of ${n} picks made</p>` : ''}
-        ${small.length ? `<div class="dr-st-small">${small.join('')}</div>` : ''}${budget()}</section>`;
+        ${n ? `<div class="dr-track" role="img" aria-label="${made} of ${n} picks made"><i style="width:${(made / n * 100).toFixed(2)}%"></i></div>` : ''}
+        ${youStrip()}</section>`;
     }
 
     // ---- the table of available players, with its filters and sort levels.
@@ -173,7 +174,7 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
       const f = F[t], s = SORTS[t], unused = colsOf(t).filter(c => !s.some(x => x.key === c.key));
       const pos = [['', 'All'], ['GK', 'GK'], ['DEF', 'DEF'], ['MID', 'MID'], ['FWD', 'FWD']];
       return `<div class="dr-filter"><label class="dr-search">${icon('search')}<input type="search" data-f="q" data-t="${t}" placeholder="Search players" aria-label="Search players" value="${esc(f.q)}"></label>
-        <div class="dr-pos" role="group" aria-label="Position">${pos.map(([v, l]) => `<button type="button" data-fpos="${v}" aria-pressed="${f.pos === v}">${l}</button>`).join('')}</div>
+        <div class="dr-pos sc-toggle" role="group" aria-label="Position">${pos.map(([v, l]) => `<button type="button" data-fpos="${v}" aria-pressed="${f.pos === v}">${l}</button>`).join('')}</div>
         <label class="dr-max"><span>Max $</span><input type="number" inputmode="numeric" min="0" step="1000" data-f="max" data-t="avail" placeholder="Any" aria-label="Maximum value" value="${esc(f.max)}"></label>
         ${code ? `<label class="dr-fit"><input type="checkbox" data-f="fit" data-t="avail"${f.fit ? ' checked' : ''}><span>Fits my squad</span></label>` : ''}</div>
         <div class="dr-sortbar"><span class="dr-sortl">Sorted by</span>${s.map((x, i) => `<span class="dr-chip"><button data-t="${t}" data-sflip="${i}" title="Flip direction">${esc(col(t, x.key).long)} ${arrow(x.dir)}</button>${s.length > 1 ? `<button data-t="${t}" data-sdel="${i}" aria-label="Stop sorting by ${esc(col(t, x.key).long)}">${icon('x')}</button>` : ''}</span>`).join('')}
@@ -230,7 +231,7 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
       const q = new Set(st.queue);
       const shown = sorted('avail', free().filter(p => passes('avail', p))).slice(0, 400);
       const qn = queue().length;
-      return `<div class="dr-availwrap"><nav class="dr-sub" aria-label="Show">${[['players', 'Players'], ['queue', `My queue${qn ? ` (${qn})` : ''}`], ['auto', 'Auto-pick']].map(([k, l]) => `<button type="button" data-sub="${k}" aria-pressed="${sub === k}">${l}</button>`).join('')}</nav>
+      return `<div class="dr-availwrap"><nav class="dr-sub sc-toggle" aria-label="Show">${[['players', 'Players'], ['queue', `My queue${qn ? ` (${qn})` : ''}`], ['auto', 'Auto-pick']].map(([k, l]) => `<button type="button" data-sub="${k}" aria-pressed="${sub === k}">${l}</button>`).join('')}</nav>
         <div class="dr-avail" data-sub="${sub}"><aside class="dr-side">${queuePanel()}${autoPanel()}</aside>
         <section class="lg-card dr-main"><div class="lg-card-head"><h2>Available players</h2><span class="dr-count">${free().length} left</span></div>${toolbar('avail')}
         ${table('avail', shown, p => `<tr><td class="c-position pos-${esc(p.position)}">${esc(p.position)}</td><td class="c-name"><button class="dr-name" data-player="${esc(p.id)}">${esc(p.name)}</button></td><td class="c-number">${esc(p.number ?? '')}</td>${ratings(p)}
@@ -250,7 +251,7 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
         + `<div class="dr-teams">${clubs.map(row).join('') || '<div class="sc-empty"><b>No picks yet</b><span>Each club’s squad and what it costs appear here as the draft goes.</span></div>'}</div></section>`;
     }
 
-    const pageHtml = autoOpen => `<div class="draft">${head()}<div class="dr-bar-row"><nav class="dr-tabs" role="tablist" aria-label="Draft">${TABS.map(([id, l]) => `<button role="tab" data-tab="${id}" aria-selected="${tab === id}">${l}</button>`).join('')}</nav><button class="dr-help" data-tour title="A step-by-step guide to this page" aria-label="How it works">${icon('circle-help')}<span>How it works</span></button></div>
+    const pageHtml = autoOpen => `<div class="draft">${head()}<div class="dr-bar-row"><nav class="dr-tabs sc-toggle" aria-label="Draft">${TABS.map(([id, l]) => `<button type="button" data-tab="${id}" aria-pressed="${tab === id}">${l}</button>`).join('')}</nav><button class="dr-help" data-tour title="A step-by-step guide to this page" aria-label="How it works">${icon('circle-help')}<span>How it works</span></button></div>
         <p class="dr-msg" role="status">${esc(msg)}</p>${tab === 'players' ? playersTab(autoOpen) : { board: boardTab, values: valuesTab }[tab]()}</div>`;
 
     // Typing in a search or filter box: update everything around the box but never the box itself, so it keeps the cursor

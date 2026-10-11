@@ -55,7 +55,7 @@
 .lg-draft .mine .dr-go { background: var(--club, var(--brand)); color: var(--on-club, #fff); }
 
 /* how far the draft has got */
-.dr-track { height: 6px; margin: 20px 0 6px; border-radius: 999px; background: var(--surface-sunk); overflow: hidden; }
+.dr-track { height: 4px; margin: 18px 0 0; border-radius: 999px; background: var(--surface-sunk); overflow: hidden; }
 .dr-track i { display: block; height: 100%; border-radius: inherit; background: var(--brand); }
 .dr-track-l { margin: 0; color: var(--muted); font: 400 var(--fs-s) var(--font); }
 .dr-track-l b { color: var(--text-strong); font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -77,18 +77,13 @@
 
 /* ---------- the three views ---------- */
 .dr-bar-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.lg-draft .dr-tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
-.lg-draft .dr-tabs::-webkit-scrollbar { display: none; }
-.lg-draft .dr-tabs button, .lg-draft .dr-sub button {
-  flex: none; min-height: 36px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--text);
-  cursor: pointer; font: 600 var(--fs-m) var(--font);
-}
-.lg-draft .dr-tabs button[aria-selected="true"], .lg-draft .dr-sub button[aria-pressed="true"] { background: var(--tab-accent, var(--brand)); border-color: transparent; color: #fff; }
-:root:not([data-theme="light"]) .lg-draft .dr-tabs button[aria-selected="true"], :root:not([data-theme="light"]) .lg-draft .dr-sub button[aria-pressed="true"] { color: var(--blue-900, #0d47a1); }
+.lg-draft .dr-tabs, .lg-draft .dr-sub { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+.lg-draft :is(.dr-tabs, .dr-sub)::-webkit-scrollbar { display: none; }
+.dr-bar-row { min-width: 0; }
 .lg-draft .dr-help { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 4px; border: 0; background: none; color: var(--muted); cursor: pointer; font: 600 var(--fs-s) var(--font); }
 .lg-draft .dr-help .ic { width: 18px; height: 18px; }
 .lg-draft .dr-help.glow { color: var(--brand); }
-@media (hover: hover) { .lg-draft .dr-tabs button:not([aria-selected="true"]):hover { background: var(--surface-hover); } .lg-draft .dr-help:hover { color: var(--text); } }
+@media (hover: hover) { .lg-draft .dr-help:hover { color: var(--text); } }
 
 /* ---------- the board ---------- */
 .lg-draft .dr-boardcard { padding-bottom: 0; overflow: hidden; }
@@ -119,8 +114,7 @@
   .lg-draft .dr-sub { display: none; }
 }
 @media (max-width: 991px) {
-  .lg-draft .dr-sub { display: flex; gap: 6px; margin-bottom: 12px; }
-  .lg-draft .dr-sub button { flex: 1; }
+  .lg-draft .dr-sub { margin-bottom: 12px; }
   .lg-draft .dr-avail[data-sub="players"] .dr-side { display: none; }
   .lg-draft .dr-avail[data-sub="queue"] .dr-main, .lg-draft .dr-avail[data-sub="queue"] .dr-autobox { display: none; }
   .lg-draft .dr-avail[data-sub="auto"] .dr-main, .lg-draft .dr-avail[data-sub="auto"] .dr-queue { display: none; }
@@ -133,9 +127,7 @@
 .dr-search input { flex: 1; min-width: 0; border: 0; background: none; color: var(--text); font: 400 var(--fs-m) var(--font); }
 .dr-search input:focus { outline: none; }
 .dr-search:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
-.dr-pos { display: inline-flex; padding: 3px; gap: 2px; border-radius: 999px; background: var(--surface-sunk); border: 1px solid var(--line); }
-.dr-pos button { min-height: 32px; min-width: 44px; padding: 0 10px; border: 0; border-radius: 999px; background: none; color: var(--muted); cursor: pointer; font: 600 var(--fs-s) var(--font); }
-.dr-pos button[aria-pressed="true"] { background: var(--surface); color: var(--text-strong); box-shadow: 0 0 0 1px var(--line); }
+.lg-draft .dr-pos { align-items: center; }
 .dr-max { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 6px 0 14px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); font: 600 var(--fs-s) var(--font); }
 .dr-max input { width: 84px; border: 0; background: none; color: var(--text); font: 400 var(--fs-m) var(--font); font-variant-numeric: tabular-nums; }
 .dr-max input:focus { outline: none; }
@@ -322,3 +314,25 @@
 :root[data-theme="light"] .dr-hollow { -webkit-text-stroke-color: var(--gl, var(--line)); opacity: .32; }
 .dr-st-main, .dr-track, .dr-track-l, .dr-st-small, .lg-draft .dr-budget { position: relative; }
 @media (max-width: 767px) { .dr-hollow { font-size: 3.25rem; top: 4px; right: 10px; } }
+
+/* ---------- tidy-up (user, 11 Oct 2026: too messy, chips not aligned) ---------- */
+.dr-rchip b { font-weight: 700; }
+.dr-paused { margin-top: 2px; font: 600 var(--fs-s) var(--font); }
+.dr-paused .ic { width: 14px; height: 14px; }
+/* your strip: label, the four chips and the money on one line, the bar underneath */
+.lg-draft .dr-you { margin: 16px -16px -16px; padding: 12px 16px 14px; border-top: 1px solid var(--line); background: var(--surface-sunk); }
+.dr-you-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-height: 28px; }
+.dr-you-l { color: var(--text-strong); font: 700 var(--fs-m)/1 var(--font); }
+.dr-you .dr-roster { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.lg-draft .dr-rchip { height: 26px; line-height: 1; }
+.dr-you-money { margin-left: auto; color: var(--muted); font: 400 var(--fs-s)/1 var(--font); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dr-you-money b { color: var(--text-strong); font-weight: 700; }
+.dr-budget.over .dr-you-money b { color: var(--res-l); }
+.lg-draft .dr-you .dr-bar { margin-top: 10px; }
+.lg-draft .dr-st-sub { color: var(--muted); }
+@media (max-width: 767px) { .dr-you-money { margin-left: 0; flex-basis: 100%; } }
+@media (max-width: 767px) { .dr-hollow { opacity: .16; } :root[data-theme="light"] .dr-hollow { opacity: .2; } }
+/* one height for the whole filter row, the same as the toggles beside them */
+.lg-draft :is(.dr-search, .dr-max, .dr-fit) { min-height: 32px; height: 32px; }
+.lg-draft .dr-then select { min-height: 28px; height: 28px; }
+.lg-draft .dr-chip, .lg-draft .dr-chip button { min-height: 28px; height: 28px; }
