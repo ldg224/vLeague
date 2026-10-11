@@ -315,6 +315,18 @@
 /* After the first fade-in, cards made by a redraw (a tab, an arrow) show their silk straight away and carry on moving where the last one was. */
 .lg.topo-ready.silk-seen .lg-card::before { animation: lg-silk-slide 56s ease-in-out var(--fph, 0s) infinite alternate, lg-silk-breathe 24s ease-in-out var(--fph2, 0s) infinite alternate-reverse; }
 @keyframes lg-silk-in { from { opacity: 0; } }
+/* The same white silk on the grey strip under the header (the tab row, or the back row on My club and Settings), so it matches the cards below. */
+.lg-tabs, .lg-backbar { position: relative; isolation: isolate; }
+.lg-tabs::before, .lg-backbar::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: var(--fabric) 100% 100% / 135% 135% no-repeat; opacity: 0;
+}
+.lg.topo-ready .lg-tabs::before, .lg.topo-ready .lg-backbar::before {
+  opacity: 1;
+  animation: lg-silk-in 2.6s cubic-bezier(.22, .61, .36, 1) backwards, lg-silk-slide 56s ease-in-out -20s infinite alternate, lg-silk-breathe 24s ease-in-out -8s infinite alternate-reverse;
+}
+.lg.topo-ready.silk-seen .lg-tabs::before, .lg.topo-ready.silk-seen .lg-backbar::before { animation: lg-silk-slide 56s ease-in-out -20s infinite alternate, lg-silk-breathe 24s ease-in-out -8s infinite alternate-reverse; }
+
 @keyframes lg-silk-slide { from { background-position: 100% 100%; } to { background-position: 0% 0%; } }
 @keyframes lg-silk-breathe { from { background-size: 135% 135%; } to { background-size: 150% 150%; } }
 @media (prefers-reduced-motion: reduce) { .lg.topo-ready .lg-card::before { animation: none; background-position: 50% 50%; } :root:not([data-theme="light"]) .lg-card { animation: none; --gx: var(--gx0, 20%); --gy: var(--gy0, 20%); } }

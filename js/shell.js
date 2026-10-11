@@ -44,6 +44,12 @@ function drawSubFrame(place, me, club) {
   if (!el || place === 'league') return;
   document.body.classList.toggle('has-club', Boolean(club));
   mountSubFrame(el, { office: me?.profile?.role === 'office', crest: club?.crest_path ? crestUrl(club.crest_path) : '', here: place === 'settings' ? 'settings' : 'club', title: document.body.dataset.title || PAGE_TITLES[place] || '' });
+  // The contour lines and the silk fade in once their pictures are loaded, as on the league page (js/league.js).
+  if (!document.body.classList.contains('topo-ready')) {
+    Promise.all(['assets/img/topo.png', 'assets/img/fabric.png'].map(src => { const i = new Image(); i.src = src; return i.decode().catch(() => {}); }))
+      .then(() => requestAnimationFrame(() => document.body.classList.add('topo-ready')));
+    setTimeout(() => document.body.classList.add('silk-seen'), 3500);
+  }
 }
 
 // ctx = { me: { user, profile }, club, season, team, prefs, main } or null if the visitor was sent elsewhere.
