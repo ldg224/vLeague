@@ -24,8 +24,8 @@ import { VERSION } from './version.js';
 const params = new URLSearchParams(location.search);
 const preview = ['localhost', '127.0.0.1'].includes(location.hostname) && params.has('preview');
 
-// The contour lines fade in once the picture is loaded, instead of popping in half way through the page loading.
-(() => { const i = new Image(); i.src = 'assets/img/topo.png'; return i.decode().catch(() => {}); })()
+// The contour lines and the silk in the cards fade in once their pictures are loaded, instead of popping in half way through the page loading.
+Promise.all(['assets/img/topo.png', 'assets/img/fabric.png'].map(src => { const i = new Image(); i.src = src; return i.decode().catch(() => {}); }))
   .then(() => requestAnimationFrame(() => document.body.classList.add('topo-ready')));
 
 let ctx;
@@ -124,6 +124,12 @@ if (ctx) {
     c.style.setProperty('--gy', `${r(8) < .5 ? Math.round(r(16) * 25) : 100 - Math.round(r(16) * 25)}%`);
     c.style.setProperty('--ga', `${Math.round(r(24) * 360)}deg`);
     if (r(5) < .34) c.style.setProperty('--gt', 'var(--club, #fff)');
+    // The silk: its own point in the slide and the breathing (negative delays start it part-way through), flipped or not, and a staggered fade-in.
+    c.style.setProperty('--fph', `${-Math.round(r(3) * 56)}s`);
+    c.style.setProperty('--fph2', `${-Math.round(r(11) * 24)}s`);
+    c.style.setProperty('--fsx', r(19) < .5 ? '1' : '-1');
+    c.style.setProperty('--fsy', r(27) < .5 ? '1' : '-1');
+    c.style.setProperty('--fdl', `${Math.round(r(13) * 600)}ms`);
   });
 
   // ---- The table (WR-11 to WR-14) ----

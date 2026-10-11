@@ -173,8 +173,10 @@
 .lg-content { display: grid; gap: 16px; align-content: start; flex: 1; }
 .lg-card {
   min-width: 0; padding: 16px 20px 20px;
-  background: var(--sheen), var(--fabric) center / cover no-repeat, var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
+  background: var(--sheen), var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
 }
+/* The silk (below) lives in the card's ::before so it can move. */
+.lg-card { position: relative; isolation: isolate; }
 /* A faint sheen on every card so the dark greys aren't plain (user, 11 Oct 2026): a soft glow from one random corner and a slow
    fall to a touch darker, in white or (now and then) the club colour. Each card gets its own angle, spot and tint from js/league.js
    (always the same ones for the same card). Dark theme only: on light the layers are empty. */
@@ -266,3 +268,25 @@
 @keyframes lg-topo-breathe { from { transform: scale(1) rotate(0deg); } to { transform: scale(1.06) rotate(.6deg); } }
 @keyframes lg-topo-drift { to { background-position: 700px 350px; } }
 @media (prefers-reduced-motion: reduce) { .lg::before { animation: none; } .lg::before { transition: none; } }
+
+/* White silk in every dark card (user, 11 Oct 2026): the picture is a bit bigger than the card and slowly slides the opposite way to the
+   contour lines (up and to the left, where they drift down and to the right), breathing the opposite way too. Each card starts at its own
+   point of the slide and may be flipped (js/league.js sets --fph, --fph2, --fsx, --fsy, --fdl), so no two look alike. It fades in once the
+   picture is loaded (the same moment as the contour lines), so loading never looks odd. Still when reduced motion is on. */
+.lg-card::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  background: var(--fabric) 100% 100% / 135% 135% no-repeat;
+  transform: scale(var(--fsx, 1), var(--fsy, 1));
+  opacity: 0;
+}
+.lg.topo-ready .lg-card::before {
+  opacity: 1;
+  animation:
+    lg-silk-in 2.6s cubic-bezier(.22, .61, .36, 1) var(--fdl, 0s) backwards,
+    lg-silk-slide 56s ease-in-out var(--fph, 0s) infinite alternate,
+    lg-silk-breathe 24s ease-in-out var(--fph2, 0s) infinite alternate-reverse;
+}
+@keyframes lg-silk-in { from { opacity: 0; } }
+@keyframes lg-silk-slide { from { background-position: 100% 100%; } to { background-position: 0% 0%; } }
+@keyframes lg-silk-breathe { from { background-size: 135% 135%; } to { background-size: 150% 150%; } }
+@media (prefers-reduced-motion: reduce) { .lg.topo-ready .lg-card::before { animation: none; background-position: 50% 50%; } }
