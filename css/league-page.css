@@ -22,8 +22,26 @@
 :root[data-theme="light"] .lg.has-club { background: color-mix(in oklab, var(--club) 9%, var(--bg)); }
 /* Your club in the header: the top of the header card washed in the club's colour (the tabs below stay neutral), and the
    Club button filled with it. */
-.lg.has-club .lg-head { background: color-mix(in oklab, var(--club) 16%, var(--surface)); }
-:root[data-theme="light"] .lg.has-club .lg-head { background: color-mix(in oklab, var(--club) 11%, var(--surface)); }
+.lg.has-club .lg-head {
+  /* The user's call (11 Oct 2026): a deep club-colour panel, darkest at the left, with a radial glow of the club colour
+     from the top right. The same in both themes; text on it is white. */
+  --club-darkest: color-mix(in oklab, var(--club) 22%, #000);
+  --club-deep: color-mix(in oklab, var(--club) 82%, #000);
+  background:
+    radial-gradient(90% 160% at 100% 0%, var(--club-deep) 0%, transparent 70%),
+    var(--club-darkest);
+  color: #fff;
+}
+.lg.has-club .lg-head .lg-title { color: #fff; }
+.lg.has-club .lg-head .lg-season { color: rgba(255, 255, 255, .72); }
+.lg.has-club .lg-head .lg-tool { border-color: rgba(255, 255, 255, .22); color: #fff; }
+.lg.has-club .lg-head .lg-tool .ic { color: rgba(255, 255, 255, .8); }
+.lg.has-club .lg-head .lg-tool.is-club { box-shadow: 0 0 0 1px rgba(255, 255, 255, .28); }
+.lg.has-club .lg-head :focus-visible { outline-color: #fff; }
+@media (hover: hover) and (pointer: fine) {
+  .lg.has-club .lg-head .lg-tool:not(.is-club):hover { background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .4); }
+  .lg.has-club .lg-head .lg-season:hover { color: #fff; background: rgba(255, 255, 255, .1); }
+}
 .lg.has-club .lg-tool.is-club { background: var(--club); border-color: transparent; color: var(--on-club); }
 .lg.has-club .lg-tool.is-club .ic { color: currentColor; }
 
