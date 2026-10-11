@@ -81,9 +81,15 @@ function team(fx, side, ctx, live, hid, edge) {
   const reds = hid ? 0 : live ? live.reds[side] : redCount(fx, code);
   const marks = reds ? `<span class="fx-reds" aria-label="${reds === 1 ? 'Sent off' : `${reds} sent off`}">${'<i></i>'.repeat(Math.min(reds, 3))}</span>` : '';
   const name = `<span class="fx-name${ctx.mine === code ? ' is-mine' : ''}"><b class="fx-full">${esc(club?.name || code)}</b><b class="fx-short">${esc(club?.short_name || club?.name || code)}</b></span>`;
-  const crest = ctx.crest(code, 32);
+  const crest = ctx.crest(code, 40);
   return side === 'home' ? `<span class="fx-team is-home${edge}">${name}${marks}${crest}</span>` : `<span class="fx-team is-away${edge}">${crest}${marks}${name}</span>`;
 }
+
+// The club's name in huge hollow capitals behind its half of the row (decoration only; the real name is in the foreground).
+const ghost = (code, side, ctx) => {
+  const club = ctx.club(code);
+  return `<span class="fx-ghost is-${side}" aria-hidden="true"><b class="fx-full">${esc(club?.name || code)}</b><b class="fx-short">${esc(club?.short_name || club?.name || code)}</b></span>`;
+};
 
 // opts.forTeam: a club code, to show that club's result letter (W, D, L) at the row's end.
 export function rowHtml(fx, season, ctx, opts = {}) {
@@ -114,7 +120,7 @@ export function rowHtml(fx, season, ctx, opts = {}) {
   const label = `${home} against ${away}`;
   const mine = ctx.mine && (fx.home === ctx.mine || fx.away === ctx.mine);
   const ground = ctx.venue?.(fx.home);
-  return `<li class="fx-row is-${st}${mine ? ' has-mine' : ''}${opts.forTeam ? ' with-res' : ''}" style="${hues(ctx, fx)}"><a href="${esc(matchUrl(fx))}" aria-label="${esc(label)}">${tag}${team(fx, 'home', ctx, live, hid, edge[0])}<span class="fx-mid">${mid}</span>${team(fx, 'away', ctx, live, hid, edge[1])}<span class="fx-venue">${ground ? esc(ground) : ''}</span>${res}</a></li>`;
+  return `<li class="fx-row is-${st}${mine ? ' has-mine' : ''}${opts.forTeam ? ' with-res' : ''}" style="${hues(ctx, fx)}"><a href="${esc(matchUrl(fx))}" aria-label="${esc(label)}">${ghost(fx.home, 'home', ctx)}${ghost(fx.away, 'away', ctx)}${tag}${team(fx, 'home', ctx, live, hid, edge[0])}<span class="fx-mid">${mid}</span>${team(fx, 'away', ctx, live, hid, edge[1])}<span class="fx-venue">${ground ? esc(ground) : ''}</span>${res}</a></li>`;
 }
 
 // ---------- groups ----------
