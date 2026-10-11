@@ -145,7 +145,7 @@
 @media (min-width: 640px) { .lg-trio { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (min-width: 992px) { .lg-cols { grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); } }
 
-.lg-foot { display: flex; justify-content: center; font-size: .75rem; }
+.lg-foot { display: flex; justify-content: center; gap: 16px; font-size: .75rem; }   /* version, and the Icons8 credit their free licence asks for */
 .lg-foot a { color: var(--faint); text-decoration: none; }
 
 /* ---------- Phones ---------- */
