@@ -240,3 +240,17 @@
 }
 /* The three stat-leader cards sit side by side in a narrow column: a smaller title so "TOP SCORERS" stays on one line. */
 @media (min-width: 992px) and (max-width: 1179px) { .lg-trio .lg-card { padding-inline: 16px; } }
+
+/* Topographic lines behind everything (user, 11 Oct 2026): the white contour tile, very faint, drifting and breathing slowly.
+   The layer is larger than the screen and the tile repeats, so no edge ever shows; it sits under the cards. Still when reduced motion is on. */
+.lg { position: relative; isolation: isolate; }
+.lg::before {
+  content: ""; position: fixed; inset: -12%; z-index: -1; pointer-events: none;
+  background: url("../assets/img/topo.png") 0 0 / 700px 700px repeat;
+  opacity: .1;
+  animation: lg-topo-breathe 24s ease-in-out infinite alternate, lg-topo-drift 90s linear infinite;
+}
+:root[data-theme="light"] .lg::before { opacity: .5; }
+@keyframes lg-topo-breathe { from { transform: scale(1) rotate(0deg); } to { transform: scale(1.06) rotate(.6deg); } }
+@keyframes lg-topo-drift { to { background-position: 700px 350px; } }
+@media (prefers-reduced-motion: reduce) { .lg::before { animation: none; } }
