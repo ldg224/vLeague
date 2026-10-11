@@ -31,18 +31,6 @@
 
 /* ---------- this round: the deadline, the save state, Submit ---------- */
 .ts { display: grid; gap: 16px; }
-.ts-top { display: grid; gap: 14px; }
-.ts-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin: 0; }
-.ts-deadline { margin: 0; color: var(--muted); font: 400 var(--fs-m) var(--font); }
-.ts-deadline b { color: var(--text-strong); font-weight: 700; }
-.ts-deadline .left { color: var(--amber-text, var(--amber)); font-weight: 700; white-space: nowrap; }
-.ts-save { display: inline-flex; align-items: center; gap: 10px; color: var(--muted); font: 600 var(--fs-s) var(--font); }
-.ts-save span { display: inline-flex; align-items: center; gap: 7px; }
-.ts-save span::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
-.ts-save.is-saved span::before { background: var(--res-w); }
-.ts-save:is(.is-dirty, .is-saving, .is-new) span::before { background: var(--amber); }
-.ts-save:is(.is-error, .is-error-load) span::before { background: var(--res-l); }
-.ts-save.is-error { color: var(--text); }
 .lg-sub .save-btn { min-height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--brand-grad, var(--brand)); color: #fff; cursor: pointer; font: 600 var(--fs-s) var(--font); }
 .ts-submit { display: grid; gap: 10px; margin: 0; padding: 0; border: 0; background: none; }
 .lg-sub .ts-submit-btn {
@@ -70,19 +58,39 @@
 .ts-sub-actions { display: flex; align-items: center; gap: 14px; }
 .ts-sub-actions .ts-submit-btn { flex: 1; }
 
-/* ---------- line-up and the cards beside it ---------- */
+/* ---------- the stage: ticket, pitch, one panel ---------- */
 .ts-grid { display: grid; gap: 16px; align-items: start; }
-.ts-left, .ts-right { min-width: 0; }
-.ts-right { display: grid; gap: 16px; }
+.ts-ticket, .ts-left, .ts-panel { min-width: 0; }
 @media (min-width: 992px) {
-  .ts-grid { grid-template-columns: minmax(0, 460px) minmax(0, 1fr); }
-  .ts-left { position: sticky; top: 16px; }
+  .ts-grid { grid-template-columns: minmax(0, 460px) minmax(0, 1fr); grid-template-areas: "pitch ticket" "pitch panel"; grid-template-rows: auto 1fr; }
+  .ts-ticket { grid-area: ticket; } .ts-left { grid-area: pitch; position: sticky; top: 16px; } .ts-panel { grid-area: panel; }
 }
+.ts-tabs { margin: 0 0 12px; }
+.ts:not(.picking) .pls-sect .sect-head { display: none; }
+.ts-more { margin: 12px 0 0; }
+
+/* the matchday ticket: the countdown to the lock is the headline, the stub below the perforation is Submit */
+.ts-ticket { position: relative; display: grid; gap: 0; padding: 0; overflow: hidden; }
+.ts-match { padding: 16px 16px 20px; }
+.ts-stub { position: relative; display: grid; gap: 12px; margin: 0 14px; padding: 18px 2px 16px; border-top: 1px dashed color-mix(in oklab, var(--text) 28%, transparent); }
+.ts-stub::before, .ts-stub::after { content: ''; position: absolute; top: -10px; width: 20px; height: 20px; border-radius: 50%; background: var(--bg); box-shadow: inset 0 0 0 1px var(--line); }
+.ts-stub::before { left: -24px; } .ts-stub::after { right: -24px; }
+.ts-deadline { display: grid; gap: 4px; margin: 0; color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.ts-deadline b { color: var(--text-strong); font: 900 1.75rem/1 var(--font-display); font-stretch: 125%; text-transform: uppercase; font-variant-numeric: tabular-nums; }
+.ts-deadline.soon b { color: var(--amber-text, var(--amber)); }
+.ts-save { display: inline-flex; align-items: center; gap: 10px; color: var(--muted); font: 600 var(--fs-s) var(--font); }
+.ts-save span { display: inline-flex; align-items: center; gap: 7px; }
+.ts-save span::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+.ts-save.is-saved span::before { background: var(--res-w); }
+.ts-save:is(.is-dirty, .is-saving, .is-new) span::before { background: var(--amber); }
+.ts-save:is(.is-error, .is-error-load) span::before { background: var(--res-l); }
+.ts-save.is-error { color: var(--text); }
 .lg-sub .formations { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; padding: 0; border: 0; background: none; border-radius: 0; }
 .lg-sub .sc-toggle button[aria-checked="true"], .lg-sub .sc-toggle button[aria-selected="true"] { background: var(--tab-accent, var(--blue-700)); color: #fff; }
 :root:not([data-theme="light"]) .lg-sub .sc-toggle button:is([aria-checked="true"], [aria-selected="true"]) { color: var(--blue-900, #0d47a1); }
-.ts-clear { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.ts-clear { display: flex; align-items: center; gap: 8px; color: var(--muted); font: 400 var(--fs-s) var(--font); }
 .ts-pitch { max-width: 440px; margin: 0 auto; }
+.ts-clear { margin-top: 12px; justify-content: center; }
 .ts-pick { display: flex; justify-content: space-between; align-items: center; gap: 10px; max-width: 440px; margin: 12px auto 0; padding: 10px 14px; border-radius: var(--r-sm); background: color-mix(in oklab, var(--brand) 12%, var(--surface-sunk)); color: var(--text); font: 400 var(--fs-m) var(--font); }
 .ts-pick[hidden] { display: none; }
 .ts-pick b { color: var(--text-strong); }
@@ -103,6 +111,8 @@
 
 /* players */
 .pls-close { display: none; }
+.pls-sect .sect-head { display: flex; align-items: center; justify-content: space-between; margin: 0 0 4px; }
+.pls-sect .sect-head h2 { margin: 0; font: 600 var(--fs-s) var(--font); letter-spacing: 0; text-transform: none; color: var(--muted); }
 .pls { list-style: none; margin: 0 -16px; padding: 0; }
 .pls li + li { border-top: 1px solid var(--line); }
 .pl { width: 100%; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; min-height: 52px; padding: 6px 16px; border: 0; border-radius: 0; background: none; color: var(--text); text-align: left; cursor: pointer; font: 400 var(--fs-m) var(--font); }
@@ -121,9 +131,10 @@
 @media (max-width: 991px) {
   .ts.picking .pls-sect {
     position: fixed; z-index: 30; left: 0; right: 0; bottom: 0; max-height: 62vh; overflow-y: auto; margin: 0;
-    padding-bottom: calc(16px + env(safe-area-inset-bottom)); border-radius: var(--r-lg) var(--r-lg) 0 0; box-shadow: 0 -12px 40px rgba(0, 0, 0, .45);
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); background: var(--surface); border-radius: var(--r-lg) var(--r-lg) 0 0; box-shadow: 0 -12px 40px rgba(0, 0, 0, .45);
   }
   .ts.picking .pls-sect .sect-head { position: sticky; top: -16px; z-index: 1; margin: -16px -16px 8px; padding: 16px; background: var(--surface); }
+  .ts.picking .pls-sect .sect-head h2 { font: 700 var(--fs-m) var(--font); color: var(--text-strong); }
   .ts.picking .pls-close { display: inline; }
 }
 /* drag and drop */
@@ -194,6 +205,9 @@
   .club-acts { width: 100%; }
   .club-acts a { flex: 1; justify-content: center; }
   .pieces { grid-template-columns: 1fr; }
+  .ts-deadline b { font-size: 1.5rem; }
+  .ts-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .lg-sub .ts-tabs button { padding: 0 2px; letter-spacing: 0; min-width: 0; }
   .pl { grid-template-columns: 36px minmax(0, 1fr) auto; }
   .pl-rts { display: none; }
 }
@@ -224,7 +238,6 @@
 .tm-v { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--surface-sunk); color: var(--muted); font: 900 var(--fs-m)/1 var(--font-display); font-stretch: 125%; text-transform: uppercase; }
 .tm-when { color: var(--text); font: 600 var(--fs-s) var(--font); white-space: nowrap; }
 .ts-nomatch { margin: 0; color: var(--muted); font: 400 var(--fs-m) var(--font); text-align: center; }
-.ts-top .ts-deadline { font-size: var(--fs-s); }
 @media (max-width: 767px) { .tm-crest { width: 44px; height: 44px; } .tm-row { gap: 8px; } .tm-side b { font-size: var(--fs-m); } }
 /* the pitch's labels on the type scale (pitch.css sizes them to the pitch's width, which gave in-between sizes) */
 .lg-sub .pt-disc { font-size: var(--fs-xs); }

@@ -179,27 +179,40 @@ async function teamSheet(box, { club, squad, userId, season }) {
   let picking = false, pickWeek = null, subBusy = false, subMsg = '';
 
   box.innerHTML = `<div class="ts">
-    <section class="lg-card ts-top" aria-label="Your next match">
-      <div class="ts-match" id="match"></div>
-      <div class="ts-bar"><p class="ts-deadline" id="deadline"></p><div class="ts-save" id="save" aria-live="polite"></div></div>
-      ${subRes.error ? '' : '<div class="ts-submit" id="submit"></div>'}
-    </section>
     <div class="ts-grid">
+      <section class="lg-card ts-ticket" aria-label="Your next match">
+        <div class="ts-match" id="match"></div>
+        <div class="ts-stub">
+          <p class="ts-deadline" id="deadline"></p>
+          ${subRes.error ? '' : '<div class="ts-submit" id="submit"></div>'}
+          <div class="ts-save" id="save" aria-live="polite"></div>
+        </div>
+      </section>
       <section class="lg-card ts-left" aria-label="Line-up">
-        <div class="lg-card-head"><h2>Line-up</h2><div class="ts-clear" id="clear"></div></div>
         <div class="formations sc-toggle" role="radiogroup" aria-label="Formation">${Object.keys(FORMATIONS).map(f => `<button type="button" role="radio" data-f="${f}">${f}</button>`).join('')}</div>
         <div id="pitch" class="ts-pitch"></div>
         <p class="ts-pick" id="pick" hidden></p>
+        <div class="ts-clear" id="clear"></div>
       </section>
-      <div class="ts-right">
-        <section class="lg-card sect pls-sect"><div class="lg-card-head sect-head"><h2 id="pls-title">Players</h2><button type="button" class="link-btn pls-close" data-cancel>Cancel</button></div><ul class="pls" id="players"></ul></section>
-        <section class="lg-card sect"><div class="lg-card-head"><h2>Set pieces</h2></div><div class="pieces" id="pieces"></div></section>
-        <section class="lg-card sect"><div class="lg-card-head"><h2>Kit</h2><a class="link-btn" href="kits.html">Design kits</a></div><div id="kitpick"></div></section>
-        <section class="lg-card sect"><div class="lg-card-head"><h2>Tactics</h2></div><div id="tactics"></div></section>
-      </div>
+      <section class="lg-card ts-panel" aria-label="Team details">
+        <div class="ts-tabs sc-toggle" role="tablist" aria-label="Team details">${[['players', 'Players'], ['pieces', 'Set pieces'], ['kit', 'Kit'], ['tactics', 'Tactics']].map(([k, n], i) => `<button type="button" role="tab" id="pt-${k}" data-ptab="${k}" aria-controls="pp-${k}" aria-selected="${i === 0}" aria-pressed="${i === 0}"${i ? ' tabindex="-1"' : ''}>${n}</button>`).join('')}</div>
+        <div class="pls-sect" id="pp-players" role="tabpanel" aria-labelledby="pt-players"><div class="sect-head"><h2 id="pls-title">Players</h2><button type="button" class="link-btn pls-close" data-cancel>Cancel</button></div><ul class="pls" id="players"></ul></div>
+        <div id="pp-pieces" role="tabpanel" aria-labelledby="pt-pieces" hidden><div class="pieces" id="pieces"></div></div>
+        <div id="pp-kit" role="tabpanel" aria-labelledby="pt-kit" hidden><div id="kitpick"></div><p class="ts-more"><a class="link-btn" href="kits.html">Design kits</a></p></div>
+        <div id="pp-tactics" role="tabpanel" aria-labelledby="pt-tactics" hidden><div id="tactics"></div></div>
+      </section>
     </div>
     <div id="locked"></div>
   </div>`;
+
+  // The panel beside the pitch: one card, four tabs. Picking a spot on the pitch brings the players back.
+  function showPanel(k) {
+    for (const t of box.querySelectorAll('[data-ptab]')) {
+      const on = t.dataset.ptab === k;
+      t.setAttribute('aria-selected', on); t.setAttribute('aria-pressed', on); t.tabIndex = on ? 0 : -1;
+      $(`#pp-${t.dataset.ptab}`, box).hidden = !on;
+    }
+  }
 
   // ----- drawing -----
 
@@ -212,6 +225,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
     const pick = $('#pick', box), p = sel?.player && byId.get(sel.player);
     pick.hidden = !sel;
     box.querySelector('.ts').classList.toggle('picking', Boolean(sel?.slot));
+    if (sel?.slot) showPanel('players');
     $('#pls-title', box).textContent = sel?.slot ? `Pick for ${sel.slot}` : 'Players';
     if (sel) pick.innerHTML = `<span>${sel.slot ? `Pick a player for <b>${esc(sel.slot)}</b>` : `Pick a place for <b>${esc(p?.name || '')}</b>`}</span><button type="button" class="link-btn" data-cancel>Cancel</button>`;
   }
@@ -293,8 +307,10 @@ async function teamSheet(box, { club, squad, userId, season }) {
   function drawDeadline(now = new Date()) {
     const next = deadlines.find(d => new Date(d.locks_at) > now), el = $('#deadline', box);
     if (!next) { el.textContent = 'No deadline set'; return; }
-    const at = new Date(next.locks_at);
-    el.innerHTML = `Team sheet locks <b>${esc(when(at, now))}</b>${at - now < 86400000 ? ` <span class="left">${esc(left(at, now))}</span>` : ''}`;
+    const at = new Date(next.locks_at), m = Math.ceil((at - now) / 60000), d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60);
+    const count = d ? `${d} d ${h} h` : h ? `${h} h ${m % 60} min` : `${m} min`;
+    el.className = `ts-deadline${m < 1440 ? ' soon' : ''}`;
+    el.innerHTML = `<span>Team sheet locks ${esc(when(at, now))}</span><b>${esc(count)}</b>`;
   }
 
   // The last week that locked: the sheet the database copied for it (or why there's none).
@@ -498,6 +514,8 @@ async function teamSheet(box, { club, squad, userId, season }) {
 
   box.addEventListener('click', e => {
     const t = e.target;
+    const pt = t.closest('[data-ptab]');
+    if (pt) { showPanel(pt.dataset.ptab); return; }
     const f = t.closest('[data-f]'), pl = t.closest('.pl'), pr = t.closest('[data-preset]'), st = t.closest('[data-tac]');
     if (f) {
       if (f.dataset.f === sheet.formation) return;
@@ -525,6 +543,12 @@ async function teamSheet(box, { club, squad, userId, season }) {
     else if (t.closest('[data-sub-cancel]')) { picking = false; subMsg = ''; drawSubmit(); $('#submit .ts-submit-btn', box)?.focus(); }
     else if (t.closest('[data-sub-go]')) submitFor(pickWeek);
     else if (t.closest('[data-withdraw]')) { e.preventDefault(); withdraw(Number(t.closest('[data-withdraw]').dataset.withdraw)); }
+  });
+  box.addEventListener('keydown', e => {
+    const t = e.target.closest?.('[data-ptab]');
+    if (!t || !['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+    const all = [...box.querySelectorAll('[data-ptab]')], n = all[(all.indexOf(t) + (e.key === 'ArrowRight' ? 1 : all.length - 1)) % all.length];
+    showPanel(n.dataset.ptab); n.focus();
   });
   box.addEventListener('change', e => {
     if (e.target.name === 'sub-week') { pickWeek = Number(e.target.value); drawSubmit(); $('#submit input[name="sub-week"]:checked', box)?.focus(); return; }
