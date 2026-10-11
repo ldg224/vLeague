@@ -135,7 +135,16 @@
 
 /* The Stats tab around the cards. */
 .sc-section { display: grid; gap: 20px; }
-.sc-title { margin: 8px 4px 0; font: 700 var(--fs-l)/1.2 var(--font); color: var(--text-strong); }
+.sc-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin: 8px 4px 0; }
+.sc-title { margin: 0; font: 700 var(--fs-xl)/1.1 var(--font-display, var(--font)); font-stretch: 125%; text-transform: uppercase; color: var(--text-strong); }
+.sc-toggle { display: flex; gap: 8px; }
+.sc-toggle a {
+  display: inline-flex; align-items: center; height: 32px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--tab-accent, var(--blue-700));
+  color: var(--tab-accent, var(--blue-700)); font: 600 var(--fs-s) var(--font); text-decoration: none; white-space: nowrap;
+}
+.sc-toggle a[aria-current="true"] { background: var(--tab-accent, var(--blue-700)); color: #fff; }
+:root:not([data-theme="light"]) .sc-toggle a[aria-current="true"] { color: var(--blue-900, #0d47a1); }
+.sc-toggle a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .sc-none { min-height: 240px; display: grid; }
 .sc-demo {
   margin: 0; padding: 10px 14px; border: 1px dashed var(--line); border-radius: var(--r-lg); color: var(--muted); font-size: var(--fs-s);

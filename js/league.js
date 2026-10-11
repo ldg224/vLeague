@@ -99,8 +99,9 @@ if (ctx) {
     if (!data.players.length && demo == null) {
       return `<section class="lg-card sc-none"><div class="sc-empty"><b>No matches played yet</b><span>Player and team stats appear here as the season is played.</span></div></section>`;
     }
-    return `${note}<div class="sc-section"><h2 class="sc-title">Player stats</h2>${grid('player', data)}</div>
-      <div class="sc-section"><h2 class="sc-title">Team stats</h2>${grid('team', data)}</div>`;
+    const team = sub === 'team', kind = team ? 'team' : 'player';
+    const toggle = `<nav class="sc-toggle" aria-label="Stats of"><a href="#stats"${team ? '' : ' aria-current="true"'}>Player stats</a><a href="#stats/team"${team ? ' aria-current="true"' : ''}>Team stats</a></nav>`;
+    return `${note}<div class="sc-section"><div class="sc-head"><h2 class="sc-title">${team ? 'Team stats' : 'Player stats'}</h2>${toggle}</div>${grid(kind, data)}</div>`;
   };
 
   const VIEWS = {

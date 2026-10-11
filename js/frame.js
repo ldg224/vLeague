@@ -135,11 +135,20 @@ export function mountFrame(el, { office = false, draft = false, crest = '', onTa
   paintSeason();
   const relayout = () => place(strip.querySelector('[aria-current]'), false);
   // A new tab or a new stat starts at the top; switching position or season on the same stat page keeps your place.
-  let shown = here();
+  // Leaving a full stat list (Back, or the arrow in the browser) returns to where the page was scrolled before it was opened.
+  let shown = here(), lastY = scrollY;
+  const spots = new Map(), key = h => `${h.id}/${h.sub}`, isList = h => h.id === 'stats' && !['', 'team'].includes(h.sub.split('/')[0]);
+  addEventListener('scroll', () => { lastY = scrollY; }, { passive: true });
   addEventListener('hashchange', () => {
     const now = here();
+    spots.set(key(shown), lastY);
     show(true);
-    if (now.id !== shown.id || now.sub.split('/')[0] !== shown.sub.split('/')[0]) scrollTo(0, 0);
+    if (isList(shown) && !isList(now) && spots.has(key(now))) {
+      const y = spots.get(key(now));
+      scrollTo(0, y);
+      requestAnimationFrame(() => scrollTo(0, y));
+    } else if (now.id !== shown.id || now.sub.split('/')[0] !== shown.sub.split('/')[0]) scrollTo(0, 0);
+    lastY = scrollY;
     shown = now;
   });
   addEventListener('resize', relayout);
