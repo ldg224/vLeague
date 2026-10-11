@@ -153,7 +153,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
       </div>
     </dialog>
     <dialog autofocus tabindex="-1" class="dlg" id="dlg-piece" aria-labelledby="dlg-piece-t">
-      <div class="dlg-head"><h2 id="dlg-piece-t">Captain</h2><button type="button" class="dlg-done" data-close>Cancel</button></div>
+      <div class="dlg-head"><h2 id="dlg-piece-t">Captain</h2><button type="button" class="dlg-done dlg-quiet" data-close>Cancel</button></div>
       <div class="dlg-body"><ul class="pk" id="piece-list"></ul></div>
     </dialog>
     <dialog autofocus tabindex="-1" class="dlg" id="dlg-tactics" aria-labelledby="dlg-tactics-t">
@@ -279,7 +279,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
       <ul class="pk">${Object.keys(PRESETS).map(n => `<li><button type="button" class="pk-row" data-preset="${esc(n)}" aria-pressed="${n === preset}"><span class="pk-name">${esc(n)}<small>${esc(STYLE_NOTE[n] || '')}</small></span></button></li>`).join('')}</ul>
       <p class="tac-sub tac-fine">Fine-tune${preset ? '' : ' <b>Custom</b>'}</p>
       ${TACTICS.map(t => `<div class="tac"><div class="tac-head"><span id="tac-${t.key}">${t.label}</span><b>${word(t, sheet.tactics[t.key])}</b></div>
-        <div class="dots" role="radiogroup" aria-labelledby="tac-${t.key}">${STEPS.map(v => `<button type="button" role="radio" data-tac="${t.key}" data-v="${v}" aria-checked="${sheet.tactics[t.key] === v}" aria-label="${esc(word(t, v))}"></button>`).join('')}</div>
+        <div class="dots" data-dial="${t.key}" style="--v:${sheet.tactics[t.key]}" role="radiogroup" aria-labelledby="tac-${t.key}"><i class="thumb" aria-hidden="true"></i>${STEPS.map(v => `<button type="button" role="radio" data-tac="${t.key}" data-v="${v}" aria-checked="${sheet.tactics[t.key] === v}" aria-label="${esc(word(t, v))}"></button>`).join('')}</div>
         <div class="tac-ends" aria-hidden="true"><span>${t.lo}</span><span>${t.hi}</span></div></div>`).join('')}`;
   }
 
@@ -508,6 +508,33 @@ async function teamSheet(box, { club, squad, userId, season }) {
   box.addEventListener('pointercancel', endDrag);
   // A drag ends in a click on whatever it started on; that click shouldn't also pick.
   box.addEventListener('click', e => { if (dragged) { e.stopPropagation(); e.preventDefault(); } }, true);
+
+  // The tactics dials: drag the dot along its line (it snaps to the nearest of five on release); a tap or the arrow keys also work.
+  let dial = null;
+  function dialAt(e) {
+    const r = dial.el.getBoundingClientRect(), v = Math.min(1, Math.max(0, (e.clientX - r.left - r.width * 0.1) / (r.width * 0.8)));
+    dial.el.style.setProperty('--v', v);
+    const snapped = STEPS[Math.round(v * 4)];
+    if (snapped !== sheet.tactics[dial.key]) {
+      sheet.tactics[dial.key] = snapped; changed();
+      const t = TACTICS.find(x => x.key === dial.key), head = dial.el.closest('.tac').querySelector('.tac-head b');
+      head.textContent = word(t, snapped);
+      dial.el.querySelectorAll('[data-v]').forEach(b => b.setAttribute('aria-checked', Number(b.dataset.v) === snapped));
+    }
+  }
+  box.addEventListener('pointerdown', e => {
+    const el = e.target.closest('.dots'); if (!el || e.button !== 0) return;
+    dial = { el, key: el.dataset.dial, pid: e.pointerId }; el.classList.add('drag'); el.setPointerCapture(e.pointerId); dialAt(e);
+  });
+  box.addEventListener('pointermove', e => { if (dial && e.pointerId === dial.pid) dialAt(e); });
+  const dialEnd = e => { if (!dial || e.pointerId !== dial.pid) return; const k = dial.key; dial = null; drawTactics(); };
+  box.addEventListener('pointerup', dialEnd); box.addEventListener('pointercancel', dialEnd);
+  box.addEventListener('keydown', e => {
+    const b = e.target.closest?.('[data-tac]'); if (!b || !['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+    e.preventDefault();
+    const i = Math.min(4, Math.max(0, STEPS.indexOf(sheet.tactics[b.dataset.tac]) + (e.key === 'ArrowRight' ? 1 : -1)));
+    sheet.tactics[b.dataset.tac] = STEPS[i]; changed(); drawTactics(); box.querySelector(`[data-tac="${b.dataset.tac}"][data-v="${STEPS[i]}"]`)?.focus();
+  });
 
   box.addEventListener('click', e => {
     const t = e.target;
