@@ -1,0 +1,116 @@
+/* The league page (website revamp, WR-03): a FotMob-style frame. A header card with the league and the tabs, then cards on a
+   quiet grey page. vLeague blue is the league's accent (active tab, season, links); the manager's club colour is only a faint
+   tinge on the page behind the cards. Rules: the vleague-design skill. */
+
+.lg {
+  /* The club accent for the current theme (set in js/shell.js paintClub; vLeague blue when there's no club). */
+  --club-accent: var(--club-accent-dark, var(--blue-300));
+  --tab-accent: var(--blue-300);
+  margin: 0; min-height: 100%;
+  display: flex; flex-direction: column; gap: 16px;
+  padding: 16px 16px max(24px, env(safe-area-inset-bottom));
+  background: var(--bg);
+  color: var(--text);
+}
+:root[data-theme="light"] .lg { --club-accent: var(--club-accent-light, var(--blue-800)); --tab-accent: var(--blue-700); }
+/* The tinge: a faint wash of the manager's club colour on the page between the cards. Cards stay neutral. */
+.lg.has-club { background: color-mix(in oklab, var(--club) 7%, var(--bg)); }
+:root[data-theme="light"] .lg.has-club { background: color-mix(in oklab, var(--club) 5%, var(--bg)); }
+
+.lg-frame, .lg-content, .lg-foot { width: 100%; max-width: 1280px; margin: 0 auto; }
+.lg-frame, .lg-foot { flex: none; }   /* never squash the header when the page is taller than the screen */
+
+/* ---------- Header card ---------- */
+.lg-frame {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
+  overflow: hidden;   /* the tab row's underline sits on the card's bottom edge */
+}
+.lg-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 24px 20px; }
+.lg-id { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.lg-crest { width: 56px; height: 56px; flex: none; }
+.lg-name { display: grid; justify-items: start; gap: 2px; min-width: 0; }
+.lg-title {
+  margin: 0; font: 500 2rem/1 var(--font-display); letter-spacing: .01em; color: var(--text-strong);
+}
+.lg-title b { font-weight: 700; }
+.lg-season {
+  display: inline-flex; align-items: center; gap: 2px; margin-left: -6px; padding: 4px 6px;
+  border: 0; border-radius: var(--r-sm); background: none; cursor: pointer;
+  font: 500 .875rem var(--font); color: var(--muted);
+}
+.lg-season .ic { width: 16px; height: 16px; }
+
+.lg-tools { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.lg-tool {
+  display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px;
+  border: 1px solid var(--line); border-radius: 999px;
+  font: 600 .875rem var(--font); color: var(--text); text-decoration: none; white-space: nowrap;
+}
+.lg-tool .ic { width: 18px; height: 18px; color: var(--muted); }
+.lg-tool.is-club .ic { color: var(--club-accent); }
+
+/* ---------- Tabs ---------- */
+.lg-tabs { border-top: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
+.lg-tabs::-webkit-scrollbar { display: none; }
+.lg-tabs-in { position: relative; display: flex; width: max-content; min-width: 100%; padding: 0 12px; }
+.lg-tabs a {
+  display: inline-flex; align-items: center; gap: 6px; height: 52px; padding: 0 12px;
+  font: 500 .9375rem var(--font); color: var(--muted); text-decoration: none; white-space: nowrap;
+}
+.lg-tabs a[aria-current="page"] { color: var(--text-strong); font-weight: 600; }
+.lg-bar {
+  position: absolute; left: 0; bottom: 0; height: 3px; width: 0; border-radius: 3px 3px 0 0;
+  background: var(--tab-accent);
+  transition: transform .25s cubic-bezier(.3, .7, .2, 1), width .25s cubic-bezier(.3, .7, .2, 1);
+}
+.lg-bar.still, .reduce-motion .lg-bar { transition: none; }
+@media (prefers-reduced-motion: reduce) { .lg-bar { transition: none; } }
+.lg-live {
+  padding: 1px 6px; border-radius: 999px; background: var(--res-l); color: #fff;
+  font: 700 .6875rem/1.4 var(--font); font-style: normal; letter-spacing: .02em;
+}
+
+/* Hover only where a pointer can hover (FotMob does the same). */
+@media (hover: hover) and (pointer: fine) {
+  .lg-tabs a:hover { color: var(--text); }
+  .lg-tool:hover { background: var(--surface-hover); border-color: color-mix(in oklab, var(--line), var(--text) 18%); }
+  .lg-season:hover { color: var(--text); background: var(--surface-hover); }
+}
+.lg :focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; border-radius: var(--r-sm); }
+
+/* ---------- Content ---------- */
+.lg-content { display: grid; gap: 16px; align-content: start; flex: 1; }
+.lg-card {
+  min-width: 0; padding: 16px 20px 20px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
+}
+.lg-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.lg-card-head h2 { margin: 0; font: 600 1.1875rem/1.3 var(--font); color: var(--text-strong); }
+.lg-soon { margin: 0; padding: 24px 0 8px; font-size: .875rem; color: var(--muted); }
+
+.lg-cols, .lg-main, .lg-side { display: grid; gap: 16px; align-content: start; min-width: 0; }
+.lg-trio { display: grid; gap: 16px; }
+@media (min-width: 640px) { .lg-trio { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 992px) { .lg-cols { grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); } }
+
+.lg-foot { display: flex; justify-content: center; font-size: .75rem; }
+.lg-foot a { color: var(--faint); text-decoration: none; }
+
+/* ---------- Phones ---------- */
+@media (max-width: 767px) {
+  .lg { padding: 12px 12px max(20px, env(safe-area-inset-bottom)); gap: 12px; }
+  .lg-content, .lg-cols, .lg-main, .lg-side, .lg-trio { gap: 12px; }
+  .lg-head { padding: 16px 16px 14px; gap: 12px; flex-wrap: wrap; }
+  .lg-crest { width: 44px; height: 44px; }
+  .lg-id { gap: 12px; }
+  .lg-title { font-size: 1.5rem; }
+  .lg-tool { height: 36px; padding: 0 12px; gap: 6px; }
+  .lg-tabs-in { padding: 0 4px; }
+  .lg-tabs a { height: 48px; padding: 0 12px; }
+  .lg-card { padding: 14px 16px 16px; }
+}
+/* Narrow phones: the buttons share one full-width row under the name, equal widths (two for managers, three for the office). */
+@media (max-width: 479px) {
+  .lg-tools { width: 100%; flex-wrap: nowrap; }
+  .lg-tool { flex: 1 1 0; justify-content: center; min-width: 0; padding: 0 8px; }
+}

@@ -45,6 +45,27 @@
   --font-display: 'Oswald', 'Arial Narrow', 'Roboto Condensed', sans-serif;
   --r-md: 14px;
   --r-sm: 10px;
+  --r-lg: 16px;                /* cards and dialogs (website revamp) */
+}
+/* Website revamp (WR-03): the page is a FotMob-style league page. Neutral greys, not navy, so any club's tinge sits well on
+   them; vLeague blue stays the league's accent (--brand). The matchday board and the pitch keep the navy values above. */
+:root {
+  --bg: #161616;
+  --surface: #222222;
+  --surface-raised: #2a2a2a;
+  --surface-hover: #2a2a2a;
+  --surface-sunk: #1b1b1b;     /* grey strips inside a card ("Today", "Yesterday") */
+  --line: #333333;
+  --text: #f2f2f2;
+  --text-strong: #ffffff;
+  --text-soft: #d0d0d0;
+  --muted: #a0a0a0;
+  --faint: #7a7a7a;
+  --card: #222222; --card-strong: #222222;
+  --bar: rgba(22, 22, 22, 0.9); --bar-strong: rgba(22, 22, 22, 0.96);
+  --autofill: #222222;
+  --edge: 255, 255, 255;
+  --tint-bg: rgba(100, 181, 246, 0.12);
 }
 /* Light theme (0.9): the same names, light values. js/prefs.js sets data-theme on <html> before the page paints.
    The matchday board and the pitch stay dark on purpose: they list their own tokens above. */
@@ -78,6 +99,22 @@
   --shadow: 30, 50, 90;
   --res-w: #1b8a4b; --res-d: #6b7585; --res-l: #d03a3f;
   color-scheme: light;
+  /* Website revamp (WR-03): neutral light greys. */
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --surface-raised: #f7f7f7;
+  --surface-hover: #fafafa;
+  --surface-sunk: #f5f5f5;
+  --line: #e8e8e8;
+  --text: #222222;
+  --text-strong: #111111;
+  --text-soft: #444444;
+  --muted: #6b6b6b;
+  --faint: #858585;
+  --card: #ffffff; --card-strong: #ffffff;
+  --bar: rgba(245, 245, 245, 0.92); --bar-strong: rgba(245, 245, 245, 0.97);
+  --autofill: #ffffff;
+  --edge: 0, 0, 0;
 }
 .board, .pt { color: var(--text); }
 

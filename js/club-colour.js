@@ -25,3 +25,21 @@ export function contrast(a, b) {
 }
 
 export const onColour = c => (contrast(c, '#ffffff') >= contrast(c, NAVY) ? '#ffffff' : NAVY);
+
+// Website revamp (WR-03): a club's colour as an accent that always reads, like FotMob's lightMode/darkMode team colours.
+// The colour is mixed toward white (dark theme) or black (light theme) only as far as it takes to reach 3:1 against the
+// card surface, so a navy club gets a lighter shade on dark greys and a white or yellow club a deeper one on white.
+const hex2 = v => Math.round(v).toString(16).padStart(2, '0');
+export function mixHex(a, b, t) {
+  const x = rgb(a), y = rgb(b);
+  return `#${x.map((v, i) => hex2(v + (y[i] - v) * t)).join('')}`;
+}
+export function accentFor(c, theme) {
+  if (!isHex(c)) return theme === 'light' ? '#1565c0' : '#64b5f6';
+  const surface = theme === 'light' ? '#ffffff' : '#222222', toward = theme === 'light' ? '#000000' : '#ffffff';
+  for (let t = 0; t <= 0.9; t += 0.05) {
+    const m = mixHex(c, toward, t);
+    if (contrast(m, surface) >= 3) return m;
+  }
+  return mixHex(c, toward, 0.9);
+}

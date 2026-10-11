@@ -6,6 +6,8 @@
 //   REACTION[emoji]           -> { name, label } for the Inbox's reaction buttons (the database still stores the emoji character)
 //   maskCss(name)             -> a CSS url(...) of the icon, for ::before content drawn with mask-image
 const ICONS = {
+  'shield': '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />',
+  'settings-2': '<path d="M20 7h-9" /><path d="M14 17H5" /><circle cx="17" cy="17" r="3" /><circle cx="7" cy="7" r="3" />',
   'arrow-left': '<path d="m12 19-7-7 7-7" /><path d="M19 12H5" />',
   'arrow-right': '<path d="M5 12h14" /><path d="m12 5 7 7-7 7" />',
   'check': '<path d="M20 6 9 17l-5-5" />',

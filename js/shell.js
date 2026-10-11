@@ -2,7 +2,7 @@
 // managers only, so an account without a club doesn't get it). Each page calls enterPlace() once: it signs the
 // visitor in (or sends them on), wires the top bar and footer, paints the club's colour and band, draws the nav, and
 // loads the club row, the league data and the account's settings together.
-import { onColour } from './club-colour.js';
+import { onColour, accentFor } from './club-colour.js';
 import { enter, chrome, safeColour, esc } from './member.js';
 import { prefs } from './prefs.js';
 import { db } from './auth.js';
@@ -51,6 +51,9 @@ export function paintClub(club) {
   const colour = safeColour(club.colour), s = document.body.style;
   s.setProperty('--club', colour);
   s.setProperty('--on-club', onColour(colour));
+  // The accent shade for each theme (WR-03); css picks the one for the current theme.
+  s.setProperty('--club-accent-dark', accentFor(colour, 'dark'));
+  s.setProperty('--club-accent-light', accentFor(colour, 'light'));
   document.body.classList.add('themed');
   document.getElementById('band')?.classList.add('on');
 }
