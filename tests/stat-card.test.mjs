@@ -63,8 +63,10 @@ test('the full page has the top bar, a banner in the leading club colour that sa
 
 test('a tie at the top names everyone who shares it', () => {
   const html = statPage(scorers, rank([player('Ana', 4), player('Bea', 4), player('Cy', 4), player('Di', 4), player('Ed', 1)], scorers), ctx, pageOpts);
-  assert.ok(html.includes('<b>Ana</b>, <b>Bea</b> and 2 others share the top spot with 4'));
-  assert.ok(statPage(scorers, rank([player('Ana', 4), player('Bea', 4)], scorers), ctx, pageOpts).includes('<b>Ana</b> and <b>Bea</b> share the top spot with 4'));
+  const many = html.match(/<div class="sp-says"><p>(.*?)<\/p>/)[1];
+  assert.ok(many.includes('<b>Ana</b>, <b>Bea</b> and 2 others') && many.includes('4') && !many.includes('share the top spot'), many);
+  const two = statPage(scorers, rank([player('Ana', 4), player('Bea', 4)], scorers), ctx, pageOpts).match(/<div class="sp-says"><p>(.*?)<\/p>/)[1];
+  assert.ok(two.includes('<b>Ana</b> and <b>Bea</b>') && two.includes('4') && !two.includes('share the top spot'), two);
 });
 
 test('a club banner names the club, and a single goal is not "1 goals"', () => {
@@ -119,7 +121,8 @@ test('with a position picked the banner says so: five main stats name it in the 
 
 test('a tie names the position too, and a club banner never does', () => {
   const html = statPage(scorers, rank([player('Ana', 4), player('Bea', 4)], scorers), ctx, { ...pageOpts, position: 'MID' });
-  assert.ok(html.includes('<b>Ana</b> and <b>Bea</b> share the top spot among midfielders with 4'));
+  const line = html.match(/<div class="sp-says"><p>(.*?)<\/p>/)[1];
+  assert.ok(line.includes('<b>Ana</b> and <b>Bea</b>') && line.includes('among midfielders') && line.includes('4') && !line.includes('share the top spot'), line);
   const tc = TEAM_CARDS.find(c => c.id === 'tgoals');
   assert.ok(!statPage(tc, rank([{ code: 'RED', p: 2, gf: 4 }], tc), ctx, { kind: 'team', title: 'Team stats', cards: TEAM_CARDS, position: 'MID' }).includes('Among'));
 });
@@ -130,4 +133,16 @@ test('the line under the banner is how many matches the leader has played (a clu
   assert.ok(statPage(scorers, rank([{ ...player('Ana', 4), apps: 3 }, { ...player('Bea', 4), apps: 5 }], scorers), ctx, pageOpts).includes('<span>3–5 matches played</span>'));
   const tc = TEAM_CARDS.find(c => c.id === 'tgoals');
   assert.ok(statPage(tc, rank([{ code: 'RED', p: 2, gf: 4 }], tc), ctx, { kind: 'team', title: 'Team stats', cards: TEAM_CARDS }).includes('<span>2 matches played</span>'));
+});
+
+test('a tie reads as a sentence about the stat, with some variety, and the same wording every time for the same list', () => {
+  const rating = PLAYER_CARDS.find(c => c.id === 'rating');
+  const say = (card, rows) => statPage(card, rank(rows, card), ctx, pageOpts).match(/<div class="sp-says"><p>(.*?)<\/p>/)[1];
+  const tie = [{ ...player('Ana', 0), ratingSum: 15, apps: 2, min: 180 }, { ...player('Bea', 0), ratingSum: 15, apps: 2, min: 180 }];
+  const first = say(rating, tie);
+  assert.equal(say(rating, tie), first);                                   // stable across redraws
+  assert.ok(first.includes('average rating') && first.includes('7.5'), first);
+  const seen = new Set();
+  for (const c of PLAYER_CARDS) { const r = rank([player('Ana', 4), player('Bea', 4)], c); if (r.length > 1 && r[0].rank === r[1].rank) seen.add(say(c, [player('Ana', 4), player('Bea', 4)]).replace(/<[^>]+>/g, '').replace(/\d+(\.\d+)?/g, '#').split(' ').slice(2, 4).join(' ')); }
+  assert.ok(seen.size >= 1);
 });

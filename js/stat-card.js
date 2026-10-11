@@ -64,6 +64,26 @@ export function statCard(card, ranked, ctx, { kind = 'player' } = {}) {
 // ---------- the full page ----------
 const list = names => (names.length < 2 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`);
 
+// A tie at the top, in words that mean something and vary a little so the lists don't all read the same. Which wording a list gets depends only on the stat and
+// the names, so it never changes between redraws.
+const TIE_PLURAL = { scorers: 'goals', assists: 'assists', ga: 'goals and assists', rating: 'average ratings', trating: 'average ratings', minutes: 'minutes played' };
+const TIE_METRIC = { scorers: 'goals', assists: 'assists', ga: 'goals and assists', rating: 'average rating', minutes: 'minutes played', savepct: 'save percentage' };
+const metricOf = card => TIE_METRIC[card.id] || card.title.replace(/^([A-Z])(?=[a-z])/, c => c.toLowerCase());
+function tieSentence(card, names, value, plural) {
+  const m = metricOf(card), among = plural ? ` among ${plural}` : '', pl = TIE_PLURAL[card.id];
+  const options = [
+    `${names} are level on ${m}${among}, with ${value}`,
+    `${names} are neck and neck on ${m}${among}: ${value} each`,
+    `It’s a dead heat on ${m}${among}: ${names} all have ${value}`,
+    `${names} can’t be split on ${m}${among}, with ${value} each`,
+    `${names} are tied at the top for ${m}${among}, on ${value}`,
+    ...(pl ? [`${names} have equal ${pl}${among}, with ${value}`, `${names} have matching ${pl}${among}, with ${value}`] : []),
+  ];
+  let h = 5381;
+  for (const ch of `${card.id}|${names}`) h = (h * 33 + ch.charCodeAt(0)) >>> 0;
+  return options[h % options.length];
+}
+
 // The line under the sentence: how many matches the leader has played (a club: how many the club has). A tie shows the one number if they share it, else the range.
 function playedLine(tied) {
   const n = tied.map(x => x.row.apps ?? x.row.p ?? 0), lo = Math.min(...n), hi = Math.max(...n);
@@ -80,7 +100,8 @@ function banner(card, ranked, ctx, kind, position = 'all') {
   const shown = tied.slice(0, 3).map(x => `<b>${esc(name(x))}</b>`);
   let sentence;
   if (tied.length > 1) {
-    sentence = `${list(tied.length > 3 ? [...shown.slice(0, 2), `${tied.length - 2} others`] : shown)} share the top spot${word ? ` among ${word[1]}` : ''} with ${esc(value)}`;
+    const names = list(tied.length > 3 ? [...shown.slice(0, 2), `${tied.length - 2} others`] : shown);
+    sentence = tieSentence(card, names, esc(value), word?.[1] || '');
   } else {
     const say = card.say ? card.say(value, card.sayPos ? word?.[0] || '' : '') : `leads with ${value}`;
     sentence = `${word && !card.sayPos ? `Among ${word[1]}, ` : ''}<b>${esc(name(lead))}</b> ${esc(say)}`;
