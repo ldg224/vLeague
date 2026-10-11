@@ -149,7 +149,7 @@ function season(all, code, now) {
         <span class="hm-k">Last match</span><span class="hm-out ${o}">${o}</span><strong>${score}</strong>
         <span class="hm-vs">${last.home === code ? 'v' : 'at'}</span>${crest(opp, 'hm-mini')}<b>${esc(nameOf(opp))}</b></a>`;
   }
-  return `<section class="hm-card hm-season-card"><h2>Your season <a href="league.html">Table</a></h2>
+  return `<section class="hm-card hm-season-card"><h2>Your season <a href="overview.html">Table</a></h2>
       <div class="hm-season">
         <div class="hm-stat big"><strong>${r.p ? ordinal(r.rank) : '–'}</strong><span>of ${rows.length}</span></div>
         <div class="hm-stat"><strong>${r.pts}</strong><span>pts</span></div>
@@ -166,7 +166,7 @@ function comingUp(s, code, now) {
   const hero = current(s, code, now);
   const next = mine(s, code).filter(f => f !== hero && ['upcoming', 'tba'].includes(status(f, s, now))).slice(0, 4);
   if (!next.length) return '';
-  return `<section class="hm-card hm-fix-card"><h2>Coming up <a href="league.html">All matches</a></h2>
+  return `<section class="hm-card hm-fix-card"><h2>Coming up <a href="overview.html">All matches</a></h2>
       <ol class="hm-fix">${next.map(f => {
         const ko = kickoff(f), opp = f.home === code ? f.away : f.home;
         return `<li><a class="hm-fixlink" href="${esc(matchUrl(f))}" aria-label="Preview ${esc(nameOf(f.home))} against ${esc(nameOf(f.away))}"><span class="hm-wk">${ko ? esc(day(ko, now)) : 'TBA'}</span>${crest(opp, 'hm-mini')}<b>${esc(nameOf(opp))}</b>

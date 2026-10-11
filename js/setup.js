@@ -304,7 +304,7 @@ if (me) {
     // The wizard shows once per round: only while the club's setup_at is null (the office can reopen it). After that,
     // setup.html sends people Home; ?edit (from Home's "Edit club" and "Fix and resend") is the later-changes page.
     editMode = new URLSearchParams(location.search).has('edit');
-    if (!editMode && !me.profile.needs_setup) { location.replace('league.html'); throw 'redirect'; }
+    if (!editMode && !me.profile.needs_setup) { location.replace('overview.html'); throw 'redirect'; }
     document.body.classList.toggle('su-edit', editMode);
     const draft = await load();
 
