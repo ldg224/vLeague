@@ -22,6 +22,8 @@ import { fixturesView, parseSub, roundWidget, rounds } from './league-fixtures.j
 import { teamOfWeekCard } from './team-of-week.js';
 import { loadPlayers } from './players-data.js';
 import { instagramCard } from './instagram.js';
+import { seasonsView, grandFinal } from './seasons-tab.js';
+import { loadHistory, trophyUrl } from './history-data.js';
 import { db } from './auth.js';
 import { winChance, percents } from './match-model.js';
 import { VERSION } from './version.js';
@@ -224,16 +226,28 @@ if (ctx) {
   };
   const showOverview = () => { paint(main, SKELETON); patchOverview(false); };
   const rerender = (timed = false) => (!current ? false : current[0] === 'overview' ? patchOverview(timed) : draw(VIEWS[current[0]](current[2], current[1]), timed));
+  // The Seasons tab (WR-24): this season's card from the league page, the others from History (read once, a moment after the page).
+  let honours = null, clubRows = null;   // (not `history`: that is the browser's)
+  const seasonsHtml = (sub, picked) => {
+    const now = tableNow(), all = season ? season.fixtures : [], hidden = new Set(all.filter(f => f.result && !f.test && spoilerHidden(f, season, now)).map(f => f.id));
+    const gf = all.find(f => f.stage === 'GF' && !f.test && f.result);
+    return seasonsView({
+      current: { label: picked?.label || 'Season 1', live: picked?.live !== false }, final: grandFinal(all.filter(f => f.result), { hidden }), history: honours,
+      club: code => clubRows?.get(code) || sctx.club(code), crest: sctx.crest, trophy: trophyUrl, office, hiddenCount: gf && hidden.has(gf.id) ? 1 : 0,
+    });
+  };
+  loadHistory().then(h => { honours = h; drawInSoon(); }).catch(() => {});
+
   // Things that arrive a moment after the page (the grounds, the shirt numbers) are drawn in when nobody is mid-tap, trying again a few times if someone is.
   const drawInSoon = () => {
     let tries = 0;
-    const put = () => { if (['fixtures', 'overview'].includes(current?.[0]) && !rerender(true) && ++tries < 8) setTimeout(put, 1500); };
+    const put = () => { if (['fixtures', 'overview', 'seasons'].includes(current?.[0]) && !rerender(true) && ++tries < 8) setTimeout(put, 1500); };
     put();
   };
   // The league's Instagram: read a moment after the page and drawn in without interrupting a tap.
   (async () => { try { const { data } = await (await db()).from('league_social').select('*').eq('id', 1).maybeSingle(); social = data || null; if (preview && params.get('ig')) social = { ...social, instagram_posts: params.get('ig').split(',').map(c => `https://www.instagram.com/p/${c}/`), followers: 1250, posts: 48 }; } catch { /* the card still shows the follow button */ } socialLoaded = true; drawInSoon(); })();
 
-  clubs().then(rows => { stadiums = Object.fromEntries(rows.filter(c => c.stadium).map(c => [c.code, c.stadium])); drawInSoon(); }).catch(() => {});
+  clubs().then(rows => { clubRows = new Map(rows.map(c => [c.code, c])); stadiums = Object.fromEntries(rows.filter(c => c.stadium).map(c => [c.code, c.stadium])); drawInSoon(); }).catch(() => {});
   if (demo == null) loadPlayers().then(list => { numbers = new Map(list.filter(p => p.number != null).map(p => [String(p.id), p.number])); drawInSoon(); }).catch(() => {});
 
   main.addEventListener('click', async e => {
@@ -280,7 +294,7 @@ if (ctx) {
     overview: () => SKELETON,   // filled slot by slot (showOverview, patchOverview)
     fixtures: sub => fixturesHtml(sub),
     stats,
-    seasons: () => card('Seasons'),
+    seasons: seasonsHtml,
     news: () => card('News'),
     draft: () => card('Draft'),
   };

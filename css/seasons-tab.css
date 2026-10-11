@@ -1,0 +1,34 @@
+/* The Seasons tab (WR-24): see js/seasons-tab.js. Tokens only. The grid is the stat cards' (.sc-grid: 1, 2, 3 across). */
+.ss-edit { color: var(--brand); font: 600 var(--fs-m) var(--font); text-decoration: none; }
+.ss-edit:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 4px; }
+@media (hover: hover) { .ss-edit:hover { text-decoration: underline; } }
+.sc-head:has(.ss-edit) { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+
+.ss { display: grid; gap: 4px; align-content: start; }
+.ss-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+.ss-head h3 { margin: 0; font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; letter-spacing: .01em; color: var(--text-strong); }
+.ss-pill {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line);
+  color: var(--muted); font: 600 var(--fs-s) var(--font);
+}
+.ss-pill.is-live { border-color: color-mix(in oklab, var(--brand) 55%, transparent); color: var(--brand); }
+.ss-pill.is-live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--brand); }
+.ss-comp { margin: 8px -16px 0; padding: 8px 16px; background: var(--surface-sunk); color: var(--muted); font: 600 var(--fs-xs) var(--font); letter-spacing: .06em; text-transform: uppercase; }
+.ss-comp:first-of-type { margin-top: 4px; }
+.ss-rows { margin: 0; }
+.ss-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; border-top: 1px solid var(--line); }
+.ss-comp + .ss-rows .ss-row:first-child { border-top: 0; }
+.ss-row dt { flex: none; width: 76px; color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.ss-row dd { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; min-width: 0; }
+.ss-team { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ss-team b { font: 600 var(--fs-m) var(--font); color: var(--text-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ss-badge {
+  flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--surface-sunk); color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--line); font: 700 var(--fs-xs) var(--font-display);
+}
+.ss-tbd { color: var(--faint); font: 400 var(--fs-m) var(--font); }
+.ss-cup { flex: none; width: 36px; height: 36px; object-fit: contain; }
+.ss .crest { position: relative; display: inline-grid; place-items: center; width: var(--s); height: var(--s); flex: none; }
+.ss .crest img { width: 100%; height: 100%; object-fit: contain; }
+.ss .crest i { display: none; }
+.ss .crest.none i { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--c); color: var(--on, #fff); font: 700 calc(var(--s) * .34)/1 var(--font-display); font-style: normal; }
