@@ -20,16 +20,16 @@
 .tb th, .tb td { padding: 0 6px; height: 46px; text-align: center; border-top: 1px solid var(--line); white-space: nowrap; font-weight: 400; color: var(--text); }
 .tb thead th { height: 34px; border-top: 0; color: var(--muted); font-size: var(--fs-xs); font-weight: 600; }
 .tb abbr { text-decoration: none; }
-.tb .tb-pos { width: 38px; text-align: center; color: var(--muted); font-weight: 600; box-shadow: inset 3px 0 0 transparent; }
-.tb tr[data-zone="finals"] .tb-pos { box-shadow: inset 3px 0 0 var(--z-finals); color: var(--text-strong); }
-.tb tr[data-zone="spoon"] .tb-pos { box-shadow: inset 3px 0 0 var(--z-spoon); color: var(--text-strong); }
+.tb .tb-pos { width: 38px; text-align: center; color: var(--muted); font-weight: 600; background-repeat: no-repeat; background-position: left center; background-size: 3px 100%; }   /* the zone stripe is a background (not a shadow), which every browser draws on table cells */
+.tb tr[data-zone="finals"] .tb-pos { background-image: linear-gradient(var(--z-finals), var(--z-finals)); color: var(--text-strong); }
+.tb tr[data-zone="spoon"] .tb-pos { background-image: linear-gradient(var(--z-spoon), var(--z-spoon)); color: var(--text-strong); }
 .tb .tb-club { text-align: left; width: 100%; max-width: 0; padding-left: 4px; }
 .tb tbody .tb-club { font-weight: 600; color: var(--text-strong); }
 .tb .tb-club span { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .tb .tb-club b { font-weight: inherit; overflow: hidden; text-overflow: ellipsis; }
 .tb .tb-short { display: none; }   /* the full name where there is room; the short one on phones */
 .tb .tb-pts { font-weight: 700; color: var(--text-strong); }
-.tb tr.is-mine td, .tb tr.is-mine th { background: color-mix(in oklab, var(--club, var(--blue-700)) 14%, transparent); }
+.tb tr.is-mine td, .tb tr.is-mine th { background-color: color-mix(in oklab, var(--club, var(--blue-700)) 14%, transparent); }
 .tb tr.is-mine .tb-club b { color: var(--club-accent, var(--text-strong)); }
 
 .tb-form { display: inline-flex; gap: 3px; vertical-align: middle; }

@@ -123,9 +123,9 @@ export function reshuffle(card, before) {
     const mine = tr.classList.contains('is-mine');
     for (const cell of tr.children) {
       cell.style.position = 'relative'; cell.style.zIndex = '1';
-      if (!mine) cell.style.background = 'var(--surface)';
+      if (!mine) cell.style.backgroundColor = 'var(--surface)';
       const a = cell.animate([{ transform: `translateY(${dy}px)` }, { transform: 'translateY(0)' }], { duration: 650, easing: 'cubic-bezier(.22,.61,.36,1)' });
-      a.onfinish = a.oncancel = () => { cell.style.position = cell.style.zIndex = cell.style.background = ''; };
+      a.onfinish = a.oncancel = () => { cell.style.position = cell.style.zIndex = cell.style.backgroundColor = ''; };
     }
   }
 }
