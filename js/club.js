@@ -8,11 +8,10 @@ import { SUPABASE_URL } from './config.js';
 import { finished, logoUrl, kickoff, status, matchUrl } from './dashboard-data.js';
 import { tableRows } from './league-table.js';
 import { rating } from './places.js';
-import { prefsNow, spoilerHidden, revealScore } from './prefs.js';
+import { prefsNow, spoilerHidden } from './prefs.js';
 import { kitSprite, cleanDesign, kitName, FIELD_SLOTS } from './kit.js';
 import { renderPitch, FORMATIONS, DEFAULT_FORMATION, TACTICS, STEPS, PRESETS, POS_ORDER, normaliseSheet, reshape, benchOf, autoLineup, fillLineup } from './pitch.js';
 
-const POS_NAME = { GK: 'Goalkeeper', DEF: 'Defender', MID: 'Midfielder', FWD: 'Forward' };
 const PIECES = [['captain', 'Captain'], ['penalties', 'Penalties'], ['freekicks', 'Free kicks'], ['corners', 'Corners']];
 const TZ = 'Australia/Melbourne';
 const $ = (s, root = document) => root.querySelector(s);
@@ -29,23 +28,6 @@ function totals(season, now = new Date()) {
     }
   }
   return tot;
-}
-
-// Spoiler-free results (0.7): the stats leave out results the account hasn't revealed.
-function statsHtml(season, squad) {
-  if (!squad.length) return '<p class="empty">No players yet.</p>';
-  const hidden = (season.fixtures || []).filter(f => spoilerHidden(f, season)).map(f => f.id);
-  const seen = hidden.length ? { ...season, fixtures: season.fixtures.map(f => (hidden.includes(f.id) ? { ...f, result: null } : f)) } : season;
-  const tot = totals(seen);
-  return `<table class="squad">
-    <thead><tr><th scope="col" class="pos"><abbr title="Position">Pos</abbr></th><th scope="col" class="who">Player</th><th scope="col"><abbr title="Appearances">Apps</abbr></th><th scope="col"><abbr title="Goals">G</abbr></th><th scope="col"><abbr title="Assists">A</abbr></th><th scope="col"><abbr title="Average rating">Avg</abbr></th></tr></thead>
-    <tbody>${squad.map(p => {
-      const t = tot[String(p.id)] || { apps: 0, g: 0, a: 0 };
-      return `<tr><td class="pos pos-${esc(p.position || '')}"><abbr title="${esc(POS_NAME[p.position] || p.position || '')}">${esc(p.position || '')}</abbr></td>
-        <th scope="row" class="who">${esc(p.name)}</th><td>${t.apps}</td><td>${t.g}</td><td>${t.a}</td>
-        <td class="avg">${t.apps ? rating(t.rsum / t.apps) : '–'}</td></tr>`;
-    }).join('')}</tbody>
-  </table>${hidden.length ? `<p class="spoil">${hidden.length === 1 ? '1 result' : `${hidden.length} results`} hidden · <button type="button" class="link-btn" data-reveal-all="${esc(hidden.join(' '))}">Show all</button></p>` : ''}`;
 }
 
 // ---------- Deadlines (league time: Melbourne) ----------
@@ -89,47 +71,8 @@ if (ctx) {
         ${manager ? `<div><dt>Manager</dt><dd>${esc(manager)}</dd></div>` : ''}${club.stadium ? `<div><dt>Ground</dt><dd>${esc(club.stadium)}</dd></div>` : ''}
         <div><dt>Position</dt><dd id="f-pos">–</dd></div><div><dt>Points</dt><dd id="f-pts">–</dd></div><div><dt>Played</dt><dd id="f-p">–</dd></div><div><dt>Form</dt><dd id="f-form">–</dd></div>
       </dl></section>
-      <div class="club-tabs sc-toggle" role="tablist" aria-label="My club">
-        <button type="button" role="tab" id="tab-sheet" aria-controls="sheet" aria-selected="true" aria-pressed="true">Overview</button>
-        <button type="button" role="tab" id="tab-squad" aria-controls="squad" aria-selected="false" aria-pressed="false" tabindex="-1">Squad</button>
-      </div>
-      <section id="sheet" role="tabpanel" aria-labelledby="tab-sheet"><p class="quiet">Loading…</p></section>
-      <section id="squad" role="tabpanel" aria-labelledby="tab-squad" hidden>
-        <section class="lg-card club-squad"><div class="lg-card-head"><h2>Squad</h2><span class="club-count">${squad.length} player${squad.length === 1 ? '' : 's'}</span></div>
-        <div class="sect" id="stats">${season ? statsHtml(season, squad) : '<p class="empty">The squad didn’t load. <a href="club.html">Try again</a></p>'}</div></section>
-      </section>
+      <section id="sheet"><p class="quiet">Loading…</p></section>
     </div>`;
-
-    // Tabs, remembered in the URL hash.
-    const tabs = [...main.querySelectorAll('[role="tab"]')];
-    const showTab = id => {
-      for (const t of tabs) {
-        const on = t.getAttribute('aria-controls') === id;
-        t.setAttribute('aria-selected', on); t.setAttribute('aria-pressed', on);
-        t.tabIndex = on ? 0 : -1;
-        $(`#${t.getAttribute('aria-controls')}`).hidden = !on;
-      }
-    };
-    const tablist = main.querySelector('.club-tabs');
-    tablist.addEventListener('click', e => {
-      const t = e.target.closest('[role="tab"]');
-      if (!t) return;
-      const id = t.getAttribute('aria-controls');
-      showTab(id);
-      history.replaceState(null, '', id === 'squad' ? '#squad' : location.pathname + location.search);
-    });
-    tablist.addEventListener('keydown', e => {
-      if (!['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
-      const next = tabs[(tabs.indexOf(document.activeElement) + 1) % tabs.length];
-      next.focus(); next.click();
-    });
-    if (location.hash === '#squad') showTab('squad');
-    main.querySelector('#stats').addEventListener('click', async e => {
-      const b = e.target.closest('[data-reveal-all]');
-      if (!b) return;
-      await revealScore(b.dataset.revealAll.split(' '));
-      main.querySelector('#stats').innerHTML = statsHtml(season, squad);
-    });
 
     if (!season || !squad.length) {
       $('#sheet').innerHTML = `<div class="sect"><p class="empty">${season ? 'No players yet.' : 'The squad didn’t load. <a href="club.html">Try again</a>'}</p></div>`;

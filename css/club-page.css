@@ -26,9 +26,6 @@
 @media (hover: hover) { .club-acts a:hover { background: var(--surface-hover); } }
 .club-count { color: var(--muted); font: 400 var(--fs-s) var(--font); }
 
-/* Team sheet / Squad: the site's toggle (css/stat-card.css .sc-toggle), selected by aria-pressed */
-.lg-sub .club-tabs { border: 0; margin: 0; }
-
 /* the pitch: neutral like the Team of the week, your players in your club's colour */
 .lg-sub .pt { border-radius: var(--r-sm); background: var(--surface-sunk); box-shadow: none; }
 .lg-sub .pt-lines * { stroke: color-mix(in oklab, var(--text) 22%, transparent); }
@@ -81,19 +78,6 @@
 .lock-tag { padding: 2px 10px; border-radius: 999px; background: var(--surface-sunk); color: var(--muted); font: 600 var(--fs-xs) var(--font); text-transform: none; }
 .locked .locked-pitch { max-width: 360px; margin: 16px auto 8px; }
 .locked .quiet { margin-top: 10px; text-align: center; font-size: var(--fs-s); }
-
-/* ---------- squad ---------- */
-.lg-sub .squad { width: 100%; border-collapse: collapse; font: 400 var(--fs-m) var(--font); font-variant-numeric: tabular-nums; }
-.lg-sub .club-squad .sect { margin: 0 -16px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
-.lg-sub .squad th, .lg-sub .squad td { padding: 10px 8px; text-align: center; min-width: 40px; }
-.lg-sub .squad :is(th, td):first-child { padding-left: 16px; } .lg-sub .squad :is(th, td):last-child { padding-right: 16px; }
-.lg-sub .squad thead th { color: var(--muted); font: 600 var(--fs-xs) var(--font); border-bottom: 1px solid var(--line); }
-.lg-sub .squad abbr { text-decoration: none; }
-.lg-sub .squad tbody tr + tr { border-top: 1px solid var(--line); }
-.lg-sub .squad .pos { width: 48px; text-align: left; color: var(--pc, var(--muted)); font: 700 var(--fs-xs) var(--font); }
-.lg-sub .squad .who { width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; color: var(--text-strong); font-weight: 600; }
-.lg-sub .squad .avg { font-weight: 700; }
-.lg-sub .spoil { margin: 12px 16px 0; color: var(--muted); font: 400 var(--fs-s) var(--font); }
 
 /* ---------- phones ---------- */
 @media (max-width: 767px) {
