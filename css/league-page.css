@@ -32,6 +32,13 @@
     var(--club-darkest);
   color: #fff;
 }
+.lg.has-club .lg-head { position: relative; isolation: isolate; }
+/* Crumpled-paper texture over the club panel (assets/img/header-texture.jpg, mid-grey so it lifts and shades any colour). */
+.lg.has-club .lg-head::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: url("../assets/img/header-texture.jpg") center / cover no-repeat;
+  mix-blend-mode: overlay; opacity: .55;
+}
 .lg.has-club .lg-head .lg-title { color: #fff; }
 .lg.has-club .lg-head .lg-season { color: rgba(255, 255, 255, .72); }
 .lg.has-club .lg-head .lg-tool { border-color: rgba(255, 255, 255, .22); color: #fff; }
