@@ -1,6 +1,6 @@
-// My club (0.6): the team sheet (formation, the XI on a pitch, set pieces, tactics) saved to Supabase team_sheets,
-// the deadline it counts for (deadlines) and the last locked sheet (week_sheets); and the squad with season totals.
-// Every save is kept by the database; at a week's deadline it copies each club's last save into week_sheets.
+// My club: the club's information (facts, matches, best rated), then the team sheet as a form. Each row opens a menu: the starting XI
+// (formation, pitch, players), captain and set-piece takers, tactics, kit. Saved to Supabase team_sheets; the deadline it counts for
+// comes from deadlines, and Submit stores the sheet for a round. At a deadline the database copies each club's sheet for that week.
 import { enterPlace } from './shell.js';
 import { esc, crestUrl } from './member.js';
 import { db } from './auth.js';
@@ -121,7 +121,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   let state = rowRes.error ? 'error-load' : rowRes.data ? 'saved' : 'new';   // 'new' saves at once (below)
   let savedAt = rowRes.data?.updated_at ? new Date(rowRes.data.updated_at) : null;
   let sel = null;   // { slot } or { player }: the first tap of a move
-  let timer = null, saving = false, again = false, lockedKey = null;
+  let timer = null, saving = false, again = false;
   // SUBMIT (0.63): the sheet submitted for each upcoming round. Without one, a round uses the latest draft, as before.
   const submitted = new Map((subRes.error ? [] : subRes.data || []).map(s => [s.week, s]));
   let picking = false, pickWeek = null, subBusy = false, subMsg = '';
@@ -138,7 +138,6 @@ async function teamSheet(box, { club, squad, userId, season }) {
       </section>
       <div class="ts-over-right" id="ov-cards"></div>
     </div>
-    <div id="locked"></div>
 
     <dialog autofocus tabindex="-1" class="dlg dlg-wide" id="dlg-lineup" aria-labelledby="dlg-lineup-t">
       <div class="dlg-head"><h2 id="dlg-lineup-t">Starting XI</h2><button type="button" class="dlg-done" data-close>Done</button></div>
@@ -307,23 +306,6 @@ async function teamSheet(box, { club, squad, userId, season }) {
     const count = d ? `${d} d ${h} h` : h ? `${h} h ${m % 60} min` : `${m} min`;
     el.className = `ts-deadline${m < 1440 ? ' soon' : ''}`;
     el.innerHTML = `<span>Locks ${esc(when(at, now))}</span><b>${esc(count)}</b>`;
-  }
-
-  // The last week that locked: the sheet the database copied for it (or why there's none).
-  async function drawLocked(now = new Date()) {
-    const last = [...deadlines].reverse().find(d => new Date(d.locks_at) <= now), el = $('#locked', box);
-    if (!last) { el.innerHTML = ''; lockedKey = null; return; }
-    const key = `${last.week}:${last.locked_at}`;
-    if (key === lockedKey) return;
-    lockedKey = key;
-    const { data, error } = await ok(c.from('week_sheets').select('*').eq('week', last.week).eq('club', club.code).maybeSingle());
-    const open = el.querySelector('details')?.open ? ' open' : '';
-    let body;
-    if (data) body = `<div class="locked-pitch"></div>${data.saved_at ? `<p class="quiet">Saved ${esc(tidy(dateTime.format(new Date(data.saved_at))))}</p>` : ''}`;
-    else if (!last.locked_at || error) body = '<p class="quiet">Locking…</p>';
-    else body = '<p class="quiet">No sheet was saved before the deadline, so the team was picked automatically.</p>';
-    el.innerHTML = `<details class="lg-card sect locked"${open}><summary><span>${esc(wk(last.week))} team sheet</span><span class="lock-tag">Locked</span></summary>${body}</details>`;
-    if (data) renderPitch($('.locked-pitch', el), { ...normaliseSheet(data, squad), players: season.players });
   }
 
   // ----- submitting (0.63) -----
@@ -588,7 +570,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   // Leaving the page: send what's waiting rather than lose it.
   document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'dirty') save(); });
 
-  drawPitch(); drawPlayers(); drawKit(); drawClear(); drawTactics(); drawSave(); drawDeadline(); drawLocked(); drawSubmit(); drawForm(); drawInfo();
+  drawPitch(); drawPlayers(); drawKit(); drawClear(); drawTactics(); drawSave(); drawDeadline(); drawSubmit(); drawForm(); drawInfo();
   if (state === 'new') save();
 
   // The deadline counts down; once one passes, read the deadlines again until the database has locked that week.
@@ -599,6 +581,6 @@ async function teamSheet(box, { club, squad, userId, season }) {
       const r = await ok(c.from('deadlines').select('*').order('locks_at'));
       if (!r.error) deadlines = r.data || [];
     }
-    drawDeadline(now); drawLocked(now); if (!picking) drawSubmit(now);
+    drawDeadline(now); if (!picking) drawSubmit(now);
   }, 30000);
 }

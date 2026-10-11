@@ -75,15 +75,6 @@
 .tac-ends { display: flex; justify-content: space-between; color: var(--faint); font: 400 var(--fs-xs) var(--font); }
 @media (prefers-reduced-motion: reduce) { .thumb { transition: none; } }
 
-/* the last locked sheet */
-.locked summary { display: flex; align-items: center; gap: 10px; list-style: none; cursor: pointer; color: var(--text-strong); font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; }
-.locked summary::-webkit-details-marker { display: none; }
-.locked summary::after { content: ''; margin-left: auto; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .15s; }
-.locked[open] summary::after { transform: rotate(-135deg); }
-.lock-tag { padding: 2px 10px; border-radius: 999px; background: var(--surface-sunk); color: var(--muted); font: 600 var(--fs-xs) var(--font); text-transform: none; }
-.locked .locked-pitch { max-width: 360px; margin: 16px auto 8px; }
-.locked .quiet { margin-top: 10px; text-align: center; font-size: var(--fs-s); }
-
 /* ---------- phones ---------- */
 @media (max-width: 767px) {
   .club-head { flex-wrap: wrap; gap: 12px; }
@@ -97,7 +88,6 @@
   .pl { grid-template-columns: 36px minmax(0, 1fr) auto; }
   .pl-rts { display: none; }
 }
-@media (prefers-reduced-motion: reduce) { .locked summary::after { transition: none; } }
 /* site.css gives every .pt the dark tokens (it used to be a dark graphic in both themes); on this page the pitch follows the theme */
 .lg-sub .pt { --text: inherit; --text-strong: inherit; --text-soft: inherit; --muted: inherit; --faint: inherit; --surface: inherit; --surface-sunk: inherit; --line: inherit; }
 
