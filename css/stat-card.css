@@ -163,7 +163,6 @@
 }
 
 /* Pinned: the five main stats side by side (from 1100 px; two across on tablets, one on phones), each outlined in the leader's club colour. */
-.sc.has-lead { border-color: var(--cd, var(--line)); }
-:root[data-theme="light"] .sc.has-lead { border-color: var(--cl, var(--line)); }
-.is-pinned .sc.has-lead { border-width: 2px; }
+.is-pinned .sc.has-lead { border-width: 2px; border-color: var(--cd, var(--line)); }
+:root[data-theme="light"] .is-pinned .sc.has-lead { border-color: var(--cl, var(--line)); }
 @media (min-width: 1100px) { .is-pinned .sc-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; } }
