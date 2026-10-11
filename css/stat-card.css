@@ -163,6 +163,19 @@
 }
 
 /* Pinned: the five main stats side by side (from 1100 px; two across on tablets, one on phones), each outlined in the leader's club colour. */
-.is-pinned .sc.has-lead { border-width: 2px; border-color: var(--cd, var(--line)); }
-:root[data-theme="light"] .is-pinned .sc.has-lead { border-color: var(--cl, var(--line)); }
+/* The outline is a ring in the leader's club colour with a white shine that turns slowly round it, and a soft glow of the same colour.
+   Still (no turning) when the visitor prefers reduced motion. */
+@property --ang { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.is-pinned .sc.has-lead {
+  --ring: var(--cd, var(--line));
+  border: 2px solid transparent;
+  background:
+    linear-gradient(var(--surface), var(--surface)) padding-box,
+    conic-gradient(from var(--ang), var(--ring) 0 55%, color-mix(in oklab, var(--ring) 40%, #fff) 66%, #fff 72%, color-mix(in oklab, var(--ring) 40%, #fff) 78%, var(--ring) 89% 100%) border-box;
+  box-shadow: 0 0 14px color-mix(in oklab, var(--ring) 38%, transparent), 0 0 2px color-mix(in oklab, var(--ring) 60%, transparent);
+  animation: sc-shine 7s linear infinite;
+}
+:root[data-theme="light"] .is-pinned .sc.has-lead { --ring: var(--cl, var(--line)); box-shadow: 0 0 12px color-mix(in oklab, var(--ring) 30%, transparent); }
+@keyframes sc-shine { to { --ang: 360deg; } }
+@media (prefers-reduced-motion: reduce) { .is-pinned .sc.has-lead { animation: none; } }
 @media (min-width: 1100px) { .is-pinned .sc-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; } }
