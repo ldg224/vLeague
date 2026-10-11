@@ -254,3 +254,11 @@
 @keyframes lg-topo-breathe { from { transform: scale(1) rotate(0deg); } to { transform: scale(1.06) rotate(.6deg); } }
 @keyframes lg-topo-drift { to { background-position: 700px 350px; } }
 @media (prefers-reduced-motion: reduce) { .lg::before { animation: none; } }
+
+/* A little worn texture over the contour lines (user, 11 Oct 2026): white scratches and specks, fixed and still, very faint. */
+.lg::after {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: url("../assets/img/scratches.png") 0 0 / 735px 437px repeat;
+  opacity: .22;
+}
+:root[data-theme="light"] .lg::after { opacity: .6; }
