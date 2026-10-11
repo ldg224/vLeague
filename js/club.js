@@ -5,7 +5,8 @@ import { enterPlace } from './shell.js';
 import { esc, crestUrl } from './member.js';
 import { db } from './auth.js';
 import { SUPABASE_URL } from './config.js';
-import { finished, logoUrl, kickoff } from './dashboard-data.js';
+import { finished, logoUrl, kickoff, status, matchUrl } from './dashboard-data.js';
+import { tableRows } from './league-table.js';
 import { rating } from './places.js';
 import { prefsNow, spoilerHidden, revealScore } from './prefs.js';
 import { kitSprite, cleanDesign, kitName, FIELD_SLOTS } from './kit.js';
@@ -85,7 +86,7 @@ if (ctx) {
         <nav class="club-acts" aria-label="Club pages"><a href="team.html?c=${esc(club.code)}">Team page</a><a href="kits.html">Kits</a><a href="setup.html?edit">Edit club</a></nav>
       </section>
       <div class="club-tabs sc-toggle" role="tablist" aria-label="My club">
-        <button type="button" role="tab" id="tab-sheet" aria-controls="sheet" aria-selected="true" aria-pressed="true">Team sheet</button>
+        <button type="button" role="tab" id="tab-sheet" aria-controls="sheet" aria-selected="true" aria-pressed="true">Overview</button>
         <button type="button" role="tab" id="tab-squad" aria-controls="squad" aria-selected="false" aria-pressed="false" tabindex="-1">Squad</button>
       </div>
       <section id="sheet" role="tabpanel" aria-labelledby="tab-sheet"><p class="quiet">Loading…</p></section>
@@ -179,31 +180,54 @@ async function teamSheet(box, { club, squad, userId, season }) {
   let picking = false, pickWeek = null, subBusy = false, subMsg = '';
 
   box.innerHTML = `<div class="ts">
-    <div class="ts-grid">
-      <section class="lg-card ts-ticket" aria-label="Your next match">
-        <div class="ts-match" id="match"></div>
-        <div class="ts-stub">
-          <p class="ts-deadline" id="deadline"></p>
-          ${subRes.error ? '' : '<div class="ts-submit" id="submit"></div>'}
-          <div class="ts-save" id="save" aria-live="polite"></div>
-        </div>
-      </section>
-      <section class="lg-card ts-left" aria-label="Line-up">
-        <div class="formations sc-toggle" role="radiogroup" aria-label="Formation">${Object.keys(FORMATIONS).map(f => `<button type="button" role="radio" data-f="${f}">${f}</button>`).join('')}</div>
-        <div id="pitch" class="ts-pitch"></div>
-        <p class="ts-pick" id="pick" hidden></p>
-        <div class="ts-clear" id="clear"></div>
-      </section>
-      <section class="lg-card ts-panel" aria-label="Team details">
-        <div class="ts-tabs sc-toggle" role="tablist" aria-label="Team details">${[['players', 'Players'], ['pieces', 'Set pieces'], ['kit', 'Kit'], ['tactics', 'Tactics']].map(([k, n], i) => `<button type="button" role="tab" id="pt-${k}" data-ptab="${k}" aria-controls="pp-${k}" aria-selected="${i === 0}" aria-pressed="${i === 0}"${i ? ' tabindex="-1"' : ''}>${n}</button>`).join('')}</div>
-        <div class="pls-sect" id="pp-players" role="tabpanel" aria-labelledby="pt-players"><div class="sect-head"><h2 id="pls-title">Players</h2><button type="button" class="link-btn pls-close" data-cancel>Cancel</button></div><ul class="pls" id="players"></ul></div>
-        <div id="pp-pieces" role="tabpanel" aria-labelledby="pt-pieces" hidden><div class="pieces" id="pieces"></div></div>
-        <div id="pp-kit" role="tabpanel" aria-labelledby="pt-kit" hidden><div id="kitpick"></div><p class="ts-more"><a class="link-btn" href="kits.html">Design kits</a></p></div>
-        <div id="pp-tactics" role="tabpanel" aria-labelledby="pt-tactics" hidden><div id="tactics"></div></div>
-      </section>
+    <section class="lg-card ts-ticket" aria-label="Your next match">
+      <div class="ts-match" id="match"></div>
+      <div class="ts-stub">
+        <p class="ts-deadline" id="deadline"></p>
+        ${subRes.error ? '' : '<div class="ts-submit" id="submit"></div>'}
+        <div class="ts-save" id="save" aria-live="polite"></div>
+      </div>
+    </section>
+    <div class="ts-view" id="ts-over">
+      <div class="ts-grid">
+        <section class="lg-card ts-over-left" aria-label="Line-up">
+          <div class="lg-card-head"><h2>Line-up</h2><button type="button" class="ov-edit" data-view="edit">Edit team sheet</button></div>
+          <div id="pitch-ro" class="ts-pitch"></div>
+          <div class="ov-rows" id="ov-takers"></div>
+        </section>
+        <div class="ts-over-right" id="ov-cards"></div>
+      </div>
+    </div>
+    <div class="ts-view" id="ts-edit" hidden>
+      <div class="ts-editbar"><button type="button" class="link-btn" data-view="over">Back to overview</button><h2>Team sheet</h2></div>
+      <div class="ts-grid ts-edit-grid">
+        <section class="lg-card ts-left" aria-label="Line-up editor">
+          <div class="formations sc-toggle" role="radiogroup" aria-label="Formation">${Object.keys(FORMATIONS).map(f => `<button type="button" role="radio" data-f="${f}">${f}</button>`).join('')}</div>
+          <div id="pitch" class="ts-pitch"></div>
+          <p class="ts-pick" id="pick" hidden></p>
+          <div class="ts-clear" id="clear"></div>
+        </section>
+        <section class="lg-card ts-panel" aria-label="Team details">
+          <div class="ts-tabs sc-toggle" role="tablist" aria-label="Team details">${[['players', 'Players'], ['pieces', 'Set pieces'], ['kit', 'Kit'], ['tactics', 'Tactics']].map(([k, n], i) => `<button type="button" role="tab" id="pt-${k}" data-ptab="${k}" aria-controls="pp-${k}" aria-selected="${i === 0}" aria-pressed="${i === 0}"${i ? ' tabindex="-1"' : ''}>${n}</button>`).join('')}</div>
+          <div class="pls-sect" id="pp-players" role="tabpanel" aria-labelledby="pt-players"><div class="sect-head"><h2 id="pls-title">Players</h2><button type="button" class="link-btn pls-close" data-cancel>Cancel</button></div><ul class="pls" id="players"></ul></div>
+          <div id="pp-pieces" role="tabpanel" aria-labelledby="pt-pieces" hidden><div class="pieces" id="pieces"></div></div>
+          <div id="pp-kit" role="tabpanel" aria-labelledby="pt-kit" hidden><div id="kitpick"></div><p class="ts-more"><a class="link-btn" href="kits.html">Design kits</a></p></div>
+          <div id="pp-tactics" role="tabpanel" aria-labelledby="pt-tactics" hidden><div id="tactics"></div></div>
+        </section>
+      </div>
     </div>
     <div id="locked"></div>
   </div>`;
+
+  // Overview or the editor. The editor is the same page with the overview put away (the address ends #edit).
+  function showView(v) {
+    const edit = v === 'edit';
+    $('#ts-over', box).hidden = edit; $('#ts-edit', box).hidden = !edit;
+    box.querySelector('.ts').classList.toggle('editing', edit);
+    if (edit) { sel = null; redraw(); } else drawOver();
+    history.replaceState(null, '', edit ? '#edit' : location.pathname + location.search);
+    scrollTo({ top: 0 });
+  }
 
   // The panel beside the pitch: one card, four tabs. Picking a spot on the pitch brings the players back.
   function showPanel(k) {
@@ -212,6 +236,42 @@ async function teamSheet(box, { club, squad, userId, season }) {
       t.setAttribute('aria-selected', on); t.setAttribute('aria-pressed', on); t.tabIndex = on ? 0 : -1;
       $(`#pp-${t.dataset.ptab}`, box).hidden = !on;
     }
+  }
+
+  // ----- the overview (read only) -----
+
+  const hiddenIds = new Set((season.fixtures || []).filter(f => spoilerHidden(f, season)).map(f => f.id));
+  const ordinal = n => `${n}${[, 'st', 'nd', 'rd'][(n % 100 >> 3) ^ 1 && n % 10] || 'th'}`;
+  const chipsOf = form => (form.length ? `<span class="tb-form" role="img" aria-label="Last ${form.length}: ${form.join(', ')}">${form.map((o, i) => `<abbr class="res-${o}${i === form.length - 1 ? ' is-latest' : ''}" title="${o}">${o}</abbr>`).join('')}</span>` : '<span class="ov-none">No results yet</span>');
+  function fixtureRow(f, now) {
+    const home = f.home === club.code, opp = home ? f.away : f.home, k = kickoff(f), st = status(f, season, now), done = st === 'ft' && f.result;
+    const mine = done ? (home ? f.result.home : f.result.away) : null, theirs = done ? (home ? f.result.away : f.result.home) : null;
+    const hide = done && hiddenIds.has(f.id);
+    const right = done ? (hide ? '<span class="ov-hidden">Hidden</span>' : `<span class="ov-score res-${mine > theirs ? 'W' : mine < theirs ? 'L' : 'D'}">${mine}–${theirs}</span>`) : st === 'live' ? '<span class="ov-live">Live</span>' : `<span class="ov-when">${k ? esc(when(k, now)) : 'TBC'}</span>`;
+    return `<a class="ov-fx" href="${esc(matchUrl(f))}"><img src="${esc(crestOf(opp))}" alt="" width="24" height="24" onerror="this.style.visibility='hidden'"><span class="ov-fx-name"><b>${esc(teamName(opp))}</b><small>${home ? 'Home' : 'Away'}${f.round ? ` · ${esc(f.round)}` : ''}</small></span>${right}</a>`;
+  }
+  function drawOver(now = new Date()) {
+    renderPitch($('#pitch-ro', box), { ...sheet, players: squad });
+    const name = id => (id != null && byId.get(String(id))?.name) || 'Not set';
+    const preset = Object.keys(PRESETS).find(n => TACTICS.every(t => PRESETS[n][t.key] === sheet.tactics[t.key])) || 'Custom';
+    const kitLabel = sheet.kit && kitsMade[sheet.kit] ? kitName(sheet.kit, kitsMade[sheet.kit]) : 'Automatic';
+    $('#ov-takers', box).innerHTML = [['Formation', sheet.formation], ['Captain', name(sheet.captain)], ['Penalties', name(sheet.penalties)], ['Free kicks', name(sheet.freekicks)], ['Corners', name(sheet.corners)], ['Tactics', preset], ['Kit', kitLabel]]
+      .map(([k, v]) => `<div class="ov-row"><span>${k}</span><b>${esc(v)}</b></div>`).join('');
+    // Where the club stands, its games and its best players.
+    const rows = tableRows(season, { hidden: hiddenIds, now }), me = rows.find(r => r.team.code === club.code);
+    const stand = me ? `<div class="ov-rows"><div class="ov-row"><span>Position</span><b>${ordinal(me.rank)} of ${rows.length}</b></div><div class="ov-row"><span>Points</span><b>${me.pts}</b></div>
+      <div class="ov-row"><span>Played</span><b>${me.p}<small>${me.w}W ${me.d}D ${me.l}L</small></b></div><div class="ov-row"><span>Goals</span><b>${me.gf}–${me.ga}<small>${me.gd > 0 ? '+' : ''}${me.gd}</small></b></div>
+      <div class="ov-row"><span>Form</span>${chipsOf(me.form)}</div></div>` : '<p class="quiet">The table will appear once the season has teams.</p>';
+    const mineFx = (season.fixtures || []).filter(f => !f.test && !f.postponed && kickoff(f) && (f.home === club.code || f.away === club.code)).sort((a, b) => kickoff(a) - kickoff(b));
+    const past = mineFx.filter(f => status(f, season, now) === 'ft' && f.result).slice(-3).reverse(), next = mineFx.filter(f => status(f, season, now) !== 'ft').slice(0, 3);
+    const games = [...next, ...past].map(f => fixtureRow(f, now)).join('') || '<p class="quiet">No matches yet.</p>';
+    const seen = hiddenIds.size ? { ...season, fixtures: season.fixtures.map(f => (hiddenIds.has(f.id) ? { ...f, result: null } : f)) } : season;
+    const tot = totals(seen);
+    const best = squad.map(p => ({ p, t: tot[String(p.id)] })).filter(x => x.t?.apps).sort((a, b) => b.t.rsum / b.t.apps - a.t.rsum / a.t.apps).slice(0, 3);
+    const top = best.length ? best.map(({ p, t }) => `<div class="ov-row"><span class="ov-pl"><i class="pos-${esc(p.position)}">${esc(p.position)}</i>${esc(p.name)}</span><b>${rating(t.rsum / t.apps)}<small>${t.g} G · ${t.a} A</small></b></div>`).join('') : '<p class="quiet">No matches played yet.</p>';
+    $('#ov-cards', box).innerHTML = `<section class="lg-card" aria-label="Standing"><div class="lg-card-head"><h2>Standing</h2></div>${stand}</section>
+      <section class="lg-card ov-games" aria-label="Matches"><div class="lg-card-head"><h2>Matches</h2></div>${games}</section>
+      <section class="lg-card" aria-label="Best players"><div class="lg-card-head"><h2>Best rated</h2></div><div class="ov-rows">${top}</div></section>`;
   }
 
   // ----- drawing -----
@@ -395,7 +455,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
     sheet.bench = benchOf(sheet.lineup, squad);
     if (state === 'saving') { again = true; return; }
     state = saved && JSON.stringify(sheet) === saved ? 'saved' : 'dirty';
-    drawSave(); if (!picking) drawSubmit();
+    drawSave(); if (!picking) drawSubmit(); drawOver();
     clearTimeout(timer);
     if (state === 'dirty') timer = setTimeout(save, 1200);
   }
@@ -514,6 +574,8 @@ async function teamSheet(box, { club, squad, userId, season }) {
 
   box.addEventListener('click', e => {
     const t = e.target;
+    const vw = t.closest('[data-view]');
+    if (vw) { showView(vw.dataset.view); return; }
     const pt = t.closest('[data-ptab]');
     if (pt) { showPanel(pt.dataset.ptab); return; }
     const f = t.closest('[data-f]'), pl = t.closest('.pl'), pr = t.closest('[data-preset]'), st = t.closest('[data-tac]');
@@ -559,7 +621,8 @@ async function teamSheet(box, { club, squad, userId, season }) {
   // Leaving the page: send what's waiting rather than lose it.
   document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'dirty') save(); });
 
-  drawPitch(); drawPlayers(); drawPieces(); drawKit(); drawClear(); drawTactics(); drawSave(); drawMatch(); drawDeadline(); drawLocked(); drawSubmit();
+  drawPitch(); drawPlayers(); drawPieces(); drawKit(); drawClear(); drawTactics(); drawSave(); drawMatch(); drawDeadline(); drawLocked(); drawSubmit(); drawOver();
+  if (location.hash === '#edit') showView('edit');
   if (state === 'new') save();
 
   // The deadline counts down; once one passes, read the deadlines again until the database has locked that week.
