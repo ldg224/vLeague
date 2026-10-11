@@ -4,7 +4,7 @@
 //   signOut()
 //   myProfile()                        -> { role, club, display_name, needs_setup } for the signed-in user, or null
 //   landingPage(profile)               -> where a signed-in user goes: setup.html while their club isn't set up (setup_at null),
-//                                         otherwise overview.html (the whole site since the revamp)
+//                                         otherwise league.html (the whole site since the revamp)
 //   sendPasswordReset(email)           -> emails a link to set-password.html (same result whether or not the account exists)
 //   setPassword(password)              -> sets a new password for the session from an invite or reset link
 //   db()                               -> the Supabase client, for reading and writing tables (row-level security applies)
@@ -91,7 +91,7 @@ export const db = () => sb();
 // Anyone whose club isn't set up yet goes to the setup wizard. Anyone else with a club lands on their club's Home
 // (the league office reaches the Editor from there); an office account without a club goes straight to the Editor.
 export const landingPage = profile => (profile?.needs_setup ? 'setup.html'
-  : 'overview.html');   // the league page is the whole site (website revamp); office accounts reach the Editor from its header
+  : 'league.html');   // the league page is the whole site (website revamp); office accounts reach the Editor from its header
 
 // Supabase answers the same way for unknown emails, so this never tells anyone which accounts exist.
 export async function sendPasswordReset(email) {

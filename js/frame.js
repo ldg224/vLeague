@@ -1,5 +1,5 @@
 // The league page's frame (website revamp, WR-03): the header card (crest, name, season, Club / Settings / Editor) and the
-// row of tabs, modelled on FotMob's league page. Each tab has its own address (overview.html#fixtures), so refresh, the back
+// row of tabs, modelled on FotMob's league page. Each tab has its own address (league.html#fixtures), so refresh, the back
 // button and shared links land on the right tab.
 //   mountFrame(el, { office, draft, crest, onTab }) -> draws the frame into el and calls onTab(id, season) now, on every tab
 //                                                 change and when another season is picked (WR-05)

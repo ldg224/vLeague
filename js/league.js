@@ -1,7 +1,7 @@
 // The league page (website revamp): one FotMob-style page with a header and tabs (js/frame.js). WR-03 builds the frame;
 // each tab's content comes in its own card (the table WR-11 to 14 lives on Overview, Fixtures WR-15 to 17, Overview WR-18 to 21, Stats WR-22/23 (players and teams in one tab),
 // Seasons WR-24, News WR-25, Draft WR-27). Until then a tab shows where its content will go.
-// Local preview (screenshots only, never on the live site): http://localhost:8767/overview.html?preview&club=%23c8102e&theme=light&office
+// Local preview (screenshots only, never on the live site): http://localhost:8767/league.html?preview&club=%23c8102e&theme=light&office
 import { enterPlace, paintClub } from './shell.js';
 import { mountFrame } from './frame.js';
 import { esc, crestUrl } from './member.js';
@@ -18,7 +18,7 @@ if (preview) {
   if (colour) paintClub({ colour });
   ctx = { me: { profile: { role: params.has('office') ? 'office' : 'manager' } }, club: colour ? { colour } : null, main: document.getElementById('main') };
 } else {
-  ctx = await enterPlace('overview');
+  ctx = await enterPlace('league');
 }
 
 document.getElementById('version').textContent = `v${VERSION}`;

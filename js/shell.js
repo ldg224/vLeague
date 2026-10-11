@@ -14,7 +14,7 @@ function drawNav() {
   const nav = document.getElementById('places');
   if (!nav) return;
   nav.setAttribute('aria-label', 'Back to the league');
-  nav.innerHTML = `<a class="places-back" href="overview.html">${icon('arrow-left')}<span>League</span></a>`;
+  nav.innerHTML = `<a class="places-back" href="league.html">${icon('arrow-left')}<span>League</span></a>`;
 }
 
 // Kept so the retired Home and Inbox scripts still load; there is no tab bar to put a count on any more.
@@ -35,7 +35,7 @@ export function paintClub(club) {
 }
 
 // ctx = { me: { user, profile }, club, season, team, prefs, main } or null if the visitor was sent elsewhere.
-// place is 'club' | 'draft' | 'settings' | 'overview' (the page's own file name, used to come back after sign-in).
+// place is 'club' | 'draft' | 'settings' | 'league' (the page's own file name, used to come back after sign-in).
 // club: the Supabase clubs row (null if the account has none). season: the league's season.json (null if it didn't
 // load). team: the season's entry for this club (matched on code; the two stay in step until fixtures move to
 // Supabase in 0.11).

@@ -35,14 +35,14 @@ try {
   useClubs(rows);
   if (user) {
     const back = document.getElementById('back');
-    back.href = 'overview.html'; back.innerHTML = `${icon('arrow-left')} League`;
+    back.href = 'league.html'; back.innerHTML = `${icon('arrow-left')} League`;
     await prefs().catch(() => null);
     const prof = await myProfile().catch(() => null);
     paintClub(rows.find(c => c.code === prof?.club) || null);
   }
   const club = rows.find(c => c.code === code), team = season?.teams.some(t => t.code === code) ? teamOf(season, code) : null;   // teamOf makes up a team for any code
   if (!club && !team) {
-    main.innerHTML = `<div class="tm"><h1 class="tm-name" tabindex="-1">Club not found</h1><p class="empty">There’s no club with the code “${esc(code)}”. <a href="overview.html">See the league</a></p></div>`;
+    main.innerHTML = `<div class="tm"><h1 class="tm-name" tabindex="-1">Club not found</h1><p class="empty">There’s no club with the code “${esc(code)}”. <a href="league.html">See the league</a></p></div>`;
   } else {
     await document.fonts?.ready;   // the shirt numbers are drawn in Oswald
     render(club || { code, name: team.name, colour: team.colour }, team, season, kits[code] || {}, cabinet(hist, code));

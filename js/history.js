@@ -20,7 +20,7 @@ try {
   useClubs(rows);
   if (user) {
     const back = document.getElementById('back');
-    back.href = 'overview.html'; back.innerHTML = `${icon('arrow-left')} League`;
+    back.href = 'league.html'; back.innerHTML = `${icon('arrow-left')} League`;
     await prefs().catch(() => null);
     const prof = await myProfile().catch(() => null);
     paintClub(rows.find(c => c.code === prof?.club) || null);
