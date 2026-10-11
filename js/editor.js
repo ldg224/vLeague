@@ -9,6 +9,7 @@ import { prefs, setPref } from './prefs.js';
 import { playersView, mountPlayers } from './editor-players.js';
 import { fixturesView, mountFixtures } from './editor-fixtures.js';
 import { newsView, mountNews } from './editor-news.js';
+import { instagramView, mountInstagram } from './editor-instagram.js';
 import { historyView, mountHistory } from './editor-history.js';
 import { testView, mountTest } from './editor-test.js';
 import { draftView, mountDraft } from './editor-draft.js';
@@ -77,13 +78,14 @@ function render() {
   const y = scrollY;
   main.innerHTML = `<nav class="ed-tabs" aria-label="Editor">${Object.entries(TABS).map(([k, label]) =>
     `<a href="#${k}" ${k === t ? 'aria-current="page"' : ''}>${label}${k === 'clubs' && pending ? ` <span class="ed-count">${pending}</span>` : ''}</a>`).join('')}</nav>
-    <section id="view">${{ clubs: clubsView, players: playersView, fixtures: fixturesView, news: newsView, draft: draftView, history: historyView, test: testView }[t]()}</section>`;
+    <section id="view">${{ clubs: clubsView, players: playersView, fixtures: fixturesView, news: () => newsView() + instagramView(), draft: draftView, history: historyView, test: testView }[t]()}</section>`;
   if (y) scrollTo(0, y);   // a redraw after an action keeps your place
   if (t === 'players') mountPlayers({ db, esc, explain, clubs: state.clubs });
   if (t === 'fixtures') mountFixtures({ db, esc, explain, clubs: state.clubs });
   if (t === 'test') mountTest({ db, esc, explain, clubs: state.clubs });
   if (t === 'draft') mountDraft({ db, esc, explain, clubs: state.clubs });
   if (t === 'history') mountHistory({ db, esc, explain, clubs: state.clubs });
+  if (t === 'news') mountInstagram({ db, esc, explain });
   if (t === 'news') mountNews({ db, esc, explain, clubs: state.clubs, season: state.season, deadlines: state.deadlines, accounts: state.accounts });
   restoreInputs(main, snap);
 }

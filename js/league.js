@@ -21,6 +21,8 @@ import { spoilerHidden, revealScore, fmtTime } from './prefs.js';
 import { fixturesView, parseSub, roundWidget, rounds } from './league-fixtures.js';
 import { teamOfWeekCard } from './team-of-week.js';
 import { loadPlayers } from './players-data.js';
+import { instagramCard } from './instagram.js';
+import { db } from './auth.js';
 import { winChance, percents } from './match-model.js';
 import { VERSION } from './version.js';
 
@@ -198,14 +200,39 @@ if (ctx) {
     if (did) { sheen(main); scrollTo(0, y); }
     return did;
   };
-  const rerender = (timed = false) => (current ? draw(VIEWS[current[0]](current[2], current[1]), timed) : false);
-
+  // Overview is built in pieces (slots), each painted on its own, so a click on one card (a round arrow, a filter, a Team of the week pick) or a live minute
+  // redraws only that card, and the Instagram embed is never reloaded by them. A card swapped in keeps its silk look (the same style values).
+  const SKELETON = `<div class="lg-cols" data-view="overview"><div class="lg-main"><div class="lg-slot" data-slot="table"></div><div class="lg-slot" data-slot="trio"></div><div class="lg-slot" data-slot="ig"></div></div>`
+    + '<aside class="lg-side"><div class="lg-slot" data-slot="round"></div><div class="lg-slot" data-slot="tw"></div></aside></div>';
+  const overviewParts = () => ({ table: tableHtml(), trio: `<div class="lg-trio">${leaders()}</div>`, round: roundWidget(season, fixturesCtx(), widgetWeek), tw: teamHtml() });
+  let social = null, socialLoaded = false;   // the league's Instagram row (WR-30), read once
+  const igHtml = () => (socialLoaded ? instagramCard(social) : '');
+  const fillSlot = (el, html, timed) => {
+    const looks = [...el.querySelectorAll('.lg-card')].map(c => c.getAttribute('style'));
+    const did = timed ? quietly(() => paint(el, html)) : paint(el, html);
+    if (did) el.querySelectorAll('.lg-card').forEach((c, i) => { if (looks[i]) { c.setAttribute('style', looks[i]); c.dataset.sheen = ''; } });
+    return did;
+  };
+  const patchOverview = (timed = false) => {
+    const cols = main.querySelector('.lg-cols[data-view="overview"]');
+    if (!cols) return false;
+    const y = scrollY;
+    let did = false;
+    for (const [name, html] of Object.entries({ ...overviewParts(), ig: igHtml() })) did = fillSlot(cols.querySelector(`[data-slot="${name}"]`), html, timed) || did;
+    if (did) { sheen(main); scrollTo(0, y); }
+    return did;
+  };
+  const showOverview = () => { paint(main, SKELETON); patchOverview(false); };
+  const rerender = (timed = false) => (!current ? false : current[0] === 'overview' ? patchOverview(timed) : draw(VIEWS[current[0]](current[2], current[1]), timed));
   // Things that arrive a moment after the page (the grounds, the shirt numbers) are drawn in when nobody is mid-tap, trying again a few times if someone is.
   const drawInSoon = () => {
     let tries = 0;
     const put = () => { if (['fixtures', 'overview'].includes(current?.[0]) && !rerender(true) && ++tries < 8) setTimeout(put, 1500); };
     put();
   };
+  // The league's Instagram: read a moment after the page and drawn in without interrupting a tap.
+  (async () => { try { const { data } = await (await db()).from('league_social').select('*').eq('id', 1).maybeSingle(); social = data || null; if (preview && params.get('ig')) social = { ...social, instagram_posts: params.get('ig').split(',').map(c => `https://www.instagram.com/p/${c}/`), followers: 1250, posts: 48 }; } catch { /* the card still shows the follow button */ } socialLoaded = true; drawInSoon(); })();
+
   clubs().then(rows => { stadiums = Object.fromEntries(rows.filter(c => c.stadium).map(c => [c.code, c.stadium])); drawInSoon(); }).catch(() => {});
   if (demo == null) loadPlayers().then(list => { numbers = new Map(list.filter(p => p.number != null).map(p => [String(p.id), p.number])); drawInSoon(); }).catch(() => {});
 
@@ -225,16 +252,12 @@ if (ctx) {
     if (!pill && !all) return;
     if (pill) tableFilter = pill.dataset.tfilter;
     if (all) await revealScore(season.fixtures.filter(f => f.result && spoilerHidden(f, season, tableNow())).map(f => f.id)).catch(() => {});
-    if (current?.[0] === 'fixtures' || (all && current?.[0] === 'overview')) { rerender(); return; }
-    const el = main.querySelector('.lg-table');
-    if (el) {
-      const before = rowTops(el), look = el.getAttribute('style');
-      el.outerHTML = tableHtml();
+    const el = current?.[0] === 'overview' ? main.querySelector('.lg-table') : null, before = el && pill ? rowTops(el) : null;
+    rerender();
+    if (pill) {
       const fresh = main.querySelector('.lg-table');
-      if (look) { fresh.setAttribute('style', look); fresh.dataset.sheen = ''; }   // the same silk and splash, moving on from where they were
-      sheen(main);
-      fresh.querySelector(`[data-tfilter="${tableFilter}"]`)?.focus();
-      reshuffle(fresh, before);
+      fresh?.querySelector(`[data-tfilter="${tableFilter}"]`)?.focus();
+      if (fresh && before) reshuffle(fresh, before);
     }
   });
   // The round menu closes on Escape, a tap elsewhere or a scroll, and the arrow keys move through it.
@@ -254,16 +277,7 @@ if (ctx) {
   setInterval(() => { if (!document.hidden && ['fixtures', 'overview'].includes(current?.[0]) && main.querySelector('.fx-row.is-live')) rerender(true); }, 15000);
 
   const VIEWS = {
-    overview: () => `<div class="lg-cols">
-        <div class="lg-main">
-          ${tableHtml()}
-          <div class="lg-trio">${leaders()}</div>
-        </div>
-        <aside class="lg-side">
-          ${roundWidget(season, fixturesCtx(), widgetWeek)}
-          ${teamHtml()}
-        </aside>
-      </div>`,
+    overview: () => SKELETON,   // filled slot by slot (showOverview, patchOverview)
     fixtures: sub => fixturesHtml(sub),
     stats,
     seasons: () => card('Seasons'),
@@ -278,7 +292,7 @@ if (ctx) {
     // Each view gets the season picked in the header (WR-05); they all show the current one until a past season exists.
     onTab: (id, picked, sub) => {
       current = [id, picked, sub];
-      draw(VIEWS[id](sub, picked));
+      if (id === 'overview') showOverview(); else draw(VIEWS[id](sub, picked));
       // "Back" on a full list returns to the tab it was opened from (Overview or Stats), else to the Stats tab.
       main.querySelector('.sp-back')?.addEventListener('click', e => { if (moved) { e.preventDefault(); history.back(); } });
     },
