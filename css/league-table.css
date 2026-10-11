@@ -1,0 +1,65 @@
+/* The league table card (WR-11 to WR-14): a real table, rows split by hairlines, type from the league page scale.
+   Zones: a coloured stripe beside the position (Finals, Wooden spoon) and a key under the table. Your club's row is tinted in the club colour.
+   Phones: W D L, +/- and Next fold away so # club PL GD PTS and form fit at 360 px; the card scrolls inside itself if it still doesn't. */
+.lg-table { --z-finals: var(--blue-700); --z-spoon: #a8743d; padding-bottom: 8px; }
+:root:not([data-theme="light"]) .lg-table { --z-finals: var(--blue-300); --z-spoon: #c9935a; }
+
+.tb-pills { display: flex; gap: 8px; margin: 0 0 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.tb-pills::-webkit-scrollbar { display: none; }
+.tb-pills button {
+  flex: none; height: 32px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: transparent;
+  color: var(--text); font: 600 var(--fs-s) var(--font); cursor: pointer;
+}
+.tb-pills button[aria-pressed="true"] { background: var(--text-strong); border-color: var(--text-strong); color: var(--surface); }
+.tb-pills button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.tb-hidden { margin: 0 0 8px; color: var(--muted); font-size: var(--fs-s); }
+.tb-hidden button { border: 0; background: none; padding: 0; color: var(--tab-accent, var(--blue-700)); font: 600 var(--fs-s) var(--font); cursor: pointer; text-decoration: underline; }
+
+.tb-scroll { overflow-x: auto; margin: 0 -4px; padding: 0 4px; }
+.tb { width: 100%; border-collapse: collapse; font-size: var(--fs-m); font-variant-numeric: tabular-nums; }
+.tb th, .tb td { padding: 0 6px; height: 46px; text-align: center; border-top: 1px solid var(--line); white-space: nowrap; font-weight: 400; color: var(--text); }
+.tb thead th { height: 34px; border-top: 0; color: var(--muted); font-size: var(--fs-xs); font-weight: 600; }
+.tb abbr { text-decoration: none; }
+.tb .tb-pos { width: 38px; text-align: center; color: var(--muted); font-weight: 600; box-shadow: inset 3px 0 0 transparent; }
+.tb tr[data-zone="finals"] .tb-pos { box-shadow: inset 3px 0 0 var(--z-finals); color: var(--text-strong); }
+.tb tr[data-zone="spoon"] .tb-pos { box-shadow: inset 3px 0 0 var(--z-spoon); color: var(--text-strong); }
+.tb .tb-club { text-align: left; width: 100%; max-width: 0; padding-left: 4px; }
+.tb tbody .tb-club { font-weight: 600; color: var(--text-strong); }
+.tb .tb-club span { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.tb .tb-club b { font-weight: inherit; overflow: hidden; text-overflow: ellipsis; }
+.tb .tb-pts { font-weight: 700; color: var(--text-strong); }
+.tb tr.is-mine td, .tb tr.is-mine th { background: color-mix(in oklab, var(--club, var(--blue-700)) 14%, transparent); }
+.tb tr.is-mine .tb-club b { color: var(--club-accent, var(--text-strong)); }
+
+.tb-form { display: inline-flex; gap: 3px; vertical-align: middle; }
+.tb-form abbr { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 5px; color: #fff; font-size: var(--fs-xs); font-weight: 700; }
+.tb-form .res-W { background: var(--res-w); } .tb-form .res-D { background: var(--res-d); } .tb-form .res-L { background: var(--res-l); }
+.tb-form abbr.is-latest { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 2px; }
+.tb-none { color: var(--faint); }
+.tb-next { display: inline-flex; vertical-align: middle; }
+
+.tb-key { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 4px 6px; padding: 0; list-style: none; color: var(--muted); font-size: var(--fs-s); }
+.tb-key li { display: flex; align-items: center; gap: 8px; }
+.tb-key li::before { content: ""; width: 3px; height: 14px; border-radius: 2px; background: var(--z-finals); }
+.tb-key li[data-zone="spoon"]::before { background: var(--z-spoon); }
+
+@media (max-width: 639px) {
+  .t-wdl, .t-pm, .t-next { display: none; }
+  .tb th, .tb td { padding: 0 4px; }
+  .tb .tb-pos { width: 30px; }
+  .tb-form { gap: 2px; }
+  .tb-form abbr { width: 16px; height: 16px; border-radius: 4px; font-size: 10px; }
+  .tb .tb-club span { gap: 8px; }
+}
+
+/* Small phones (360 to 399 px): everything a little tighter so club names still fit beside the form. */
+@media (max-width: 399px) {
+  .lg-table { padding-inline: 12px; }
+  .tb th, .tb td { padding: 0 3px; }
+  .tb .tb-pos { width: 24px; }
+  .tb .tb-club { padding-left: 2px; }
+  .tb .tb-club span { gap: 6px; }
+  .tb .tb-club .crest { width: 20px; height: 20px; }
+  .tb-form { gap: 2px; }
+  .tb-form abbr { width: 15px; height: 15px; font-size: 9px; }
+}

@@ -14,6 +14,8 @@ import { kitSprite, startDesign } from './kit.js';
 import { countedFixtures, totals, rank, PLAYER_CARDS, TEAM_CARDS } from './season-stats.js';
 import { statCard, statPage, wireStatPage, initialsCrest } from './stat-card.js';
 import { demoSeason } from './demo-season.js';
+import { tableRows, tableCard } from './league-table.js';
+import { spoilerHidden, revealScore } from './prefs.js';
 import { VERSION } from './version.js';
 
 const params = new URLSearchParams(location.search);
@@ -108,10 +110,28 @@ if (ctx) {
     return `${note}<div class="sc-section"><div class="sc-head"><h2 class="sc-title">${team ? 'Team stats' : 'Player stats'}</h2>${toggle}</div>${grid(kind, data)}</div>`;
   };
 
+  // ---- The table (WR-11 to WR-14) ----
+  let tableFilter = 'all';
+  const tableNow = () => (demo != null ? new Date('2027-01-01T00:00:00') : new Date());   // demo matches are dated in the coming days: treat them as played
+  const tableHtml = () => {
+    if (!season) return tableCard([], sctx, { filter: tableFilter });
+    const now = tableNow(), counted = season.fixtures.filter(f => f.result && !f.test && !f.exhibition && !f.stage);
+    const hiddenIds = counted.filter(f => spoilerHidden(f, season, now)).map(f => f.id);
+    return tableCard(tableRows(season, { filter: tableFilter, now, hidden: new Set(hiddenIds) }), { ...sctx, mine: ctx.club?.code }, { filter: tableFilter, hiddenCount: hiddenIds.length });
+  };
+  main.addEventListener('click', async e => {
+    const pill = e.target.closest('[data-tfilter]'), all = e.target.closest('[data-reveal-all]');
+    if (!pill && !all) return;
+    if (pill) tableFilter = pill.dataset.tfilter;
+    if (all) await revealScore(season.fixtures.filter(f => f.result && spoilerHidden(f, season, tableNow())).map(f => f.id)).catch(() => {});
+    const el = main.querySelector('.lg-table');
+    if (el) { el.outerHTML = tableHtml(); main.querySelector(`.lg-table [data-tfilter="${tableFilter}"]`)?.focus(); }
+  });
+
   const VIEWS = {
     overview: () => `<div class="lg-cols">
         <div class="lg-main">
-          ${card('Table')}
+          ${tableHtml()}
           <div class="lg-trio">
             ${card('Top rated')}
             ${card('Top scorers')}

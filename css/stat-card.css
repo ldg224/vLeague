@@ -152,12 +152,12 @@
 .sc-demo b { margin-right: 6px; color: var(--text-strong); }
 .sc-demo code { font: inherit; font-weight: 600; color: var(--text); }
 
-/* Crests (js/places.js crest()): the logo, or the club's initials on its colour when it has none. Same rules as css/places.css. */
-.sc .crest, .sp-banner .crest { position: relative; display: inline-grid; place-items: center; width: var(--s); height: var(--s); flex: none; }
-.sc .crest img, .sp-banner .crest img { width: 100%; height: 100%; object-fit: contain; }
-.sc .crest i, .sp-banner .crest i { display: none; }
-.sc .crest.is-dot i, .sp-banner .crest.is-dot i { font-size: 0; }
-.sc .crest.none i, .sp-banner .crest.none i {
+/* Crests (js/places.js crest()): the logo, or the club's initials on its colour when it has none. Same rules as css/places.css (also used by the table, css/league-table.css). */
+.sc .crest, .sp-banner .crest , .lg-table .crest { position: relative; display: inline-grid; place-items: center; width: var(--s); height: var(--s); flex: none; }
+.sc .crest img, .sp-banner .crest img , .lg-table .crest img { width: 100%; height: 100%; object-fit: contain; }
+.sc .crest i, .sp-banner .crest i , .lg-table .crest i { display: none; }
+.sc .crest.is-dot i, .sp-banner .crest.is-dot i , .lg-table .crest.is-dot i { font-size: 0; }
+.sc .crest.none i, .sp-banner .crest.none i , .lg-table .crest.none i {
   display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--c); color: var(--on, #fff);
   font: 700 calc(var(--s) * .34)/1 var(--font-display); font-style: normal; box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--c) 65%, var(--text));
 }
