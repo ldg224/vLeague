@@ -182,7 +182,7 @@
    one for the same card). Dark theme only: on light the layers are empty. */
 .lg { --sheen: linear-gradient(transparent, transparent), linear-gradient(transparent, transparent); --fabric: linear-gradient(transparent, transparent); }
 :root:not([data-theme="light"]) .lg {
-  /* Under the sheen, white silk (assets/img/fabric.png, made from the user's fabric picture, 0.3 to 2.3% white) so the grey boxes have folds. */
+  /* Under the sheen, white silk (assets/img/fabric.png, made from the user's fabric picture, 0.5 to 3.5% white) so the grey boxes have folds. */
   --fabric: url("../assets/img/fabric.png");
 }
 /* The splash is defined on the card itself: a custom property that uses var() is worked out where it is declared, so declared higher up
