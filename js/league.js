@@ -57,8 +57,9 @@ if (ctx) {
   mountFrame(document.getElementById('frame'), {
     office,
     crest: preview ? params.get('crest') || '' : ctx.club?.crest_path ? crestUrl(ctx.club.crest_path) : '',
-    onTab: id => {
-      main.innerHTML = VIEWS[id]();
+    // Each view gets the season picked in the header (WR-05); they all show the current one until a past season exists.
+    onTab: (id, season) => {
+      main.innerHTML = VIEWS[id](season);
     },
   });
 }

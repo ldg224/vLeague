@@ -1,7 +1,9 @@
 // The league page's frame (website revamp, WR-03): the header card (crest, name, season, Club / Settings / Editor) and the
 // row of tabs, modelled on FotMob's league page. Each tab has its own address (league.html#fixtures), so refresh, the back
 // button and shared links land on the right tab.
-//   mountFrame(el, { office, draft, crest, onTab }) -> draws the frame into el and calls onTab(id) now and on every change
+//   mountFrame(el, { office, draft, crest, onTab }) -> draws the frame into el and calls onTab(id, season) now, on every tab
+//                                                 change and when another season is picked (WR-05)
+//   SEASONS                                    -> the seasons the toggle offers, newest first; the first is the current one
 //   TABS                                       -> the tabs in order
 import { esc } from './member.js';
 import { icon } from './icons.js';
@@ -15,8 +17,9 @@ export const TABS = [
   { id: 'draft', label: 'Draft', when: o => o.draft },
 ];
 
-// One season for now (WR-05 makes this a real choice).
-const SEASON = 'Season 1';
+// Every tab reads the season it's given, so a past season only needs adding here (fixtures have no season column yet:
+// everything in the database is the current season).
+export const SEASONS = [{ id: 1, label: 'Season 1' }];
 
 export function mountFrame(el, { office = false, draft = false, crest = '', onTab } = {}) {
   const tabs = TABS.filter(t => !t.when || t.when({ draft }));
@@ -25,7 +28,7 @@ export function mountFrame(el, { office = false, draft = false, crest = '', onTa
         <img class="lg-crest" src="assets/brand/crest.svg" alt="">
         <div class="lg-name">
           <h1 class="lg-title">v<b>LEAGUE</b></h1>
-          <button type="button" class="lg-season" aria-label="Season: ${esc(SEASON)}">${esc(SEASON)}${icon('chevron-down')}</button>
+          <label class="lg-season"><select aria-label="Season">${SEASONS.map(s => `<option value="${s.id}">${esc(s.label)}</option>`).join('')}</select>${icon('chevron-down')}</label>
         </div>
       </div>
       <nav class="lg-tools" aria-label="Your club and account">
@@ -66,8 +69,13 @@ export function mountFrame(el, { office = false, draft = false, crest = '', onTa
       if (animate) nav.scrollTo({ left: target, behavior: 'smooth' }); else nav.scrollLeft = target;
     }
     document.title = `${tabs.find(t => t.id === id).label} | vLeague`;
-    onTab?.(id);
+    onTab?.(id, season);
   };
+  let season = SEASONS[0];
+  el.querySelector('.lg-season select').addEventListener('change', e => {
+    season = SEASONS.find(s => String(s.id) === e.target.value);
+    onTab?.(current(), season);
+  });
   const relayout = () => place(strip.querySelector('[aria-current]'), false);
   addEventListener('hashchange', () => show(true));
   addEventListener('resize', relayout);

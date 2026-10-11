@@ -83,7 +83,16 @@
   border: 0; border-radius: var(--r-sm); background: none; cursor: pointer;
   font: 500 .875rem var(--font); color: var(--muted);
 }
-.lg-season .ic { width: 16px; height: 16px; }
+.lg-season .ic { width: 16px; height: 16px; pointer-events: none; }
+/* The Seasons toggle (WR-05) is a native select, so phones get their own picker; it looks like plain text with a chevron. */
+.lg-season { position: relative; }
+.lg-season select {
+  appearance: none; -webkit-appearance: none; border: 0; background: none; padding: 0 18px 0 0; margin-right: -18px;
+  font: inherit; color: inherit; cursor: pointer;
+}
+.lg-season select:focus-visible { outline: none; }
+.lg-season:focus-within { outline: 2px solid var(--focus); outline-offset: -2px; }
+.lg-season option { color: var(--text); background: var(--surface); }
 
 .lg-tools { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .lg-tool {
