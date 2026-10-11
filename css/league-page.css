@@ -188,6 +188,33 @@
 .lg-foot a { color: var(--faint); text-decoration: none; }
 
 /* ---------- Phones ---------- */
+/* ---------- The tab bar at the bottom of a phone ----------
+   Under 768 px the row of tabs under the header goes (a row that scrolls sideways hides what's off screen) and the same tabs become a
+   bar fixed to the bottom, icon over label, always in view. The active tab gets a tinted pill behind its icon and a bold label. */
+.lg-bottom { display: none; }
+@media (max-width: 767px) {
+  .lg-tabs { display: none; }
+  .lg { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+  .lg-bottom {
+    position: fixed; z-index: 40; left: 0; right: 0; bottom: 0; display: flex;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--line);
+  }
+  .lg-bottom a {
+    flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 2px 0;
+    color: var(--muted); font: 500 .6875rem/1.2 var(--font); text-decoration: none; -webkit-tap-highlight-color: transparent;
+  }
+  .lg-bi { position: relative; display: grid; place-items: center; width: 56px; height: 30px; border-radius: 999px; transition: background-color .15s ease; }
+  .lg-bi .ic { width: 22px; height: 22px; }
+  .lg-bl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lg-bottom a[aria-current="page"] { color: var(--text-strong); font-weight: 700; }
+  .lg-bottom a[aria-current="page"] .lg-bi { background: color-mix(in oklab, var(--tab-accent) 22%, transparent); }
+  .lg-bottom a[aria-current="page"] .lg-bi .ic { color: var(--tab-accent); stroke-width: 2.25; }
+  .lg-bottom a:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; border-radius: var(--r-sm); }
+  .lg-live-dot { position: absolute; top: 3px; right: 12px; width: 8px; height: 8px; border-radius: 50%; background: var(--res-l); box-shadow: 0 0 0 2px var(--surface); }
+}
+@media (prefers-reduced-motion: reduce) { .lg-bi { transition: none; } }
+.reduce-motion .lg-bi { transition: none; }
+
 @media (max-width: 767px) {
   .lg { padding: 12px 12px max(20px, env(safe-area-inset-bottom)); gap: 12px; }
   .lg-content, .lg-cols, .lg-main, .lg-side, .lg-trio { gap: 12px; }

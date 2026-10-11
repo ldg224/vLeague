@@ -5,17 +5,18 @@
 //                                                 change and when another season is picked (WR-05). A tab address can carry
 //                                                 a part after a slash, league.html#stats/scorers: that is `sub` (WR-10)
 //   SEASONS                                    -> the seasons the toggle offers, newest first; the first is the current one
-//   TABS                                       -> the tabs in order
+//   TABS                                       -> the tabs in order. Wide screens show them in a row under the header; on a phone
+//                                                 (under 768 px) the same tabs are a bar fixed to the bottom, with icons
 import { esc } from './member.js';
 import { icon } from './icons.js';
 
 export const TABS = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'fixtures', label: 'Fixtures' },
-  { id: 'stats', label: 'Stats' },
-  { id: 'seasons', label: 'Seasons' },
-  { id: 'news', label: 'News' },
-  { id: 'draft', label: 'Draft', when: o => o.draft },
+  { id: 'overview', label: 'Overview', icon: 'layout-dashboard' },
+  { id: 'fixtures', label: 'Fixtures', icon: 'calendar-days' },
+  { id: 'stats', label: 'Stats', icon: 'chart-column' },
+  { id: 'seasons', label: 'Seasons', icon: 'trophy' },
+  { id: 'news', label: 'News', icon: 'newspaper' },
+  { id: 'draft', label: 'Draft', icon: 'list-ordered', when: o => o.draft },
 ];
 
 // Every tab reads the season it's given, so a past season only needs adding here (fixtures have no season column yet:
@@ -52,6 +53,13 @@ export function mountFrame(el, { office = false, draft = false, crest = '', onTa
       <div class="lg-tabs-in">${tabs.map(t => `<a href="#${t.id}" data-tab="${t.id}">${esc(t.label)}${t.id === 'draft' ? ' <i class="lg-live">Live</i>' : ''}</a>`).join('')}
         <span class="lg-bar" aria-hidden="true"></span></div>
     </nav>`;
+  // The phone's tab bar, fixed to the bottom of the screen (css/league-page.css shows it under 768 px and hides the row above).
+  // It lives in the body, not the header card, so nothing clips it.
+  const bottom = document.createElement('nav');
+  bottom.className = 'lg-bottom';
+  bottom.setAttribute('aria-label', 'League');
+  bottom.innerHTML = tabs.map(t => `<a href="#${t.id}" data-tab="${t.id}"><span class="lg-bi">${icon(t.icon)}${t.id === 'draft' ? '<i class="lg-live-dot" title="Live"></i>' : ''}</span><span class="lg-bl">${esc(t.label)}</span></a>`).join('');
+  document.body.append(bottom);
 
   const strip = el.querySelector('.lg-tabs-in'), bar = el.querySelector('.lg-bar');
   const here = () => {
@@ -67,9 +75,9 @@ export function mountFrame(el, { office = false, draft = false, crest = '', onTa
   const show = animate => {
     const { id, sub } = here();
     let active = null;
-    for (const a of strip.querySelectorAll('a')) {
+    for (const a of [...strip.querySelectorAll('a'), ...bottom.querySelectorAll('a')]) {
       const on = a.dataset.tab === id;
-      if (on) { a.setAttribute('aria-current', 'page'); active = a; } else a.removeAttribute('aria-current');
+      if (on) { a.setAttribute('aria-current', 'page'); if (strip.contains(a)) active = a; } else a.removeAttribute('aria-current');
     }
     place(active, animate);
     // On a phone the row scrolls sideways: keep the active tab in view.
