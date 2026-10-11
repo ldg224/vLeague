@@ -1,7 +1,7 @@
 // Shared start-up for the signed-in pages behind the league page's header buttons. Each page calls enterPlace() once: it signs the
 // visitor in (or sends them on), wires the top bar and footer, paints the club's colour and band, draws the nav, and
 // loads the club row, the league data and the account's settings together.
-import { onColour, accentFor, glowFor } from './club-colour.js';
+import { onColour, accentFor, glowFor, topoFor } from './club-colour.js';
 import { enter, chrome, safeColour, esc } from './member.js';
 import { prefs } from './prefs.js';
 import { db } from './auth.js';
@@ -30,6 +30,7 @@ export function paintClub(club) {
   // The accent shade for each theme (WR-03); css picks the one for the current theme.
   s.setProperty('--club-accent-dark', accentFor(colour, 'dark'));
   s.setProperty('--club-accent-light', accentFor(colour, 'light'));
+  s.setProperty('--topo-o', topoFor(colour));   // the contour lines' strength in dark mode: stronger on a very dark colour
   s.setProperty('--club-glow', glowFor(colour));   // the header panel's glow: lifted when the colour is too dark to shine
   document.body.classList.add('themed');
   document.getElementById('band')?.classList.add('on');

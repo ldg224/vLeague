@@ -67,3 +67,10 @@ export function glowFor(c) {
   }
   return fromHsl(h, sat, 0.9);
 }
+
+// How strong the contour lines are in dark mode: the darker the club colour (and so the page's tinge), the stronger, so they show on SKS's navy
+// without shouting on a red or yellow club. .13 for near-black down to .06 from luminance 0.12 up (the glow's threshold).
+export function topoFor(c) {
+  const l = isHex(c) ? luminance(c) : GLOW_MIN, t = Math.min(1, l / GLOW_MIN);
+  return +(0.13 - 0.07 * t).toFixed(3);
+}
