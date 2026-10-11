@@ -39,22 +39,24 @@
   mix-blend-mode: overlay; opacity: .55;
 }
 .lg.has-club .lg-head .lg-title { color: #fff; }
-.lg.has-club .lg-head .lg-season { color: rgba(255, 255, 255, .72); }
+.lg.has-club .lg-head .lg-season-btn { background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .24); color: #fff; }
+.lg.has-club .lg-head .lg-season-btn .lg-season-live, .lg.has-club .lg-head .lg-season-btn > .ic { color: rgba(255, 255, 255, .72); }
+.lg.has-club .lg-head .lg-season-btn .lg-season-live::before { background: var(--blue-300); box-shadow: 0 0 0 3px rgba(100, 181, 246, .3); }
 .lg.has-club .lg-head .lg-tool { border-color: rgba(255, 255, 255, .22); color: #fff; }
 .lg.has-club .lg-head .lg-tool .ic { color: rgba(255, 255, 255, .8); }
 
 .lg.has-club .lg-head :focus-visible { outline-color: #fff; }
 @media (hover: hover) and (pointer: fine) {
   .lg.has-club .lg-head .lg-tool:not(.is-club):hover { background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .4); }
-  .lg.has-club .lg-head .lg-season:hover { color: #fff; background: rgba(255, 255, 255, .1); }
+  .lg.has-club .lg-head .lg-season-btn:hover { background: rgba(255, 255, 255, .16); border-color: rgba(255, 255, 255, .4); }
 }
 .lg.has-club .lg-tool.is-club { background: var(--club); border-color: transparent; color: var(--on-club); }
 .lg.has-club .lg-tool.is-club .ic { color: currentColor; }
 /* The Club button on the club panel: the club's colour, with the crest filling its left side. */
 .lg.has-club .lg-head .lg-tool.is-club {
-  gap: 8px; padding: 0 16px 0 3px; background: var(--club); border-color: rgba(255, 255, 255, .28); color: var(--on-club);
+  gap: 8px; padding: 0 16px 0 8px; background: var(--club); border-color: rgba(255, 255, 255, .28); color: var(--on-club);
 }
-.lg.has-club .lg-head .lg-tool.is-club .lg-tool-crest { width: 34px; height: 34px; }
+.lg.has-club .lg-head .lg-tool.is-club .lg-tool-crest { width: 26px; height: 26px; }
 .lg.has-club .lg-head .lg-tool.is-club > .ic { width: 22px; height: 22px; margin-left: 8px; color: currentColor; }
 
 
@@ -78,21 +80,49 @@
 .font-old .lg-title { font-stretch: normal; font-weight: 500; font-size: 2rem; }
 .font-old .lg-title b { font-weight: 700; }
 .font-old .lg-card-head h2 { font: 600 1.1875rem/1.3 var(--font); font-stretch: normal; text-transform: none; }
-.lg-season {
-  display: inline-flex; align-items: center; gap: 2px; margin-left: -6px; padding: 4px 6px;
-  border: 0; border-radius: var(--r-sm); background: none; cursor: pointer;
-  font: 500 .875rem var(--font); color: var(--muted);
+/* ---------- Seasons toggle (WR-05) ----------
+   A pill under the wordmark: the season in small expanded capitals and an "In progress" marker with a blue dot. It opens a
+   menu card (one of the few things allowed a shadow, since it floats) listing every season, the chosen one ticked. */
+.lg-season { margin-top: 6px; }
+.lg-season-btn {
+  display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px 0 12px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--surface-sunk); color: var(--text); cursor: pointer;
+  font: 500 .75rem/1 var(--font);
 }
-.lg-season .ic { width: 16px; height: 16px; pointer-events: none; }
-/* The Seasons toggle (WR-05) is a native select, so phones get their own picker; it looks like plain text with a chevron. */
-.lg-season { position: relative; }
-.lg-season select {
-  appearance: none; -webkit-appearance: none; border: 0; background: none; padding: 0 18px 0 0; margin-right: -18px;
-  font: inherit; color: inherit; cursor: pointer;
+.lg-season-name { font: 800 .75rem/1 var(--font-display); font-stretch: 125%; text-transform: uppercase; letter-spacing: .02em; }
+.lg-season-live { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font: 500 .75rem/1 var(--font); }
+.lg-season-live::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--brand);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 25%, transparent);
 }
-.lg-season select:focus-visible { outline: none; }
-.lg-season:focus-within { outline: 2px solid var(--focus); outline-offset: -2px; }
-.lg-season option { color: var(--text); background: var(--surface); }
+.lg-season-btn > .ic { width: 16px; height: 16px; color: var(--muted); transition: transform .15s ease; }
+.lg-season-btn[aria-expanded="true"] > .ic { transform: rotate(180deg); }
+
+.lg-season-menu {
+  position: fixed; z-index: 50; width: 260px; max-width: calc(100vw - 24px); padding: 6px;
+  background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: var(--r-lg);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .28);
+}
+.lg-season-menu[hidden] { display: none; }
+.lg-season-head { margin: 0; padding: 8px 10px 6px; font: 600 .75rem/1 var(--font); color: var(--muted); }
+.lg-season-menu [data-season], .lg-season-all {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 10px;
+  border: 0; border-radius: var(--r-sm); background: none; color: var(--text); text-align: left; cursor: pointer;
+  font: 500 .875rem var(--font); text-decoration: none;
+}
+.lg-season-menu [data-season] .lg-season-name { font-size: .8125rem; }
+.lg-season-menu [data-season] .ic { margin-left: auto; width: 18px; height: 18px; color: var(--brand); visibility: hidden; }
+.lg-season-menu [aria-checked="true"] { background: color-mix(in oklab, var(--brand) 10%, transparent); }
+.lg-season-menu [aria-checked="true"] .ic { visibility: visible; }
+.lg-season-all { margin-top: 4px; border-top: 1px solid var(--line); border-radius: 0 0 var(--r-sm) var(--r-sm); color: var(--brand); }
+.lg-season-all .ic { margin-left: auto; width: 16px; height: 16px; }
+.lg-season-menu :focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+@media (hover: hover) and (pointer: fine) {
+  .lg-season-btn:hover { border-color: color-mix(in oklab, var(--line), var(--text) 25%); }
+  .lg-season-menu [data-season]:hover, .lg-season-all:hover { background: var(--surface-hover); }
+}
+@media (prefers-reduced-motion: reduce) { .lg-season-btn > .ic { transition: none; } }
+.reduce-motion .lg-season-btn > .ic { transition: none; }
 
 .lg-tools { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .lg-tool {
@@ -174,8 +204,8 @@
 @media (max-width: 479px) {
   .lg-tools { width: 100%; flex-wrap: nowrap; }
   .lg-tool { flex: 1 1 0; justify-content: center; min-width: 0; padding: 0 8px; }
-  .lg.has-club .lg-head .lg-tool.is-club { padding: 0 12px 0 2px; justify-content: flex-start; }
-  .lg.has-club .lg-head .lg-tool.is-club .lg-tool-crest { width: 30px; height: 30px; }
+  .lg.has-club .lg-head .lg-tool.is-club { padding: 0 12px 0 6px; justify-content: flex-start; }
+  .lg.has-club .lg-head .lg-tool.is-club .lg-tool-crest { width: 22px; height: 22px; }
 }
 /* The three stat-leader cards sit side by side in a narrow column: a smaller title so "TOP SCORERS" stays on one line. */
 .lg-trio .lg-card-head h2 { font-size: .9375rem; }
