@@ -237,17 +237,20 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
           <td class="c-act">${code ? `<button class="dr-b" data-add="${esc(p.id)}" aria-label="${q.has(p.id) ? 'In your queue' : `Add ${esc(p.name)} to your queue`}"${q.has(p.id) ? ' disabled' : ''}>${q.has(p.id) ? `${icon('check')}<span class="dr-bt">Queued</span>` : `${icon('plus')}<span class="dr-bt">Queue</span>`}</button>` : ''}${myTurn() ? `<button class="dr-b pick" data-pick="${esc(p.id)}"${blocked(p) ? ` disabled title="${esc(blocked(p))}"` : ''}>Pick</button>` : ''}</td></tr>`, 'No players match.')}</section></div></div>`;
     }
 
+    // Team values: a box per club, up to six across, each with its total against the cap and every player it has drafted.
+    const short = n => (n >= 1000 ? `$${(n / 1000).toFixed(n % 1000 ? 1 : 0)}K` : money(n));
     function valuesTab() {
       const by = new Map();
       for (const p of players) if (p.team) { if (!by.has(p.team)) by.set(p.team, []); by.get(p.team).push(p); }
       const clubs = [...by.entries()].map(([c, ps]) => ({ c, ps: ps.sort((a, b) => b.value - a.value), total: ps.reduce((s, p) => s + p.value, 0) }))
         .sort((a, b) => (a.c === code ? -1 : b.c === code ? 1 : b.total - a.total));
-      const row = ({ c, ps, total }) => `<details class="dr-team${c === code ? ' me' : ''}${total > CAP ? ' over' : ''}"${c === code ? ' open' : ''}><summary>${crest(c, 32)}
-          <span class="dr-tn"><b>${esc(nameOf(c))}</b><small>${ps.length} player${ps.length === 1 ? '' : 's'}</small></span>
-          <span class="dr-tbar" aria-hidden="true"><i style="width:${Math.min(100, total / CAP * 100).toFixed(1)}%"></i></span><span class="dr-tv">${money(total)}</span>${icon('chevron-down')}</summary>
-        <ul class="dr-list">${ps.map(p => playerRow(p)).join('')}</ul></details>`;
+      const box = ({ c, ps, total }) => `<article class="dr-tbox${c === code ? ' me' : ''}${total > CAP ? ' over' : ''}">
+          <header class="dr-thead">${crest(c, 28)}<b>${esc(nameOf(c))}</b></header>
+          <p class="dr-tsum"><b>${money(total)}</b><span>${ps.length} player${ps.length === 1 ? '' : 's'}</span></p>
+          <span class="dr-tbar" role="img" aria-label="${money(total)} of the ${money(CAP)} cap"><i style="width:${Math.min(100, total / CAP * 100).toFixed(1)}%"></i></span>
+          <ol class="dr-tlist">${ps.map(p => `<li><span class="pos pos-${esc(p.position)}">${esc(p.position)}</span><button class="dr-name" data-player="${esc(p.id)}" aria-label="${esc(p.name)}">${(([f, ...r]) => (r.length ? `<span class="dr-fn">${esc(f)} </span>${esc(r.join(' '))}` : esc(f)))(String(p.name).split(' '))}</button><span class="dr-tval">${short(p.value || 0)}</span></li>`).join('')}</ol></article>`;
       return `<section class="lg-card dr-teamscard"><div class="lg-card-head"><h2>Team values</h2><span class="dr-count">Cap ${money(CAP)} a week</span></div>`
-        + `<div class="dr-teams">${clubs.map(row).join('') || '<div class="sc-empty"><b>No picks yet</b><span>Each club’s squad and what it costs appear here as the draft goes.</span></div>'}</div></section>`;
+        + `${clubs.length ? `<div class="dr-teams">${clubs.map(box).join('')}</div>` : '<div class="sc-empty"><b>No picks yet</b><span>Each club’s squad and what it costs appear here as the draft goes.</span></div>'}</section>`;
     }
 
     const pageHtml = autoOpen => `<div class="draft">${head()}<div class="dr-bar-row"><nav class="dr-tabs sc-toggle" aria-label="Draft">${TABS.map(([id, l]) => `<button type="button" data-tab="${id}" aria-pressed="${tab === id}">${l}</button>`).join('')}</nav><button class="dr-help" data-tour title="A step-by-step guide to this page" aria-label="How it works">${icon('circle-help')}<span>How it works</span></button></div>

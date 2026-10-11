@@ -356,3 +356,25 @@
 .lg .tour-btns button { font: 600 var(--fs-m) var(--font); }
 .lg .tour-next { border-color: transparent; background: var(--brand-grad, var(--brand)); color: #fff; }
 .lg .tour-spot { animation: none; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .7), 0 0 0 2px var(--brand); }
+
+/* ---------- team values as boxes, up to six across (user, 11 Oct 2026: condense the list) ---------- */
+.lg-draft .dr-teams { margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(188px, 1fr)); gap: 12px; }
+.lg-draft .dr-teamscard { padding-bottom: 16px; }
+.dr-tbox { display: grid; align-content: start; gap: 8px; min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-sunk); }
+.dr-tbox.me { border-color: color-mix(in oklab, var(--club-accent, var(--brand)) 70%, var(--line)); background: color-mix(in oklab, var(--club, var(--brand)) 8%, var(--surface-sunk)); }
+.dr-thead { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.dr-thead .crest { flex: none; }
+.dr-thead b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-strong); font: 600 var(--fs-m) var(--font); }
+.dr-tbox.me .dr-thead b { color: var(--club-accent, var(--brand)); }
+.dr-tsum { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 0; }
+.dr-tsum b { color: var(--text-strong); font: 700 var(--fs-m) var(--font); font-variant-numeric: tabular-nums; }
+.dr-tsum span { color: var(--muted); font: 400 var(--fs-xs) var(--font); }
+.dr-tbox.over .dr-tsum b { color: var(--res-l); }
+.dr-tbox .dr-tbar { display: block; height: 4px; }
+.dr-tlist { list-style: none; margin: 4px 0 0; padding: 0; }
+.dr-tlist li { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 6px; min-height: 28px; border-top: 1px solid var(--line); }
+.dr-tlist li:first-child { border-top: 0; }
+.dr-tlist .pos { color: var(--pc, var(--muted)); font: 700 var(--fs-xs) var(--font); }
+.dr-tlist .dr-name { font: 400 var(--fs-s) var(--font); color: var(--text); }
+.dr-tval { color: var(--muted); font: 400 var(--fs-xs) var(--font); font-variant-numeric: tabular-nums; }
+@media (max-width: 767px) { .lg-draft .dr-teams { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .dr-tbox { padding: 10px; } .dr-tlist .dr-fn { display: none; } }
