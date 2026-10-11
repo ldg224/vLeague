@@ -18,6 +18,7 @@ import { demoSeason } from './demo-season.js';
 import { tableRows, tableCard, rowTops, reshuffle } from './league-table.js';
 import { spoilerHidden, revealScore, fmtTime } from './prefs.js';
 import { fixturesView, parseSub } from './league-fixtures.js';
+import { winChance, percents } from './match-model.js';
 import { VERSION } from './version.js';
 
 const params = new URLSearchParams(location.search);
@@ -33,7 +34,7 @@ if (preview) {
   if (params.get('font') === 'old') document.body.classList.add('font-old');
   const colour = params.get('club');
   if (colour) paintClub({ colour });
-  ctx = { me: { profile: { role: params.has('office') ? 'office' : 'manager' } }, club: colour ? { colour } : null, main: document.getElementById('main') };
+  ctx = { me: { profile: { role: params.has('office') ? 'office' : 'manager' } }, club: colour ? { colour, code: params.get('mine') || undefined } : null, main: document.getElementById('main') };
 } else {
   ctx = await enterPlace('league');
 }
@@ -136,10 +137,17 @@ if (ctx) {
   };
   // ---- The Fixtures tab (WR-15 to WR-17) ----
   let current = null;   // the tab on screen: [id, picked, sub]
+  let stadiums = null;   // club code -> ground, read once from the clubs table
   const fixturesHtml = sub => {
     const now = tableNow(), { mode, arg } = parseSub(sub);
     const hidden = new Set(season ? season.fixtures.filter(f => f.result && !f.test && spoilerHidden(f, season, now)).map(f => f.id) : []);
-    return fixturesView(season, { ...sctx, now, hidden, mine: ctx.club?.code, time: fmtTime }, { mode, arg });
+    // The win chance never sees a result the viewer has hidden, so it can't give one away.
+    const seen = hidden.size ? { ...season, fixtures: season.fixtures.map(f => (hidden.has(f.id) ? { ...f, result: null } : f)) } : season, memo = new Map();
+    const chance = fx => {
+      if (!memo.has(fx.id)) { try { const [h, d, a] = percents(winChance(seen, fx, { now })); memo.set(fx.id, { h, d, a }); } catch { memo.set(fx.id, null); } }
+      return memo.get(fx.id);
+    };
+    return fixturesView(season, { ...sctx, now, hidden, mine: ctx.club?.code, time: fmtTime, chance, venue: code => stadiums?.[code] || '' }, { mode, arg });
   };
   const rerender = () => {
     if (!current) return;
@@ -148,6 +156,8 @@ if (ctx) {
     sheen(main);
     scrollTo(0, y);
   };
+
+  clubs().then(rows => { stadiums = Object.fromEntries(rows.filter(c => c.stadium).map(c => [c.code, c.stadium])); if (current?.[0] === 'fixtures') rerender(); }).catch(() => {});
 
   main.addEventListener('click', async e => {
     const pill = e.target.closest('[data-tfilter]'), all = e.target.closest('[data-reveal-all]'), go2 = e.target.closest('[data-fxgo]');

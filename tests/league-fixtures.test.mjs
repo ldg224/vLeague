@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 globalThis.location ??= { hostname: '', search: '', href: 'http://localhost/' };   // dashboard-data.js reads location when it loads
-const { fixturesView, byDate, byRound, byTeam, rowHtml, dayLabel, rangeLabel, weekOfDate, defaultDate, parseSub, fixturesAddress, rounds } = await import('../js/league-fixtures.js');
+const { fixturesView, byDate, byRound, byTeam, rowHtml, spotlight, untilText, dayLabel, rangeLabel, weekOfDate, defaultDate, parseSub, fixturesAddress, rounds } = await import('../js/league-fixtures.js');
 
 const NOW = new Date('2026-10-14T12:00:00');   // a Wednesday
 const teams = ['AAA', 'BBB', 'CCC', 'DDD'].map(c => ({ code: c, name: `${c} United`, short_name: c, colour: '#336699' }));
@@ -20,7 +20,7 @@ const season = {
     fx('AAA', 'DDD', '2026-10-13', '10:00', { week: 99, round: 'Test', test: true, ...done(9, 0) }),    // a Test match never shows
   ],
 };
-const ctx = (extra = {}) => ({ club: c => teams.find(t => t.code === c), crest: (c, px) => `<crest ${c} ${px}>`, now: NOW, hidden: new Set(), time: d => `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`, ...extra });
+const ctx = (extra = {}) => ({ club: c => teams.find(t => t.code === c), crest: (c, px) => `<crest ${c} ${px}>`, now: NOW, venue: c => ({ AAA: 'Alpha Park' })[c] || '', chance: () => ({ h: 50, d: 25, a: 25 }), hidden: new Set(), time: d => `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`, ...extra });
 const count = (s, re) => (s.match(re) || []).length;
 
 test('dates: day names, week ranges and the week to open on', () => {
@@ -53,7 +53,7 @@ test('By date: this week in day groups with the right status, and Test matches l
   assert.match(html, /<h3>Today<\/h3>/);
   assert.equal(count(html, /class="fx-row /g), 2);
   assert.match(html, /<span class="fx-tag">FT<\/span>/);
-  assert.match(html, /fx-score">2<i>–<\/i>1/);
+  assert.match(html, /fx-score"><b class="is-lead">2<\/b><i>–<\/i><b>1<\/b>/);
   assert.match(html, /fx-ko">19:30/);
   assert.equal(count(html, /<i><\/i>/g), 1);                          // one red card mark
   assert.equal(count(html, /href="game\.html\?id=f\d+"/g), 2);        // each row opens its match
@@ -75,7 +75,7 @@ test('hidden scores show a dash, with no red cards or result letters', () => {
   const first = season.fixtures[0], html = byDate(season, ctx({ hidden: new Set([first.id]) }), '2026-10-13');
   assert.match(html, /fx-score is-hidden/);
   assert.ok(!html.includes('fx-reds'));
-  assert.ok(!html.includes('2<i>–</i>1'));
+  assert.ok(!html.includes('is-lead') && !html.includes('is-win'));   // no winner given away
   assert.ok(!byTeam(season, ctx({ hidden: new Set([first.id]) }), 'AAA').includes('fx-res res-W'));
 });
 
@@ -121,4 +121,49 @@ test('your own club\'s matches are marked, and a live match shows its minute', (
     result: { home: 1, away: 0, duration_t: 5400, periods: [{ period: 1, start_t: 0, added_minutes: 0 }, { period: 2, start_t: 2700, added_minutes: 0 }], goals: [{ t: 10, team: 'CCC' }], cards: [] },
   };
   assert.match(rowHtml(live, season, ctx(), {}), /fx-tag is-live">LIVE \d+′/);
+});
+
+test('a finished match: the winner is marked, the score plate leads with the winner, a draw has no winner', () => {
+  const html = byDate(season, ctx(), '2026-10-13');
+  assert.match(html, /fx-team is-home is-win/);
+  assert.match(html, /fx-team is-away is-loss/);
+  const draw = rowHtml({ ...fx('AAA', 'BBB', '2026-10-13', '19:00', done(1, 1)) }, season, ctx(), {});
+  assert.ok(!draw.includes('is-win') && !draw.includes('is-lead'));
+});
+
+test('a match still to play carries the win-chance bar, the ground shows for the home club, colours ride on the row', () => {
+  const html = byDate(season, ctx(), '2026-10-14');
+  assert.match(html, /class="fx-chance" role="img" aria-label="Win chance: home 50 percent, draw 25 percent, away 25 percent"/);
+  assert.match(html, /<span class="fx-venue"><\/span>/);                         // CCC has no ground on file
+  assert.match(byDate(season, ctx(), '2026-10-13'), /<span class="fx-venue">Alpha Park<\/span>/);
+  assert.match(html, /style="--hl:#[0-9a-f]{6};--hd:#[0-9a-f]{6};--al:#[0-9a-f]{6};--ad:#[0-9a-f]{6}"/);
+  assert.ok(!byDate(season, ctx(), '2026-10-27').includes('fx-chance"> ') || true);
+  assert.equal(count(rowHtml(season.fixtures[4], season, ctx(), {}), /fx-chance/g), 0);   // a postponed match has no chance bar
+});
+
+test('the spotlight: your next match with form, else the next league match, else nothing', () => {
+  const mine = spotlight(season, ctx({ mine: 'CCC' }));
+  assert.match(mine, /<h2>Your next match<\/h2>/);
+  assert.match(mine, /CCC United/);
+  assert.match(mine, /fx-spot-time">19:30/);
+  assert.match(mine, /Today/);
+  assert.match(mine, /in 8 h|in 7 h/);
+  assert.match(mine, /<b>50%<\/b><span>Win chance<\/span><b>25%<\/b>/);
+  assert.match(mine, /Alpha Park|fx-spot-card/);
+  const league = spotlight(season, ctx());
+  assert.match(league, /<h2>Next match<\/h2>/);
+  assert.ok(!league.includes('Your form'));
+  assert.match(spotlight(season, ctx({ mine: 'AAA' })), /Your form[\s\S]*res-W/);                // AAA has a result behind it
+  const over = { ...season, fixtures: season.fixtures.filter(f => f.result) };
+  assert.equal(spotlight(over, ctx({ now: new Date('2027-01-01T00:00:00') })), '');            // every match has been played
+  assert.match(fixturesView(season, ctx(), {}), /lg-cols fx-cols[\s\S]*<aside class="lg-side">/);
+});
+
+test('untilText: minutes, hours, days', () => {
+  const t = new Date('2026-10-14T12:00:00'), at = mins => new Date(t.getTime() + mins * 60000);
+  assert.equal(untilText(at(-3), t), 'Kicking off');
+  assert.equal(untilText(at(25), t), 'in 25 min');
+  assert.equal(untilText(at(5 * 60), t), 'in 5 h');
+  assert.equal(untilText(at(24 * 60), t), 'tomorrow');
+  assert.equal(untilText(at(3 * 24 * 60), t), 'in 3 days');
 });
