@@ -5,6 +5,9 @@
 //                                                 change and when another season is picked (WR-05). A tab address can carry
 //                                                 a part after a slash, league.html#stats/scorers: that is `sub` (WR-10)
 //   mountFrame returns { setBadge(tabId, n) }: a small count on a tab (the News tab's unread posts); 0 or less removes it
+//   mountSubFrame(el, { office, crest, here, title }) -> the same header card for the pages behind the header buttons (My club, Settings, Kits):
+//                                                 the Club or Settings button is the current one (here: 'club' | 'settings'), and a row with a way back to
+//                                                 the league replaces the tabs
 //   SEASONS                                    -> the seasons the toggle offers, newest first; the first is the current one
 //   TABS                                       -> the tabs in order. Wide screens show them in a row under the header; on a phone
 //                                                 (under 768 px) the same tabs are a bar fixed to the bottom, with icons
@@ -164,4 +167,25 @@ export function mountFrame(el, { office = false, draft = false, crest = '', onTa
     relayout();
   };
   return { setBadge };
+}
+
+// The pages behind the header buttons (WR-26): the same header card as the league page, with the page's name where the season pill sits and a back link to
+// the league in place of the tab row (which would make no sense here). The button of the page you are on is marked as current.
+export function mountSubFrame(el, { office = false, crest = '', here = 'club', title = '' } = {}) {
+  const tool = (id, href, inner, extra = '') => `<a class="lg-tool${extra}" href="${href}"${here === id ? ' aria-current="page"' : ''}>${inner}</a>`;
+  el.innerHTML = `<div class="lg-head">
+      <div class="lg-id">
+        <img class="lg-crest" src="assets/brand/crest.svg" alt="">
+        <div class="lg-name">
+          <h1 class="lg-title">v<b>LEAGUE</b></h1>
+          ${title ? `<p class="lg-page">${esc(title)}</p>` : ''}
+        </div>
+      </div>
+      <nav class="lg-tools" aria-label="Your club and account">
+        ${tool('club', 'club.html', `${crest ? `<img class="lg-tool-crest" src="${esc(crest)}" alt="" onerror="this.replaceWith(document.createRange().createContextualFragment(this.dataset.alt))" data-alt="${esc(icon('shield'))}">` : icon('shield')}<span>Club</span>`, ' is-club')}
+        ${tool('settings', 'settings.html', `${icon('settings-2')}<span>Settings</span>`)}
+        ${office ? tool('editor', 'editor.html', `${icon('pencil')}<span>Editor</span>`) : ''}
+      </nav>
+    </div>
+    <nav class="lg-backbar" aria-label="Back"><a class="lg-backlink" href="league.html">${icon('arrow-left')}<span>League</span></a></nav>`;
 }

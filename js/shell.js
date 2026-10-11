@@ -2,11 +2,12 @@
 // visitor in (or sends them on), wires the top bar and footer, paints the club's colour and band, draws the nav, and
 // loads the club row, the league data and the account's settings together.
 import { onColour, accentFor, glowFor, topoFor } from './club-colour.js';
-import { enter, chrome, safeColour, esc } from './member.js';
+import { enter, chrome, safeColour, esc, crestUrl } from './member.js';
 import { prefs } from './prefs.js';
 import { db } from './auth.js';
 import { loadSeason } from './dashboard-data.js';
 import { icon } from './icons.js';
+import { mountSubFrame } from './frame.js';
 
 // The old menu (Home, My club, Inbox, Matches, League, Draft, Settings) is gone (WR-06): the league page is the whole site and
 // its tabs do those jobs. The pages behind its header buttons (My club, Settings, Kits, Draft) keep one way back.
@@ -36,6 +37,15 @@ export function paintClub(club) {
   document.getElementById('band')?.classList.add('on');
 }
 
+// The pages behind the header buttons (WR-26) have an empty <header id="frame"> and the league page's look (body.lg): fill it with the header card.
+const PAGE_TITLES = { club: "My club" };   // (Settings has its own big title, so no name under the wordmark)
+function drawSubFrame(place, me, club) {
+  const el = document.getElementById('frame');
+  if (!el || place === 'league') return;
+  document.body.classList.toggle('has-club', Boolean(club));
+  mountSubFrame(el, { office: me?.profile?.role === 'office', crest: club?.crest_path ? crestUrl(club.crest_path) : '', here: place === 'settings' ? 'settings' : 'club', title: document.body.dataset.title || PAGE_TITLES[place] || '' });
+}
+
 // ctx = { me: { user, profile }, club, season, team, prefs, main } or null if the visitor was sent elsewhere.
 // place is 'club' | 'draft' | 'settings' | 'league' (the page's own file name, used to come back after sign-in).
 // club: the Supabase clubs row (null if the account has none). season: the league's season.json (null if it didn't
@@ -44,6 +54,14 @@ export function paintClub(club) {
 export async function enterPlace(place) {
   chrome();
   drawNav();
+  // Localhost only, for looking at the header and the page's frame without signing in (screenshots): ?preview&club=%23c8102e&office
+  const q = new URLSearchParams(location.search);
+  if (['localhost', '127.0.0.1'].includes(location.hostname) && q.has('preview')) {
+    const club = q.get('club') ? { code: q.get('mine') || 'XXX', name: 'Preview club', colour: q.get('club') } : null, me = { user: {}, profile: { role: q.has('office') ? 'office' : 'manager', club: club?.code } };
+    if (q.get('theme')) document.documentElement.dataset.theme = q.get('theme');
+    paintClub(club); drawSubFrame(place, me, club);
+    return { me, club, season: null, team: null, prefs: {}, main: document.getElementById('main') };
+  }
   const me = await enter(`${place}.html`);
   if (!me) return null;
   const code = me.profile?.club;
@@ -53,6 +71,7 @@ export async function enterPlace(place) {
     prefs(),
   ]);
   paintClub(club);
+  drawSubFrame(place, me, club);
   const team = club && season ? season.teams.find(t => t.code === club.code) || null : null;
   return { me, club, season, team, prefs: settings, main: document.getElementById('main') };
 }

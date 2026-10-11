@@ -318,3 +318,20 @@
 @keyframes lg-silk-slide { from { background-position: 100% 100%; } to { background-position: 0% 0%; } }
 @keyframes lg-silk-breathe { from { background-size: 135% 135%; } to { background-size: 150% 150%; } }
 @media (prefers-reduced-motion: reduce) { .lg.topo-ready .lg-card::before { animation: none; background-position: 50% 50%; } :root:not([data-theme="light"]) .lg-card { animation: none; --gx: var(--gx0, 20%); --gy: var(--gy0, 20%); } }
+
+/* ---------- The pages behind the header buttons (WR-26): My club, Settings, Kits ----------
+   The same header card; the page's name sits under the wordmark, the button of the page you are on is marked, and a back row replaces the tabs. */
+.lg-page { margin: 6px 0 0; color: var(--muted); font: 600 var(--fs-m)/1.2 var(--font); }
+.lg-tool[aria-current="page"] { border-color: rgba(255, 255, 255, .6); background: rgba(255, 255, 255, .14); }
+.lg-backbar { border-top: 1px solid var(--line); padding: 0 12px; }
+.lg-backlink {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 12px; margin-left: -12px; color: var(--text); text-decoration: none; font: 600 var(--fs-m) var(--font);
+}
+.lg-backlink .ic { width: 18px; height: 18px; color: var(--muted); }
+.lg-backlink:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; border-radius: var(--r-sm); }
+@media (hover: hover) { .lg-backlink:hover .ic { color: var(--text); } .lg-backlink:hover { text-decoration: underline; } }
+/* the old pages' own content, now on the league page's quiet surface: one page width, no old top padding */
+.lg-sub .member-main, .lg-sub .member-main.wide { width: 100%; max-width: 1280px; margin: 0 auto; padding: 0; align-self: stretch; flex: 1; }
+.lg-sub .member-main.club-main { width: 100%; }
+.lg-sub .member-main.settings-main > * { max-width: 640px; }
+.lg.has-club .lg-head .lg-page { color: rgba(255, 255, 255, .78); }   /* on the club panel, whatever its colour */
