@@ -290,7 +290,7 @@
 .lg-draft, .dr-dialog { --pos-gk: #f4c430; --pos-def: #ef5350; --pos-mid: #ba68c8; --pos-fwd: #42a5f5; }
 :root[data-theme="light"] :is(.lg-draft, .dr-dialog) { --pos-gk: #a07400; --pos-def: #c62828; --pos-mid: #7b1fa2; --pos-fwd: #1565c0; }
 .lg-draft .pos-GK { --pc: var(--pos-gk); } .lg-draft .pos-DEF { --pc: var(--pos-def); } .lg-draft .pos-MID { --pc: var(--pos-mid); } .lg-draft .pos-FWD { --pc: var(--pos-fwd); }
-.lg-draft :is(.dr-table .c-position, .dr-p .pos, .dg-who small)[class*="pos-"] { color: var(--pc); font-weight: 700; }
+.lg-draft :is(.dr-table .c-position, .dr-p .pos)[class*="pos-"] { color: var(--pc); font-weight: 700; }   /* the board stays grey: colour on every cell was too busy */
 .dr-roster { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .dr-roster-l { margin-right: 2px; color: var(--text); font-weight: 600; }
 .dr-rchip {
@@ -317,7 +317,7 @@
 
 /* ---------- tidy-up (user, 11 Oct 2026: too messy, chips not aligned) ---------- */
 .dr-rchip b { font-weight: 700; }
-.dr-paused { margin-top: 2px; font: 600 var(--fs-s) var(--font); }
+.lg-draft .dr-paused { display: inline; margin: 0; color: var(--amber-text, var(--amber)); font: inherit; font-weight: 600; }
 .dr-paused .ic { width: 14px; height: 14px; }
 /* your strip: label, the four chips and the money on one line, the bar underneath */
 .lg-draft .dr-you { margin: 16px -16px -16px; padding: 12px 16px 14px; border-top: 1px solid var(--line); background: var(--surface-sunk); }
@@ -336,3 +336,10 @@
 .lg-draft :is(.dr-search, .dr-max, .dr-fit) { min-height: 32px; height: 32px; }
 .lg-draft .dr-then select { min-height: 28px; height: 28px; }
 .lg-draft .dr-chip, .lg-draft .dr-chip button { min-height: 28px; height: 28px; }
+
+/* the hollow name: quieter, centred in the hero's height, kept clear of the clock and fading out well before the title */
+.dr-hollow { top: 14px; right: 190px; transform: none; font-size: 4.5rem; opacity: .16;
+  -webkit-mask-image: linear-gradient(270deg, #000 15%, transparent 75%); mask-image: linear-gradient(270deg, #000 15%, transparent 75%); }
+:root[data-theme="light"] .dr-hollow { opacity: .2; }
+.lg-draft .dr-st-main { min-height: 72px; }
+@media (max-width: 767px) { .dr-hollow { top: 34px; right: 10px; transform: none; font-size: 3rem; } }

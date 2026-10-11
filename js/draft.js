@@ -138,15 +138,14 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
         done: ['Finished', 'The draft is finished', `All ${n} picks are done.`, ''],
       }[ph];
       // Each piece is escaped here (the pause icon is markup, so the line itself is not escaped as a whole: that printed the icon's code, B-12).
-      const paused = d.quiet?.length && inQuiet() && ph === 'live' ? `<span class="dr-paused">${icon('pause')}Timer paused until ${esc(new Date(st.qs.quiet_until).toLocaleTimeString('en-AU', { timeZone: 'Australia/Melbourne', hour: 'numeric', minute: '2-digit' }))}</span>` : '';
+      const paused = d.quiet?.length && inQuiet() && ph === 'live' ? `<span class="dr-paused">. Timer paused until ${esc(new Date(st.qs.quiet_until).toLocaleTimeString('en-AU', { timeZone: 'Australia/Melbourne', hour: 'numeric', minute: '2-digit' }))}</span>` : '';
       const made = st.picks.length, face = t && ['live', 'paused'].includes(ph) ? crest(t.club, 56) : '<img class="dr-st-crest" src="assets/brand/crest.svg" alt="">';
       const go = mine ? '<button class="dr-go" data-tab="players" type="button">Choose a player</button>' : '';
       const ghost = t && ['live', 'paused'].includes(ph) ? `<span class="dr-hollow" aria-hidden="true" style="--gl:${esc(colourOf(t.club, 'light'))};--gd:${esc(colourOf(t.club, 'dark'))}">${esc(nameOf(t.club))}</span>` : '';
       return `<section class="lg-card dr-status ph-${ph}${mine ? ' mine' : ''}${ph === 'live' && inQuiet() ? ' quiet' : ''}">${ghost}
-        <div class="dr-st-main"><div class="dr-st-who">${face}<div class="dr-st-text"><p class="dr-st-line"><span class="dr-st-tag">${B[0]}</span><span class="dr-st-name">${esc(d.name || 'Draft')}</span></p>
-          <h1 class="dr-st-big" tabindex="-1">${B[1]}</h1><p class="dr-st-sub">${B[2]}</p>${paused}${go}</div></div>
+        <div class="dr-st-main"><div class="dr-st-who">${face}<div class="dr-st-text">${ph === 'live' ? '' : `<p class="dr-st-line"><span class="dr-st-tag">${B[0]}</span></p>`}
+          <h1 class="dr-st-big" tabindex="-1">${B[1]}</h1><p class="dr-st-sub">${B[2]}${paused}</p>${go}</div></div>
           ${B[3] ? `<div class="dr-clock">${B[3]}</div>` : ''}</div>
-        ${n ? `<div class="dr-track" role="img" aria-label="${made} of ${n} picks made"><i style="width:${(made / n * 100).toFixed(2)}%"></i></div>` : ''}
         ${youStrip()}</section>`;
     }
 
