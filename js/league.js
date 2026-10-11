@@ -117,16 +117,19 @@ if (ctx) {
 
   // A hardly-there splash of vLeague blue on every card (css/league-page.css, --sheen): each card gets its own spot, picked from its title so the
   // same card always looks the same.
-  // Every redraw (a tab, an arrow) makes new card elements, whose animations would start again from the beginning. So each card's delays are
-  // shifted back by the seconds the page has been open: a redrawn card carries on exactly where the old one was (the same title and place give the
-  // same starting point), and the silk only fades in the first time (`silk-seen` goes on once that first fade is over).
-  const T0 = performance.now();
+  // Every redraw (a tab, an arrow, a filter) makes new card elements, whose animations would start again from the beginning. So every card's
+  // slow animations (silk slide and breathing, the splash, the leaders' ring) are pinned to the document's clock (startTime 0) instead of to
+  // the moment the element was made: a redrawn card is exactly where the old one was, whatever caused the redraw. The silk fades in only the
+  // first time (`silk-seen` goes on once that fade is over).
+  const SLOW = new Set(['lg-silk-slide', 'lg-silk-breathe', 'lg-splash', 'sc-shine']);
+  const pinClock = () => { for (const a of document.getAnimations()) if (SLOW.has(a.animationName) && a.startTime !== 0) a.startTime = 0; };
   setTimeout(() => document.body.classList.add('silk-seen'), 3500);
-  const sheen = root => root.querySelectorAll('.lg-card:not([data-sheen])').forEach((c, i) => {
+  const sheen = root => {
+    root.querySelectorAll('.lg-card:not([data-sheen])').forEach((c, i) => {
     let h = 2166136261;
     for (const ch of `${c.querySelector('h2')?.textContent || ''}${i}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
     h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16;   // mix the bits so similar titles still land in different places
-    const r = n => ((h >>> n) & 255) / 255, up = (performance.now() - T0) / 1000;
+    const r = n => ((h >>> n) & 255) / 255;
     c.dataset.sheen = '';
     // The splash starts at one random spot and wanders to another, each card at its own speed and its own point on the way.
     c.style.setProperty('--gx0', `${Math.round(r(0) * 100)}%`);
@@ -135,15 +138,16 @@ if (ctx) {
     c.style.setProperty('--gy1', `${Math.round(r(24) * 100)}%`);
     const sd = 12 + Math.round(r(2) * 34);
     c.style.setProperty('--sd', `${sd}s`);
-    c.style.setProperty('--sp', `${-(Math.round(r(10) * 40) + up).toFixed(2)}s`);
+    c.style.setProperty('--sp', `${-Math.round(r(10) * 40)}s`);
     // The silk: its own point in the slide and the breathing (negative delays start it part-way through), flipped or not, and a staggered fade-in.
-    c.style.setProperty('--fph', `${-(Math.round(r(3) * 56) + up).toFixed(2)}s`);
-    c.style.setProperty('--fph2', `${-(Math.round(r(11) * 24) + up).toFixed(2)}s`);
-    c.style.setProperty('--sh', `${-up.toFixed(2)}s`);   // the turning shine on a leader's outline
+    c.style.setProperty('--fph', `${-Math.round(r(3) * 56)}s`);
+    c.style.setProperty('--fph2', `${-Math.round(r(11) * 24)}s`);
     c.style.setProperty('--fsx', r(19) < .5 ? '1' : '-1');
     c.style.setProperty('--fsy', r(27) < .5 ? '1' : '-1');
     c.style.setProperty('--fdl', `${Math.round(r(13) * 600)}ms`);
-  });
+    });
+    pinClock();
+  };
 
   // ---- The table (WR-11 to WR-14) ----
   let tableFilter = 'all';
