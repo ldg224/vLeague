@@ -57,18 +57,22 @@
 .kitpick button[aria-checked="true"] { border-color: color-mix(in oklab, var(--club-accent, var(--brand)) 70%, var(--line)); background: color-mix(in oklab, var(--club, var(--brand)) 10%, var(--surface-sunk)); }
 
 /* tactics */
-.lg-sub .presets { flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
-.custom summary { margin: 0 0 12px; color: var(--muted); cursor: pointer; font: 600 var(--fs-s) var(--font); }
-.custom summary b { margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--brand); color: #fff; font: 600 var(--fs-xs) var(--font); }
-.tac + .tac { margin-top: 14px; }
+.tac-sub { margin: 0 0 4px; color: var(--muted); font: 600 var(--fs-s) var(--font); }
+.tac-sub b { margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--brand); color: #fff; font: 600 var(--fs-xs) var(--font); }
+:root:not([data-theme="light"]) .tac-sub b { color: var(--blue-900, #0d47a1); }
+.tac-fine { margin-top: 20px; }
+.tac { padding: 12px 0; border-top: 1px solid var(--line); }
 .tac-head { display: flex; justify-content: space-between; gap: 10px; font: 400 var(--fs-m) var(--font); }
-.tac-head span { color: var(--muted); }
-.tac-head b { color: var(--text-strong); font-weight: 600; }
-.steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin: 8px 0 4px; }
-.steps button { height: 24px; border: 0; border-radius: 6px; background: var(--surface-sunk); box-shadow: inset 0 0 0 1px var(--line); cursor: pointer; }
-.steps button[aria-checked="true"] { background: var(--brand); box-shadow: none; }
-@media (hover: hover) { .steps button:not([aria-checked="true"]):hover { background: var(--surface-hover); } }
+.tac-head span { color: var(--text-strong); font-weight: 600; }
+.tac-head b { color: var(--brand); font-weight: 700; }
+.dots { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); margin: 2px 0; }
+.dots::before { content: ''; position: absolute; left: 10%; right: 10%; top: 50%; height: 2px; margin-top: -1px; border-radius: 1px; background: var(--line); }
+.dots button { position: relative; height: 44px; border: 0; background: none; cursor: pointer; }
+.dots button::after { content: ''; position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--surface); box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--text) 35%, transparent); transition: transform .12s; }
+.dots button[aria-checked="true"]::after { width: 22px; height: 22px; margin: -11px 0 0 -11px; background: var(--brand); box-shadow: 0 0 0 4px color-mix(in oklab, var(--brand) 25%, transparent); }
+@media (hover: hover) { .dots button:not([aria-checked="true"]):hover::after { transform: scale(1.4); } }
 .tac-ends { display: flex; justify-content: space-between; color: var(--faint); font: 400 var(--fs-xs) var(--font); }
+@media (prefers-reduced-motion: reduce) { .dots button::after { transition: none; } }
 
 /* the last locked sheet */
 .locked summary { display: flex; align-items: center; gap: 10px; list-style: none; cursor: pointer; color: var(--text-strong); font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; }

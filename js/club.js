@@ -197,7 +197,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   // ----- the form: one row per thing to fill in; a row opens its menu -----
 
   const dlg = id => $(`#dlg-${id}`, box);
-  const openDlg = id => { const d = dlg(id); if (d && !d.open) d.showModal(); };
+  const openDlg = id => { const d = dlg(id); if (d && !d.open) { d.showModal(); d.focus({ preventScroll: true }); } };
   let pieceKey = null;
   const nameOf = id => (id != null && byId.get(String(id))?.name) || '';
   function drawForm() {
@@ -272,13 +272,15 @@ async function teamSheet(box, { club, squad, userId, season }) {
   }
 
   const word = (t, v) => (v === 0.5 ? 'Balanced' : v === 0 ? `Very ${t.lo.toLowerCase()}` : v === 1 ? `Very ${t.hi.toLowerCase()}` : v < 0.5 ? t.lo : t.hi);
+  const STYLE_NOTE = { Balanced: 'No strong lean. Safe in any match.', Possession: 'Short passes, wide and high. Keep the ball.', 'High press': 'Win it back high up the pitch.', Counter: 'Sit back, then break fast with direct passes.', 'Park the bus': 'Deep and narrow. Make it hard to score.' };
   function drawTactics() {
     const preset = Object.keys(PRESETS).find(n => TACTICS.every(t => PRESETS[n][t.key] === sheet.tactics[t.key]));
-    const open = !preset || $('#tactics details', box)?.open;
-    $('#tactics', box).innerHTML = `<div class="presets sc-toggle">${Object.keys(PRESETS).map(n => `<button type="button" data-preset="${esc(n)}" aria-pressed="${n === preset}">${esc(n)}</button>`).join('')}</div>
-      <details class="custom"${open ? ' open' : ''}><summary>Custom${preset ? '' : ' <b>on</b>'}</summary>${TACTICS.map(t => `<div class="tac"><div class="tac-head"><span id="tac-${t.key}">${t.label}</span><b>${word(t, sheet.tactics[t.key])}</b></div>
-        <div class="steps" role="radiogroup" aria-labelledby="tac-${t.key}">${STEPS.map(v => `<button type="button" role="radio" data-tac="${t.key}" data-v="${v}" aria-checked="${sheet.tactics[t.key] === v}" aria-label="${esc(word(t, v))}"></button>`).join('')}</div>
-        <div class="tac-ends" aria-hidden="true"><span>${t.lo}</span><span>${t.hi}</span></div></div>`).join('')}</details>`;
+    $('#tactics', box).innerHTML = `<p class="tac-sub">Style</p>
+      <ul class="pk">${Object.keys(PRESETS).map(n => `<li><button type="button" class="pk-row" data-preset="${esc(n)}" aria-pressed="${n === preset}"><span class="pk-name">${esc(n)}<small>${esc(STYLE_NOTE[n] || '')}</small></span></button></li>`).join('')}</ul>
+      <p class="tac-sub tac-fine">Fine-tune${preset ? '' : ' <b>Custom</b>'}</p>
+      ${TACTICS.map(t => `<div class="tac"><div class="tac-head"><span id="tac-${t.key}">${t.label}</span><b>${word(t, sheet.tactics[t.key])}</b></div>
+        <div class="dots" role="radiogroup" aria-labelledby="tac-${t.key}">${STEPS.map(v => `<button type="button" role="radio" data-tac="${t.key}" data-v="${v}" aria-checked="${sheet.tactics[t.key] === v}" aria-label="${esc(word(t, v))}"></button>`).join('')}</div>
+        <div class="tac-ends" aria-hidden="true"><span>${t.lo}</span><span>${t.hi}</span></div></div>`).join('')}`;
   }
 
   function drawSave() {
