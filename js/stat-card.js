@@ -12,7 +12,7 @@
 // Look: FotMob's stat pages in vLeague's own style (css/stat-card.css): on the full page a banner in the leader's club colour says who
 // leads, and every player is shown in their club's kit with the club crest on the corner.
 import { onColour, isHex, accentFor } from './club-colour.js';
-import { format, matchesOf, POSITIONS } from './season-stats.js';
+import { format, matchesOf, POSITIONS, POSITION_WORD } from './season-stats.js';
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ESC[c]);
@@ -64,15 +64,21 @@ export function statCard(card, ranked, ctx, { kind = 'player' } = {}) {
 // ---------- the full page ----------
 const list = names => (names.length < 2 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`);
 
-// The banner in the leader's club colour: who leads, in a sentence. A tie at the top names everyone who shares it.
-function banner(card, ranked, ctx, kind, seasonLine) {
+// The banner in the leader's club colour: who leads, in a sentence that says what they lead at and, when a position is picked, in which position
+// ("Ryan Zane is the top rated midfielder, with an average rating of 7.7"). A tie at the top names everyone who shares it.
+function banner(card, ranked, ctx, kind, seasonLine, position = 'all') {
   if (!ranked.length) return '';
   const lead = ranked[0], tied = ranked.filter(x => x.rank === 1), club = ctx.club(clubOf(lead.row, kind));
   const value = format(lead.value, card), name = x => (kind === 'team' ? ctx.club(x.row.code)?.name || x.row.code : x.row.name);
+  const word = kind === 'player' ? POSITION_WORD[position] : null;   // [singular, plural] or null for everyone
   const shown = tied.slice(0, 3).map(x => `<b>${esc(name(x))}</b>`);
-  const sentence = tied.length > 1
-    ? `${list(tied.length > 3 ? [...shown.slice(0, 2), `${tied.length - 2} others`] : shown)} share the top spot with ${esc(value)}`
-    : `<b>${esc(name(lead))}</b> ${esc(card.say ? card.say(value) : `leads with ${value}`)}`;
+  let sentence;
+  if (tied.length > 1) {
+    sentence = `${list(tied.length > 3 ? [...shown.slice(0, 2), `${tied.length - 2} others`] : shown)} share the top spot${word ? ` among ${word[1]}` : ''} with ${esc(value)}`;
+  } else {
+    const say = card.say ? card.say(value, card.sayPos ? word?.[0] || '' : '') : `leads with ${value}`;
+    sentence = `${word && !card.sayPos ? `Among ${word[1]}, ` : ''}<b>${esc(name(lead))}</b> ${esc(say)}`;
+  }
   return `<div class="sp-banner" style="${clubStyle(club)}">${face(lead.row, ctx, kind, 56)}`
     + `<div class="sp-says"><p>${sentence}</p><span>${esc(seasonLine)}</span></div></div>`;
 }
@@ -101,7 +107,7 @@ export function statPage(card, ranked, ctx, { kind = 'player', title = 'Stats', 
     : (position !== 'all' ? empty(card, 'Nobody in this position qualifies yet.', 'No players to show') : empty(card));
   const note = card.note ? `<p class="sc-note">${esc(card.note)}</p>` : '';
   return `<div class="sp-top"><a class="sp-back" href="${esc(back)}" aria-label="Back">${BACK}</a><b>${esc(title)}</b></div>`
-    + banner(card, ranked, ctx, kind, seasonLine)
+    + banner(card, ranked, ctx, kind, seasonLine, position)
     + `<section class="lg-card sc sc-list" aria-label="${esc(card.title)}">${switcher(card, cards)}${note}${pills}${rows}</section>`;
 }
 

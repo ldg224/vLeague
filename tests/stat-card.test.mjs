@@ -46,15 +46,15 @@ test('team rows show the rank, crest and club name', () => {
   assert.ok(html.includes('<crest RED 30>') && html.includes('Redfield Lions') && html.includes('Whitehill Wolves'));
 });
 
-const pageOpts = { title: 'Player stats', cards: PLAYER_CARDS, seasonLine: 'vLeague · Season 1 · 6 matches played' };
+const pageOpts = { title: 'Player stats', cards: PLAYER_CARDS, seasonLine: '6 matches played' };
 
 test('the full page has the top bar, a banner in the leading club colour that says who leads, and every row with its rank', () => {
   const ranked = rank([player('Ana', 5), player('Bea', 3, 'WHT'), player('Cy', 3), player('Di', 1)], scorers);
   const html = statPage(scorers, ranked, ctx, pageOpts);
   assert.ok(html.includes('class="sp-top"') && html.includes('Player stats'));
   assert.match(html, /class="sp-banner" style="--c:#c8102e;--on:#ffffff[;"]/);
-  assert.ok(html.includes('<b>Ana</b> is the top scorer with 5 goals'));
-  assert.ok(html.includes('vLeague · Season 1 · 6 matches played'));
+  assert.ok(html.includes('<b>Ana</b> is the top scorer, with 5 goals'));
+  assert.ok(html.includes('6 matches played') && !html.includes('Season 1'));
   assert.equal(count(html, /<li class="sc-row" data-rank=/g), 4);
   assert.equal(count(html, /data-rank="2"/g), 2);          // Bea and Cy share second place
   assert.equal(count(html, /data-rank="4"/g), 1);          // and the next rank skips
@@ -104,4 +104,22 @@ test('a club without a logo gets a colour disc, with its code only when it is bi
   assert.ok(initialsCrest(clubs.RED, 'RED', 30).includes('<i>RED</i>'));
   assert.ok(initialsCrest(clubs.RED, 'RED', 16).includes('is-dot'));
   assert.ok(initialsCrest({ colour: 'not a colour' }, 'XYZ', 30).includes('--c:#64748b'));
+});
+
+test('with a position picked the banner says so: five main stats name it in the sentence, the others lead with "Among"', () => {
+  const rating = PLAYER_CARDS.find(c => c.id === 'rating'), kp = PLAYER_CARDS.find(c => c.id === 'kp'), minutes = PLAYER_CARDS.find(c => c.id === 'minutes');
+  const rows = [{ ...player('Ryan Zane', 0), ratingSum: 15.4, apps: 2, min: 180, kp: 3 }];
+  const page = (card, position) => statPage(card, rank(rows, card), ctx, { ...pageOpts, position });
+  assert.ok(page(rating, 'MID').includes('<b>Ryan Zane</b> is the top rated midfielder, with an average rating of 7.7'));
+  assert.ok(page(rating, 'all').includes('is the top rated player, with an average rating of 7.7'));
+  assert.ok(statPage(scorers, rank([player('Ana', 5)], scorers), ctx, { ...pageOpts, position: 'FWD' }).includes('<b>Ana</b> is the top scoring forward, with 5 goals'));
+  assert.ok(page(kp, 'DEF').includes('Among defenders, <b>Ryan Zane</b> has created the most chances with 3'));
+  assert.ok(page(minutes, 'GK').includes('has played the most minutes of any goalkeeper, 180'));
+});
+
+test('a tie names the position too, and a club banner never does', () => {
+  const html = statPage(scorers, rank([player('Ana', 4), player('Bea', 4)], scorers), ctx, { ...pageOpts, position: 'MID' });
+  assert.ok(html.includes('<b>Ana</b> and <b>Bea</b> share the top spot among midfielders with 4'));
+  const tc = TEAM_CARDS.find(c => c.id === 'tgoals');
+  assert.ok(!statPage(tc, rank([{ code: 'RED', p: 2, gf: 4 }], tc), ctx, { kind: 'team', title: 'Team stats', cards: TEAM_CARDS, position: 'MID' }).includes('Among'));
 });

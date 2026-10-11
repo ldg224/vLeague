@@ -148,13 +148,16 @@ export const TEAM_CARDS = [
 ];
 
 // ---------- what a card says about its leader (the banner on the full page) ----------
-// say(value text) finishes the sentence "<name> ...": "Theo Archer is the top scorer with 5 goals". sub(row) is the line under a name
+// say(value text, position) finishes the sentence "<name> ...": "Theo Archer is the top scorer, with 5 goals". With a position picked (WR-29) the five main stats
+// name it ("is the top rated midfielder, with an average rating of 7.7"); the others lead with "Among midfielders," (see stat-card.js). sub(row) is the line under a name
 // in the full list; without one it is the number of matches.
 const pl = (v, one, many = `${one}s`) => `${v} ${Number(v) === 1 ? one : many}`;
+// The position as a word: singular for "the top rated midfielder", plural for "among midfielders".
+export const POSITION_WORD = { FWD: ['forward', 'forwards'], MID: ['midfielder', 'midfielders'], DEF: ['defender', 'defenders'], GK: ['goalkeeper', 'goalkeepers'] };
 const SAY = {
-  scorers: v => `is the top scorer with ${pl(v, 'goal')}`, assists: v => `has the most assists with ${v}`,
-  ga: v => `has the most goals and assists with ${v}`, rating: v => `is the top rated player, averaging ${v}`,
-  minutes: v => `has played the most minutes, ${v}`, g90: v => `scores the most goals per 90 minutes with ${v}`,
+  scorers: (v, p) => `is the top ${p ? `scoring ${p}` : 'scorer'}, with ${pl(v, 'goal')}`, assists: (v, p) => `is the top ${p ? `assisting ${p}` : 'assist provider'}, with ${pl(v, 'assist')}`,
+  ga: (v, p) => `is the top ${p ? `contributing ${p}` : 'goal contributor'}, with ${v} ${Number(v) === 1 ? 'goal' : 'goals'} and assists`, rating: (v, p) => `is the top rated ${p || 'player'}, with an average rating of ${v}`,
+  minutes: (v, p) => `has played the most minutes${p ? ` of any ${p}` : ''}, ${v}`, g90: v => `scores the most goals per 90 minutes with ${v}`,
   xg: v => `has the highest xG with ${v}`, xg90: v => `has the highest xG per 90 minutes with ${v}`,
   sh90: v => `takes the most shots per 90 minutes with ${v}`, sot90: v => `has the most shots on target per 90 minutes with ${v}`,
   kp: v => `has created the most chances with ${v}`, pc90: v => `completes the most passes per 90 minutes with ${v}`,
@@ -178,7 +181,8 @@ const SUB = {
   scorers: r => `${(r.xg || 0).toFixed(1)} xG`, assists: r => pl(r.kp || 0, 'chance created', 'chances created'),
   ga: r => `${pl(r.g || 0, 'goal')}, ${pl(r.a || 0, 'assist')}`,
 };
-for (const c of [...PLAYER_CARDS, ...TEAM_CARDS]) { c.say = SAY[c.id]; c.sub = SUB[c.id]; }
+const SAYS_POSITION = new Set(['scorers', 'assists', 'ga', 'rating', 'minutes']);   // these name the position inside the sentence
+for (const c of [...PLAYER_CARDS, ...TEAM_CARDS]) { c.say = SAY[c.id]; c.sayPos = SAYS_POSITION.has(c.id); c.sub = SUB[c.id]; }
 export const matchesOf = r => pl(r.apps ?? r.p ?? 0, 'match', 'matches');
 
 // ---------- ranking ----------
