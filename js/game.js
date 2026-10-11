@@ -35,14 +35,14 @@ try {
   [clubsRows, season] = await Promise.all([clubs().catch(() => []), loadSeason().catch(() => null)]);
   useClubs(clubsRows);
   if (user) {
-    document.getElementById('back').href = 'matches.html';
+    document.getElementById('back').href = 'league.html#fixtures';
     document.getElementById('back').innerHTML = `${icon('arrow-left')} Matches`;
     await prefs().catch(() => null);
     const prof = await myProfile().catch(() => null);
     paintClub(clubsRows.find(c => c.code === prof?.club) || null);
   }
   fx = fxOf(season);
-  if (!fx) { main.innerHTML = '<h1 class="page-title" tabindex="-1">Game centre</h1><p class="empty">That match couldn’t be found. <a href="matches.html">See all matches</a></p>'; main.setAttribute('aria-busy', 'false'); }
+  if (!fx) { main.innerHTML = '<h1 class="page-title" tabindex="-1">Game centre</h1><p class="empty">That match couldn’t be found. <a href="league.html#fixtures">See all matches</a></p>'; main.setAttribute('aria-busy', 'false'); }
   else await run();
 } catch (e) {
   main.innerHTML = `<p class="empty">The Game centre didn’t load. ${esc(e.message || "")} <a href="game.html?id=${esc(id)}">Try again</a></p>`;
