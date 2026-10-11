@@ -343,3 +343,16 @@
 :root[data-theme="light"] .dr-hollow { opacity: .2; }
 .lg-draft .dr-st-main { min-height: 72px; }
 @media (max-width: 767px) { .dr-hollow { top: 34px; right: 10px; transform: none; font-size: 3rem; } }
+
+/* ---------- the tour on the league page: the same card, type and blue as everything else (css/tour.css stays as it is for the other pages) ---------- */
+.lg .tour-card { border-radius: var(--r-lg); background: var(--surface); border-color: var(--line); box-shadow: 0 22px 60px rgba(0, 0, 0, .45); font-family: var(--font); }
+.lg .tour-count { color: var(--muted); font: 600 var(--fs-xs) var(--font); letter-spacing: 0; text-transform: none; }
+.lg .tour-title { font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; letter-spacing: .01em; color: var(--text-strong); }
+.lg .tour-text { font: 400 var(--fs-m)/1.5 var(--font); color: var(--text-soft); }
+.lg .tour-text b { color: var(--text-strong); }
+.lg .tour-tip { border-radius: var(--r-sm); background: var(--surface-sunk); color: var(--muted); font: 400 var(--fs-s)/1.45 var(--font); }
+.lg .tour-dots i.was { background: color-mix(in oklab, var(--brand) 55%, transparent); }
+.lg .tour-dots i.now { background: var(--brand); }
+.lg .tour-btns button { font: 600 var(--fs-m) var(--font); }
+.lg .tour-next { border-color: transparent; background: var(--brand-grad, var(--brand)); color: #fff; }
+.lg .tour-spot { animation: none; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .7), 0 0 0 2px var(--brand); }

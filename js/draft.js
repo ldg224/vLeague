@@ -420,31 +420,30 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
 
     // ---- the guided tour (js/tour.js). Each step may switch tab first; what it says depends on whether it's your turn.
     const STEPS = () => [
-      { title: 'Welcome to the draft', text: 'This is where you pick the players for your club. This quick tour shows you every part of the page, one bit at a time. It takes about a minute.', tip: 'Use the Next button or your arrow keys. Press Esc to leave at any time.' },
-      { target: '.dr-status', tab: 'board', title: 'The status bar', text: () => ({
-          soon: 'This bar tells you where the draft is. Right now it <b>hasn’t started</b>, but you can already look around and <b>build your queue</b>, so you’re ready the moment it begins.',
-          opens: 'This bar tells you where the draft is. It <b>opens soon</b>, and the clock counts down to it. Until then you can look around and <b>build your queue</b>.',
-          live: myTurn() ? 'This bar tells you where the draft is. Right now it’s <b>your pick</b>. The clock counts down how long you have, and you can pick any time before it hits zero.'
-            : 'This bar tells you where the draft is: whose pick it is, how far through we are, and the clock. When it says <b>It’s your pick</b>, it’s you.',
-          paused: 'This bar tells you where the draft is. It’s <b>paused</b> for now. You can still change your queue.',
-          closed: 'This bar tells you where the draft is. It has <b>closed</b>, so picks can’t be made.',
-          done: 'This bar tells you where the draft is. It’s <b>finished</b>. Have a look at the board to see who went where.',
+      { title: 'Welcome to the draft', text: 'This is where you pick the players for your club. This quick tour shows you each part of the page. It takes about a minute.', tip: 'Use Next or your arrow keys. Press Esc to leave at any time.' },
+      { target: '.dr-status', tab: 'board', title: 'Who’s on the clock', text: () => ({
+          soon: 'The top card says where the draft is. It <b>hasn’t started</b> yet, but you can look around and <b>build your queue</b> now.',
+          opens: 'The top card says where the draft is. It <b>opens soon</b>, and the clock counts down to it. Build your queue in the meantime.',
+          live: myTurn() ? 'It’s <b>your pick</b>. The clock on the right shows how long you have. Press <b>Choose a player</b> to go to the list.'
+            : 'The top card shows <b>which club is picking</b>, which pick it is and when it ends. The clock on the right counts down their time.',
+          paused: 'The top card says the draft is <b>paused</b> for now. You can still change your queue.',
+          closed: 'The top card says the draft has <b>closed</b>, so picks can’t be made.',
+          done: 'The top card says the draft is <b>finished</b>. Look at the board to see who went where.',
         })[phase(st.draft)],
-        tip: 'Picks happen slowly over days, not all at once. Come back whenever you like.' },
-      { target: '.dr-st-small', optional: true, tab: 'board', title: 'Rules and active times', text: 'The small print in the bar shows the <b>roster rules</b> (how many of each position you can have) and the <b>active times</b>, when the pick timer runs. At other times it pauses. <b>You can still make a pick</b> whenever you’re online.' },
-      { target: '.dr-budget', title: 'Your weekly budget', text: 'Every player has a value. Your squad’s values add up against a weekly cap. The bar fills as you pick, turns <b>orange</b> when you’re close and <b>red</b> if you go over.', tip: 'It’s a guide only. It won’t stop you making a pick.' },
-      { target: '.dr-tabs', title: 'Three tabs', text: '<b>Board</b> shows every pick so far. <b>Available players</b> is where you choose. <b>Team values</b> shows what every club has spent.' },
-      { target: '.dg-wrap', tab: 'board', title: 'The board', text: 'The whole draft at a glance: a row for each round and a column for each club. Each box shows the pick number and who was taken. The pick on the clock is <b>outlined</b> and your own club’s column is <b>tinted</b>.', tip: 'It updates the moment someone picks. Tap a name for the player’s card. “Download CSV” saves it as a spreadsheet.' },
-      { target: ['.dr-filter', '.dr-sortbar'], tab: 'players', sub: 'players', title: 'Search, filter and sort', text: 'Type a name, or choose a position to narrow the list. <b>Tap any column heading</b> to sort by it, and tap again to flip it.', tip: 'Want the best defenders? Sort by Position, then add “Then by… Defensive rating”.' },
-      { target: '.dr-main .dr-tablewrap', tab: 'players', sub: 'players', title: 'Available players', text: 'Everyone who hasn’t been taken yet. <b>OFF</b> is attack, <b>DEF</b> is defence, <b>OVR</b> is the overall rating, and <b>Value</b> is what they cost against your cap. The colours run from red (weak) to green (outstanding).', tip: 'Tap a player’s name for their card. “Fits my squad” and “Max value” narrow the list further.' },
-      { target: '[data-add]', optional: true, tab: 'players', sub: 'players', title: 'Add to your queue', text: 'Press <b>+ Queue</b> next to any player you like. It adds them to your queue so you don’t have to hunt for them later.' },
-      { target: '.dr-queue', tab: 'players', sub: 'queue', title: 'My queue', text: 'Your wish list, best player first. Drag players or use the <b>' + icon('chevron-up') + ' ' + icon('chevron-down') + '</b> arrows to rank them, and <b>' + icon('x') + '</b> to remove one. If someone else takes a player, they drop off by themselves.', tip: 'Fill it with plenty of players so you’re never stuck.' },
-      { target: '.dr-autobox', optional: true, tab: 'players', sub: 'auto', title: 'Auto-pick', text: 'Can’t be online? Let the draft pick <b>for you</b>. Choose <b>what</b> to pick (from your queue, or at random) and <b>when</b> (straight away, after a few minutes, or only if you miss your turn).', tip: 'It saves as you change it. Nothing to press.' },
-      { target: '.dr-avail', tab: 'players', sub: 'players', title: 'Making a pick', text: () => myTurn()
-          ? 'It’s your turn, so every row has a <b>Pick</b> button, and your queue has a big <b>Pick now</b> button. You’ll be asked to confirm, and shown what it does to your budget.'
-          : 'When it’s your turn, a <b>Pick</b> button appears on every row, and your queue gets a big <b>Pick now</b> button. You’ll be asked to confirm first.' },
-      { target: '.dr-teams', tab: 'values', title: 'Team values', text: 'Tap a club to open its squad and see what it has spent against the cap. Your club is at the top and already open.' },
-      { target: '.dr-help', tab: 'board', title: 'You’re ready', text: 'That’s everything. If you ever get stuck, tap <b>How it works</b> and the tour will start again.' },
+        tip: 'Picks happen slowly over days, not all at once. The timer only runs in the office’s active times.' },
+      { target: '.dr-you', optional: true, title: 'Your squad', text: 'Your roster and budget in one strip. Each coloured chip shows <b>how many you have of the most allowed</b>: GK in yellow, DEF in red, MID in purple, FWD in blue. On the right, what your squad costs against the weekly cap, with the bar under it.', tip: 'The bar turns <b>orange</b> when you’re close to the cap and <b>red</b> if you go over.' },
+      { target: '.dr-tabs', title: 'Three views', text: '<b>Board</b> shows every pick so far. <b>Available players</b> is where you choose. <b>Team values</b> shows what each club has spent.' },
+      { target: '.dg-wrap', tab: 'board', title: 'The board', text: 'A row for each round and a column for each club, with the crests along the top. Your column is shaded, and the pick on the clock is <b>outlined in blue</b>.', tip: 'Tap a player’s name to see their card.' },
+      { target: ['.dr-filter', '.dr-sortbar'], tab: 'players', sub: 'players', title: 'Search, filter and sort', text: 'Search by name, pick a position, set a <b>maximum value</b>, or switch on <b>Fits my squad</b> to see only players you could take. Tap a column heading to sort by it, and again to flip it.' },
+      { target: '.dr-main .dr-tablewrap', tab: 'players', sub: 'players', title: 'Available players', text: 'Everyone who hasn’t been taken. <b>OFF</b> is attack, <b>DEF</b> is defence, <b>OVR</b> is overall, and <b>Value</b> is what they add to your budget.' },
+      { target: '[data-add]', optional: true, tab: 'players', sub: 'players', title: 'Add to your queue', text: 'Press <b>Queue</b> (a <b>+</b> on a phone) next to any player you like, so they’re ready when your turn comes.' },
+      { target: '.dr-queue', tab: 'players', sub: 'queue', title: 'My queue', text: 'Your wish list, best player first. Drag players or use the arrows to rank them, and the cross to take one out. The line at the top shows what your squad would cost with them.' },
+      { target: '.dr-autobox', optional: true, tab: 'players', sub: 'auto', title: 'Auto-pick', text: 'Can’t be online? Let the draft pick <b>for you</b>. Choose <b>what</b> to pick (from your queue, or anyone who fits) and <b>when</b> (straight away, after a few minutes, or only if you miss your turn). It saves as you change it.' },
+      { target: '.dr-avail', tab: 'players', sub: 'players', title: 'Making a pick', text: () => (myTurn()
+          ? 'It’s your turn, so every row has a <b>Pick</b> button, and your queue has <b>Pick now</b>. You’ll be asked to confirm, and shown what it does to your budget.'
+          : 'When it’s your turn, every row gets a <b>Pick</b> button and your queue gets <b>Pick now</b>. You’ll be asked to confirm first.') },
+      { target: '.dr-teams', tab: 'values', title: 'Team values', text: 'Each club with a bar against the weekly cap and its total. Tap a club to see its squad. Yours is at the top.' },
+      { target: '.dr-help', tab: 'board', title: 'You’re ready', text: 'That’s everything. Tap <b>How it works</b> any time to see this tour again.' },
     ];
     async function tour() {
       const was = tab, wasSub = sub;
