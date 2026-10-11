@@ -171,7 +171,3 @@
 /* The three stat-leader cards sit side by side in a narrow column: a smaller title so "TOP SCORERS" stays on one line. */
 .lg-trio .lg-card-head h2 { font-size: .9375rem; }
 @media (min-width: 992px) and (max-width: 1179px) { .lg-trio .lg-card-head h2 { font-size: .8125rem; } .lg-trio .lg-card { padding-inline: 16px; } }
-
-/* Icons8 icons (js/icons8.js): a PNG mask filled with the text colour */
-.ic8 { display: inline-block; flex: none; width: 1em; height: 1em; background: currentColor; -webkit-mask: no-repeat center / contain; mask: no-repeat center / contain; }
-.ic8.is-flip { transform: scaleX(-1); }
