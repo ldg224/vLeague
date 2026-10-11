@@ -44,7 +44,8 @@
 
 /* Nothing played yet. */
 .sc-empty { flex: 1; display: grid; place-content: center; gap: 4px; padding: 20px 8px 24px; text-align: center; color: var(--muted); font-size: var(--fs-s); }
-.sc-empty b { font: 600 var(--fs-m) var(--font); color: var(--text); }
+.sc-empty b { font: 900 var(--fs-l)/1.2 var(--font-display, var(--font)); font-stretch: 125%; text-transform: uppercase; letter-spacing: .02em; color: var(--text-strong); }   /* the wide display type, like the card titles */
+.sc-empty span { font-size: var(--fs-s); }
 
 /* ---------- The full page (WR-10) ---------- */
 .sp-top {
