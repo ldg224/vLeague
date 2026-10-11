@@ -43,3 +43,27 @@ export function accentFor(c, theme) {
   }
   return mixHex(c, toward, 0.9);
 }
+
+// The colour for the header panel's glow (WR-03, 11 Oct 2026): a very dark club colour (SKS's navy) leaves nothing to shine on the deep panel, so its
+// lightness is raised, keeping its hue and colourfulness, until it is as bright as a plain mid blue (luminance GLOW_MIN). (Mixing with white would
+// wash it to grey.) Colours already bright enough are untouched.
+export const GLOW_MIN = 0.12;
+function toHsl(hex) {
+  const [r, g, b] = rgb(hex).map(v => v / 255), max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, d = max - min;
+  if (!d) return [0, 0, l];
+  const s = d / (1 - Math.abs(2 * l - 1)), h = max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h * 60, s, l];
+}
+function fromHsl(h, s, l) {
+  const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l), f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  return `#${[f(0), f(8), f(4)].map(v => hex2(v * 255)).join('')}`;
+}
+export function glowFor(c) {
+  if (!isHex(c) || luminance(c) >= GLOW_MIN) return c;
+  const [h, s, l] = toHsl(c), sat = s < 0.08 ? s : Math.max(s, 0.55);   // a near-black navy keeps its blue, not a grey; a true black or grey stays neutral
+  for (let x = l; x <= 0.9; x += 0.01) {
+    const m = fromHsl(h, sat, x);
+    if (luminance(m) >= GLOW_MIN) return m;
+  }
+  return fromHsl(h, sat, 0.9);
+}
