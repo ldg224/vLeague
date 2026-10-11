@@ -19,7 +19,7 @@ function showError(text, field) {
 
 if (!ready) {
   const setup = $('#setup');
-  setup.textContent = 'Signing in isn’t working right now. You can still view as a guest.';
+  setup.textContent = 'Signing in isn’t working right now.';
   setup.hidden = false;
 }
 

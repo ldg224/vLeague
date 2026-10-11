@@ -1,6 +1,6 @@
 # vLeague
 
-Virtual football league app. Managers sign in and run their club; guests get a matchday dashboard; the league office runs everything from the Editor.
+Virtual football league app. Managers sign in and run their club (nothing is shown to signed-out visitors); the league office runs everything from the Editor.
 
 - Live site: https://ldg224.github.io/vLeague/ (GitHub Pages)
 - Repo: `ldg224/vLeague` (public), branch `main`. Cloned at `C:\Claude\Projects\vLeague`.
@@ -21,11 +21,11 @@ Virtual football league app. Managers sign in and run their club; guests get a m
 - `CHANGELOG.md`: what changed in each version.
 
 ## Design
-**Always load the `vleague-design` skill before any change to the site's HTML, CSS or page-rendering JS, and before planning UI work.** It holds the page pattern (based on the guest dashboard), tokens, football-specific rules and the list of "generated look" mistakes to avoid. Source: `C:\Claude\Skills\vleague-design\SKILL.md` (in the private workspace repo).
+**Always load the `vleague-design` skill before any change to the site's HTML, CSS or page-rendering JS, and before planning UI work.** It holds the page pattern (a FotMob-style league page, since the website revamp), tokens, football-specific rules and the list of "generated look" mistakes to avoid. Source: `C:\Claude\Skills\vleague-design\SKILL.md` (in the private workspace repo).
 
 ## Product decisions to respect (from the private PLAN.md)
-- A club's primary colour runs its whole page. The Editor and signed-out pages stay vLeague navy and blue.
-- Guests stay fully signed out; the dashboard signs out anyone who arrives signed in. No guest accounts.
+- Colour: vLeague blue is the league's colour (tabs, buttons, links); a club's colour marks "you" as an accent plus a faint page tinge (vleague-design skill, 11 Oct 2026). The Editor and sign-in page stay vLeague navy and blue.
+- Everything needs sign-in (WR-02, 11 Oct 2026): signed-out visitors only see the sign-in page. The guest dashboard was removed. No guest accounts.
 - No chat, and nothing sent to the league's WhatsApp group.
 - Managers get Home, My club, Inbox, League; the office also gets the Editor.
 - Brand: vLeague crest, Material Blue ramp with white accent, Oswald + Figtree.

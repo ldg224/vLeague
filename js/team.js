@@ -1,4 +1,4 @@
-// Team pages (S-04, redesigned 0.67): one page per club (team.html?c=CODE), open to guests like the Game centre.
+// Team pages (S-04, redesigned 0.67): one page per club (team.html?c=CODE), signed-in only since WR-02.
 // The top is a band of the club's own home-kit fabric with the crest on its edge; the name, motto and last five results sit
 // below it on the page, so they read the same whatever the club's colours. The squad hangs in a dressing room: one shirt per
 // player in the club's home kit with their number on it. Then the trophy cabinet (from Editor -> History, history-data.js),
@@ -29,6 +29,8 @@ function ordinal(n) { return `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th
 
 try {
   const user = await currentUser().catch(() => null);
+  // Signed-out visitors see nothing but sign-in (WR-02): stop here while the page changes.
+  if (!user) { location.replace('index.html?signin'); await new Promise(() => {}); }
   const [rows, season, kits, hist] = await Promise.all([clubs().catch(() => []), loadSeason().catch(() => null), loadKits(), loadHistory()]);
   useClubs(rows);
   if (user) {
@@ -40,7 +42,7 @@ try {
   }
   const club = rows.find(c => c.code === code), team = season?.teams.some(t => t.code === code) ? teamOf(season, code) : null;   // teamOf makes up a team for any code
   if (!club && !team) {
-    main.innerHTML = `<div class="tm"><h1 class="tm-name" tabindex="-1">Club not found</h1><p class="empty">There’s no club with the code “${esc(code)}”. <a href="${user ? 'league.html' : 'dashboard.html'}">See the league</a></p></div>`;
+    main.innerHTML = `<div class="tm"><h1 class="tm-name" tabindex="-1">Club not found</h1><p class="empty">There’s no club with the code “${esc(code)}”. <a href="league.html">See the league</a></p></div>`;
   } else {
     await document.fonts?.ready;   // the shirt numbers are drawn in Oswald
     render(club || { code, name: team.name, colour: team.colour }, team, season, kits[code] || {}, cabinet(hist, code));

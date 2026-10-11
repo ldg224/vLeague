@@ -1,5 +1,5 @@
 // A news post as the reader sees it (0.19): an accent bar, an optional picture, the message and an optional button.
-// The Editor's preview, a manager's Inbox and the guest dashboard all draw posts here, so they always match.
+// The Editor's preview and a manager's Inbox both draw posts here, so they always match.
 // Pure helpers, no page code, and no imports beyond the backend address, so any page can load it.
 //   post: { title, body, data: { colour, image, button: { label, url } } }
 import { SUPABASE_URL } from './config.js';
@@ -27,7 +27,7 @@ export function markdown(text, vars = {}) {
   }).join('');
 }
 
-// The post without its title (the Inbox and dashboard show the title on the row that opens it).
+// The post without its title (the Inbox shows the title on the row that opens it).
 export function newsBody(post, vars) {
   const d = post.data || {}, img = imageUrl(d.image), url = safeUrl(d.button?.url), label = String(d.button?.label || '').trim();
   return `<div class="nc-body" style="--nc:${safeColour(d.colour)}">

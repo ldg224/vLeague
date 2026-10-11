@@ -47,7 +47,7 @@
   --r-sm: 10px;
 }
 /* Light theme (0.9): the same names, light values. js/prefs.js sets data-theme on <html> before the page paints.
-   The matchday board (dashboard) and the pitch stay dark on purpose: they list their own tokens above. */
+   The matchday board and the pitch stay dark on purpose: they list their own tokens above. */
 :root[data-theme="light"] {
   --bg: #f4f7fb;
   --surface: #ffffff;
@@ -161,8 +161,6 @@ a { color: var(--brand); }
 .login-state { display: grid; gap: 14px; }
 .login-state[hidden] { display: none; }
 .login-state .btn { text-decoration: none; }
-.btn.ghost.guest-btn { width: 100%; color: var(--text); text-decoration: none; font-weight: 600; border-color: rgba(var(--ink),.18); }
-.btn.ghost.guest-btn:hover { border-color: rgba(var(--ink),.4); }
 .login-foot { position: relative; padding: 16px; text-align: center; font-size: .75rem; }
 .login-foot a { color: var(--faint); text-decoration: none; }
 .login-foot a:hover { color: var(--muted); }

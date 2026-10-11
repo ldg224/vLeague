@@ -1,4 +1,4 @@
-// The XI on a pitch (0.6): the read-only team sheet (the reveal graphic, also used on Home and the dashboard) and the
+// The XI on a pitch (0.6): the read-only team sheet (the reveal graphic, also used on Home) and the
 // editable one on My club. Formations, slot names and tactics match the match engine
 // (hcl-s3/js/sim/hcl_sim/tactics.py); keep them in step.
 //   renderPitch(el, { formation, lineup, captain, players, editable, selected, onSlot })

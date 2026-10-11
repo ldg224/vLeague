@@ -15,7 +15,6 @@ Virtual football. The home of vLeague from Season 1: sign in, manage your club, 
 |---|---|
 | `index.html` | Sign in (email + password), "Forgot password?", and "View as guest". A signed-in visitor goes to their page. |
 | `set-password.html` | Where invite and password-reset emails land: choose a password, then on to your page. |
-| `dashboard.html` | The guest profile: live/next match board with line-ups (from 10 min before kick-off), the week's matches, table, league news for guests, leaders. Signs out anyone who arrives signed in. Reads the s3 site's public data for now. |
 | `matches.html` | Matches: a card for every game of a round with win chance, form, stadium and home or away records. Opens the Game centre. |
 | `game.html` | Game centre: one match. Preview before kick-off; one scrolling page: the scoreboard (in the round's look), the match viewer (broadcast, tactical, highlights video), then stats, line-ups and the timeline. Before kick-off: win chance and line-ups. Open to guests. |
 | `team.html` | Team page for one club (`?c=CODE`): the club's colours, crest and last five results, its trophy cabinet, the squad, value against the weekly cap, kits, club details and the history the office writes. Open to guests. |

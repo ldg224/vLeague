@@ -1,5 +1,5 @@
 // History (0.66): every season's winners and runners-up, newest first, then the roll of honour (titles by club).
-// Open to guests. The office writes it in Editor -> History (history-data.js). A club that has left the league is shown by
+// Signed-in only (WR-02). The office writes it in Editor -> History (history-data.js). A club that has left the league is shown by
 // the name, code and manager the office kept for it.
 import { chrome, esc, clubs } from './member.js';
 import { currentUser, myProfile } from './auth.js';
@@ -14,6 +14,8 @@ const main = document.getElementById('main');
 
 try {
   const user = await currentUser().catch(() => null);
+  // Signed-out visitors see nothing but sign-in (WR-02): stop here while the page changes.
+  if (!user) { location.replace('index.html?signin'); await new Promise(() => {}); }
   const [rows, h] = await Promise.all([clubs().catch(() => []), loadHistory()]);
   useClubs(rows);
   if (user) {

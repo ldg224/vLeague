@@ -1,4 +1,4 @@
-// Game centre (0.34): the page for one match, opened from Matches, League, Home or the guest dashboard (game.html?id=...).
+// Game centre (0.34): the page for one match, opened from Matches, League or Home (game.html?id=...); signed-in only since WR-02.
 // Before kick-off it is a preview (win chance, form, records, line-ups once locked). From kick-off it is the watching spot:
 // the match viewer (js/viewer/): the broadcast view of the whole match, the tactical top-down view and, after full time, a
 // highlights video (0.36). A live match is a broadcast: no play, pause or seek controls, and the picture
@@ -30,6 +30,8 @@ let season = null, fx = null, clubsRows = [];
 const fxOf = s => s?.fixtures.find(f => String(f.id) === String(id)) || null;
 try {
   const user = await currentUser().catch(() => null);
+  // Signed-out visitors see nothing but sign-in (WR-02): stop here while the page changes.
+  if (!user) { location.replace('index.html?signin'); await new Promise(() => {}); }
   [clubsRows, season] = await Promise.all([clubs().catch(() => []), loadSeason().catch(() => null)]);
   useClubs(clubsRows);
   if (user) {
