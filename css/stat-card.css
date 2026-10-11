@@ -3,7 +3,6 @@
 
 .sc { display: flex; flex-direction: column; padding-bottom: 8px; }
 .sc .lg-card-head { align-items: center; min-height: 40px; margin-bottom: 4px; }   /* a title that wraps to two lines keeps the rows level across the grid */
-.sc .lg-card-head h2 { font-size: .9375rem; }
 .sc.is-empty { min-height: 168px; }
 
 .sc-more {
@@ -15,45 +14,41 @@
 .sc-rows { list-style: none; margin: 0; padding: 0; }
 .sc-row {
   display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 8px 0; border-top: 1px solid var(--line);
-  font: 400 .875rem/1.25 var(--font); color: var(--text);
+  font: 400 var(--fs-m)/1.25 var(--font); color: var(--text);
 }
 .sc-row:first-child { border-top: 0; }
-.sc-row.is-lead { min-height: 64px; }
 .sc-who { display: grid; gap: 2px; min-width: 0; flex: 1; }
-.sc-name { font-weight: 600; font-size: .875rem; color: var(--text-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.is-lead .sc-name { font-size: .9375rem; }
-.sc-club { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--muted); font-size: .8125rem; }
+.sc-name { font-weight: 600; font-size: var(--fs-m); color: var(--text-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc-club { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--muted); font-size: var(--fs-s); }
 .sc-club > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sc-rank { width: 20px; flex: none; text-align: center; color: var(--muted); font: 600 .8125rem var(--font); font-variant-numeric: tabular-nums; }
+.sc-rank { width: 20px; flex: none; text-align: center; color: var(--muted); font: 600 var(--fs-s) var(--font); font-variant-numeric: tabular-nums; }
 
 /* vLeague's own pill player, in the club's colour, with a kit band. */
 .sc-av {
-  flex: none; width: 24px; height: 32px; border-radius: 999px; margin: 0 4px;
+  flex: none; width: 28px; height: 40px; border-radius: 999px; margin: 0 4px;
   background: linear-gradient(transparent 40%, color-mix(in oklab, var(--on) 28%, transparent) 40% 56%, transparent 56%), var(--c);
   box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--c) 65%, var(--text));
 }
-.sc-av.is-big { width: 30px; height: 40px; margin: 0 5px; }
 /* The club's real home kit (js/kit.js kitSprite), a pill-shaped player: it brings its own colours, so no capsule behind it. */
-.sc-av.is-kit { width: 28px; height: 38px; margin: 0 3px; display: grid; place-items: center; background: none; box-shadow: none; }
-.sc-av.is-kit.is-big { width: 34px; height: 48px; margin: 0 4px; }
+.sc-av.is-kit { display: grid; place-items: center; background: none; box-shadow: none; }
 .sc-av.is-kit img { display: block; max-width: 100%; max-height: 100%; border-radius: 999px; box-shadow: 0 0 0 1px color-mix(in oklab, var(--c) 55%, var(--text)); }
 
-.sc-val { flex: none; min-width: 2ch; text-align: right; font: 700 .9375rem var(--font); font-variant-numeric: tabular-nums; color: var(--text-strong); }
+.sc-val { flex: none; min-width: 2ch; text-align: right; font: 700 var(--fs-m) var(--font); font-variant-numeric: tabular-nums; color: var(--text-strong); }
 .sc-val.is-lead {
-  min-width: 44px; padding: 5px 12px; border-radius: 999px; text-align: center; font-size: 1rem;
+  min-width: 44px; padding: 5px 12px; border-radius: 999px; text-align: center;
   background: var(--c); color: var(--on); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--c) 65%, var(--text));
 }
 
 /* Crests next to club names (js/places.js draws them): keep them from shrinking in a tight row. */
 
 /* Nothing played yet. */
-.sc-empty { flex: 1; display: grid; place-content: center; gap: 4px; padding: 20px 8px 24px; text-align: center; color: var(--muted); font-size: .8125rem; }
-.sc-empty b { font: 600 .9375rem var(--font); color: var(--text); }
+.sc-empty { flex: 1; display: grid; place-content: center; gap: 4px; padding: 20px 8px 24px; text-align: center; color: var(--muted); font-size: var(--fs-s); }
+.sc-empty b { font: 600 var(--fs-m) var(--font); color: var(--text); }
 
 /* ---------- The full page (WR-10) ---------- */
 .sp-top {
   display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--r-lg); font: 600 1rem var(--font); color: var(--text-strong);
+  border-radius: var(--r-lg); font: 600 var(--fs-l) var(--font); color: var(--text-strong);
 }
 .sp-back { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--surface-sunk); color: var(--text); text-decoration: none; }
 .sp-back .sc-chev { width: 20px; height: 20px; }
@@ -67,9 +62,9 @@
 .sp-banner .sc-av.is-kit img { box-shadow: 0 0 0 2px color-mix(in oklab, var(--on) 35%, transparent); }
 .sp-banner > .crest { flex: none; }
 .sp-says { display: grid; gap: 4px; min-width: 0; }
-.sp-says p { margin: 0; font: 500 1.25rem/1.3 var(--font); }
-.sp-says b { font-weight: 800; }
-.sp-says span { font-size: .8125rem; color: color-mix(in oklab, var(--on) 78%, transparent); }
+.sp-says p { margin: 0; font: 400 var(--fs-xl)/1.3 var(--font); }
+.sp-says b { font-weight: 700; }
+.sp-says span { font-size: var(--fs-s); color: color-mix(in oklab, var(--on) 78%, transparent); }
 
 /* The crest on a player's corner. */
 .sc-av.is-kit { position: relative; }
@@ -84,7 +79,7 @@
   display: inline-flex; align-items: center; gap: 6px; max-width: 100%; margin: -6px 0 0 -8px; padding: 6px 8px; border: 0; border-radius: var(--r-sm);
   background: none; color: var(--text-strong); cursor: pointer;
 }
-.sp-stat h2 { margin: 0; font: 900 1.0625rem/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; letter-spacing: .01em; text-align: left; }
+.sp-stat h2 { margin: 0; font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; letter-spacing: .01em; text-align: left; }
 .sp-stat .sc-chev { width: 18px; height: 18px; color: var(--muted); transition: transform .15s ease; flex: none; }
 .sp-stat[aria-expanded="true"] .sc-chev { transform: rotate(180deg); }
 .sp-menu {
@@ -92,32 +87,32 @@
   padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: 0 12px 32px rgba(0, 0, 0, .28);
 }
 .sp-menu[hidden] { display: none; }
-.sp-group { margin: 0; padding: 10px 10px 4px; font: 700 .6875rem var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.sp-group { margin: 0; padding: 10px 10px 4px; font: 600 var(--fs-xs) var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .sp-menu a {
   display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border-radius: var(--r-sm);
-  color: var(--text); font: 500 .875rem var(--font); text-decoration: none;
+  color: var(--text); font: 400 var(--fs-m) var(--font); text-decoration: none;
 }
 .sp-menu a .sc-chev { margin-left: auto; width: 18px; height: 18px; color: var(--brand); visibility: hidden; }
 .sp-menu a[aria-checked="true"] { background: color-mix(in oklab, var(--brand) 10%, transparent); font-weight: 600; }
 .sp-menu a[aria-checked="true"] .sc-chev { visibility: visible; }
 .sp-menu a:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 
-.sc-note { margin: 0 0 12px; color: var(--muted); font-size: .8125rem; }
+.sc-note { margin: 0 0 12px; color: var(--muted); font-size: var(--fs-s); }
 .sp-pills { display: flex; gap: 8px; margin: 4px 0 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
 .sp-pills::-webkit-scrollbar { display: none; }
 .sp-pills a {
   flex: none; display: inline-flex; align-items: center; height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line);
-  background: var(--surface-sunk); color: var(--text); font: 600 .8125rem var(--font); text-decoration: none; white-space: nowrap;
+  background: var(--surface-sunk); color: var(--text); font: 600 var(--fs-s) var(--font); text-decoration: none; white-space: nowrap;
 }
 .sp-pills a[aria-current="true"] { background: var(--text-strong); border-color: var(--text-strong); color: var(--surface); }
 
 .sc-rows.is-full .sc-row { min-height: 68px; padding: 10px 4px; gap: 14px; }
-.sp-rank { flex: none; width: 24px; text-align: center; color: var(--muted); font: 600 .875rem var(--font); font-variant-numeric: tabular-nums; }
+.sp-rank { flex: none; width: 24px; text-align: center; color: var(--muted); font: 600 var(--fs-s) var(--font); font-variant-numeric: tabular-nums; }
 .sc-row[data-rank="1"] .sp-rank { color: var(--text-strong); }
 .sc-rows.is-full .sc-av.is-kit { width: 30px; height: 44px; margin: 0 6px 0 2px; }
 .sc-rows.is-full > li > .crest { margin: 0 2px; }
-.sc-sub { color: var(--muted); font-size: .8125rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sc-rows.is-full .sc-val { font-size: 1.0625rem; }
+.sc-sub { color: var(--muted); font-size: var(--fs-s); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc-rows.is-full .sc-val { font-size: var(--fs-l); }
 
 @media (hover: hover) and (pointer: fine) {
   .sc-more:hover, .sp-back:hover { background: var(--surface-hover); color: var(--text); }
@@ -131,7 +126,7 @@
 
 /* A grid of stat cards (Player stats, Team stats, the Overview leaders): three across from 992 px, two from 640, one on phones. */
 .sc-group { display: grid; gap: 12px; }
-.sc-group > h3 { margin: 8px 4px 0; font: 700 .8125rem var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.sc-group > h3 { margin: 8px 4px 0; font: 600 var(--fs-xs) var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .sc-grid { display: grid; gap: 16px; }
 @media (min-width: 640px) { .sc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 992px) { .sc-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
@@ -139,13 +134,13 @@
 
 /* The Stats tab around the cards. */
 .sc-section { display: grid; gap: 20px; }
-.sc-title { margin: 8px 4px 0; font: 700 1.375rem/1.2 var(--font); color: var(--text-strong); }
+.sc-title { margin: 8px 4px 0; font: 700 var(--fs-l)/1.2 var(--font); color: var(--text-strong); }
 .sc-none { min-height: 240px; display: grid; }
 .sc-demo {
-  margin: 0; padding: 10px 14px; border: 1px dashed var(--line); border-radius: var(--r-lg); color: var(--muted); font-size: .8125rem;
+  margin: 0; padding: 10px 14px; border: 1px dashed var(--line); border-radius: var(--r-lg); color: var(--muted); font-size: var(--fs-s);
 }
 .sc-demo b { margin-right: 6px; color: var(--text-strong); }
-.sc-demo code { font: 600 .75rem ui-monospace, monospace; color: var(--text); }
+.sc-demo code { font: inherit; font-weight: 600; color: var(--text); }
 
 /* Crests (js/places.js crest()): the logo, or the club's initials on its colour when it has none. Same rules as css/places.css. */
 .sc .crest, .sp-banner .crest { position: relative; display: inline-grid; place-items: center; width: var(--s); height: var(--s); flex: none; }

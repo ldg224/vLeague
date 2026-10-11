@@ -7,6 +7,10 @@
   --font: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-display: 'Archivo', 'Arial Narrow', sans-serif;
   font-family: var(--font);
+  /* The type scale for the whole league page: five sizes and four weights, nothing in between (user, 11 Oct 2026: it had too many).
+     12 labels and tiny print, 13 second lines, 14 rows, names, values and tabs, 16 titles and headings, 20 the stat banner.
+     Weights: 400 text, 600 names and labels, 700 values and strong text, 900 the expanded display type (wordmark, card titles). */
+  --fs-xs: .75rem; --fs-s: .8125rem; --fs-m: .875rem; --fs-l: 1rem; --fs-xl: 1.25rem;
   /* The club accent for the current theme (set in js/shell.js paintClub; vLeague blue when there's no club). */
   --club-accent: var(--club-accent-dark, var(--blue-300));
   --tab-accent: var(--blue-300);
@@ -87,10 +91,10 @@
 .lg-season-btn {
   display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px 0 12px;
   border: 1px solid var(--line); border-radius: 999px; background: var(--surface-sunk); color: var(--text); cursor: pointer;
-  font: 500 .75rem/1 var(--font);
+  font: 400 var(--fs-xs)/1 var(--font);
 }
-.lg-season-name { font: 800 .75rem/1 var(--font-display); font-stretch: 125%; text-transform: uppercase; letter-spacing: .02em; }
-.lg-season-live { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font: 500 .75rem/1 var(--font); }
+.lg-season-name { font: 900 var(--fs-xs)/1 var(--font-display); font-stretch: 125%; text-transform: uppercase; letter-spacing: .02em; }
+.lg-season-live { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font: 400 var(--fs-xs)/1 var(--font); }
 .lg-season-live::before {
   content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--brand);
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 25%, transparent);
@@ -104,13 +108,13 @@
   box-shadow: 0 12px 32px rgba(0, 0, 0, .28);
 }
 .lg-season-menu[hidden] { display: none; }
-.lg-season-head { margin: 0; padding: 8px 10px 6px; font: 600 .75rem/1 var(--font); color: var(--muted); }
+.lg-season-head { margin: 0; padding: 8px 10px 6px; font: 600 var(--fs-xs)/1 var(--font); color: var(--muted); }
 .lg-season-menu [data-season], .lg-season-all {
   display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 10px;
   border: 0; border-radius: var(--r-sm); background: none; color: var(--text); text-align: left; cursor: pointer;
-  font: 500 .875rem var(--font); text-decoration: none;
+  font: 400 var(--fs-m) var(--font); text-decoration: none;
 }
-.lg-season-menu [data-season] .lg-season-name { font-size: .8125rem; }
+.lg-season-menu [data-season] .lg-season-name { font-size: var(--fs-xs); }
 .lg-season-menu [data-season] .ic { margin-left: auto; width: 18px; height: 18px; color: var(--brand); visibility: hidden; }
 .lg-season-menu [aria-checked="true"] { background: color-mix(in oklab, var(--brand) 10%, transparent); }
 .lg-season-menu [aria-checked="true"] .ic { visibility: visible; }
@@ -128,7 +132,7 @@
 .lg-tool {
   display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px;
   border: 1px solid var(--line); border-radius: 999px;
-  font: 600 .875rem var(--font); color: var(--text); text-decoration: none; white-space: nowrap;
+  font: 600 var(--fs-m) var(--font); color: var(--text); text-decoration: none; white-space: nowrap;
 }
 .lg-tool .ic { width: 18px; height: 18px; color: var(--muted); }
 .lg-tool.is-club .ic { color: var(--club-accent); }
@@ -141,10 +145,10 @@
 .lg-tabs a {
   /* Tab names in the page's Archivo, in capitals. */
   display: inline-flex; align-items: center; gap: 6px; height: 52px; padding: 0 12px;
-  font: 500 .9375rem var(--font); text-transform: uppercase; letter-spacing: .03em;
+  font: 600 var(--fs-m) var(--font); text-transform: uppercase; letter-spacing: .03em;
   color: var(--muted); text-decoration: none; white-space: nowrap;
 }
-.lg-tabs a[aria-current="page"] { color: var(--text-strong); font-weight: 600; }
+.lg-tabs a[aria-current="page"] { color: var(--text-strong); font-weight: 700; }
 .lg-bar {
   position: absolute; left: 0; bottom: 0; height: 3px; width: 0; border-radius: 3px 3px 0 0;
   background: var(--tab-accent);
@@ -154,7 +158,7 @@
 @media (prefers-reduced-motion: reduce) { .lg-bar { transition: none; } }
 .lg-live {
   padding: 1px 6px; border-radius: 999px; background: var(--res-l); color: #fff;
-  font: 700 .6875rem/1.4 var(--font); font-style: normal; letter-spacing: .02em;
+  font: 700 var(--fs-xs)/1.4 var(--font); font-style: normal; letter-spacing: .02em;
 }
 
 /* Hover only where a pointer can hover (FotMob does the same). */
@@ -174,7 +178,7 @@
 .lg-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .lg-card-head h2 {
   /* Archivo Expanded Black, as on vLeague's own graphics ("GAME WEEK TIMELINE"). */
-  margin: 0; font: 900 1.0625rem/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; letter-spacing: .01em;
+  margin: 0; font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; letter-spacing: .01em;
   color: var(--text-strong);
 }
 .lg-empty { min-height: 120px; }
@@ -184,7 +188,7 @@
 @media (min-width: 640px) { .lg-trio { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (min-width: 992px) { .lg-cols { grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); } }
 
-.lg-foot { display: flex; justify-content: center; gap: 16px; font-size: .75rem; }   /* version, and the Icons8 credit their free licence asks for */
+.lg-foot { display: flex; justify-content: center; gap: 16px; font-size: var(--fs-xs); }   /* version, and the Icons8 credit their free licence asks for */
 .lg-foot a { color: var(--faint); text-decoration: none; }
 
 /* ---------- Phones ---------- */
@@ -201,7 +205,7 @@
   }
   .lg-bottom a {
     flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 2px 0;
-    color: var(--muted); font: 500 .6875rem/1.2 var(--font); text-decoration: none; -webkit-tap-highlight-color: transparent;
+    color: var(--muted); font: 600 var(--fs-xs)/1.2 var(--font); text-decoration: none; -webkit-tap-highlight-color: transparent;
   }
   .lg-bi { position: relative; display: grid; place-items: center; width: 56px; height: 30px; border-radius: 999px; transition: background-color .15s ease; }
   .lg-bi .ic { width: 22px; height: 22px; }
@@ -235,5 +239,4 @@
   .lg.has-club .lg-head .lg-tool.is-club .lg-tool-crest { width: 22px; height: 22px; }
 }
 /* The three stat-leader cards sit side by side in a narrow column: a smaller title so "TOP SCORERS" stays on one line. */
-.lg-trio .lg-card-head h2 { font-size: .9375rem; }
-@media (min-width: 992px) and (max-width: 1179px) { .lg-trio .lg-card-head h2 { font-size: .8125rem; } .lg-trio .lg-card { padding-inline: 16px; } }
+@media (min-width: 992px) and (max-width: 1179px) { .lg-trio .lg-card { padding-inline: 16px; } }
