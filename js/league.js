@@ -110,6 +110,19 @@ if (ctx) {
     return `${note}<div class="sc-section"><div class="sc-head"><h2 class="sc-title">${team ? 'Team stats' : 'Player stats'}</h2>${toggle}</div>${grid(kind, data)}</div>`;
   };
 
+  // A faint sheen on every card (css/league-page.css, --sheen): each card gets its own corner, angle and tint, picked from its title so the
+  // same card always looks the same. One card in three leans towards the club colour instead of white.
+  const sheen = root => root.querySelectorAll('.lg-card:not([data-sheen])').forEach((c, i) => {
+    let h = 2166136261;
+    for (const ch of `${c.querySelector('h2')?.textContent || ''}${i}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+    const r = n => ((h >>> n) & 255) / 255;
+    c.dataset.sheen = '';
+    c.style.setProperty('--gx', `${Math.round(r(0) * 100)}%`);
+    c.style.setProperty('--gy', `${r(8) < .5 ? Math.round(r(16) * 25) : 100 - Math.round(r(16) * 25)}%`);
+    c.style.setProperty('--ga', `${Math.round(r(24) * 360)}deg`);
+    if (r(5) < .34) c.style.setProperty('--gt', 'var(--club, #fff)');
+  });
+
   // ---- The table (WR-11 to WR-14) ----
   let tableFilter = 'all';
   const tableNow = () => (demo != null ? new Date('2027-01-01T00:00:00') : new Date());   // demo matches are dated in the coming days: treat them as played
@@ -129,6 +142,7 @@ if (ctx) {
       const before = rowTops(el);
       el.outerHTML = tableHtml();
       const fresh = main.querySelector('.lg-table');
+      sheen(main);
       fresh.querySelector(`[data-tfilter="${tableFilter}"]`)?.focus();
       reshuffle(fresh, before);
     }
@@ -163,6 +177,7 @@ if (ctx) {
     // Each view gets the season picked in the header (WR-05); they all show the current one until a past season exists.
     onTab: (id, picked, sub) => {
       main.innerHTML = VIEWS[id](sub, picked);
+      sheen(main);
       // "Back" on a full list returns to the tab it was opened from (Overview or Stats), else to the Stats tab.
       main.querySelector('.sp-back')?.addEventListener('click', e => { if (moved) { e.preventDefault(); history.back(); } });
     },
