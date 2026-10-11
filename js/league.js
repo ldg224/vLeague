@@ -121,8 +121,13 @@ if (ctx) {
     h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16;   // mix the bits so similar titles still land in different places
     const r = n => ((h >>> n) & 255) / 255;
     c.dataset.sheen = '';
-    c.style.setProperty('--gx', `${Math.round(r(0) * 100)}%`);
-    c.style.setProperty('--gy', `${Math.round(r(8) * 100)}%`);
+    // The splash starts at one random spot and wanders to another, each card at its own speed and its own point on the way.
+    c.style.setProperty('--gx0', `${Math.round(r(0) * 100)}%`);
+    c.style.setProperty('--gy0', `${Math.round(r(8) * 100)}%`);
+    c.style.setProperty('--gx1', `${Math.round(r(16) * 100)}%`);
+    c.style.setProperty('--gy1', `${Math.round(r(24) * 100)}%`);
+    c.style.setProperty('--sd', `${12 + Math.round(r(2) * 34)}s`);
+    c.style.setProperty('--sp', `${-Math.round(r(10) * 40)}s`);
     // The silk: its own point in the slide and the breathing (negative delays start it part-way through), flipped or not, and a staggered fade-in.
     c.style.setProperty('--fph', `${-Math.round(r(3) * 56)}s`);
     c.style.setProperty('--fph2', `${-Math.round(r(11) * 24)}s`);

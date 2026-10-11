@@ -187,7 +187,12 @@
 }
 /* The splash is defined on the card itself: a custom property that uses var() is worked out where it is declared, so declared higher up
    it would never see each card's own --gx and --gy (which is why every splash sat in the top left corner at first). */
+@property --gx { syntax: "<percentage>"; inherits: false; initial-value: 20%; }
+@property --gy { syntax: "<percentage>"; inherits: false; initial-value: 20%; }
+/* The splash wanders between two random spots on each card, at the card's own speed (js/league.js sets --gx0..--gy1, --sd and --sp). */
+@keyframes lg-splash { from { --gx: var(--gx0, 20%); --gy: var(--gy0, 20%); } to { --gx: var(--gx1, 80%); --gy: var(--gy1, 80%); } }
 :root:not([data-theme="light"]) .lg-card {
+  animation: lg-splash var(--sd, 30s) ease-in-out var(--sp, 0s) infinite alternate;
   --sheen:
     radial-gradient(75% 60% at var(--gx, 20%) var(--gy, 20%), color-mix(in oklab, var(--blue-400, #42a5f5) 11%, transparent), transparent 72%),
     linear-gradient(transparent, transparent);
@@ -293,4 +298,4 @@
 @keyframes lg-silk-in { from { opacity: 0; } }
 @keyframes lg-silk-slide { from { background-position: 100% 100%; } to { background-position: 0% 0%; } }
 @keyframes lg-silk-breathe { from { background-size: 135% 135%; } to { background-size: 150% 150%; } }
-@media (prefers-reduced-motion: reduce) { .lg.topo-ready .lg-card::before { animation: none; background-position: 50% 50%; } }
+@media (prefers-reduced-motion: reduce) { .lg.topo-ready .lg-card::before { animation: none; background-position: 50% 50%; } :root:not([data-theme="light"]) .lg-card { animation: none; --gx: var(--gx0, 20%); --gy: var(--gy0, 20%); } }
