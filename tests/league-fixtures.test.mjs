@@ -69,7 +69,7 @@ test('By date: arrows go to the neighbouring weeks, and are off at either end', 
   const last = byDate(season, ctx(), '2026-10-27');
   assert.match(last, /aria-disabled="true" class="fx-arrow" aria-label="Next week"/);
   assert.match(last, /Date to be confirmed/);                          // the postponed match waits at the end of the last week
-  assert.match(last, /<span class="fx-tag is-off">Postponed<\/span>/);
+  assert.match(last, /<span class="fx-tag is-off" title="Postponed">PPD<\/span>/);
   assert.match(byDate(season, ctx(), '2026-11-30'), /No matches this week/);
 });
 

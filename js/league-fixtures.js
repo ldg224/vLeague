@@ -81,7 +81,7 @@ function team(fx, side, ctx, live, hid, edge) {
   const reds = hid ? 0 : live ? live.reds[side] : redCount(fx, code);
   const marks = reds ? `<span class="fx-reds" aria-label="${reds === 1 ? 'Sent off' : `${reds} sent off`}">${'<i></i>'.repeat(Math.min(reds, 3))}</span>` : '';
   const name = `<span class="fx-name${ctx.mine === code ? ' is-mine' : ''}"><b class="fx-full">${esc(club?.name || code)}</b><b class="fx-short">${esc(club?.short_name || club?.name || code)}</b></span>`;
-  const crest = ctx.crest(code, 28);
+  const crest = ctx.crest(code, 40);
   return side === 'home' ? `<span class="fx-team is-home${edge}">${name}${marks}${crest}</span>` : `<span class="fx-team is-away${edge}">${crest}${marks}${name}</span>`;
 }
 
@@ -91,7 +91,7 @@ export function rowHtml(fx, season, ctx, opts = {}) {
   const live = st === 'live' && !hid ? liveState(fx, season, now) : null;
   const tag = st === 'live' ? `<span class="fx-tag is-live">${hid ? 'LIVE' : `LIVE ${liveMinute(fx, season, now) ?? ''}′`}</span>`
     : st === 'ft' ? '<span class="fx-tag">FT</span>'
-      : st === 'postponed' ? '<span class="fx-tag is-off">Postponed</span>'
+      : st === 'postponed' ? '<span class="fx-tag is-off" title="Postponed">PPD</span>'
         : st === 'awaiting' ? '<span class="fx-tag">Soon</span>' : '<span class="fx-tag"></span>';
   let mid = '', edge = ['', ''];
   if (st === 'live' || st === 'ft') {
