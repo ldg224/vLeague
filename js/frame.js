@@ -1,5 +1,5 @@
 // The league page's frame (website revamp, WR-03): the header card (crest, name, season, Club / Settings / Editor) and the
-// row of tabs, modelled on FotMob's league page. Each tab has its own address (league.html#table), so refresh, the back
+// row of tabs, modelled on FotMob's league page. Each tab has its own address (league.html#fixtures), so refresh, the back
 // button and shared links land on the right tab.
 //   mountFrame(el, { office, draft, crest, onTab }) -> draws the frame into el and calls onTab(id) now and on every change
 //   TABS                                       -> the tabs in order
@@ -8,10 +8,8 @@ import { icon } from './icons.js';
 
 export const TABS = [
   { id: 'overview', label: 'Overview' },
-  { id: 'table', label: 'Table' },
   { id: 'fixtures', label: 'Fixtures' },
-  { id: 'player-stats', label: 'Player stats' },
-  { id: 'team-stats', label: 'Team stats' },
+  { id: 'stats', label: 'Stats' },
   { id: 'seasons', label: 'Seasons' },
   { id: 'news', label: 'News' },
   { id: 'draft', label: 'Draft', when: o => o.draft },

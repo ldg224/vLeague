@@ -1,5 +1,5 @@
 // The league page (website revamp): one FotMob-style page with a header and tabs (js/frame.js). WR-03 builds the frame;
-// each tab's content comes in its own card (Table WR-11 to 14, Fixtures WR-15 to 17, Overview WR-18 to 21, stats WR-22/23,
+// each tab's content comes in its own card (the table WR-11 to 14 lives on Overview, Fixtures WR-15 to 17, Overview WR-18 to 21, Stats WR-22/23 (players and teams in one tab),
 // Seasons WR-24, News WR-25, Draft WR-27). Until then a tab shows where its content will go.
 // Local preview (screenshots only, never on the live site): http://localhost:8767/league.html?preview&club=%23c8102e&theme=light&office
 import { enterPlace, paintClub } from './shell.js';
@@ -47,10 +47,8 @@ if (ctx) {
           ${card('This round')}
         </aside>
       </div>`,
-    table: () => card('Table'),
     fixtures: () => card('Fixtures'),
-    'player-stats': () => card('Player stats'),
-    'team-stats': () => card('Team stats'),
+    stats: () => `${card('Player stats')}${card('Team stats')}`,
     seasons: () => card('Seasons'),
     news: () => card('News'),
     draft: () => card('Draft'),
