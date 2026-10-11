@@ -61,7 +61,7 @@ if (ctx) {
 
   mountFrame(document.getElementById('frame'), {
     office,
-    crest: ctx.club?.crest_path ? crestUrl(ctx.club.crest_path) : '',
+    crest: preview ? params.get('crest') || '' : ctx.club?.crest_path ? crestUrl(ctx.club.crest_path) : '',
     onTab: id => {
       main.innerHTML = VIEWS[id]();
     },

@@ -27,9 +27,8 @@
      from the top right. The same in both themes; text on it is white. */
   --club-darkest: color-mix(in oklab, var(--club) 22%, #000);
   --club-deep: color-mix(in oklab, var(--club) 82%, #000);
-  background:
-    radial-gradient(90% 160% at 100% 0%, var(--club-deep) 0%, transparent 70%),
-    var(--club-darkest);
+  --panel-glow: radial-gradient(120% 220% at 82% 0%, var(--club-deep) 0%, transparent 72%);
+  background: var(--panel-glow), var(--club-darkest);
   color: #fff;
 }
 .lg.has-club .lg-head { position: relative; isolation: isolate; }
@@ -43,7 +42,7 @@
 .lg.has-club .lg-head .lg-season { color: rgba(255, 255, 255, .72); }
 .lg.has-club .lg-head .lg-tool { border-color: rgba(255, 255, 255, .22); color: #fff; }
 .lg.has-club .lg-head .lg-tool .ic { color: rgba(255, 255, 255, .8); }
-.lg.has-club .lg-head .lg-tool.is-club { box-shadow: 0 0 0 1px rgba(255, 255, 255, .28); }
+
 .lg.has-club .lg-head :focus-visible { outline-color: #fff; }
 @media (hover: hover) and (pointer: fine) {
   .lg.has-club .lg-head .lg-tool:not(.is-club):hover { background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .4); }
@@ -51,6 +50,26 @@
 }
 .lg.has-club .lg-tool.is-club { background: var(--club); border-color: transparent; color: var(--on-club); }
 .lg.has-club .lg-tool.is-club .ic { color: currentColor; }
+/* On the club panel the Club button is the inverse of the others: a solid white pill with the crest filling its left side
+   and the word "Club" cut out of it, showing the panel (glow and paper texture) through. js/frame.js lines the label's
+   copy of the panel up with the real one (--kx/--ky, --kw/--kh, the texture's --tw/--th/--tx/--ty). */
+.lg.has-club .lg-head .lg-tool.is-club {
+  gap: 8px; padding: 0 16px 0 3px; background: #fff; border-color: #fff; color: var(--club-darkest);
+}
+.lg.has-club .lg-head .lg-tool.is-club .lg-tool-crest { width: 34px; height: 34px; }
+.lg.has-club .lg-head .lg-tool.is-club > .ic { width: 22px; height: 22px; margin-left: 8px; color: var(--club-darkest); }
+.lg.has-club .lg-head .lg-tool.is-club span {
+  font-weight: 800; color: transparent;
+  background:
+    url("../assets/img/header-texture.jpg") var(--tx, 0) var(--ty, 0) / var(--tw, 100%) var(--th, 100%) no-repeat,
+    var(--panel-glow) var(--kx, 0) var(--ky, 0) / var(--kw, 100%) var(--kh, 100%) no-repeat,
+    var(--club-darkest);
+  background-blend-mode: soft-light, normal, normal;
+  -webkit-background-clip: text; background-clip: text;
+}
+@media (hover: hover) and (pointer: fine) {
+  .lg.has-club .lg-head .lg-tool.is-club:hover { background: rgba(255, 255, 255, .88); }
+}
 
 .lg-frame, .lg-content, .lg-foot { width: 100%; max-width: 1280px; margin: 0 auto; }
 .lg-frame, .lg-foot { flex: none; }   /* never squash the header when the page is taller than the screen */
@@ -87,7 +106,7 @@
 }
 .lg-tool .ic { width: 18px; height: 18px; color: var(--muted); }
 .lg-tool.is-club .ic { color: var(--club-accent); }
-.lg-tool-crest { width: 22px; height: 22px; object-fit: contain; }
+.lg-tool-crest { width: 22px; height: 22px; object-fit: contain; flex: none; }
 
 /* ---------- Tabs ---------- */
 .lg-tabs { border-top: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
@@ -157,6 +176,9 @@
 @media (max-width: 479px) {
   .lg-tools { width: 100%; flex-wrap: nowrap; }
   .lg-tool { flex: 1 1 0; justify-content: center; min-width: 0; padding: 0 8px; }
+  .lg.has-club .lg-head .lg-tool.is-club { padding: 0 12px 0 2px; justify-content: flex-start; }
+  .lg.has-club .lg-head .lg-tool.is-club span { margin: 0 auto; }
+  .lg.has-club .lg-head .lg-tool.is-club .lg-tool-crest { width: 30px; height: 30px; }
 }
 /* The three stat-leader cards sit side by side in a narrow column: a smaller title so "TOP SCORERS" stays on one line. */
 .lg-trio .lg-card-head h2 { font-size: .9375rem; }
