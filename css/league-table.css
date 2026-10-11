@@ -1,8 +1,8 @@
 /* The league table card (WR-11 to WR-14): a real table, rows split by hairlines, type from the league page scale.
    Zones: a coloured stripe beside the position (Finals, Wooden spoon) and a key under the table. Your club's row is tinted in the club colour.
    Phones: W D L, +/- and Next fold away so # club PL GD PTS and form fit at 360 px; the card scrolls inside itself if it still doesn't. */
-.lg-table { --z-finals: var(--blue-700); --z-spoon: #a8743d; padding-bottom: 8px; }
-:root:not([data-theme="light"]) .lg-table { --z-finals: var(--blue-300); --z-spoon: #c9935a; }
+.lg-table { --z-finals: var(--res-w); --z-spoon: #a8743d; padding-bottom: 8px; }
+:root:not([data-theme="light"]) .lg-table { --z-spoon: #c9935a; }
 
 .tb-pills { display: flex; gap: 8px; margin: 0 0 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
 .tb-pills::-webkit-scrollbar { display: none; }
@@ -38,7 +38,7 @@
 .tb-none { color: var(--faint); }
 .tb-next { display: inline-flex; vertical-align: middle; }
 
-.tb-key { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 4px 6px; padding: 0; list-style: none; color: var(--muted); font-size: var(--fs-s); }
+.tb-key { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 4px 6px; padding: 0; list-style: none; color: var(--muted); font: 600 var(--fs-xs)/1.2 var(--font-display, var(--font)); font-stretch: 125%; letter-spacing: .04em; text-transform: uppercase; }
 .tb-key li { display: flex; align-items: center; gap: 8px; }
 .tb-key li::before { content: ""; width: 3px; height: 14px; border-radius: 2px; background: var(--z-finals); }
 .tb-key li[data-zone="spoon"]::before { background: var(--z-spoon); }
