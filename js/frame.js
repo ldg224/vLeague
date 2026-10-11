@@ -4,7 +4,8 @@
 //   mountFrame(el, { office, draft, crest, onTab }) -> draws the frame into el and calls onTab(id, season, sub) now, on every tab
 //                                                 change and when another season is picked (WR-05). A tab address can carry
 //                                                 a part after a slash, league.html#stats/scorers: that is `sub` (WR-10)
-//   mountFrame returns { setBadge(tabId, n) }: a small count on a tab (the News tab's unread posts); 0 or less removes it
+//   draft / draftLive: the Draft tab shows only while a draft is visible (draft), with a Live marker while picks are being made (draftLive);
+//   mountFrame returns { setDraft({ visible, live }), setBadge(tabId, n) }: a small count on a tab (the News tab's unread posts); 0 or less removes it
 //   mountSubFrame(el, { office, crest, here, title }) -> the same header card for the pages behind the header buttons (My club, Settings, Kits):
 //                                                 the Club or Settings button is the current one (here: 'club' | 'settings'), and a row with a way back to
 //                                                 the league replaces the tabs
@@ -29,8 +30,10 @@ export const SEASONS = [{ id: 1, label: 'Season 1', live: true }];
 // A season still being played gets a small "In progress" marker; a finished one shows nothing extra.
 const status = s => s.live ? '<span class="lg-season-live">In progress</span>' : '';
 
-export function mountFrame(el, { office = false, draft = false, crest = '', onTab } = {}) {
-  const tabs = TABS.filter(t => !t.when || t.when({ draft }));
+export function mountFrame(el, { office = false, draft = false, draftLive = false, crest = '', onTab } = {}) {
+  let tabs = TABS.filter(t => !t.when || t.when({ draft })), live = draftLive;
+  const topLink = t => `<a href="#${t.id}" data-tab="${t.id}">${esc(t.label)}${t.id === 'draft' && live ? ' <i class="lg-live">Live</i>' : ''}</a>`;
+  const bottomLink = t => `<a href="#${t.id}" data-tab="${t.id}"><span class="lg-bi">${icon(t.icon)}${t.id === 'draft' && live ? '<i class="lg-live-dot" title="Live"></i>' : ''}</span><span class="lg-bl">${esc(t.label)}</span></a>`;
   el.innerHTML = `<div class="lg-head">
       <div class="lg-id">
         <img class="lg-crest" src="assets/brand/crest.svg" alt="">
@@ -54,7 +57,7 @@ export function mountFrame(el, { office = false, draft = false, crest = '', onTa
       </nav>
     </div>
     <nav class="lg-tabs" aria-label="League">
-      <div class="lg-tabs-in">${tabs.map(t => `<a href="#${t.id}" data-tab="${t.id}">${esc(t.label)}${t.id === 'draft' ? ' <i class="lg-live">Live</i>' : ''}</a>`).join('')}
+      <div class="lg-tabs-in">${tabs.map(topLink).join('')}
         <span class="lg-bar" aria-hidden="true"></span></div>
     </nav>`;
   // The phone's tab bar, fixed to the bottom of the screen (css/league-page.css shows it under 768 px and hides the row above).
@@ -62,7 +65,7 @@ export function mountFrame(el, { office = false, draft = false, crest = '', onTa
   const bottom = document.createElement('nav');
   bottom.className = 'lg-bottom';
   bottom.setAttribute('aria-label', 'League');
-  bottom.innerHTML = tabs.map(t => `<a href="#${t.id}" data-tab="${t.id}"><span class="lg-bi">${icon(t.icon)}${t.id === 'draft' ? '<i class="lg-live-dot" title="Live"></i>' : ''}</span><span class="lg-bl">${esc(t.label)}</span></a>`).join('');
+  bottom.innerHTML = tabs.map(bottomLink).join('');
   document.body.append(bottom);
 
   const strip = el.querySelector('.lg-tabs-in'), bar = el.querySelector('.lg-bar');
@@ -76,7 +79,8 @@ export function mountFrame(el, { office = false, draft = false, crest = '', onTa
     bar.style.width = `${link.offsetWidth}px`;
     bar.style.transform = `translateX(${link.offsetLeft}px)`;
   };
-  const show = animate => {
+  // Mark the current tab (underline, aria-current, keeping it in view) without drawing its content.
+  const mark = animate => {
     const { id, sub } = here();
     let active = null;
     for (const a of [...strip.querySelectorAll('a'), ...bottom.querySelectorAll('a')]) {
@@ -91,6 +95,10 @@ export function mountFrame(el, { office = false, draft = false, crest = '', onTa
     if ((left < nav.scrollLeft || right > nav.scrollLeft + nav.clientWidth) && Math.abs(target - nav.scrollLeft) > 1) {
       if (animate) nav.scrollTo({ left: target, behavior: 'smooth' }); else nav.scrollLeft = target;
     }
+    return { id, sub };
+  };
+  const show = animate => {
+    const { id, sub } = mark(animate);
     document.title = `${tabs.find(t => t.id === id).label} | vLeague`;
     onTab?.(id, season, sub);
   };
@@ -158,7 +166,22 @@ export function mountFrame(el, { office = false, draft = false, crest = '', onTa
   addEventListener('resize', relayout);
   document.fonts?.ready.then(relayout);
   show(false);
+  // The Draft tab appears and disappears with the Editor's "visible" switch, and shows Live while picks can be made. Only the tab links are
+  // rebuilt (the content on screen is left alone); the page decides what to do if the tab you are on has gone.
+  const setDraft = ({ visible, live: nowLive }) => {
+    const had = tabs.some(t => t.id === 'draft');
+    if (had === visible && live === nowLive) return;
+    live = nowLive;
+    tabs = TABS.filter(t => !t.when || t.when({ draft: visible }));
+    strip.querySelectorAll('a').forEach(a => a.remove());
+    bar.before(...tabs.map(t => { const tpl = document.createElement('template'); tpl.innerHTML = topLink(t); return tpl.content.firstElementChild; }));
+    bottom.innerHTML = tabs.map(bottomLink).join('');
+    if (tabs.some(t => t.id === here().id)) mark(false);
+    for (const [k, v] of Object.entries(badges)) setBadge(k, v);
+  };
+  const badges = {};   // kept so a rebuilt tab row can show them again
   const setBadge = (id, n) => {
+    badges[id] = n;
     for (const a of [...strip.querySelectorAll('a'), ...bottom.querySelectorAll('a')]) {
       if (a.dataset.tab !== id) continue;
       a.querySelector('.lg-count')?.remove();
@@ -166,7 +189,7 @@ export function mountFrame(el, { office = false, draft = false, crest = '', onTa
     }
     relayout();
   };
-  return { setBadge };
+  return { setBadge, setDraft };
 }
 
 // The pages behind the header buttons (WR-26): the same header card as the league page, with the page's name where the season pill sits and a back link to

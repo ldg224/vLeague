@@ -1,10 +1,9 @@
-// Draft (0.21): the manager's side of the limited-time draft. Three tabs: Board (the draft as a grid), Available players (with
+// Draft (0.21, a tab of the league page since WR-27): the manager's side of the limited-time draft. Three tabs: Board (the draft as a grid), Available players (with
 // My queue and Auto-pick beside them) and Team values. A big status bar on top says where the draft stands; a budget bar under
 // it shows the weekly cap used. The page shows once the office switches "Make page visible" on (0.32), even before the draft
 // starts: managers can read everything and build their queues, and only picking waits for a live draft. Updates the moment a
 // pick is made (realtime), with a 15 s poll as backup. Tap a player's name for their card; picks are confirmed in a small dialog.
 import { snapshotInputs, restoreInputs } from './paint.js';
-import { enterPlace } from './shell.js';
 import { esc } from './member.js';
 import { icon } from './icons.js';
 import { openDraft, phase, loadDraft, saveQueue, savePrefs, makePick, quietState, describeQuiet } from './draft-data.js';
@@ -42,17 +41,21 @@ const CAP = 125000;   // the weekly cap per team: $125,000 from 0.39.1 (was $100
 const money = n => `$${Number(n || 0).toLocaleString('en-AU')}`;
 const fmt = ms => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); if (h >= 48) return `${Math.floor(h / 24)}d ${h % 24}h`; return h ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}:${String(s % 60).padStart(2, '0')}`; };
 
-const ctx = await enterPlace('draft');
-if (ctx) {
-  const { main, club } = ctx, code = club?.code;
-  const clubName = new Map((ctx.season?.teams || []).map(t => [t.code, t.name]));
+// mountDraft(main, { club, season, sub, onGone }): draws the draft into `main` (an element of its own, so its listeners go with it) and returns
+// { unmount(), setTab(sub) }. onGone() is called when the office has hidden the draft while the tab was open (the page used to reload).
+// unmount() stops the clock, the 15 s poll, the live channel and the visibility listener; nothing of the draft runs once you leave the tab.
+export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGone } = {}) {
+  const code = club?.code;
+  const clubName = new Map((season?.teams || []).map(t => [t.code, t.name]));
   const nameOf = c => (c === code && club?.name) || clubName.get(c) || c;
+  const timers = [], every = (fn, ms) => timers.push(setInterval(fn, ms));
+  let channel = null, channelClient = null, onVisible = null, dead = false;
   const draft0 = await openDraft();
   if (!draft0) {
-    main.innerHTML = '<h1 class="page-title" tabindex="-1">Draft</h1><p class="empty">The draft page isn’t open yet. It will appear here as soon as the league office makes it visible.</p><p><a class="btn ghost" href="club.html">Set your team sheet meanwhile</a></p>';
-    main.setAttribute('aria-busy', 'false');
+    main.innerHTML = '<section class="lg-card"><div class="lg-card-head"><h2>Draft</h2></div><div class="sc-empty"><b>The draft isn’t open yet</b><span>It appears here as soon as the league office makes it visible.</span></div></section>'; return { unmount() {}, setTab() {} };
   } else {
-    let tab = (() => { const h = location.hash.slice(1); return h === 'queue' || h === 'auto' ? 'players' : TABS.some(t => t[0] === h) ? h : 'board'; })();
+    const tabOf = h => (h === 'queue' || h === 'auto' ? 'players' : TABS.some(t => t[0] === h) ? h : 'board');
+    let tab = tabOf(sub0);
     // The draft plus, when it has quiet times, how the clock stands (so it can freeze while the timer is paused).
     const loadAll = async () => { const s = await loadDraft(draft0.id, code); s.qs = s.draft?.quiet?.length ? await quietState(draft0.id) : null; return s; };
     let st = await loadAll(), players = await loadPlayers({ fresh: true });
@@ -246,6 +249,7 @@ if (ctx) {
     }
 
     function draw() {
+      if (dead) return;
       const y = window.scrollY, wraps = [...main.querySelectorAll('.dr-tablewrap')].map(w => w.scrollTop), side = main.querySelector('.dr-side')?.scrollTop || 0;
       const open = [...main.querySelectorAll('details.dr-team')].map(d => d.open), autoOpen = main.querySelector('.dr-autobox')?.open ?? true;
       const snap = snapshotInputs(main);
@@ -266,7 +270,7 @@ if (ctx) {
         // Only a successful read that finds no visible draft means it was hidden. A failed read (offline, a renewing session) is
         // ignored: reloading then wiped a queue being edited. And never reload with a save in flight.
         const open = await openDraft(undefined, true);
-        if (!open) { if (!qSaves) location.reload(); return; }
+        if (!open) { if (!qSaves && !dead) onGone?.(); return; }
         const sel = window.getSelection?.(), typing = document.activeElement?.matches?.('input,select,textarea') || Boolean(sel && !sel.isCollapsed && main.contains(sel.anchorNode)), before = sig(), mine = st.queue;
         forgetPlayers();
         [st, players] = await Promise.all([loadAll(), loadPlayers({ fresh: true })]);
@@ -344,7 +348,7 @@ if (ctx) {
       const b = e.target.closest('button'); if (!b) return;
       const q = queue(), d = b.dataset;
       if (d.tour !== undefined) { tour(); return; }
-      if (d.tab) { tab = d.tab; location.hash = tab; msg = ''; draw(); }
+      if (d.tab) { tab = d.tab; location.hash = `draft/${tab}`; msg = ''; draw(); }
       else if (d.sort) { clickSort(d.t, d.sort, e.shiftKey); draw(); }
       else if (d.sflip !== undefined) { SORTS[d.t][+d.sflip].dir *= -1; draw(); }
       else if (d.sdel !== undefined) { SORTS[d.t].splice(+d.sdel, 1); draw(); }
@@ -436,7 +440,7 @@ if (ctx) {
     if (!tourSeen('draft') && code) setTimeout(tour, 600);
     else if (!tourSeen('draft')) main.querySelector('.dr-help')?.classList.add('glow');
     let flipping = false, shown = phase(st.draft);
-    setInterval(() => {
+    every(() => {
       const c = document.getElementById('clock');
       if (c?.dataset.until) c.textContent = fmt(new Date(c.dataset.until) - Date.now()); else if (c && st.draft.pick_deadline) c.textContent = fmt(clockMs());
       // The open or close time has just passed: redraw so the bar and the Pick buttons change over.
@@ -445,16 +449,29 @@ if (ctx) {
       const q = st.qs, edge = q && [q.quiet_until, q.next_quiet].filter(Boolean).map(x => new Date(x).getTime()).find(x => x > q.at && x <= Date.now());
       if (edge && !flipping) { flipping = true; refresh().finally(() => { flipping = false; }); }
     }, 1000);
-    setInterval(refresh, 15000);   // backup: the live channel below does the real work
+    every(refresh, 15000);   // backup: the live channel below does the real work
     // Live updates: hear about a pick or a clock change the moment it happens. If this can't connect, the 15 s poll still works.
     try {
       let soon = null;
       const kick = () => { clearTimeout(soon); soon = setTimeout(refresh, 250); };
-      (await db()).channel(`draft-${draft0.id}`)
+      channelClient = await db();
+      channel = channelClient.channel(`draft-${draft0.id}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'draft_picks', filter: `draft=eq.${draft0.id}` }, kick)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'drafts', filter: `id=eq.${draft0.id}` }, kick)
         .subscribe();
     } catch { /* polling covers it */ }
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+    onVisible = () => { if (!document.hidden) refresh(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return {
+      unmount() {
+        dead = true;
+        timers.forEach(clearInterval);
+        document.removeEventListener('visibilitychange', onVisible);
+        if (channel) channelClient?.removeChannel(channel);
+        document.querySelectorAll('dialog.dr-dialog').forEach(x => x.close());
+      },
+      // The address changed to another part of the draft (#draft/players): show it, unless the page already does.
+      setTab(s) { const t = tabOf(s); if (t !== tab && !dead) { tab = t; msg = ''; draw(); } },
+    };
   }
 }

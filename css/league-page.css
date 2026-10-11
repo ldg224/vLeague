@@ -335,3 +335,7 @@
 .lg-sub .member-main.club-main { width: 100%; }
 .lg-sub .member-main.settings-main > * { max-width: 640px; }
 .lg.has-club .lg-head .lg-page { color: rgba(255, 255, 255, .78); }   /* on the club panel, whatever its colour */
+
+/* The Draft tab (WR-27): the draft page mounted inside the content area. It is a grid item, so it must be allowed to be narrower than its widest table:
+   the board and the player list scroll inside themselves, never the page. */
+.lg-draft, .lg-draft > .draft { min-width: 0; max-width: 100%; }

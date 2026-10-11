@@ -28,6 +28,8 @@ import { inboxItems, readIds, markRead } from './inbox-data.js';
 import { dismissPosts, restorePosts } from './prefs.js';
 import { loadReactions, setReaction } from './news-reactions.js';
 import { loadHistory, trophyUrl } from './history-data.js';
+import { mountDraft } from './draft.js';
+import { openDraft, phase as draftPhase } from './draft-data.js';
 import { db } from './auth.js';
 import { winChance, percents } from './match-model.js';
 import { VERSION } from './version.js';
@@ -278,6 +280,28 @@ if (ctx) {
   clubs().then(rows => { clubRows = new Map(rows.map(c => [c.code, c])); stadiums = Object.fromEntries(rows.filter(c => c.stadium).map(c => [c.code, c.stadium])); drawInSoon(); }).catch(() => {});
   if (demo == null) loadPlayers().then(list => { numbers = new Map(list.filter(p => p.number != null).map(p => [String(p.id), p.number])); drawInSoon(); }).catch(() => {});
 
+  // The Draft tab (WR-27): shown only while the office has made a draft visible, with LIVE while picks can be made. The draft itself (js/draft.js) is mounted into
+  // an element of its own when you open the tab and unmounted (clock, poll and live channel stopped) when you leave it.
+  let draftApi = null;
+  const showDraft = sub => {
+    if (draftApi && main.querySelector('.lg-draft')) { draftApi.setTab(sub); return; }
+    paint(main, '<div class="lg-draft"></div>');
+    const root = main.querySelector('.lg-draft');
+    draftApi = null;
+    mountDraft(root, { club: ctx.club, season, sub, onGone: () => { frameApi?.setDraft({ visible: false, live: false }); if (current?.[0] === 'draft') location.replace('#overview'); } })
+      .then(api => { if (current?.[0] === 'draft' && root.isConnected) draftApi = api; else api.unmount(); })
+      .catch(() => { if (root.isConnected) root.innerHTML = '<section class="lg-card"><div class="lg-card-head"><h2>Draft</h2></div><div class="sc-empty"><b>The draft didn’t load</b><span>Check your connection and refresh the page.</span></div></section>'; });
+  };
+  // Every minute: has a draft been made visible or hidden, or started or finished? Only the tab changes; a read that fails changes nothing.
+  setInterval(async () => {
+    if (document.hidden) return;
+    try {
+      const d = await openDraft(undefined, true);
+      frameApi?.setDraft({ visible: Boolean(d), live: Boolean(d) && draftPhase(d) === 'live' });
+      if (!d && current?.[0] === 'draft') location.replace('#overview');
+    } catch { /* try again next minute */ }
+  }, 60000);
+
   // News: opening a post marks it read; the buttons are data-nw; the phone number form saves through save_my_phone().
   main.addEventListener('toggle', e => {
     const d = e.target;
@@ -373,17 +397,21 @@ if (ctx) {
     stats,
     seasons: seasonsHtml,
     news: newsHtmlNow,
-    draft: () => card('Draft'),
+    draft: () => '',   // mounted by showDraft
   };
 
   wireStatPage(main, { go });
+  const draftNow = await openDraft().catch(() => null);
   frameApi = mountFrame(document.getElementById('frame'), {
     office,
+    draft: Boolean(draftNow), draftLive: Boolean(draftNow) && draftPhase(draftNow) === 'live',
     crest: preview ? params.get('crest') || '' : ctx.club?.crest_path ? crestUrl(ctx.club.crest_path) : '',
     // Each view gets the season picked in the header (WR-05); they all show the current one until a past season exists.
     onTab: (id, picked, sub) => {
+      const left = current?.[0];
       current = [id, picked, sub];
-      if (id === 'overview') showOverview(); else draw(VIEWS[id](sub, picked));
+      if (left === 'draft' && id !== 'draft') { draftApi?.unmount(); draftApi = null; }
+      if (id === 'overview') showOverview(); else if (id === 'draft') showDraft(sub); else draw(VIEWS[id](sub, picked));
       // "Back" on a full list returns to the tab it was opened from (Overview or Stats), else to the Stats tab.
       main.querySelector('.sp-back')?.addEventListener('click', e => { if (moved) { e.preventDefault(); history.back(); } });
     },
