@@ -233,7 +233,7 @@ if (ctx) {
     const gf = all.find(f => f.stage === 'GF' && !f.test && f.result);
     return seasonsView({
       current: { label: picked?.label || 'Season 1', live: picked?.live !== false }, final: grandFinal(all.filter(f => f.result), { hidden }), history: honours,
-      club: code => clubRows?.get(code) || sctx.club(code), crest: sctx.crest, trophy: trophyUrl, office, hiddenCount: gf && hidden.has(gf.id) ? 1 : 0,
+      club: code => clubRows?.get(code) || sctx.club(code), crest: sctx.crest, trophy: trophyUrl, hiddenCount: gf && hidden.has(gf.id) ? 1 : 0,
     });
   };
   loadHistory().then(h => { honours = h; drawInSoon(); }).catch(() => {});

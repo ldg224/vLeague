@@ -9,7 +9,7 @@
 // final has a result. Past seasons come from History (Editor, History: js/history-data.js): for each competition that has an award in that season,
 // the winner (with the competition's trophy picture) and the runner-up, a current club by its crest and name or a past team by its code badge.
 // opts = { current: { label, live }, final: grandFinal(...) | null, history: loadHistory() | null, club(code) -> { name, short_name }, crest(code, px) -> html,
-//          trophy(path) -> url, office: bool (adds the link to Editor, History), hiddenCount }
+//          trophy(path) -> url, hiddenCount }
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ESC[c]);
 
@@ -64,10 +64,9 @@ function pastCard(season, h, o) {
 
 export function seasonsView(o) {
   const h = o.history, past = h ? h.seasons : [];
-  const link = o.office ? '<a class="ss-edit" href="editor.html#history">Edit in Editor</a>' : '';
   const hid = o.hiddenCount ? `<p class="tb-hidden">${o.hiddenCount} result${o.hiddenCount === 1 ? '' : 's'} hidden, so the final isn’t shown. <button type="button" data-reveal-all>Show all</button></p>` : '';
   const cards = currentCard({ ...o, final: o.final?.hiddenFinal ? null : o.final });
-  return `<div class="sc-section"><div class="sc-head"><h2 class="sc-title">Seasons</h2>${link}</div>${hid}`
+  return `<div class="sc-section"><div class="sc-head"><h2 class="sc-title">Seasons</h2></div>${hid}`
     + `<div class="sc-group"><div class="sc-grid">${cards}</div></div>`
     + (past.length ? `<div class="sc-group"><h3>Previous seasons</h3><div class="sc-grid">${past.map(s => pastCard(s, h, o)).join('')}</div></div>` : '')
     + '</div>';

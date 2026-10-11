@@ -53,8 +53,3 @@ test('previous seasons come from History, newest first, with past teams on a bad
   assert.match(html, /No winners recorded yet/);                               // a season with no awards still has a card
   assert.doesNotMatch(seasonsView(o({ history: null })), /Previous seasons/);  // History not loaded (or empty): just the current season
 });
-
-test('only the office gets the link to the Editor', () => {
-  assert.doesNotMatch(seasonsView(o()), /editor\.html/);
-  assert.match(seasonsView(o({ office: true })), /href="editor\.html#history"/);
-});

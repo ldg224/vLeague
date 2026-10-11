@@ -1,9 +1,4 @@
 /* The Seasons tab (WR-24): see js/seasons-tab.js. Tokens only. The grid is the stat cards' (.sc-grid: 1, 2, 3 across). */
-.ss-edit { color: var(--brand); font: 600 var(--fs-m) var(--font); text-decoration: none; }
-.ss-edit:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 4px; }
-@media (hover: hover) { .ss-edit:hover { text-decoration: underline; } }
-.sc-head:has(.ss-edit) { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-
 .ss { display: grid; gap: 4px; align-content: start; }
 .ss-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
 .ss-head h3 { margin: 0; font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; letter-spacing: .01em; color: var(--text-strong); }
