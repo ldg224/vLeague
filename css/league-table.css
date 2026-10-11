@@ -27,6 +27,7 @@
 .tb tbody .tb-club { font-weight: 600; color: var(--text-strong); }
 .tb .tb-club span { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .tb .tb-club b { font-weight: inherit; overflow: hidden; text-overflow: ellipsis; }
+.tb .tb-short { display: none; }   /* the full name where there is room; the short one on phones */
 .tb .tb-pts { font-weight: 700; color: var(--text-strong); }
 .tb tr.is-mine td, .tb tr.is-mine th { background: color-mix(in oklab, var(--club, var(--blue-700)) 14%, transparent); }
 .tb tr.is-mine .tb-club b { color: var(--club-accent, var(--text-strong)); }
@@ -44,6 +45,8 @@
 .tb-key li[data-zone="spoon"]::before { background: var(--z-spoon); }
 
 @media (max-width: 639px) {
+  .tb .tb-full { display: none; }
+  .tb .tb-short { display: inline; }
   .t-wdl, .t-pm, .t-next { display: none; }
   .tb th, .tb td { padding: 0 4px; }
   .tb .tb-pos { width: 30px; }
@@ -63,3 +66,6 @@
   .tb-form { gap: 2px; }
   .tb-form abbr { width: 17px; height: 17px; }
 }
+
+/* Full club names need room: with the two-column layout still narrow (640 to 1179 px) the goals for and against column steps aside. */
+@media (min-width: 640px) and (max-width: 1179px) { .t-pm { display: none; } }
