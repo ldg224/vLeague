@@ -1,0 +1,101 @@
+/* The stat card (WR-09) and the full stat list (WR-10): see js/stat-card.js. Tokens only (css/site.css, css/league-page.css).
+   The leader's value is a pill in their club's colour (--c) with the text that reads on it (--on); both come from the row's style. */
+
+.sc { display: flex; flex-direction: column; padding-bottom: 8px; }
+.sc .lg-card-head { align-items: center; min-height: 40px; margin-bottom: 4px; }   /* a title that wraps to two lines keeps the rows level across the grid */
+.sc .lg-card-head h2 { font-size: .9375rem; }
+.sc.is-empty { min-height: 168px; }
+
+.sc-more {
+  display: inline-grid; place-items: center; width: 32px; height: 32px; margin: -4px -6px -4px 0; border-radius: 50%;
+  color: var(--muted); text-decoration: none;
+}
+.sc-chev { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.sc-rows { list-style: none; margin: 0; padding: 0; }
+.sc-row {
+  display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 8px 0; border-top: 1px solid var(--line);
+  font: 400 .875rem/1.25 var(--font); color: var(--text);
+}
+.sc-row:first-child { border-top: 0; }
+.sc-row.is-lead { min-height: 64px; }
+.sc-who { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.sc-name { font-weight: 600; font-size: .875rem; color: var(--text-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.is-lead .sc-name { font-size: .9375rem; }
+.sc-club { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--muted); font-size: .8125rem; }
+.sc-club > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc-rank { width: 20px; flex: none; text-align: center; color: var(--muted); font: 600 .8125rem var(--font); font-variant-numeric: tabular-nums; }
+
+/* vLeague's own pill player, in the club's colour, with a kit band. */
+.sc-av {
+  flex: none; width: 24px; height: 32px; border-radius: 999px; margin: 0 4px;
+  background: linear-gradient(transparent 40%, color-mix(in oklab, var(--on) 28%, transparent) 40% 56%, transparent 56%), var(--c);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--c) 65%, var(--text));
+}
+.sc-av.is-big { width: 30px; height: 40px; margin: 0 5px; }
+
+.sc-val { flex: none; min-width: 2ch; text-align: right; font: 700 .9375rem var(--font); font-variant-numeric: tabular-nums; color: var(--text-strong); }
+.sc-val.is-lead {
+  min-width: 44px; padding: 5px 12px; border-radius: 999px; text-align: center; font-size: 1rem;
+  background: var(--c); color: var(--on); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--c) 65%, var(--text));
+}
+
+/* Crests next to club names (js/places.js draws them): keep them from shrinking in a tight row. */
+
+/* Nothing played yet. */
+.sc-empty { flex: 1; display: grid; place-content: center; gap: 4px; padding: 20px 8px 24px; text-align: center; color: var(--muted); font-size: .8125rem; }
+.sc-empty b { font: 600 .9375rem var(--font); color: var(--text); }
+
+/* The full list: one tidy column, a back link above the title. */
+.sc-list { padding-bottom: 12px; }
+.sc-list-head { margin: -2px 0 8px -8px; }
+.sc-back {
+  display: inline-flex; align-items: center; gap: 2px; height: 36px; padding: 0 12px 0 4px; border-radius: 999px;
+  color: var(--muted); font: 600 .875rem var(--font); text-decoration: none;
+}
+.sc-count { color: var(--muted); font: 500 .8125rem var(--font); }
+.sc-note { margin: 0 0 8px; color: var(--muted); font-size: .8125rem; }
+.sc-rows.is-full .sc-row { min-height: 56px; padding: 8px 4px; gap: 12px; }
+.sc-rows.is-full .sc-row::before {
+  content: attr(data-rank); flex: none; width: 28px; text-align: center; color: var(--muted);
+  font: 600 .8125rem var(--font); font-variant-numeric: tabular-nums;
+}
+.sc-rows.is-full .sc-row[data-rank="1"]::before { color: var(--text-strong); }
+.sc-rows.is-full .sc-rank { display: none; }
+.sc-rows.is-full .is-lead .sc-name { font-size: .875rem; }
+.sc-rows.is-full .sc-row.is-lead { min-height: 56px; }
+
+@media (hover: hover) and (pointer: fine) {
+  .sc-more:hover, .sc-back:hover { background: var(--surface-hover); color: var(--text); }
+  .sc-row:hover { background: var(--surface-hover); }
+  .sc-rows.is-full .sc-row:hover { border-radius: var(--r-sm); }
+}
+.sc a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 999px; }
+
+/* A grid of stat cards (Player stats, Team stats, the Overview leaders): three across from 992 px, two from 640, one on phones. */
+.sc-group { display: grid; gap: 12px; }
+.sc-group > h3 { margin: 8px 4px 0; font: 700 .8125rem var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.sc-grid { display: grid; gap: 16px; }
+@media (min-width: 640px) { .sc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 992px) { .sc-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 767px) { .sc-grid { gap: 12px; } .sc { padding-bottom: 4px; } }
+
+/* The Stats tab around the cards. */
+.sc-section { display: grid; gap: 20px; }
+.sc-title { margin: 8px 4px 0; font: 700 1.375rem/1.2 var(--font); color: var(--text-strong); }
+.sc-none { min-height: 240px; display: grid; }
+.sc-demo {
+  margin: 0; padding: 10px 14px; border: 1px dashed var(--line); border-radius: var(--r-lg); color: var(--muted); font-size: .8125rem;
+}
+.sc-demo b { margin-right: 6px; color: var(--text-strong); }
+.sc-demo code { font: 600 .75rem ui-monospace, monospace; color: var(--text); }
+
+/* Crests (js/places.js crest()): the logo, or the club's initials on its colour when it has none. Same rules as css/places.css. */
+.sc .crest { position: relative; display: inline-grid; place-items: center; width: var(--s); height: var(--s); flex: none; }
+.sc .crest img { width: 100%; height: 100%; object-fit: contain; }
+.sc .crest i { display: none; }
+.sc .crest.is-dot i { font-size: 0; }
+.sc .crest.none i {
+  display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--c); color: var(--on, #fff);
+  font: 700 calc(var(--s) * .34)/1 var(--font-display); font-style: normal; box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--c) 65%, var(--text));
+}

@@ -1,8 +1,9 @@
 // The league page's frame (website revamp, WR-03): the header card (crest, name, season, Club / Settings / Editor) and the
 // row of tabs, modelled on FotMob's league page. Each tab has its own address (league.html#fixtures), so refresh, the back
 // button and shared links land on the right tab.
-//   mountFrame(el, { office, draft, crest, onTab }) -> draws the frame into el and calls onTab(id, season) now, on every tab
-//                                                 change and when another season is picked (WR-05)
+//   mountFrame(el, { office, draft, crest, onTab }) -> draws the frame into el and calls onTab(id, season, sub) now, on every tab
+//                                                 change and when another season is picked (WR-05). A tab address can carry
+//                                                 a part after a slash, league.html#stats/scorers: that is `sub` (WR-10)
 //   SEASONS                                    -> the seasons the toggle offers, newest first; the first is the current one
 //   TABS                                       -> the tabs in order
 import { esc } from './member.js';
@@ -53,9 +54,9 @@ export function mountFrame(el, { office = false, draft = false, crest = '', onTa
     </nav>`;
 
   const strip = el.querySelector('.lg-tabs-in'), bar = el.querySelector('.lg-bar');
-  const current = () => {
-    const id = location.hash.slice(1);
-    return tabs.some(t => t.id === id) ? id : tabs[0].id;
+  const here = () => {
+    const [id, ...rest] = location.hash.slice(1).split('/');
+    return { id: tabs.some(t => t.id === id) ? id : tabs[0].id, sub: rest.join('/') };
   };
   // The underline sits under the active tab and slides to the next one you pick (no slide on first paint).
   const place = (link, animate) => {
@@ -64,7 +65,7 @@ export function mountFrame(el, { office = false, draft = false, crest = '', onTa
     bar.style.transform = `translateX(${link.offsetLeft}px)`;
   };
   const show = animate => {
-    const id = current();
+    const { id, sub } = here();
     let active = null;
     for (const a of strip.querySelectorAll('a')) {
       const on = a.dataset.tab === id;
@@ -79,7 +80,7 @@ export function mountFrame(el, { office = false, draft = false, crest = '', onTa
       if (animate) nav.scrollTo({ left: target, behavior: 'smooth' }); else nav.scrollLeft = target;
     }
     document.title = `${tabs.find(t => t.id === id).label} | vLeague`;
-    onTab?.(id, season);
+    onTab?.(id, season, sub);
   };
   // The Seasons toggle: a pill showing the chosen season, opening a small menu of every season.
   let season = SEASONS[0];
@@ -111,7 +112,7 @@ export function mountFrame(el, { office = false, draft = false, crest = '', onTa
     if (b.dataset.season === String(season.id)) return;
     season = SEASONS.find(s => String(s.id) === b.dataset.season);
     paintSeason();
-    onTab?.(current(), season);
+    onTab?.(here().id, season, here().sub);
   });
   menu.addEventListener('keydown', e => {
     const items = [...menu.querySelectorAll('[role^="menuitem"]')], i = items.indexOf(document.activeElement);
@@ -125,7 +126,7 @@ export function mountFrame(el, { office = false, draft = false, crest = '', onTa
   addEventListener('scroll', () => { if (!menu.hidden) openMenu(false); }, { passive: true });
   paintSeason();
   const relayout = () => place(strip.querySelector('[aria-current]'), false);
-  addEventListener('hashchange', () => show(true));
+  addEventListener('hashchange', () => { show(true); scrollTo(0, 0); });
   addEventListener('resize', relayout);
   document.fonts?.ready.then(relayout);
   show(false);

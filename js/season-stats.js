@@ -18,6 +18,7 @@ const PLAYER_SUMS = ['min', 'g', 'a', 'og', 'sh', 'sot', 'xg', 'kp', 'pas', 'pc'
 const TEAM_SUMS = ['xg', 'shots', 'shots_on_target', 'big_chances', 'passes', 'passes_completed', 'crosses', 'tackles_won', 'interceptions',
   'clearances', 'saves', 'fouls', 'yellow_cards', 'red_cards', 'corners', 'offsides', 'possession'];
 const KEEPER = 'GK';
+const NOTE_MIN = `Players with at least ${MIN_MINUTES} minutes played`, NOTE_GK = `Goalkeepers with at least ${MIN_MINUTES} minutes in goal`;
 
 // League matches with a result: not a Test match, not an exhibition round.
 export const countedFixtures = list => list.filter(f => f.result?.players && !f.test && !f.exhibition);
@@ -74,18 +75,18 @@ const rating = row => (row.apps ? row.ratingSum / row.apps : 0);
 const keeperMin = row => row.gkMin;
 
 // ---------- the stat cards ----------
-// value(row): the number ranked. dp: decimals shown (and used to decide ties). low: lower is better (goals conceded...); every other
+// note: a line the full list shows under its title when the card has a minimum. value(row): the number ranked. dp: decimals shown (and used to decide ties). low: lower is better (goals conceded...); every other
 // card, discipline included, lists the most. zero: a 0 can be listed.
 // qualifies(row): who may be ranked (default: anyone who played). Player cards give `group` for the Player stats tab headings.
 const count = (id, group, title, key, extra = {}) => ({ id, group, title, value: r => r[key], dp: 0, ...extra });
-const rate90 = (id, group, title, key, extra = {}) => ({ id, group, title, value: r => per90(r, key), dp: 1, qualifies: r => r.min >= MIN_MINUTES, ...extra });
-const gk = { qualifies: r => keeperMin(r) >= MIN_MINUTES };
+const rate90 = (id, group, title, key, extra = {}) => ({ id, group, title, value: r => per90(r, key), dp: 1, qualifies: r => r.min >= MIN_MINUTES, note: NOTE_MIN, ...extra });
+const gk = { qualifies: r => keeperMin(r) >= MIN_MINUTES, note: NOTE_GK };
 
 export const PLAYER_CARDS = [
   count('scorers', 'Top stats', 'Top scorers', 'g'),
   count('assists', 'Top stats', 'Top assists', 'a'),
   { id: 'ga', group: 'Top stats', title: 'Goals + assists', value: r => r.g + r.a, dp: 0 },
-  { id: 'rating', group: 'Top stats', title: 'Top rated', value: rating, dp: 1, qualifies: r => r.min >= MIN_MINUTES },
+  { id: 'rating', group: 'Top stats', title: 'Top rated', value: rating, dp: 1, qualifies: r => r.min >= MIN_MINUTES, note: NOTE_MIN },
   count('minutes', 'Top stats', 'Minutes played', 'min'),
 
   rate90('g90', 'Attack', 'Goals per 90', 'g', { dp: 2 }),
@@ -105,7 +106,7 @@ export const PLAYER_CARDS = [
 
   { id: 'cs', group: 'Goalkeeping', title: 'Clean sheets', value: r => r.cs, dp: 0, ...gk },
   { id: 'savepct', group: 'Goalkeeping', title: 'Save percentage', value: r => 100 * r.saves / (r.saves + r.conceded), dp: 0, unit: '%',
-    qualifies: r => keeperMin(r) >= MIN_MINUTES && r.saves + r.conceded > 0 },
+    qualifies: r => keeperMin(r) >= MIN_MINUTES && r.saves + r.conceded > 0, note: NOTE_GK },
   { id: 'sv90', group: 'Goalkeeping', title: 'Saves per 90', value: r => r.saves * 90 / r.gkMin, dp: 1, ...gk },
   { id: 'gc90', group: 'Goalkeeping', title: 'Goals conceded per 90', value: r => r.conceded * 90 / r.gkMin, dp: 1, low: true, zero: true, ...gk },
 
@@ -126,7 +127,7 @@ export const TEAM_CARDS = [
   { id: 'txgdiff', group: 'Attack', title: 'xG difference', value: r => r.xg - r.xga, dp: 1, zero: true, signed: true },
   mean('tsot', 'Attack', 'Shots on target per match', 'shots_on_target'),
   { id: 'tbig', group: 'Attack', title: 'Big chances', value: r => r.big_chances, dp: 0 },
-  mean('tpc', 'Attack', 'Accurate passes per match', 'passes_completed'),
+  mean('tpc', 'Attack', 'Accurate passes per match', 'passes_completed', { dp: 0 }),
   mean('tcr', 'Attack', 'Crosses per match', 'crosses'),
   { id: 'tcor', group: 'Attack', title: 'Corners', value: r => r.corners, dp: 0 },
 
