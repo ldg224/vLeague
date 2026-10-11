@@ -100,7 +100,7 @@
 
 /* the ground and the result letter share the right-hand column, which is as wide as the tag column on the left */
 .fx-venue { display: none; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; color: var(--muted); font: 600 var(--fs-s) var(--font); }
-.fx-res { grid-column: 5; justify-self: end; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 6px; color: #fff; font-weight: 900; font-size: var(--fs-xs); font-family: var(--font-display, var(--font)); font-stretch: 125%; text-decoration: none; }
+.fx-res { grid-column: 5; justify-self: end; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 6px; color: #fff; font-weight: 700; font-size: var(--fs-xs); font-family: var(--font); font-stretch: 100%; text-decoration: none; }
 .fx-res.res-W { background: var(--res-w); } .fx-res.res-D { background: var(--res-d); } .fx-res.res-L { background: var(--res-l); }
 .fx-res:empty { display: none; }
 .fx-row.with-res .fx-venue { display: none; }

@@ -76,7 +76,7 @@
 .tb td { font-weight: 600; font-stretch: 112%; }
 .tb .tb-pts { font-weight: 900; font-stretch: 125%; }
 .tb tbody .tb-club { font-weight: 700; font-stretch: 106%; }
-.tb-form abbr { font-family: var(--font-display, var(--font)); font-weight: 900; font-stretch: 125%; }
+.tb-form abbr { font-family: var(--font); font-weight: 700; font-stretch: 100%; }   /* capital letters in the normal width, not the wide face (user, 11 Oct 2026) */
 .tb-none { font-stretch: 100%; }
 @media (max-width: 639px) { .tb tbody .tb-club { font-stretch: 100%; } .tb td { font-stretch: 100%; } .tb .tb-pts { font-stretch: 112%; } .tb thead th { letter-spacing: .02em; } }
 @media (max-width: 639px) { .tb-form abbr { font-stretch: 100%; } .tb .tb-pos { font-stretch: 100%; } .tb .tb-pts { font-stretch: 100%; } }
