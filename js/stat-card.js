@@ -73,10 +73,9 @@ function tieSentence(card, names, value, plural) {
   const m = metricOf(card), among = plural ? ` among ${plural}` : '', pl = TIE_PLURAL[card.id];
   const options = [
     `${names} are level on ${m}${among}, with ${value}`,
-    `${names} are neck and neck on ${m}${among}: ${value} each`,
-    `It’s a dead heat on ${m}${among}: ${names} all have ${value}`,
-    `${names} can’t be split on ${m}${among}, with ${value} each`,
-    `${names} are tied at the top for ${m}${among}, on ${value}`,
+    `${names} are tied on ${m}${among}, with ${value} each`,
+    `${names} have the same ${m}${among}, with ${value}`,
+    `${names} are equal on ${m}${among}, with ${value} each`,
     ...(pl ? [`${names} have equal ${pl}${among}, with ${value}`, `${names} have matching ${pl}${among}, with ${value}`] : []),
   ];
   let h = 5381;
