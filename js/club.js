@@ -15,6 +15,7 @@ const POS_NAME = { GK: 'Goalkeeper', DEF: 'Defender', MID: 'Midfielder', FWD: 'F
 const PIECES = [['captain', 'Captain'], ['penalties', 'Penalties'], ['freekicks', 'Free kicks'], ['corners', 'Corners']];
 const TZ = 'Australia/Melbourne';
 const $ = (s, root = document) => root.querySelector(s);
+const CHEV = '<svg class="piece-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
 
 // ---------- Squad stats (0.5) ----------
 
@@ -39,7 +40,7 @@ function statsHtml(season, squad) {
     <thead><tr><th scope="col" class="pos"><abbr title="Position">Pos</abbr></th><th scope="col" class="who">Player</th><th scope="col"><abbr title="Appearances">Apps</abbr></th><th scope="col"><abbr title="Goals">G</abbr></th><th scope="col"><abbr title="Assists">A</abbr></th><th scope="col"><abbr title="Average rating">Avg</abbr></th></tr></thead>
     <tbody>${squad.map(p => {
       const t = tot[String(p.id)] || { apps: 0, g: 0, a: 0 };
-      return `<tr><td class="pos"><abbr title="${esc(POS_NAME[p.position] || p.position || '')}">${esc(p.position || '')}</abbr></td>
+      return `<tr><td class="pos pos-${esc(p.position || '')}"><abbr title="${esc(POS_NAME[p.position] || p.position || '')}">${esc(p.position || '')}</abbr></td>
         <th scope="row" class="who">${esc(p.name)}</th><td>${t.apps}</td><td>${t.g}</td><td>${t.a}</td>
         <td class="avg">${t.apps ? rating(t.rsum / t.apps) : '–'}</td></tr>`;
     }).join('')}</tbody>
@@ -77,21 +78,20 @@ if (ctx) {
     const manager = club.manager_name || me.profile?.display_name || '';
 
     main.innerHTML = `<div class="club">
-      <header class="club-head">
+      <section class="lg-card club-head" aria-label="${esc(club.name)}"><span class="club-hollow" aria-hidden="true">${esc(club.short_name || club.name)}</span>
         <img class="club-crest" src="${esc(crest)}" alt="" onerror="this.remove()">
         <div class="club-name"><h1>${esc(club.name)}</h1>
-          <p>${club.motto ? `<i>${esc(club.motto)}</i><br>` : ''}${[manager, club.stadium].filter(Boolean).map(x => `<span class="cl-meta">${esc(x)}</span>`).join(' · ')}</p></div>
-        <a class="edit-club" href="team.html?c=${esc(club.code)}">Team page</a>
-        <a class="edit-club" href="kits.html">Kits</a>
-        <a class="edit-club" href="setup.html?edit">Edit club</a>
-      </header>
-      <div class="club-tabs" role="tablist" aria-label="My club">
-        <button type="button" role="tab" id="tab-sheet" aria-controls="sheet" aria-selected="true">Team sheet</button>
-        <button type="button" role="tab" id="tab-squad" aria-controls="squad" aria-selected="false" tabindex="-1">Squad</button>
+          ${club.motto ? `<p class="club-motto">${esc(club.motto)}</p>` : ''}<p class="club-meta">${[manager && `Manager <b>${esc(manager)}</b>`, club.stadium && `Ground <b>${esc(club.stadium)}</b>`].filter(Boolean).map(x => `<span>${x}</span>`).join('')}</p></div>
+        <nav class="club-acts" aria-label="Club pages"><a href="team.html?c=${esc(club.code)}">Team page</a><a href="kits.html">Kits</a><a href="setup.html?edit">Edit club</a></nav>
+      </section>
+      <div class="club-tabs sc-toggle" role="tablist" aria-label="My club">
+        <button type="button" role="tab" id="tab-sheet" aria-controls="sheet" aria-selected="true" aria-pressed="true">Team sheet</button>
+        <button type="button" role="tab" id="tab-squad" aria-controls="squad" aria-selected="false" aria-pressed="false" tabindex="-1">Squad</button>
       </div>
       <section id="sheet" role="tabpanel" aria-labelledby="tab-sheet"><p class="quiet">Loading…</p></section>
       <section id="squad" role="tabpanel" aria-labelledby="tab-squad" hidden>
-        <div class="sect" id="stats">${season ? statsHtml(season, squad) : '<p class="empty">The squad didn’t load. <a href="club.html">Try again</a></p>'}</div>
+        <section class="lg-card club-squad"><div class="lg-card-head"><h2>Squad</h2><span class="club-count">${squad.length} player${squad.length === 1 ? '' : 's'}</span></div>
+        <div class="sect" id="stats">${season ? statsHtml(season, squad) : '<p class="empty">The squad didn’t load. <a href="club.html">Try again</a></p>'}</div></section>
       </section>
     </div>`;
 
@@ -100,7 +100,7 @@ if (ctx) {
     const showTab = id => {
       for (const t of tabs) {
         const on = t.getAttribute('aria-controls') === id;
-        t.setAttribute('aria-selected', on);
+        t.setAttribute('aria-selected', on); t.setAttribute('aria-pressed', on);
         t.tabIndex = on ? 0 : -1;
         $(`#${t.getAttribute('aria-controls')}`).hidden = !on;
       }
@@ -179,20 +179,23 @@ async function teamSheet(box, { club, squad, userId, season }) {
   let picking = false, pickWeek = null, subBusy = false, subMsg = '';
 
   box.innerHTML = `<div class="ts">
-    <div class="ts-bar"><p class="ts-deadline" id="deadline"></p><div class="ts-save" id="save" aria-live="polite"></div></div>
-    ${subRes.error ? '' : '<section class="ts-submit" id="submit" aria-label="Submit your team sheet"></section>'}
+    <section class="lg-card ts-top" aria-label="Your next match">
+      <div class="ts-match" id="match"></div>
+      <div class="ts-bar"><p class="ts-deadline" id="deadline"></p><div class="ts-save" id="save" aria-live="polite"></div></div>
+      ${subRes.error ? '' : '<div class="ts-submit" id="submit"></div>'}
+    </section>
     <div class="ts-grid">
-      <div class="ts-left">
-        <div class="formations" role="radiogroup" aria-label="Formation">${Object.keys(FORMATIONS).map(f => `<button type="button" role="radio" data-f="${f}">${f}</button>`).join('')}</div>
+      <section class="lg-card ts-left" aria-label="Line-up">
+        <div class="lg-card-head"><h2>Line-up</h2><div class="ts-clear" id="clear"></div></div>
+        <div class="formations sc-toggle" role="radiogroup" aria-label="Formation">${Object.keys(FORMATIONS).map(f => `<button type="button" role="radio" data-f="${f}">${f}</button>`).join('')}</div>
         <div id="pitch" class="ts-pitch"></div>
-        <div class="ts-clear" id="clear"></div>
         <p class="ts-pick" id="pick" hidden></p>
-      </div>
+      </section>
       <div class="ts-right">
-        <section class="sect pls-sect"><div class="sect-head"><h2 id="pls-title">Players</h2><button type="button" class="link-btn pls-close" data-cancel>Cancel</button></div><ul class="pls" id="players"></ul></section>
-        <section class="sect"><div class="sect-head"><h2>Set pieces</h2></div><div class="pieces" id="pieces"></div></section>
-        <section class="sect"><div class="sect-head"><h2>Kit</h2><a class="link-btn" href="kits.html">Design kits</a></div><div id="kitpick"></div></section>
-        <section class="sect"><div class="sect-head"><h2>Tactics</h2></div><div id="tactics"></div></section>
+        <section class="lg-card sect pls-sect"><div class="lg-card-head sect-head"><h2 id="pls-title">Players</h2><button type="button" class="link-btn pls-close" data-cancel>Cancel</button></div><ul class="pls" id="players"></ul></section>
+        <section class="lg-card sect"><div class="lg-card-head"><h2>Set pieces</h2></div><div class="pieces" id="pieces"></div></section>
+        <section class="lg-card sect"><div class="lg-card-head"><h2>Kit</h2><a class="link-btn" href="kits.html">Design kits</a></div><div id="kitpick"></div></section>
+        <section class="lg-card sect"><div class="lg-card-head"><h2>Tactics</h2></div><div id="tactics"></div></section>
       </div>
     </div>
     <div id="locked"></div>
@@ -227,8 +230,9 @@ async function teamSheet(box, { club, squad, userId, season }) {
     $('#players', box).innerHTML = list.map(p => {
       const id = String(p.id), slot = slotOf(id), off = slot && p.position !== wantOf(slot), on = sel?.player === id;
       return `<li><button type="button" class="pl${slot ? ' in' : ''}${on ? ' sel' : ''}${want && p.position === want ? ' fits' : ''}" data-id="${esc(id)}" aria-pressed="${on}">
-        <span class="pl-pos">${esc(p.position)}</span>
-        <span class="pl-name">${esc(p.name)}<small>#${esc(p.number ?? "")} · Att <span class="rt rt-${Number(p.offense) || 5}">${esc(p.offense)}</span> · Def <span class="rt rt-${Number(p.defense) || 5}">${esc(p.defense)}</span></small></span>
+        <span class="pl-pos pos-${esc(p.position)}">${esc(p.position)}</span>
+        <span class="pl-name">${esc(p.name)}<small>${p.number != null && p.number !== '' ? `#${esc(p.number)}` : ''}</small></span>
+        <span class="pl-rts"><span class="rt rt-${Number(p.offense) || 5}" title="Attack">${esc(p.offense)}</span><span class="rt rt-${Number(p.defense) || 5}" title="Defence">${esc(p.defense)}</span></span>
         <span class="pl-slot${off ? ' off' : ''}"${off ? ` title="Out of position"` : ''}>${slot ? esc(slot) : 'Bench'}</span></button></li>`;
     }).join('');
   }
@@ -236,7 +240,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   function drawPieces() {
     const xi = Object.keys(FORMATIONS[sheet.formation]).map(slot => ({ slot, p: byId.get(sheet.lineup[slot]) })).filter(x => x.p);
     $('#pieces', box).innerHTML = PIECES.map(([key, label]) => `<label class="piece"><span>${label}</span>
-      <select data-piece="${key}"><option value="">Not set</option>${xi.map(({ slot, p }) => `<option value="${esc(p.id)}"${String(sheet[key]) === String(p.id) ? ' selected' : ''}>${esc(p.name)} (${esc(slot)})</option>`).join('')}</select></label>`).join('');
+      <span class="piece-sel"><select data-piece="${key}"><option value="">Not set</option>${xi.map(({ slot, p }) => `<option value="${esc(p.id)}"${String(sheet[key]) === String(p.id) ? ' selected' : ''}>${esc(p.name)} (${esc(slot)})</option>`).join('')}</select>${CHEV}</span></label>`).join('');
   }
 
   // Which kit the team wears (S-23): automatic, or one of the club's own kits, each shown by the name the club gave it.
@@ -253,7 +257,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   function drawTactics() {
     const preset = Object.keys(PRESETS).find(n => TACTICS.every(t => PRESETS[n][t.key] === sheet.tactics[t.key]));
     const open = !preset || $('#tactics details', box)?.open;
-    $('#tactics', box).innerHTML = `<div class="presets">${Object.keys(PRESETS).map(n => `<button type="button" data-preset="${esc(n)}" aria-pressed="${n === preset}">${esc(n)}</button>`).join('')}</div>
+    $('#tactics', box).innerHTML = `<div class="presets sc-toggle">${Object.keys(PRESETS).map(n => `<button type="button" data-preset="${esc(n)}" aria-pressed="${n === preset}">${esc(n)}</button>`).join('')}</div>
       <details class="custom"${open ? ' open' : ''}><summary>Custom${preset ? '' : ' <b>on</b>'}</summary>${TACTICS.map(t => `<div class="tac"><div class="tac-head"><span id="tac-${t.key}">${t.label}</span><b>${word(t, sheet.tactics[t.key])}</b></div>
         <div class="steps" role="radiogroup" aria-labelledby="tac-${t.key}">${STEPS.map(v => `<button type="button" role="radio" data-tac="${t.key}" data-v="${v}" aria-checked="${sheet.tactics[t.key] === v}" aria-label="${esc(word(t, v))}"></button>`).join('')}</div>
         <div class="tac-ends" aria-hidden="true"><span>${t.lo}</span><span>${t.hi}</span></div></div>`).join('')}</details>`;
@@ -274,11 +278,23 @@ async function teamSheet(box, { club, squad, userId, season }) {
 
   const wk = w => season?.rounds?.[w]?.label || `Week ${w}`;
 
+  // The matchday ticket: your club against the next opponent, the round and kick-off, and how long until the sheet locks.
+  const crestOf = code => (code === club.code && club.crest_path ? crestUrl(club.crest_path) : logoUrl(code));
+  function drawMatch(now = new Date()) {
+    const el = $('#match', box); if (!el) return;
+    const next = upcoming(now)[0];
+    if (!next) { el.innerHTML = '<p class="ts-nomatch">No match to pick a team for yet.</p>'; return; }
+    const home = next.fx.home === club.code, opp = home ? next.fx.away : next.fx.home, k = kickoff(next.fx);
+    const side = (code, name, mine) => `<div class="tm-side${mine ? ' mine' : ''}"><img class="tm-crest" src="${esc(crestOf(code))}" alt="" onerror="this.style.visibility='hidden'"><b>${esc(name)}</b><small>${mine ? 'You' : home ? 'Away' : 'Home'}</small></div>`;
+    const sides = [side(club.code, club.short_name || club.name, true), side(opp, teamName(opp), false)];
+    el.innerHTML = `<p class="tm-round">${esc(wk(next.week))}</p><div class="tm-row">${home ? sides[0] : sides[1]}<div class="tm-mid"><span class="tm-v">v</span>${k ? `<span class="tm-when">${esc(when(k, now))}</span>` : ''}</div>${home ? sides[1] : sides[0]}</div>`;
+  }
+
   function drawDeadline(now = new Date()) {
     const next = deadlines.find(d => new Date(d.locks_at) > now), el = $('#deadline', box);
     if (!next) { el.textContent = 'No deadline set'; return; }
     const at = new Date(next.locks_at);
-    el.innerHTML = `Counts for <b>${esc(wk(next.week))}</b> · locks ${esc(when(at, now))}${at - now < 86400000 ? ` · <span class="left">${esc(left(at, now))}</span>` : ''}`;
+    el.innerHTML = `Team sheet locks <b>${esc(when(at, now))}</b>${at - now < 86400000 ? ` <span class="left">${esc(left(at, now))}</span>` : ''}`;
   }
 
   // The last week that locked: the sheet the database copied for it (or why there's none).
@@ -294,7 +310,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
     if (data) body = `<div class="locked-pitch"></div>${data.saved_at ? `<p class="quiet">Saved ${esc(tidy(dateTime.format(new Date(data.saved_at))))}</p>` : ''}`;
     else if (!last.locked_at || error) body = '<p class="quiet">Locking…</p>';
     else body = '<p class="quiet">No sheet was saved before the deadline, so the team was picked automatically.</p>';
-    el.innerHTML = `<details class="sect locked"${open}><summary><span>${esc(wk(last.week))} team sheet</span><span class="lock-tag">Locked</span></summary>${body}</details>`;
+    el.innerHTML = `<details class="lg-card sect locked"${open}><summary><span>${esc(wk(last.week))} team sheet</span><span class="lock-tag">Locked</span></summary>${body}</details>`;
     if (data) renderPitch($('.locked-pitch', el), { ...normaliseSheet(data, squad), players: season.players });
   }
 
@@ -519,7 +535,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   // Leaving the page: send what's waiting rather than lose it.
   document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'dirty') save(); });
 
-  drawPitch(); drawPlayers(); drawPieces(); drawKit(); drawClear(); drawTactics(); drawSave(); drawDeadline(); drawLocked(); drawSubmit();
+  drawPitch(); drawPlayers(); drawPieces(); drawKit(); drawClear(); drawTactics(); drawSave(); drawMatch(); drawDeadline(); drawLocked(); drawSubmit();
   if (state === 'new') save();
 
   // The deadline counts down; once one passes, read the deadlines again until the database has locked that week.
@@ -530,6 +546,6 @@ async function teamSheet(box, { club, squad, userId, season }) {
       const r = await ok(c.from('deadlines').select('*').order('locks_at'));
       if (!r.error) deadlines = r.data || [];
     }
-    drawDeadline(now); drawLocked(now); if (!picking) drawSubmit(now);
+    drawMatch(now); drawDeadline(now); drawLocked(now); if (!picking) drawSubmit(now);
   }, 30000);
 }

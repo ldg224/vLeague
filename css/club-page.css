@@ -1,0 +1,232 @@
+/* My club (WR-43 overhaul): the team sheet and the squad on the league page's system. Replaces css/club.css. Tokens only, the five type sizes,
+   hairline cards. The club's colour marks what is yours (the players on your pitch, the Submit button, a chosen round); controls stay vLeague blue. */
+
+.lg-sub .club { display: grid; gap: 16px; min-width: 0; }
+.lg-sub .club :is(button, a, select, summary, input):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.lg-sub .club .lg-card-head { align-items: center; }
+.lg-sub .club .lg-card-head h2 { font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: var(--text-strong); margin: 0; }
+.lg-sub .club .quiet, .lg-sub .club .empty { margin: 0; color: var(--muted); font: 400 var(--fs-m) var(--font); }
+.lg-sub .link-btn { padding: 0; border: 0; background: none; color: var(--brand); cursor: pointer; font: 600 var(--fs-s) var(--font); text-decoration: none; }
+.lg-sub .link-btn[disabled] { opacity: .45; cursor: default; }
+/* the roster colours (as on the Draft tab): goalkeeper yellow, defence red, midfield purple, attack blue */
+.lg-sub { --pos-gk: #f4c430; --pos-def: #ef5350; --pos-mid: #ba68c8; --pos-fwd: #42a5f5; }
+:root[data-theme="light"] .lg-sub { --pos-gk: #a07400; --pos-def: #c62828; --pos-mid: #7b1fa2; --pos-fwd: #1565c0; }
+.lg-sub .pos-GK { --pc: var(--pos-gk); } .lg-sub .pos-DEF { --pc: var(--pos-def); } .lg-sub .pos-MID { --pc: var(--pos-mid); } .lg-sub .pos-FWD { --pc: var(--pos-fwd); }
+
+/* ---------- the club ---------- */
+.club-head { display: flex; align-items: center; gap: 16px; }
+.club-head .club-crest { width: 64px; height: 64px; flex: none; object-fit: contain; }
+.club-name { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.lg-sub .club-name h1 { margin: 0; font: 900 var(--fs-xl)/1.15 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: var(--text-strong); overflow-wrap: break-word; }
+.club-motto { margin: 0; color: var(--text-soft); font: 400 var(--fs-m) var(--font); }
+.club-meta { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.club-meta b { color: var(--text); font-weight: 600; }
+.club-acts { display: flex; flex-wrap: wrap; gap: 8px; flex: none; }
+.club-acts a { display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text); text-decoration: none; font: 600 var(--fs-s) var(--font); }
+@media (hover: hover) { .club-acts a:hover { background: var(--surface-hover); } }
+.club-count { color: var(--muted); font: 400 var(--fs-s) var(--font); }
+
+/* Team sheet / Squad: the site's toggle (css/stat-card.css .sc-toggle), selected by aria-pressed */
+.lg-sub .club-tabs { border: 0; margin: 0; }
+
+/* ---------- this round: the deadline, the save state, Submit ---------- */
+.ts { display: grid; gap: 16px; }
+.ts-top { display: grid; gap: 14px; }
+.ts-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin: 0; }
+.ts-deadline { margin: 0; color: var(--muted); font: 400 var(--fs-m) var(--font); }
+.ts-deadline b { color: var(--text-strong); font-weight: 700; }
+.ts-deadline .left { color: var(--amber-text, var(--amber)); font-weight: 700; white-space: nowrap; }
+.ts-save { display: inline-flex; align-items: center; gap: 10px; color: var(--muted); font: 600 var(--fs-s) var(--font); }
+.ts-save span { display: inline-flex; align-items: center; gap: 7px; }
+.ts-save span::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+.ts-save.is-saved span::before { background: var(--res-w); }
+.ts-save:is(.is-dirty, .is-saving, .is-new) span::before { background: var(--amber); }
+.ts-save:is(.is-error, .is-error-load) span::before { background: var(--res-l); }
+.ts-save.is-error { color: var(--text); }
+.lg-sub .save-btn { min-height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--brand-grad, var(--brand)); color: #fff; cursor: pointer; font: 600 var(--fs-s) var(--font); }
+.ts-submit { display: grid; gap: 10px; margin: 0; padding: 0; border: 0; background: none; }
+.lg-sub .ts-submit-btn {
+  width: 100%; min-height: 52px; padding: 0 20px; border: 0; border-radius: 999px; background: var(--club, var(--brand)); color: var(--on-club, #fff); cursor: pointer;
+  font: 900 var(--fs-l)/1 var(--font-display); font-stretch: 125%; text-transform: uppercase; letter-spacing: .02em; box-shadow: none;
+}
+@media (hover: hover) { .lg-sub .ts-submit-btn:not(:disabled):hover { filter: brightness(1.08); } }
+.lg-sub .ts-submit-btn:disabled { opacity: .6; cursor: progress; }
+.ts-sub-line { display: block; margin: 0; color: var(--muted); font: 400 var(--fs-s)/1.45 var(--font); }
+.ts-sub-line b { color: var(--text-strong); font-weight: 700; }
+.ts-sub-line::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: var(--faint); vertical-align: 1px; }
+.ts-sub-line.is-done::before { background: var(--res-w); } .ts-sub-line:is(.is-todo, .is-changed)::before { background: var(--amber); }
+.ts-sub-msg { color: var(--text); font-weight: 600; }
+.ts-rounds { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+.ts-rounds legend { margin: 0 0 8px; padding: 0; color: var(--text-strong); font: 700 var(--fs-m) var(--font); }
+.ts-round { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 56px; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-sunk); cursor: pointer; }
+.ts-round.on { border-color: color-mix(in oklab, var(--club-accent, var(--brand)) 70%, var(--line)); background: color-mix(in oklab, var(--club, var(--brand)) 10%, var(--surface-sunk)); }
+.ts-round input { appearance: none; width: 18px; height: 18px; margin: 0; border-radius: 50%; border: 2px solid color-mix(in oklab, var(--text) 35%, transparent); }
+.ts-round input:checked { border-color: var(--club-accent, var(--brand)); background: radial-gradient(circle, var(--club-accent, var(--brand)) 0 4px, transparent 5px); }
+.ts-round-main { display: grid; gap: 2px; min-width: 0; font: 400 var(--fs-s) var(--font); color: var(--muted); }
+.ts-round-main b { color: var(--text-strong); font: 700 var(--fs-m) var(--font); }
+.ts-round-main span { color: var(--text); }
+.ts-round-state { display: grid; justify-items: end; gap: 2px; color: var(--muted); font: 400 var(--fs-s) var(--font); text-align: right; }
+.ts-sub-warn { margin: 0; color: var(--amber-text, var(--amber)); font: 600 var(--fs-s) var(--font); }
+.ts-sub-actions { display: flex; align-items: center; gap: 14px; }
+.ts-sub-actions .ts-submit-btn { flex: 1; }
+
+/* ---------- line-up and the cards beside it ---------- */
+.ts-grid { display: grid; gap: 16px; align-items: start; }
+.ts-left, .ts-right { min-width: 0; }
+.ts-right { display: grid; gap: 16px; }
+@media (min-width: 992px) {
+  .ts-grid { grid-template-columns: minmax(0, 460px) minmax(0, 1fr); }
+  .ts-left { position: sticky; top: 16px; }
+}
+.lg-sub .formations { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; padding: 0; border: 0; background: none; border-radius: 0; }
+.lg-sub .sc-toggle button[aria-checked="true"], .lg-sub .sc-toggle button[aria-selected="true"] { background: var(--tab-accent, var(--blue-700)); color: #fff; }
+:root:not([data-theme="light"]) .lg-sub .sc-toggle button:is([aria-checked="true"], [aria-selected="true"]) { color: var(--blue-900, #0d47a1); }
+.ts-clear { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.ts-pitch { max-width: 440px; margin: 0 auto; }
+.ts-pick { display: flex; justify-content: space-between; align-items: center; gap: 10px; max-width: 440px; margin: 12px auto 0; padding: 10px 14px; border-radius: var(--r-sm); background: color-mix(in oklab, var(--brand) 12%, var(--surface-sunk)); color: var(--text); font: 400 var(--fs-m) var(--font); }
+.ts-pick[hidden] { display: none; }
+.ts-pick b { color: var(--text-strong); }
+
+/* the pitch: neutral like the Team of the week, your players in your club's colour */
+.lg-sub .pt { border-radius: var(--r-sm); background: var(--surface-sunk); box-shadow: none; }
+.lg-sub .pt-lines * { stroke: color-mix(in oklab, var(--text) 22%, transparent); }
+.lg-sub .pt-form { color: var(--muted); font: 600 var(--fs-xs) var(--font); letter-spacing: 0; }
+.lg-sub .pt-disc { background: var(--club, var(--brand)); color: var(--on-club, #fff); box-shadow: 0 0 0 2px var(--surface-sunk); font-family: var(--font); font-weight: 700; }
+.lg-sub .pt-name { background: color-mix(in oklab, var(--surface) 88%, transparent); color: var(--text-strong); font-family: var(--font); font-weight: 600; border-radius: 6px; }
+.lg-sub .pt-no { color: var(--muted); font-weight: 700; }
+.lg-sub .pt-slot.empty .pt-disc { background: color-mix(in oklab, var(--text) 7%, transparent); box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--text) 40%, transparent); color: var(--text-soft); }
+.lg-sub .pt-slot.empty .pt-name { background: none; color: var(--muted); }
+.lg-sub .pt-slot.off .pt-disc { box-shadow: 0 0 0 2px var(--surface-sunk), 0 0 0 4px var(--amber); }
+.lg-sub .pt-slot.off .pt-disc::after { box-shadow: 0 0 0 2px var(--surface-sunk); }
+.lg-sub .pt-slot.sel .pt-disc { background: var(--brand); color: #fff; box-shadow: 0 0 0 4px color-mix(in oklab, var(--brand) 35%, transparent); }
+.lg-sub .pt-c { background: var(--pos-gk); color: #111; }
+
+/* players */
+.pls-close { display: none; }
+.pls { list-style: none; margin: 0 -16px; padding: 0; }
+.pls li + li { border-top: 1px solid var(--line); }
+.pl { width: 100%; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; min-height: 52px; padding: 6px 16px; border: 0; border-radius: 0; background: none; color: var(--text); text-align: left; cursor: pointer; font: 400 var(--fs-m) var(--font); }
+@media (hover: hover) { .pl:hover { background: var(--surface-hover); } }
+.pl-pos { color: var(--pc, var(--muted)); font: 700 var(--fs-xs) var(--font); }
+.pl-name { display: grid; min-width: 0; color: var(--text-strong); font-weight: 600; }
+.pl-name, .pl-name small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pl-name small { color: var(--muted); font: 400 var(--fs-xs) var(--font); }
+.pl-rts { display: inline-flex; gap: 4px; }
+.pl-rts .rt { min-width: 1.9em; padding: 1px 4px; border-radius: 6px; font: 700 var(--fs-xs) var(--font); }
+.pl-slot { min-width: 52px; padding: 4px 8px; border-radius: 999px; color: var(--faint); text-align: center; font: 600 var(--fs-xs) var(--font); }
+.pl.in .pl-slot { background: color-mix(in oklab, var(--club, var(--brand)) 18%, transparent); color: var(--text-strong); }
+.pl.in .pl-slot.off { box-shadow: inset 0 0 0 1px var(--amber); }
+.pl.sel, .pl.held { background: color-mix(in oklab, var(--brand) 12%, transparent); box-shadow: inset 3px 0 0 var(--brand); }
+.pl.fits .pl-pos { text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 991px) {
+  .ts.picking .pls-sect {
+    position: fixed; z-index: 30; left: 0; right: 0; bottom: 0; max-height: 62vh; overflow-y: auto; margin: 0;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom)); border-radius: var(--r-lg) var(--r-lg) 0 0; box-shadow: 0 -12px 40px rgba(0, 0, 0, .45);
+  }
+  .ts.picking .pls-sect .sect-head { position: sticky; top: -16px; z-index: 1; margin: -16px -16px 8px; padding: 16px; background: var(--surface); }
+  .ts.picking .pls-close { display: inline; }
+}
+/* drag and drop */
+.ts .pt-edit .pt-slot:not(.empty) { touch-action: none; cursor: grab; }
+.ts .pl { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.ts.dragging, .ts.dragging * { cursor: grabbing !important; }
+.lg-sub .ts.dragging .pt-slot.drop .pt-disc { transform: scale(1.15); box-shadow: 0 0 0 4px color-mix(in oklab, var(--brand) 50%, transparent); }
+.lg-sub .ts.dragging .pt-slot.empty .pt-disc { box-shadow: inset 0 0 0 2px var(--brand); background: color-mix(in oklab, var(--brand) 18%, transparent); }
+.ts.dragging #players.drop { outline: 2px dashed var(--brand); outline-offset: -2px; }
+.ts-ghost { position: fixed; left: 0; top: 0; z-index: 1000; pointer-events: none; margin: -18px 0 0 12px; padding: 6px 12px; border-radius: 999px; background: var(--brand); color: #fff; font: 600 var(--fs-s) var(--font); white-space: nowrap; box-shadow: 0 8px 24px rgba(0, 0, 0, .35); }
+
+/* set pieces: a styled select per role */
+.pieces { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.piece { display: grid; gap: 6px; min-width: 0; }
+.piece > span:first-child { color: var(--muted); font: 600 var(--fs-s) var(--font); }
+.piece-sel { position: relative; display: block; min-width: 0; }
+.piece select { appearance: none; width: 100%; min-width: 0; min-height: 40px; padding: 0 34px 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-sunk); color: var(--text); cursor: pointer; font: 400 var(--fs-m) var(--font); text-overflow: ellipsis; }
+.piece select option { background: var(--surface); color: var(--text); }
+.piece-chev { position: absolute; right: 12px; top: 50%; width: 16px; height: 16px; translate: 0 -50%; pointer-events: none; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* kit */
+.kitpick { display: grid; gap: 8px; }
+.kitpick button { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 14px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-sunk); color: var(--text); cursor: pointer; text-align: left; font: 400 var(--fs-m) var(--font); }
+.kitpick button b { color: var(--text-strong); font-weight: 600; }
+.kitpick button small { display: block; color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.kitpick button[aria-checked="true"] { border-color: color-mix(in oklab, var(--club-accent, var(--brand)) 70%, var(--line)); background: color-mix(in oklab, var(--club, var(--brand)) 10%, var(--surface-sunk)); }
+
+/* tactics */
+.lg-sub .presets { flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+.custom summary { margin: 0 0 12px; color: var(--muted); cursor: pointer; font: 600 var(--fs-s) var(--font); }
+.custom summary b { margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--brand); color: #fff; font: 600 var(--fs-xs) var(--font); }
+.tac + .tac { margin-top: 14px; }
+.tac-head { display: flex; justify-content: space-between; gap: 10px; font: 400 var(--fs-m) var(--font); }
+.tac-head span { color: var(--muted); }
+.tac-head b { color: var(--text-strong); font-weight: 600; }
+.steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin: 8px 0 4px; }
+.steps button { height: 24px; border: 0; border-radius: 6px; background: var(--surface-sunk); box-shadow: inset 0 0 0 1px var(--line); cursor: pointer; }
+.steps button[aria-checked="true"] { background: var(--brand); box-shadow: none; }
+@media (hover: hover) { .steps button:not([aria-checked="true"]):hover { background: var(--surface-hover); } }
+.tac-ends { display: flex; justify-content: space-between; color: var(--faint); font: 400 var(--fs-xs) var(--font); }
+
+/* the last locked sheet */
+.locked summary { display: flex; align-items: center; gap: 10px; list-style: none; cursor: pointer; color: var(--text-strong); font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; }
+.locked summary::-webkit-details-marker { display: none; }
+.locked summary::after { content: ''; margin-left: auto; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .15s; }
+.locked[open] summary::after { transform: rotate(-135deg); }
+.lock-tag { padding: 2px 10px; border-radius: 999px; background: var(--surface-sunk); color: var(--muted); font: 600 var(--fs-xs) var(--font); text-transform: none; }
+.locked .locked-pitch { max-width: 360px; margin: 16px auto 8px; }
+.locked .quiet { margin-top: 10px; text-align: center; font-size: var(--fs-s); }
+
+/* ---------- squad ---------- */
+.lg-sub .squad { width: 100%; border-collapse: collapse; font: 400 var(--fs-m) var(--font); font-variant-numeric: tabular-nums; }
+.lg-sub .club-squad .sect { margin: 0 -16px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+.lg-sub .squad th, .lg-sub .squad td { padding: 10px 8px; text-align: center; min-width: 40px; }
+.lg-sub .squad :is(th, td):first-child { padding-left: 16px; } .lg-sub .squad :is(th, td):last-child { padding-right: 16px; }
+.lg-sub .squad thead th { color: var(--muted); font: 600 var(--fs-xs) var(--font); border-bottom: 1px solid var(--line); }
+.lg-sub .squad abbr { text-decoration: none; }
+.lg-sub .squad tbody tr + tr { border-top: 1px solid var(--line); }
+.lg-sub .squad .pos { width: 48px; text-align: left; color: var(--pc, var(--muted)); font: 700 var(--fs-xs) var(--font); }
+.lg-sub .squad .who { width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; color: var(--text-strong); font-weight: 600; }
+.lg-sub .squad .avg { font-weight: 700; }
+.lg-sub .spoil { margin: 12px 16px 0; color: var(--muted); font: 400 var(--fs-s) var(--font); }
+
+/* ---------- phones ---------- */
+@media (max-width: 767px) {
+  .club-head { flex-wrap: wrap; gap: 12px; }
+  .club-head .club-crest { width: 48px; height: 48px; }
+  .club-acts { width: 100%; }
+  .club-acts a { flex: 1; justify-content: center; }
+  .pieces { grid-template-columns: 1fr; }
+  .pl { grid-template-columns: 36px minmax(0, 1fr) auto; }
+  .pl-rts { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .locked summary::after { transition: none; } }
+/* site.css gives every .pt the dark tokens (it used to be a dark graphic in both themes); on this page the pitch follows the theme */
+.lg-sub .pt { --text: inherit; --text-strong: inherit; --text-soft: inherit; --muted: inherit; --faint: inherit; --surface: inherit; --surface-sunk: inherit; --line: inherit; }
+
+/* ---------- the club card: its name huge and hollow behind it (as on the Draft tab) ---------- */
+.club-head { position: relative; isolation: isolate; overflow: hidden; }
+.club-hollow {
+  position: absolute; z-index: -1; right: 16px; top: 50%; translate: 0 -50%; white-space: nowrap; pointer-events: none;
+  font: 900 5rem/1 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: transparent;
+  -webkit-text-stroke: 1.5px var(--club-accent, var(--line)); opacity: .2;
+  -webkit-mask-image: linear-gradient(270deg, #000 25%, transparent 85%); mask-image: linear-gradient(270deg, #000 25%, transparent 85%);
+}
+@media (max-width: 767px) { .club-hollow { font-size: 3rem; top: 26px; translate: none; opacity: .14; } }
+
+/* ---------- the matchday ticket ---------- */
+.ts-match { display: grid; gap: 10px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.tm-round { margin: 0; text-align: center; color: var(--muted); font: 600 var(--fs-s) var(--font); }
+.tm-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 16px; }
+.tm-side { display: grid; justify-items: center; gap: 6px; min-width: 0; text-align: center; }
+.tm-crest { width: 56px; height: 56px; object-fit: contain; }
+.tm-side b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-strong); font: 900 var(--fs-l)/1.15 var(--font-display); font-stretch: 125%; text-transform: uppercase; }
+.tm-side.mine b { color: var(--club-accent, var(--brand)); }
+.tm-side small { color: var(--muted); font: 400 var(--fs-xs) var(--font); }
+.tm-mid { display: grid; justify-items: center; gap: 4px; }
+.tm-v { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--surface-sunk); color: var(--muted); font: 900 var(--fs-m)/1 var(--font-display); font-stretch: 125%; text-transform: uppercase; }
+.tm-when { color: var(--text); font: 600 var(--fs-s) var(--font); white-space: nowrap; }
+.ts-nomatch { margin: 0; color: var(--muted); font: 400 var(--fs-m) var(--font); text-align: center; }
+.ts-top .ts-deadline { font-size: var(--fs-s); }
+@media (max-width: 767px) { .tm-crest { width: 44px; height: 44px; } .tm-row { gap: 8px; } .tm-side b { font-size: var(--fs-m); } }
+/* the pitch's labels on the type scale (pitch.css sizes them to the pitch's width, which gave in-between sizes) */
+.lg-sub .pt-disc { font-size: var(--fs-xs); }
+.lg-sub .pt-name, .lg-sub .pt-no { font-size: var(--fs-xs); }
+.lg-sub .pt-c { width: 16px; height: 16px; font: 700 var(--fs-xs)/1 var(--font); }

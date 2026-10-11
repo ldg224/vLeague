@@ -57,10 +57,13 @@ export async function enterPlace(place) {
   // Localhost only, for looking at the header and the page's frame without signing in (screenshots): ?preview&club=%23c8102e&office
   const q = new URLSearchParams(location.search);
   if (['localhost', '127.0.0.1'].includes(location.hostname) && q.has('preview')) {
-    const club = q.get('club') ? { code: q.get('mine') || 'XXX', name: 'Preview club', colour: q.get('club') } : null, me = { user: {}, profile: { role: q.has('office') ? 'office' : 'manager', club: club?.code } };
     if (q.get('theme')) document.documentElement.dataset.theme = q.get('theme');
+    const [rows, season] = await Promise.all([db().then(c => c.from('clubs').select('*')).then(r => r.data || []).catch(() => []), loadSeason().catch(() => null)]);
+    const real = rows.find(c => c.code === q.get('mine'));
+    const club = real ? { ...real, ...(q.get('club') ? { colour: q.get('club') } : {}) } : q.get('club') ? { code: q.get('mine') || 'XXX', name: 'Preview club', colour: q.get('club') } : null;
+    const me = { user: { id: 'preview' }, profile: { role: q.has('office') ? 'office' : 'manager', club: club?.code, display_name: club?.manager_name || 'Manager' } };
     paintClub(club); drawSubFrame(place, me, club);
-    return { me, club, season: null, team: null, prefs: {}, main: document.getElementById('main') };
+    return { me, club, season, team: club && season ? season.teams.find(t => t.code === club.code) || null : null, prefs: {}, main: document.getElementById('main') };
   }
   const me = await enter(`${place}.html`);
   if (!me) return null;
