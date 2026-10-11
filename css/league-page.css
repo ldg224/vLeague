@@ -280,7 +280,7 @@
   opacity: 0; transition: opacity 2.6s cubic-bezier(.22,.61,.36,1) .15s;
   animation: lg-topo-breathe 24s ease-in-out infinite alternate, lg-topo-drift 90s linear infinite;
 }
-.lg.topo-ready::before { opacity: .06; }
+.lg.topo-ready::before { opacity: .13; }   /* was .06: too faint on a very dark club colour (SKS navy), 11 Oct 2026 */
 :root[data-theme="light"] .lg.topo-ready::before { opacity: .3; }
 @keyframes lg-topo-breathe { from { transform: scale(1) rotate(0deg); } to { transform: scale(1.06) rotate(.6deg); } }
 @keyframes lg-topo-drift { to { background-position: 700px 350px; } }
