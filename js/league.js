@@ -13,6 +13,7 @@ const preview = ['localhost', '127.0.0.1'].includes(location.hostname) && params
 let ctx;
 if (preview) {
   if (params.get('theme')) document.documentElement.dataset.theme = params.get('theme');
+  if (params.get('font') === 'old') document.body.classList.add('font-old');
   const colour = params.get('club');
   if (colour) paintClub({ colour });
   ctx = { me: { profile: { role: params.has('office') ? 'office' : 'manager' } }, club: colour ? { colour } : null, main: document.getElementById('main') };

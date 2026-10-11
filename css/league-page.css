@@ -3,6 +3,10 @@
    tinge on the page behind the cards. Rules: the vleague-design skill. */
 
 .lg {
+  /* Archivo (trial, 11 Oct 2026): one family for everything, its narrow width for the wordmark and big figures. */
+  --font: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Archivo', 'Arial Narrow', sans-serif;
+  font-family: var(--font);
   /* The club accent for the current theme (set in js/shell.js paintClub; vLeague blue when there's no club). */
   --club-accent: var(--club-accent-dark, var(--blue-300));
   --tab-accent: var(--blue-300);
@@ -34,9 +38,12 @@
 .lg-crest { width: 56px; height: 56px; flex: none; }
 .lg-name { display: grid; justify-items: start; gap: 2px; min-width: 0; }
 .lg-title {
-  margin: 0; font: 500 2rem/1 var(--font-display); letter-spacing: .01em; color: var(--text-strong);
+  margin: 0; font: 500 2rem/1 var(--font-display); font-stretch: 70%; letter-spacing: .01em; color: var(--text-strong);
 }
-.lg-title b { font-weight: 700; }
+.lg-title b { font-weight: 800; }
+.font-old { --font: 'Figtree', system-ui, sans-serif; --font-display: 'Oswald', 'Arial Narrow', sans-serif; }
+.font-old .lg-title { font-stretch: normal; }
+.font-old .lg-title b { font-weight: 700; }
 .lg-season {
   display: inline-flex; align-items: center; gap: 2px; margin-left: -6px; padding: 4px 6px;
   border: 0; border-radius: var(--r-sm); background: none; cursor: pointer;
