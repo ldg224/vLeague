@@ -50,26 +50,13 @@
 }
 .lg.has-club .lg-tool.is-club { background: var(--club); border-color: transparent; color: var(--on-club); }
 .lg.has-club .lg-tool.is-club .ic { color: currentColor; }
-/* On the club panel the Club button is the inverse of the others: a solid white pill with the crest filling its left side
-   and the word "Club" cut out of it, showing the panel (glow and paper texture) through. js/frame.js lines the label's
-   copy of the panel up with the real one (--kx/--ky, --kw/--kh, the texture's --tw/--th/--tx/--ty). */
+/* The Club button on the club panel: the club's colour, with the crest filling its left side. */
 .lg.has-club .lg-head .lg-tool.is-club {
-  gap: 8px; padding: 0 16px 0 3px; background: #fff; border-color: #fff; color: var(--club-darkest);
+  gap: 8px; padding: 0 16px 0 3px; background: var(--club); border-color: rgba(255, 255, 255, .28); color: var(--on-club);
 }
 .lg.has-club .lg-head .lg-tool.is-club .lg-tool-crest { width: 34px; height: 34px; }
-.lg.has-club .lg-head .lg-tool.is-club > .ic { width: 22px; height: 22px; margin-left: 8px; color: var(--club-darkest); }
-.lg.has-club .lg-head .lg-tool.is-club span {
-  font-weight: 800; color: transparent;
-  background:
-    url("../assets/img/header-texture.jpg") var(--tx, 0) var(--ty, 0) / var(--tw, 100%) var(--th, 100%) no-repeat,
-    var(--panel-glow) var(--kx, 0) var(--ky, 0) / var(--kw, 100%) var(--kh, 100%) no-repeat,
-    var(--club-darkest);
-  background-blend-mode: soft-light, normal, normal;
-  -webkit-background-clip: text; background-clip: text;
-}
-@media (hover: hover) and (pointer: fine) {
-  .lg.has-club .lg-head .lg-tool.is-club:hover { background: rgba(255, 255, 255, .88); }
-}
+.lg.has-club .lg-head .lg-tool.is-club > .ic { width: 22px; height: 22px; margin-left: 8px; color: currentColor; }
+
 
 .lg-frame, .lg-content, .lg-foot { width: 100%; max-width: 1280px; margin: 0 auto; }
 .lg-frame, .lg-foot { flex: none; }   /* never squash the header when the page is taller than the screen */
@@ -113,12 +100,12 @@
 .lg-tabs::-webkit-scrollbar { display: none; }
 .lg-tabs-in { position: relative; display: flex; width: max-content; min-width: 100%; padding: 0 12px; }
 .lg-tabs a {
-  /* Tab names in the same Archivo Expanded Black capitals as the card titles. */
-  display: inline-flex; align-items: center; gap: 6px; height: 52px; padding: 0 14px;
-  font: 900 .8125rem var(--font-display); font-stretch: 125%; text-transform: uppercase; letter-spacing: .02em;
+  /* Tab names in the page's Archivo, in capitals. */
+  display: inline-flex; align-items: center; gap: 6px; height: 52px; padding: 0 12px;
+  font: 500 .9375rem var(--font); text-transform: uppercase; letter-spacing: .03em;
   color: var(--muted); text-decoration: none; white-space: nowrap;
 }
-.lg-tabs a[aria-current="page"] { color: var(--text-strong); }   /* same weight, so tabs never shift */
+.lg-tabs a[aria-current="page"] { color: var(--text-strong); font-weight: 600; }
 .lg-bar {
   position: absolute; left: 0; bottom: 0; height: 3px; width: 0; border-radius: 3px 3px 0 0;
   background: var(--tab-accent);
@@ -179,7 +166,6 @@
   .lg-tools { width: 100%; flex-wrap: nowrap; }
   .lg-tool { flex: 1 1 0; justify-content: center; min-width: 0; padding: 0 8px; }
   .lg.has-club .lg-head .lg-tool.is-club { padding: 0 12px 0 2px; justify-content: flex-start; }
-  .lg.has-club .lg-head .lg-tool.is-club span { margin: 0 auto; }
   .lg.has-club .lg-head .lg-tool.is-club .lg-tool-crest { width: 30px; height: 30px; }
 }
 /* The three stat-leader cards sit side by side in a narrow column: a smaller title so "TOP SCORERS" stays on one line. */

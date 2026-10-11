@@ -70,21 +70,9 @@ export function mountFrame(el, { office = false, draft = false, crest = '', onTa
     document.title = `${tabs.find(t => t.id === id).label} | vLeague`;
     onTab?.(id);
   };
-  // The Club button's cut-out label shows the club panel through it: give the label's copy of the panel (glow and paper
-  // texture) the panel's size, shifted by where the label sits, so the two line up exactly.
-  const head = el.querySelector('.lg-head'), hole = el.querySelector('.lg-tool.is-club span');
-  const TEX = [1280, 717];   // assets/img/header-texture.jpg, drawn with background-size: cover
-  const alignHole = () => {
-    const h = head.getBoundingClientRect(), l = hole.getBoundingClientRect(), x = l.left - h.left, y = l.top - h.top;
-    const k = Math.max(h.width / TEX[0], h.height / TEX[1]), tw = TEX[0] * k, th = TEX[1] * k;
-    const set = (n, v) => hole.style.setProperty(n, `${v}px`);
-    set('--kx', -x); set('--ky', -y); set('--kw', h.width); set('--kh', h.height);
-    set('--tw', tw); set('--th', th); set('--tx', (h.width - tw) / 2 - x); set('--ty', (h.height - th) / 2 - y);
-  };
-  const relayout = () => { place(strip.querySelector('[aria-current]'), false); alignHole(); };
+  const relayout = () => place(strip.querySelector('[aria-current]'), false);
   addEventListener('hashchange', () => show(true));
   addEventListener('resize', relayout);
   document.fonts?.ready.then(relayout);
-  alignHole();
   show(false);
 }
