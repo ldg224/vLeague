@@ -16,13 +16,17 @@ import { countedFixtures, totals, rank, PLAYER_CARDS, TEAM_CARDS } from './seaso
 import { statCard, statPage, wireStatPage, initialsCrest } from './stat-card.js';
 import { demoSeason } from './demo-season.js';
 import { tableRows, tableCard, rowTops, reshuffle } from './league-table.js';
-import { paint, quietly } from './paint.js';
+import { paint, quietly, busy, snapshotInputs, restoreInputs } from './paint.js';
 import { spoilerHidden, revealScore, fmtTime } from './prefs.js';
 import { fixturesView, parseSub, roundWidget, rounds } from './league-fixtures.js';
 import { teamOfWeekCard } from './team-of-week.js';
 import { loadPlayers } from './players-data.js';
 import { instagramCard } from './instagram.js';
 import { seasonsView, grandFinal } from './seasons-tab.js';
+import { newsHtml, clearable } from './news-tab.js';
+import { inboxItems, readIds, markRead } from './inbox-data.js';
+import { dismissPosts, restorePosts } from './prefs.js';
+import { loadReactions, setReaction } from './news-reactions.js';
 import { loadHistory, trophyUrl } from './history-data.js';
 import { db } from './auth.js';
 import { winChance, percents } from './match-model.js';
@@ -198,8 +202,8 @@ if (ctx) {
   // nothing; and a timed one (`timed`) also waits while the person is pressing, typing, selecting or has a menu open (js/paint.js), trying
   // again on the next tick. This is what stops the page redrawing under someone's hand.
   const draw = (html, timed = false) => {
-    const y = scrollY, did = timed ? quietly(() => paint(main, html)) : paint(main, html);
-    if (did) { sheen(main); scrollTo(0, y); }
+    const y = scrollY, snap = snapshotInputs(main), did = timed ? quietly(() => paint(main, html)) : paint(main, html);   // half-typed fields (the phone number) survive a redraw
+    if (did) { sheen(main); restoreInputs(main, snap); scrollTo(0, y); }
     return did;
   };
   // Overview is built in pieces (slots), each painted on its own, so a click on one card (a round arrow, a filter, a Team of the week pick) or a live minute
@@ -238,10 +242,35 @@ if (ctx) {
   };
   loadHistory().then(h => { honours = h; drawInSoon(); }).catch(() => {});
 
+  // The News tab (WR-25): the old Inbox. Loaded once at the start (so the tab can show an unread count), drawn by news-tab.js.
+  const club = ctx.club, code = club?.code;
+  const nw = { items: [], read: new Set(), reactions: new Map(), phone: '', toast: null, opened: new Set(), loading: true, code, sbNews: [] };
+  const newsVars = () => ({ team: club?.name || 'your club', manager: club?.manager_name || ctx.me?.profile?.display_name || 'manager' });
+  let frameApi = null;
+  const newsBadge = () => frameApi?.setBadge('news', nw.items.filter(i => !nw.read.has(i.id)).length);
+  const newsHtmlNow = () => newsHtml(nw, { vars: newsVars() });
+  const loadNews = async () => {
+    if (!code) { nw.loading = false; return; }
+    try {
+      const c = await db();
+      nw.sbNews = await c.from('news').select('*').order('created_at', { ascending: false }).limit(50).then(r => r.data || []).catch(() => []);
+      nw.phone = await c.from('manager_phones').select('phone').eq('club', code).maybeSingle().then(r => r.data?.phone || '').catch(() => '');
+    } catch { /* an empty list */ }
+    nw.items = inboxItems(season, nw.sbNews, code); nw.read = readIds(code); nw.loading = false;
+    newsBadge(); drawInSoon();
+    loadReactions(nw.items.flatMap(i => (i.src === 'sb' ? [`news:${i.row.id}`] : []))).then(r => { nw.reactions = r; drawInSoon(); }).catch(() => {});
+  };
+  loadNews();
+
   // Things that arrive a moment after the page (the grounds, the shirt numbers) are drawn in when nobody is mid-tap, trying again a few times if someone is.
   const drawInSoon = () => {
     let tries = 0;
-    const put = () => { if (['fixtures', 'overview', 'seasons'].includes(current?.[0]) && !rerender(true) && ++tries < 8) setTimeout(put, 1500); };
+    // Draw once, unless the person is busy with the page, and then try again a little later (never just because nothing changed: that would redraw a post they have just opened).
+    const put = () => {
+      if (!['fixtures', 'overview', 'seasons', 'news'].includes(current?.[0])) return;
+      if (busy(main) && ++tries < 8) { setTimeout(put, 1500); return; }
+      rerender(true);
+    };
     put();
   };
   // The league's Instagram: read a moment after the page and drawn in without interrupting a tap.
@@ -250,7 +279,56 @@ if (ctx) {
   clubs().then(rows => { clubRows = new Map(rows.map(c => [c.code, c])); stadiums = Object.fromEntries(rows.filter(c => c.stadium).map(c => [c.code, c.stadium])); drawInSoon(); }).catch(() => {});
   if (demo == null) loadPlayers().then(list => { numbers = new Map(list.filter(p => p.number != null).map(p => [String(p.id), p.number])); drawInSoon(); }).catch(() => {});
 
+  // News: opening a post marks it read; the buttons are data-nw; the phone number form saves through save_my_phone().
+  main.addEventListener('toggle', e => {
+    const d = e.target;
+    if (!d.matches?.('details.nw-post')) return;
+    if (d.open) nw.opened.add(d.dataset.id); else nw.opened.delete(d.dataset.id);
+    if (!d.open || nw.read.has(d.dataset.id)) return;
+    nw.read = markRead(code, [d.dataset.id]);
+    d.classList.remove('new'); d.querySelector('.sr-only')?.remove();
+    newsBadge();
+    if (!nw.items.some(i => !nw.read.has(i.id))) main.querySelector('[data-nw="markall"]')?.remove();
+  }, true);
+  main.addEventListener('submit', async e => {
+    const form = e.target.closest('.ph-form');
+    if (!form) return;
+    e.preventDefault();
+    const msg = form.querySelector('.ph-msg'), btn = form.querySelector('button'), value = form.phone.value.trim(), digits = value.replace(/\D/g, '').length;
+    if (!/^\+?[0-9 ()-]{8,20}$/.test(value) || digits < 8 || digits > 15) { msg.textContent = 'Enter a phone number with 8 to 15 digits, like 0412 345 678.'; form.phone.focus(); return; }
+    btn.disabled = true; msg.textContent = 'Saving…';
+    const { error } = await (await db()).rpc('save_my_phone', { p_phone: value });
+    btn.disabled = false;
+    if (error) { msg.textContent = /digits|Sign in|linked/.test(error.message) ? error.message : 'That didn’t save. Check your connection and try again.'; return; }
+    nw.phone = value; btn.textContent = 'Change'; msg.textContent = 'Saved. The league office can see it.';
+  });
+  const removePosts = async (ids, text) => {
+    await dismissPosts(ids);
+    nw.items = nw.items.filter(i => !ids.includes(i.id)); nw.toast = { text, ids };
+    newsBadge(); rerender();
+  };
   main.addEventListener('click', async e => {
+    const act = e.target.closest('[data-nw]');
+    if (act) {
+      const what = act.dataset.nw;
+      if (what === 'markall') { nw.read = markRead(code, nw.items.map(i => i.id)); newsBadge(); rerender(); return; }
+      if (what === 'del') { await removePosts([act.dataset.del], 'Post deleted.'); return; }
+      if (what === 'clear') { const ids = nw.items.filter(i => clearable(i, nw)).map(i => i.id); await removePosts(ids, ids.length === 1 ? 'Post deleted.' : `${ids.length} posts deleted.`); return; }
+      if (what === 'undo' && nw.toast) {
+        const { ids } = nw.toast; nw.toast = null;
+        await restorePosts(ids); nw.items = inboxItems(season, nw.sbNews, code); newsBadge(); rerender(); return;
+      }
+      if (what === 'rx') {
+        const target = act.dataset.rx, r = nw.reactions.get(target) || { counts: {}, mine: null };
+        try {
+          const next = await setReaction(target, act.dataset.e, r.mine);
+          if (r.mine) r.counts[r.mine] = Math.max(0, (r.counts[r.mine] || 1) - 1);
+          if (next) r.counts[next] = (r.counts[next] || 0) + 1;
+          r.mine = next; nw.reactions.set(target, r); rerender();
+        } catch { /* leave the buttons as they were */ }
+        return;
+      }
+    }
     const menuBtn = e.target.closest('[data-twmenu]'), twPick = e.target.closest('[data-tw]');
     if (menuBtn) { const menu = menuBtn.nextElementSibling, open = menu.hidden; menu.hidden = !open; menuBtn.setAttribute('aria-expanded', String(open)); if (open) (menu.querySelector('[aria-checked="true"]') || menu.firstElementChild)?.focus(); return; }
     if (twPick) {
@@ -295,12 +373,12 @@ if (ctx) {
     fixtures: sub => fixturesHtml(sub),
     stats,
     seasons: seasonsHtml,
-    news: () => card('News'),
+    news: newsHtmlNow,
     draft: () => card('Draft'),
   };
 
   wireStatPage(main, { go });
-  mountFrame(document.getElementById('frame'), {
+  frameApi = mountFrame(document.getElementById('frame'), {
     office,
     crest: preview ? params.get('crest') || '' : ctx.club?.crest_path ? crestUrl(ctx.club.crest_path) : '',
     // Each view gets the season picked in the header (WR-05); they all show the current one until a past season exists.

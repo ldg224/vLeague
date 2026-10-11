@@ -1,0 +1,87 @@
+/* The News tab (WR-25): see js/news-tab.js. Tokens only. One card; posts are rows split by hairlines that open in place. */
+.nw .lg-card-head { align-items: center; }
+.nw-acts { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.nw-btn {
+  min-height: 36px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--text); cursor: pointer;
+  font: 600 var(--fs-s) var(--font);
+}
+.nw-btn:focus-visible, .nw-del:focus-visible, .nw-undo:focus-visible, .rx-b:focus-visible, .nw-post summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+@media (hover: hover) { .nw-btn:hover { background: var(--surface-hover); } }
+
+.nw-toast {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 8px; padding: 10px 14px; border-radius: var(--r-sm);
+  background: var(--surface-sunk); color: var(--text); font: 400 var(--fs-m) var(--font);
+}
+.nw-undo { border: 0; background: none; color: var(--brand); font: 600 var(--fs-m) var(--font); text-decoration: underline; cursor: pointer; }
+
+.nw-list { list-style: none; margin: 0 -16px; padding: 0; }
+.nw-list > li { position: relative; border-top: 1px solid var(--line); }
+.nw-post summary {
+  list-style: none; cursor: pointer; display: grid; grid-template-columns: 10px minmax(0, 1fr); column-gap: 12px; row-gap: 2px; align-items: center;
+  min-height: 56px; padding: 12px 56px 12px 16px;
+}
+.nw-post summary::-webkit-details-marker { display: none; }
+@media (hover: hover) { .nw-post summary:hover { background: var(--surface-hover); } }
+.nw-post .dot { grid-row: 1; width: 8px; height: 8px; border-radius: 50%; }
+.nw-post.new .dot { background: var(--club-accent, var(--brand)); }
+.nw-title { grid-column: 2; color: var(--muted); font: 600 var(--fs-m)/1.3 var(--font); }
+.nw-post.new .nw-title, .nw-post[open] .nw-title { color: var(--text-strong); }
+.nw-post.new .nw-title { font-weight: 700; }
+.nw-meta { grid-column: 2; color: var(--faint); font: 400 var(--fs-s) var(--font); }
+.nw-pin { margin-right: 8px; padding: 1px 8px; border-radius: 999px; background: color-mix(in oklab, var(--brand) 14%, transparent); color: var(--brand); font: 600 var(--fs-xs) var(--font); }
+.nw-del {
+  position: absolute; top: 8px; right: 12px; z-index: 1; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%;
+  background: none; color: var(--faint); cursor: pointer;
+}
+.nw-del .ic { width: 18px; height: 18px; }
+@media (hover: hover) { .nw-del:hover { background: var(--surface-hover); color: var(--text); } }
+
+/* an opened post: the text, then a picture as big as the post is wide */
+.nw-body { padding: 0 16px 16px 38px; color: var(--text-soft); font: 400 var(--fs-m)/1.5 var(--font); overflow-wrap: anywhere; }
+.nw-body p { margin: 0 0 10px; }
+.nw-body h3, .nw-body h4 { margin: 12px 0 6px; font: 700 var(--fs-m) var(--font); color: var(--text-strong); }
+.nw-body ul { margin: 0 0 10px; padding-left: 20px; }
+.nw-body a { color: var(--brand); }
+.nw-body .poll { margin: 0 0 10px; padding: 10px 12px; border-radius: var(--r-sm); background: var(--surface-sunk); }
+.nw-body .poll ul { margin: 6px 0 0; color: var(--muted); }
+.nw .nc-body { border-left: 0; margin: 0; }
+.nw .nc-text { padding: 0; }
+.nw .nc-img { width: calc(100% + 38px); max-width: none; max-height: 480px; margin: 0 0 12px -38px; border-radius: 0; object-fit: cover; }
+.nw .nc-act { margin: 4px 0 0; }
+.nw .nc-btn { border-radius: 999px; font: 600 var(--fs-m) var(--font); }
+@media (max-width: 767px) {
+  .nw-body { padding: 0 16px 16px; }
+  .nw .nc-img { width: calc(100% + 32px); margin-left: -16px; max-height: 300px; }
+}
+
+/* a new club's crest, shown in its own colour */
+.nw .reveal { display: grid; justify-items: center; gap: 4px; margin: 4px 0 12px; padding: 18px 12px; border-radius: var(--r-sm); text-align: center; background: var(--surface-sunk); }
+.nw .reveal img { width: 96px; height: 96px; object-fit: contain; margin-bottom: 6px; }
+.nw .reveal b { font: 900 var(--fs-xl)/1.1 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: var(--text-strong); }
+.nw .reveal i { font-style: normal; color: var(--muted); }
+
+/* the phone number form in a post */
+.nw .ph-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px 10px; margin: 14px 0 0; max-width: 420px; }
+.nw .ph-form label { display: grid; gap: 6px; color: var(--muted); font: 600 var(--fs-s) var(--font); }
+.nw .ph-form input { width: 100%; min-height: 44px; padding: 9px 12px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-sunk); color: var(--text); font: 400 var(--fs-m) var(--font); }
+.nw .ph-form input:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
+.nw .ph-form .nw-btn { min-height: 44px; }
+.nw .ph-msg { grid-column: 1 / -1; margin: 0; min-height: 1.2em; color: var(--muted); font: 400 var(--fs-s) var(--font); }
+
+/* reactions */
+.nw .rx { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
+.nw .rx-b {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: none; color: var(--muted);
+  cursor: pointer; font: 600 var(--fs-s) var(--font);
+}
+.nw .rx-b .ic { width: 18px; height: 18px; }
+.nw .rx-b.on { border-color: var(--club-accent, var(--brand)); background: color-mix(in oklab, var(--club-accent, var(--brand)) 14%, transparent); color: var(--text-strong); }
+@media (hover: hover) { .nw .rx-b:hover { background: var(--surface-hover); } }
+
+/* the unread count on a tab */
+.lg-count {
+  display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 6px; padding: 0 5px; border-radius: 999px; background: var(--club-accent, var(--brand)); color: var(--on-club, #fff);
+  font: 700 var(--fs-xs)/1 var(--font); font-style: normal; font-variant-numeric: tabular-nums;
+}
+.lg-bi { position: relative; }
+.lg-bi .lg-count { position: absolute; top: -6px; right: -12px; margin: 0; }

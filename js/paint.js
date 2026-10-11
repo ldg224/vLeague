@@ -35,6 +35,9 @@ export function quietly(fn) {
   try { return fn(); } finally { hands = false; }
 }
 
+// Is someone using this part of the page right now (see inUse)? A late redraw asks first, and tries again later if so.
+export const busy = el => inUse(el);
+
 export function paint(el, html) {
   if (shown.get(el) === html) return false;
   if (hands && inUse(el)) return false;

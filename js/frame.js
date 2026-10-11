@@ -4,6 +4,7 @@
 //   mountFrame(el, { office, draft, crest, onTab }) -> draws the frame into el and calls onTab(id, season, sub) now, on every tab
 //                                                 change and when another season is picked (WR-05). A tab address can carry
 //                                                 a part after a slash, league.html#stats/scorers: that is `sub` (WR-10)
+//   mountFrame returns { setBadge(tabId, n) }: a small count on a tab (the News tab's unread posts); 0 or less removes it
 //   SEASONS                                    -> the seasons the toggle offers, newest first; the first is the current one
 //   TABS                                       -> the tabs in order. Wide screens show them in a row under the header; on a phone
 //                                                 (under 768 px) the same tabs are a bar fixed to the bottom, with icons
@@ -154,4 +155,13 @@ export function mountFrame(el, { office = false, draft = false, crest = '', onTa
   addEventListener('resize', relayout);
   document.fonts?.ready.then(relayout);
   show(false);
+  const setBadge = (id, n) => {
+    for (const a of [...strip.querySelectorAll('a'), ...bottom.querySelectorAll('a')]) {
+      if (a.dataset.tab !== id) continue;
+      a.querySelector('.lg-count')?.remove();
+      if (n > 0) { const i = document.createElement('i'); i.className = 'lg-count'; i.textContent = n > 99 ? '99+' : String(n); i.setAttribute('aria-label', `${n} unread`); (a.querySelector('.lg-bi') || a).append(i); }
+    }
+    relayout();
+  };
+  return { setBadge };
 }
