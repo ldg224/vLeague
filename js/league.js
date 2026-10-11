@@ -113,17 +113,15 @@ if (ctx) {
     return `${note}<div class="sc-section"><div class="sc-head"><h2 class="sc-title">${team ? 'Team stats' : 'Player stats'}</h2>${toggle}</div>${grid(kind, data)}</div>`;
   };
 
-  // A faint sheen on every card (css/league-page.css, --sheen): each card gets its own corner, angle and tint, picked from its title so the
-  // same card always looks the same. One card in three leans towards the club colour instead of white.
+  // A hardly-there splash of vLeague blue on every card (css/league-page.css, --sheen): each card gets its own spot, picked from its title so the
+  // same card always looks the same.
   const sheen = root => root.querySelectorAll('.lg-card:not([data-sheen])').forEach((c, i) => {
     let h = 2166136261;
     for (const ch of `${c.querySelector('h2')?.textContent || ''}${i}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
     const r = n => ((h >>> n) & 255) / 255;
     c.dataset.sheen = '';
     c.style.setProperty('--gx', `${Math.round(r(0) * 100)}%`);
-    c.style.setProperty('--gy', `${r(8) < .5 ? Math.round(r(16) * 25) : 100 - Math.round(r(16) * 25)}%`);
-    c.style.setProperty('--ga', `${Math.round(r(24) * 360)}deg`);
-    if (r(5) < .34) c.style.setProperty('--gt', 'var(--club, #fff)');
+    c.style.setProperty('--gy', `${Math.round(r(8) * 100)}%`);
     // The silk: its own point in the slide and the breathing (negative delays start it part-way through), flipped or not, and a staggered fade-in.
     c.style.setProperty('--fph', `${-Math.round(r(3) * 56)}s`);
     c.style.setProperty('--fph2', `${-Math.round(r(11) * 24)}s`);
