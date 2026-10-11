@@ -44,7 +44,7 @@ const fmt = ms => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor
 // mountDraft(main, { club, season, sub, onGone }): draws the draft into `main` (an element of its own, so its listeners go with it) and returns
 // { unmount(), setTab(sub) }. onGone() is called when the office has hidden the draft while the tab was open (the page used to reload).
 // unmount() stops the clock, the 15 s poll, the live channel and the visibility listener; nothing of the draft runs once you leave the tab.
-export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGone } = {}) {
+export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGone, crest = () => '' } = {}) {
   const code = club?.code;
   const clubName = new Map((season?.teams || []).map(t => [t.code, t.name]));
   const nameOf = c => (c === code && club?.name) || clubName.get(c) || c;
@@ -98,8 +98,9 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
       if (!code) return '';
       const mine = players.filter(p => p.team === code), used = squadValue(), pct = Math.min(100, used / CAP * 100);
       const state = used > CAP ? ' over' : used >= CAP * 0.9 ? ' warn' : '';
-      return `<div class="dr-budget${state}"><div class="dr-budget-text"><b>Weekly budget</b><span>${money(used)} of ${money(CAP)} used · ${used > CAP ? `${money(used - CAP)} over the cap` : `${money(CAP - used)} left`} · ${mine.length} player${mine.length === 1 ? '' : 's'}</span></div>
-        <div class="dr-bar" role="progressbar" aria-label="Weekly budget used" aria-valuemin="0" aria-valuemax="${CAP}" aria-valuenow="${used}"><i style="width:${pct.toFixed(1)}%"></i></div></div>`;
+      return `<div class="dr-budget${state}"><div class="dr-budget-text"><b>Your squad</b><span>${mine.length} player${mine.length === 1 ? '' : 's'}, <b>${money(used)}</b> of ${money(CAP)} a week</span>`
+        + `<span class="dr-budget-left">${used > CAP ? `${money(used - CAP)} over the cap` : `${money(CAP - used)} left`}</span></div>`
+        + `<div class="dr-bar" role="progressbar" aria-label="Weekly budget used" aria-valuemin="0" aria-valuemax="${CAP}" aria-valuenow="${used}"><i style="width:${pct.toFixed(1)}%"></i></div></div>`;
     }
 
     // Active times: the pick timer runs only inside them (drafts.quiet holds them; 0040) (managers can still pick). The clock shows ACTIVE time left, frozen while it's quiet.
@@ -119,18 +120,22 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
         soon: ['Not started yet', 'Get ready', 'Read the rules, look through the players and build your queue. You can pick as soon as the draft starts.', ''],
         opens: ['Opens soon', 'Get ready', `Opens ${esc(whenAt(d.opens_at))}. Build your queue and set auto-pick now.`, `<small>Opens in</small><span id="clock" data-until="${esc(d.opens_at)}">${fmt(new Date(d.opens_at) - Date.now())}</span>`],
         live: ['Live', mine ? 'It’s your pick' : t ? `${who} is picking` : 'Draft complete', t ? `Pick ${t.pick_no} of ${n}${mine ? '. Choose any player before the clock runs out.' : '.'}${d.pick_deadline ? ` The pick ends <b>${esc(whenAt(d.pick_deadline))}</b>${d.quiet?.length ? ', counting only active times' : ''}. The clock runs even when nobody has the page open.` : ''}` : '',
-          `${mine ? '<small>Your time</small>' : '<small>Time left</small>'}<span id="clock">${fmt(clockMs())}</span>`],
+          `<small>${mine ? 'Your time' : 'Time left'}</small><span id="clock">${fmt(clockMs())}</span>`],
         paused: ['Paused', 'The draft is paused', `${t ? `Pick ${t.pick_no} of ${n}, ${who} is up. ` : ''}It carries on when the office resumes it. You can still change your queue.`, ''],
         closed: ['Closed', 'The draft has closed', 'Picks can’t be made now.', ''],
         done: ['Finished', 'The draft is finished', `All ${n} picks are done.`, ''],
       }[ph];
       // Each piece is escaped here (the pause icon is markup, so the line itself is not escaped as a whole: that printed the icon's code, B-12).
-      const quiet = d.quiet?.length ? (inQuiet() && ph === 'live' ? `${icon('pause')} Outside active times: the timer is paused until ${esc(new Date(st.qs.quiet_until).toLocaleTimeString('en-AU', { timeZone: 'Australia/Melbourne', hour: 'numeric', minute: '2-digit' }))}. You can still pick.` : `The pick timer runs ${esc(describeQuiet(d.quiet))}, and is paused at other times. You can still pick whenever you’re online.`) : '';
-      const small = [rulesText() && `Roster rules: ${esc(rulesText())}`, quiet].filter(Boolean);
-      return `<section class="dr-status ph-${ph}${mine ? ' mine' : ''}${ph === 'live' && inQuiet() ? ' quiet' : ''}"><div class="dr-st-main"><div><span class="dr-st-tag">${B[0]}</span><p class="dr-st-name">${esc(d.name || 'Draft')}</p>
-        <h1 class="page-title dr-st-big" tabindex="-1">${B[1]}</h1><p class="dr-st-sub">${B[2]}</p></div>
-        ${B[3] ? `<div class="dr-clock">${B[3]}</div>` : ''}</div>
-        ${small.length ? `<p class="dr-st-small">${small.join(' · ')}</p>` : ''}</section>${budget()}`;
+      const quiet = d.quiet?.length ? (inQuiet() && ph === 'live' ? `${icon('pause')} Outside active times: the timer is paused until ${esc(new Date(st.qs.quiet_until).toLocaleTimeString('en-AU', { timeZone: 'Australia/Melbourne', hour: 'numeric', minute: '2-digit' }))}. You can still pick.` : `Pick timer runs ${esc(describeQuiet(d.quiet))}`) : '';
+      const small = [rulesText() && `<span><b>Roster</b> ${esc(rulesText())}</span>`, quiet && `<span>${quiet}</span>`].filter(Boolean);
+      const made = st.picks.length, face = t && ['live', 'paused'].includes(ph) ? crest(t.club, 56) : '<img class="dr-st-crest" src="assets/brand/crest.svg" alt="">';
+      const go = mine ? '<button class="dr-go" data-tab="players" type="button">Choose a player</button>' : '';
+      return `<section class="lg-card dr-status ph-${ph}${mine ? ' mine' : ''}${ph === 'live' && inQuiet() ? ' quiet' : ''}">
+        <div class="dr-st-main"><div class="dr-st-who">${face}<div class="dr-st-text"><p class="dr-st-line"><span class="dr-st-tag">${B[0]}</span><span class="dr-st-name">${esc(d.name || 'Draft')}</span></p>
+          <h1 class="dr-st-big" tabindex="-1">${B[1]}</h1><p class="dr-st-sub">${B[2]}</p>${go}</div></div>
+          ${B[3] ? `<div class="dr-clock">${B[3]}</div>` : ''}</div>
+        ${n ? `<div class="dr-track" role="img" aria-label="${made} of ${n} picks made"><i style="width:${(made / n * 100).toFixed(2)}%"></i></div><p class="dr-track-l"><b>${made}</b> of ${n} picks made</p>` : ''}
+        ${small.length ? `<p class="dr-st-small">${small.join('')}</p>` : ''}${budget()}</section>`;
     }
 
     // ---- the table of available players, with its filters and sort levels.
@@ -155,13 +160,14 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
 
     function toolbar(t) {
       const f = F[t], s = SORTS[t], unused = colsOf(t).filter(c => !s.some(x => x.key === c.key));
-      return `<div class="dr-filter"><input type="search" data-f="q" data-t="${t}" placeholder="Search players" value="${esc(f.q)}">
-        <select data-f="pos" data-t="${t}" aria-label="Position"><option value="">All positions</option>${['GK', 'DEF', 'MID', 'FWD'].map(p => `<option${f.pos === p ? ' selected' : ''}>${p}</option>`).join('')}</select>
-        <input type="number" inputmode="numeric" min="0" step="1000" data-f="max" data-t="avail" placeholder="Max value $" aria-label="Maximum value" value="${esc(f.max)}">${code ? `<label class="dr-fit"><input type="checkbox" data-f="fit" data-t="avail"${f.fit ? ' checked' : ''}> Fits my squad</label>` : ''}</div>
-        <div class="dr-sortbar"><span>Sort by</span>${s.map((x, i) => `<span class="dr-chip"><b>${i + 1}</b><button data-t="${t}" data-sflip="${i}" title="Flip direction">${esc(col(t, x.key).long)} ${arrow(x.dir)}</button><button data-t="${t}" data-sdel="${i}" aria-label="Stop sorting by ${esc(col(t, x.key).long)}"${s.length > 1 ? '' : ' disabled'}>${icon('x')}</button></span>`).join('')}
-          ${unused.length ? `<select data-sadd="${t}" aria-label="Add a sort"><option value="">+ Then by…</option>${unused.map(c => `<option value="${c.key}">${esc(c.long)}</option>`).join('')}</select>` : ''}
-          <button class="dr-b" data-t="${t}" data-sreset>Reset</button></div>
-        <p class="quiet dr-hint">Tap a heading to sort by it. Shift-tap, or use “Then by…”, to sort by a second or third thing, for example Position, then Defensive rating.</p>`;
+      const pos = [['', 'All'], ['GK', 'GK'], ['DEF', 'DEF'], ['MID', 'MID'], ['FWD', 'FWD']];
+      return `<div class="dr-filter"><label class="dr-search">${icon('search')}<input type="search" data-f="q" data-t="${t}" placeholder="Search players" aria-label="Search players" value="${esc(f.q)}"></label>
+        <div class="dr-pos" role="group" aria-label="Position">${pos.map(([v, l]) => `<button type="button" data-fpos="${v}" aria-pressed="${f.pos === v}">${l}</button>`).join('')}</div>
+        <label class="dr-max"><span>Max $</span><input type="number" inputmode="numeric" min="0" step="1000" data-f="max" data-t="avail" placeholder="Any" aria-label="Maximum value" value="${esc(f.max)}"></label>
+        ${code ? `<label class="dr-fit"><input type="checkbox" data-f="fit" data-t="avail"${f.fit ? ' checked' : ''}><span>Fits my squad</span></label>` : ''}</div>
+        <div class="dr-sortbar"><span class="dr-sortl">Sorted by</span>${s.map((x, i) => `<span class="dr-chip"><button data-t="${t}" data-sflip="${i}" title="Flip direction">${esc(col(t, x.key).long)} ${arrow(x.dir)}</button>${s.length > 1 ? `<button data-t="${t}" data-sdel="${i}" aria-label="Stop sorting by ${esc(col(t, x.key).long)}">${icon('x')}</button>` : ''}</span>`).join('')}
+          ${unused.length ? `<label class="dr-then"><select data-sadd="${t}" aria-label="Then sort by"><option value="">Then by…</option>${unused.map(c => `<option value="${c.key}">${esc(c.long)}</option>`).join('')}</select>${icon('chevron-down')}</label>` : ''}
+          ${s.length > 1 || s[0].key !== DEFAULT[t][0].key || s[0].dir !== DEFAULT[t][0].dir ? `<button class="dr-link" data-t="${t}" data-sreset>Reset</button>` : ''}</div>`;
     }
     function table(t, rows, rowHtml, empty) {
       const cols = colsOf(t), s = SORTS[t];
@@ -178,10 +184,11 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
     function boardTab() {
       const map = byId();
       const grid = renderGrid(gridOf(st.order, st.picks), {
-        esc, clubName: nameOf, me: code, current: phase(st.draft) === 'live' ? st.draft.current_pick : null, made: st.picks.length,
+        esc, clubName: nameOf, me: code, current: phase(st.draft) === 'live' ? st.draft.current_pick : null, made: st.picks.length, crest: c => crest(c, 28),
         who: x => { const p = map.get(x.pick?.player); return p ? `<button class="dr-name" data-player="${esc(p.id)}">${esc(p.name)}</button> <small>${esc(p.position)}</small>` : '<i>skipped</i>'; },
       });
-      return `<section><h2>Draft board <small class="dr-count">${st.picks.length} of ${st.order.length} picks made</small>${st.picks.length ? ' <button class="dr-b dr-export" data-export title="Download every pick so far as a spreadsheet">Download CSV</button>' : ''}</h2>${grid || '<p class="empty">The pick order hasn’t been set yet.</p>'}</section>`;
+      return `<section class="lg-card dr-boardcard"><div class="lg-card-head"><h2>Draft board</h2>${st.picks.length ? '<button class="dr-ghost dr-export" data-export title="Download every pick so far as a spreadsheet">Download CSV</button>' : ''}</div>`
+        + `${grid || '<div class="sc-empty"><b>No draft order yet</b><span>The board appears once the office sets the order.</span></div>'}</section>`;
     }
 
     // Players: the queue and auto-pick on the left, every available player on the right.
@@ -189,34 +196,34 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
       if (!code) return '<p class="empty">Your account isn’t linked to a club.</p>';
       const map = byId(), q = queue();
       const picked = squadValue(), queued = q.reduce((n, id) => n + (map.get(id)?.value || 0), 0), end = picked + queued;
-      return `<section class="dr-queue"><h2>My queue <small>${q.length}</small></h2>
-        ${q.length ? `<p class="dr-qsum${end > CAP ? ' over' : ''}">Club value with your queue: <b>${money(end)}</b> of ${money(CAP)} <span>(${money(picked)} picked + ${money(queued)} queued)</span>. ${afterText(end)}.</p>` : ''}
+      return `<section class="lg-card dr-queue"><div class="lg-card-head"><h2>My queue</h2><span class="dr-count">${q.length}</span></div>
+        ${q.length ? `<p class="dr-qsum${end > CAP ? ' over' : ''}">With your queue the squad would be worth <b>${money(end)}</b>, ${afterText(end)}.</p>` : ''}
         ${myTurn() && q.length ? `<button class="dr-b pick big" data-pick="${esc(q[0])}"${blocked(map.get(q[0])) ? ` disabled title="${esc(blocked(map.get(q[0])))}"` : ''}>Pick now: ${esc(map.get(q[0])?.name)}</button>` : ''}
-        <ol class="dr-list" id="queue">${q.map((id, i) => playerRow(map.get(id), `<span class="mv"><button class="dr-b" data-up="${i}" aria-label="Move up"${i ? '' : ' disabled'}>${icon('chevron-up')}</button><button class="dr-b" data-down="${i}" aria-label="Move down"${i < q.length - 1 ? '' : ' disabled'}>${icon('chevron-down')}</button><button class="dr-b" data-rm="${i}" aria-label="Remove">${icon('x')}</button></span>`, ` draggable="true" data-i="${i}"`)).join('') || '<li class="empty">Add players with “+ Queue”. Drag or use the arrows to rank them.</li>'}</ol></section>`;
+        <ol class="dr-list" id="queue">${q.map((id, i) => playerRow(map.get(id), `<span class="mv"><button class="dr-b" data-up="${i}" aria-label="Move up"${i ? '' : ' disabled'}>${icon('chevron-up')}</button><button class="dr-b" data-down="${i}" aria-label="Move down"${i < q.length - 1 ? '' : ' disabled'}>${icon('chevron-down')}</button><button class="dr-b" data-rm="${i}" aria-label="Remove">${icon('x')}</button></span>`, ` draggable="true" data-i="${i}"`)).join('') || '<li class="dr-qempty">Add players with Queue in the list. Drag them, or use the arrows, to put your favourite first.</li>'}</ol></section>`;
     }
-    function autoPanel(open) {
+    function autoPanel() {
       if (!code) return '';
       const { mode, minutes, pick_how: how = 'queue' } = st.prefs, max = st.draft.pick_minutes;
-      const hint = [...HOW, ...MODES].find(x => x[0] === how)?.[2], when = MODES.find(x => x[0] === mode)?.[2];
+      const head = '<div class="lg-card-head"><h2>Auto-pick</h2></div>';
       // The office has set one rule for everyone: nothing here to change.
-      if (st.draft.auto_after_minutes) return `<details class="dr-autobox"${open ? ' open' : ''}><summary>Auto-pick</summary>
-        <p class="dr-locked">${icon('lock')} <b>Set by the league office.</b> Your queue picks for you ${esc(st.draft.auto_after_minutes)} minutes into your turn, whether or not you are online. Keep your queue up to date: with no queue you have the full ${esc(st.draft.pick_minutes >= 60 && st.draft.pick_minutes % 60 === 0 ? st.draft.pick_minutes / 60 + ' hour' + (st.draft.pick_minutes > 60 ? 's' : '') : st.draft.pick_minutes + ' minutes')} and then a player is picked for you.</p></details>`;
-      return `<details class="dr-autobox"${open ? ' open' : ''}><summary>Auto-pick</summary>
-        <form id="auto" class="dr-auto" novalidate>
-          <label>What to pick<select name="how">${HOW.map(([v, l]) => `<option value="${v}"${how === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label><small>${esc(hint)}</small>
-          <label>When<select name="mode">${MODES.map(([v, l]) => `<option value="${v}"${mode === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label><small>${esc(when)}</small>
-          <label class="dr-min"${mode === 'after_minutes' ? '' : ' hidden'}>Minutes into my turn <input type="number" name="minutes" min="1"${max ? ` max="${max}"` : ''} value="${esc(minutes ?? '')}"> ${max ? `<small>(1 to ${max})</small>` : ''}</label>
-          <small>Saves as you change it. The office can change it too.</small></form></details>`;
+      if (st.draft.auto_after_minutes) return `<section class="lg-card dr-autobox">${head}
+        <p class="dr-locked">${icon('lock')}<span><b>Set by the league office.</b> Your queue picks for you ${esc(st.draft.auto_after_minutes)} minutes into your turn, whether or not you are online. Keep your queue up to date: with no queue you have the full ${esc(st.draft.pick_minutes ?? '')} minutes to pick yourself.</span></p></section>`;
+      const radios = (name, list, cur) => list.map(([v, l, h]) => `<label class="dr-opt"><input type="radio" name="${name}" value="${v}"${cur === v ? ' checked' : ''}><span><b>${l}</b><small>${esc(h)}</small></span></label>`).join('');
+      return `<section class="lg-card dr-autobox">${head}<form id="auto" class="dr-auto" novalidate>
+          <fieldset><legend>What to pick</legend>${radios('how', HOW, how)}</fieldset>
+          <fieldset><legend>When</legend>${radios('mode', MODES, mode)}</fieldset>
+          <label class="dr-min"${mode === 'after_minutes' ? '' : ' hidden'}><span>Minutes into my turn${max ? ` (1 to ${max})` : ''}</span><input type="number" name="minutes" min="1"${max ? ` max="${max}"` : ''} value="${esc(minutes ?? '')}"></label>
+          <p class="dr-note">Saves as you change it. The office can change it too.</p></form></section>`;
     }
     function playersTab(autoOpen) {
       const q = new Set(st.queue);
       const shown = sorted('avail', free().filter(p => passes('avail', p))).slice(0, 400);
       const qn = queue().length;
       return `<div class="dr-availwrap"><nav class="dr-sub" aria-label="Show">${[['players', 'Players'], ['queue', `My queue${qn ? ` (${qn})` : ''}`], ['auto', 'Auto-pick']].map(([k, l]) => `<button type="button" data-sub="${k}" aria-pressed="${sub === k}">${l}</button>`).join('')}</nav>
-        <div class="dr-avail" data-sub="${sub}"><aside class="dr-side">${queuePanel()}${autoPanel(autoOpen)}</aside>
-        <section class="dr-main"><h2>Available players (${free().length})</h2>${toolbar('avail')}
+        <div class="dr-avail" data-sub="${sub}"><aside class="dr-side">${queuePanel()}${autoPanel()}</aside>
+        <section class="lg-card dr-main"><div class="lg-card-head"><h2>Available players</h2><span class="dr-count">${free().length} left</span></div>${toolbar('avail')}
         ${table('avail', shown, p => `<tr><td class="c-position">${esc(p.position)}</td><td class="c-name"><button class="dr-name" data-player="${esc(p.id)}">${esc(p.name)}</button></td><td class="c-number">${esc(p.number ?? '')}</td>${ratings(p)}
-          <td class="c-act">${code ? `<button class="dr-b" data-add="${esc(p.id)}"${q.has(p.id) ? ' disabled' : ''}>${q.has(p.id) ? 'Queued' : '+ Queue'}</button>` : ''}${myTurn() ? `<button class="dr-b pick" data-pick="${esc(p.id)}"${blocked(p) ? ` disabled title="${esc(blocked(p))}"` : ''}>Pick</button>` : ''}</td></tr>`, 'No players match.')}</section></div></div>`;
+          <td class="c-act">${code ? `<button class="dr-b" data-add="${esc(p.id)}" aria-label="${q.has(p.id) ? 'In your queue' : `Add ${esc(p.name)} to your queue`}"${q.has(p.id) ? ' disabled' : ''}>${q.has(p.id) ? `${icon('check')}<span class="dr-bt">Queued</span>` : `${icon('plus')}<span class="dr-bt">Queue</span>`}</button>` : ''}${myTurn() ? `<button class="dr-b pick" data-pick="${esc(p.id)}"${blocked(p) ? ` disabled title="${esc(blocked(p))}"` : ''}>Pick</button>` : ''}</td></tr>`, 'No players match.')}</section></div></div>`;
     }
 
     function valuesTab() {
@@ -224,11 +231,15 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
       for (const p of players) if (p.team) { if (!by.has(p.team)) by.set(p.team, []); by.get(p.team).push(p); }
       const clubs = [...by.entries()].map(([c, ps]) => ({ c, ps: ps.sort((a, b) => b.value - a.value), total: ps.reduce((s, p) => s + p.value, 0) }))
         .sort((a, b) => (a.c === code ? -1 : b.c === code ? 1 : b.total - a.total));
-      return `<section><h2>Team values</h2><p class="quiet">Each club’s drafted players and what they cost, against the ${money(CAP)} weekly cap.</p><div class="dr-teams">${clubs.map(({ c, ps, total }) => `<details class="dr-team${c === code ? ' me' : ''}"${c === code ? ' open' : ''}><summary><b>${esc(nameOf(c))}</b><span>${ps.length} players · ${money(total)} of ${money(CAP)}</span></summary>
-        <ul class="dr-list">${ps.map(p => playerRow(p)).join('')}</ul></details>`).join('') || '<p class="empty">No club has a player yet.</p>'}</div></section>`;
+      const row = ({ c, ps, total }) => `<details class="dr-team${c === code ? ' me' : ''}${total > CAP ? ' over' : ''}"${c === code ? ' open' : ''}><summary>${crest(c, 32)}
+          <span class="dr-tn"><b>${esc(nameOf(c))}</b><small>${ps.length} player${ps.length === 1 ? '' : 's'}</small></span>
+          <span class="dr-tbar" aria-hidden="true"><i style="width:${Math.min(100, total / CAP * 100).toFixed(1)}%"></i></span><span class="dr-tv">${money(total)}</span>${icon('chevron-down')}</summary>
+        <ul class="dr-list">${ps.map(p => playerRow(p)).join('')}</ul></details>`;
+      return `<section class="lg-card dr-teamscard"><div class="lg-card-head"><h2>Team values</h2><span class="dr-count">Cap ${money(CAP)} a week</span></div>`
+        + `<div class="dr-teams">${clubs.map(row).join('') || '<div class="sc-empty"><b>No picks yet</b><span>Each club’s squad and what it costs appear here as the draft goes.</span></div>'}</div></section>`;
     }
 
-    const pageHtml = autoOpen => `<div class="draft">${head()}<nav class="dr-tabs" role="tablist">${TABS.map(([id, l]) => `<button role="tab" data-tab="${id}" aria-selected="${tab === id}">${l}</button>`).join('')}<button class="dr-help" data-tour title="A step-by-step guide to this page"><b>?</b> How it works</button></nav>
+    const pageHtml = autoOpen => `<div class="draft">${head()}<div class="dr-bar-row"><nav class="dr-tabs" role="tablist" aria-label="Draft">${TABS.map(([id, l]) => `<button role="tab" data-tab="${id}" aria-selected="${tab === id}">${l}</button>`).join('')}</nav><button class="dr-help" data-tour title="A step-by-step guide to this page" aria-label="How it works">${icon('circle-help')}<span>How it works</span></button></div>
         <p class="dr-msg" role="status">${esc(msg)}</p>${tab === 'players' ? playersTab(autoOpen) : { board: boardTab, values: valuesTab }[tab]()}</div>`;
 
     // Typing in a search or filter box: update everything around the box but never the box itself, so it keeps the cursor
@@ -354,6 +365,7 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
       else if (d.sdel !== undefined) { SORTS[d.t].splice(+d.sdel, 1); draw(); }
       else if (d.sreset !== undefined) { SORTS[d.t] = DEFAULT[d.t].map(s => ({ ...s })); draw(); }
       else if (d.sub) { sub = d.sub; draw(); }
+      else if (d.fpos !== undefined) { F.avail.pos = d.fpos; draw(); }
       else if (d.export !== undefined) exportBoard();
       else if (d.player) playerCard(d.player);
       else if (d.add) addToQueue(d.add);
