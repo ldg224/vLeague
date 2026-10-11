@@ -293,3 +293,32 @@
   .lg-draft .dr-p .rts { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .dr-fit input, .dr-fit input::after, .lg-draft .dr-team summary > .ic { transition: none; } }
+
+/* ---------- the roster colours (user, 11 Oct 2026): goalkeeper yellow, defence red, midfield purple, attack blue ---------- */
+.lg-draft, .dr-dialog { --pos-gk: #f4c430; --pos-def: #ef5350; --pos-mid: #ba68c8; --pos-fwd: #42a5f5; }
+:root[data-theme="light"] :is(.lg-draft, .dr-dialog) { --pos-gk: #a07400; --pos-def: #c62828; --pos-mid: #7b1fa2; --pos-fwd: #1565c0; }
+.lg-draft .pos-GK { --pc: var(--pos-gk); } .lg-draft .pos-DEF { --pc: var(--pos-def); } .lg-draft .pos-MID { --pc: var(--pos-mid); } .lg-draft .pos-FWD { --pc: var(--pos-fwd); }
+.lg-draft :is(.dr-table .c-position, .dr-p .pos, .dg-who small)[class*="pos-"] { color: var(--pc); font-weight: 700; }
+.dr-roster { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.dr-roster-l { margin-right: 2px; color: var(--text); font-weight: 600; }
+.dr-rchip {
+  display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px 0 8px; border-radius: 999px;
+  background: color-mix(in oklab, var(--pc) 14%, transparent); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--pc) 40%, transparent);
+  color: var(--text-strong); font: 600 var(--fs-s) var(--font); font-variant-numeric: tabular-nums;
+}
+.dr-rchip b { color: var(--pc); font-weight: 800; }
+.dr-rchip.full { background: color-mix(in oklab, var(--pc) 26%, transparent); }
+.dr-paused { display: inline-flex; align-items: center; gap: 6px; color: var(--amber-text, var(--amber)); font-weight: 600; }
+.dr-st-small { align-items: center; }
+
+/* ---------- the club on the clock, its name huge and hollow behind the hero (as on the Fixtures rows) ---------- */
+.lg-draft .dr-status { position: relative; isolation: isolate; }
+.dr-hollow {
+  position: absolute; z-index: -1; top: 4px; right: 14px; white-space: nowrap; pointer-events: none; text-align: right;
+  font: 900 5.5rem/1 var(--font-display); font-stretch: 125%; text-transform: uppercase; letter-spacing: -.01em;
+  color: transparent; -webkit-text-stroke: 1.5px var(--gd, var(--line)); opacity: .28;
+  -webkit-mask-image: linear-gradient(270deg, #000 35%, transparent 100%); mask-image: linear-gradient(270deg, #000 35%, transparent 100%);
+}
+:root[data-theme="light"] .dr-hollow { -webkit-text-stroke-color: var(--gl, var(--line)); opacity: .32; }
+.dr-st-main, .dr-track, .dr-track-l, .dr-st-small, .lg-draft .dr-budget { position: relative; }
+@media (max-width: 767px) { .dr-hollow { font-size: 3.25rem; top: 4px; right: 10px; } }

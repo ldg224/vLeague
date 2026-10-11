@@ -44,7 +44,7 @@ const fmt = ms => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor
 // mountDraft(main, { club, season, sub, onGone }): draws the draft into `main` (an element of its own, so its listeners go with it) and returns
 // { unmount(), setTab(sub) }. onGone() is called when the office has hidden the draft while the tab was open (the page used to reload).
 // unmount() stops the clock, the 15 s poll, the live channel and the visibility listener; nothing of the draft runs once you leave the tab.
-export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGone, crest = () => '' } = {}) {
+export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGone, crest = () => '', colourOf = () => '' } = {}) {
   const code = club?.code;
   const clubName = new Map((season?.teams || []).map(t => [t.code, t.name]));
   const nameOf = c => (c === code && club?.name) || clubName.get(c) || c;
@@ -75,6 +75,16 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
       return ['GK', 'DEF', 'MID', 'FWD'].filter(k => mx[k] != null || mn[k] != null)
         .map(k => `${k} ${mn[k] != null && mx[k] != null ? (mn[k] === mx[k] ? mn[k] : `${mn[k]} to ${mx[k]}`) : mx[k] != null ? `up to ${mx[k]}` : `at least ${mn[k]}`}`).join(' · ');
     };
+    // The roster as four coloured chips (GK yellow, DEF red, MID purple, FWD blue): how many you have of the most allowed ("2/5"), or just the
+    // rule when you have no club. A position you have filled is ticked off.
+    const rosterChips = () => {
+      const mx = st.draft.roster_max || {}, mn = st.draft.roster_min || {}, have = pos => players.filter(x => x.team === code && x.position === pos).length;
+      const chips = ['GK', 'DEF', 'MID', 'FWD'].filter(k => mx[k] != null || mn[k] != null).map(k => {
+        const top = mx[k] ?? mn[k], n = code ? have(k) : null, full = n != null && n >= top;
+        return `<span class="dr-rchip pos-${k}${full ? ' full' : ''}" title="${esc(`${k}: ${mn[k] != null && mn[k] !== mx[k] ? `at least ${mn[k]}, ` : ''}${mx[k] != null ? `at most ${mx[k]}` : ''}`)}"><b>${k}</b>${n != null ? `${n}/${top}` : top}</span>`;
+      });
+      return chips.length ? `<span class="dr-roster"><span class="dr-roster-l">${code ? 'Your roster' : 'Roster'}</span>${chips.join('')}</span>` : '';
+    };
     const blocked = p => {
       if (!p) return '';
       const mx = st.draft.roster_max || {}, mn = st.draft.roster_min || {}, have = pos => players.filter(x => x.team === code && x.position === pos).length;
@@ -84,7 +94,7 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
       const needed = Object.keys(mn).reduce((n, k) => n + Math.max(0, mn[k] - have(k) - (k === p.position ? 1 : 0)), 0);
       return needed > left ? 'Taking this player would leave too few picks to fill every position.' : '';
     };
-    const playerRow = (p, extra = '', attrs = '') => `<li class="dr-p"${attrs}><span class="pos">${esc(p.position)}</span>
+    const playerRow = (p, extra = '', attrs = '') => `<li class="dr-p"${attrs}><span class="pos pos-${esc(p.position)}">${esc(p.position)}</span>
       <span class="nm"><button class="dr-name" data-player="${esc(p.id)}">${esc(p.name)}</button></span><span class="rts">${chip(p.offense)}${chip(p.defense)}</span><span class="val">${money(p.value)}</span>${extra}</li>`;
 
     // What this club's squad is worth now.
@@ -117,25 +127,26 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
       const d = st.draft, t = turn(), ph = phase(d), mine = myTurn(), n = st.order.length;
       const who = t ? `${esc(nameOf(t.club))}${t.club === code ? ' (you)' : ''}` : '';
       const B = {
-        soon: ['Not started yet', 'Get ready', 'Read the rules, look through the players and build your queue. You can pick as soon as the draft starts.', ''],
-        opens: ['Opens soon', 'Get ready', `Opens ${esc(whenAt(d.opens_at))}. Build your queue and set auto-pick now.`, `<small>Opens in</small><span id="clock" data-until="${esc(d.opens_at)}">${fmt(new Date(d.opens_at) - Date.now())}</span>`],
-        live: ['Live', mine ? 'It’s your pick' : t ? `${who} is picking` : 'Draft complete', t ? `Pick ${t.pick_no} of ${n}${mine ? '. Choose any player before the clock runs out.' : '.'}${d.pick_deadline ? ` The pick ends <b>${esc(whenAt(d.pick_deadline))}</b>${d.quiet?.length ? ', counting only active times' : ''}. The clock runs even when nobody has the page open.` : ''}` : '',
+        soon: ['Not started yet', 'Get ready', 'Build your queue now. Picking opens when the draft starts.', ''],
+        opens: ['Opens soon', 'Get ready', `Opens <b>${esc(whenAt(d.opens_at))}</b>.`, `<small>Opens in</small><span id="clock" data-until="${esc(d.opens_at)}">${fmt(new Date(d.opens_at) - Date.now())}</span>`],
+        live: ['Live', mine ? 'It’s your pick' : t ? `${who} is picking` : 'Draft complete', t ? `Pick ${t.pick_no} of ${n}${d.pick_deadline ? `, ends <b>${esc(whenAt(d.pick_deadline))}</b>` : ''}` : '',
           `<small>${mine ? 'Your time' : 'Time left'}</small><span id="clock">${fmt(clockMs())}</span>`],
         paused: ['Paused', 'The draft is paused', `${t ? `Pick ${t.pick_no} of ${n}, ${who} is up. ` : ''}It carries on when the office resumes it. You can still change your queue.`, ''],
         closed: ['Closed', 'The draft has closed', 'Picks can’t be made now.', ''],
         done: ['Finished', 'The draft is finished', `All ${n} picks are done.`, ''],
       }[ph];
       // Each piece is escaped here (the pause icon is markup, so the line itself is not escaped as a whole: that printed the icon's code, B-12).
-      const quiet = d.quiet?.length ? (inQuiet() && ph === 'live' ? `${icon('pause')} Outside active times: the timer is paused until ${esc(new Date(st.qs.quiet_until).toLocaleTimeString('en-AU', { timeZone: 'Australia/Melbourne', hour: 'numeric', minute: '2-digit' }))}. You can still pick.` : `Pick timer runs ${esc(describeQuiet(d.quiet))}`) : '';
-      const small = [rulesText() && `<span><b>Roster</b> ${esc(rulesText())}</span>`, quiet && `<span>${quiet}</span>`].filter(Boolean);
+      const quiet = d.quiet?.length && inQuiet() && ph === 'live' ? `<span class="dr-paused">${icon('pause')} Timer paused until ${esc(new Date(st.qs.quiet_until).toLocaleTimeString('en-AU', { timeZone: 'Australia/Melbourne', hour: 'numeric', minute: '2-digit' }))}</span>` : '';
+      const small = [rosterChips(), quiet].filter(Boolean);
       const made = st.picks.length, face = t && ['live', 'paused'].includes(ph) ? crest(t.club, 56) : '<img class="dr-st-crest" src="assets/brand/crest.svg" alt="">';
       const go = mine ? '<button class="dr-go" data-tab="players" type="button">Choose a player</button>' : '';
-      return `<section class="lg-card dr-status ph-${ph}${mine ? ' mine' : ''}${ph === 'live' && inQuiet() ? ' quiet' : ''}">
+      const ghost = t && ['live', 'paused'].includes(ph) ? `<span class="dr-hollow" aria-hidden="true" style="--gl:${esc(colourOf(t.club, 'light'))};--gd:${esc(colourOf(t.club, 'dark'))}">${esc(nameOf(t.club))}</span>` : '';
+      return `<section class="lg-card dr-status ph-${ph}${mine ? ' mine' : ''}${ph === 'live' && inQuiet() ? ' quiet' : ''}">${ghost}
         <div class="dr-st-main"><div class="dr-st-who">${face}<div class="dr-st-text"><p class="dr-st-line"><span class="dr-st-tag">${B[0]}</span><span class="dr-st-name">${esc(d.name || 'Draft')}</span></p>
           <h1 class="dr-st-big" tabindex="-1">${B[1]}</h1><p class="dr-st-sub">${B[2]}</p>${go}</div></div>
           ${B[3] ? `<div class="dr-clock">${B[3]}</div>` : ''}</div>
         ${n ? `<div class="dr-track" role="img" aria-label="${made} of ${n} picks made"><i style="width:${(made / n * 100).toFixed(2)}%"></i></div><p class="dr-track-l"><b>${made}</b> of ${n} picks made</p>` : ''}
-        ${small.length ? `<p class="dr-st-small">${small.join('')}</p>` : ''}${budget()}</section>`;
+        ${small.length ? `<div class="dr-st-small">${small.join('')}</div>` : ''}${budget()}</section>`;
     }
 
     // ---- the table of available players, with its filters and sort levels.
@@ -185,7 +196,7 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
       const map = byId();
       const grid = renderGrid(gridOf(st.order, st.picks), {
         esc, clubName: nameOf, me: code, current: phase(st.draft) === 'live' ? st.draft.current_pick : null, made: st.picks.length, crest: c => crest(c, 28),
-        who: x => { const p = map.get(x.pick?.player); return p ? `<button class="dr-name" data-player="${esc(p.id)}">${esc(p.name)}</button> <small>${esc(p.position)}</small>` : '<i>skipped</i>'; },
+        who: x => { const p = map.get(x.pick?.player); return p ? `<button class="dr-name" data-player="${esc(p.id)}">${esc(p.name)}</button> <small class="pos-${esc(p.position)}">${esc(p.position)}</small>` : '<i>skipped</i>'; },
       });
       return `<section class="lg-card dr-boardcard"><div class="lg-card-head"><h2>Draft board</h2>${st.picks.length ? '<button class="dr-ghost dr-export" data-export title="Download every pick so far as a spreadsheet">Download CSV</button>' : ''}</div>`
         + `${grid || '<div class="sc-empty"><b>No draft order yet</b><span>The board appears once the office sets the order.</span></div>'}</section>`;
@@ -222,7 +233,7 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
       return `<div class="dr-availwrap"><nav class="dr-sub" aria-label="Show">${[['players', 'Players'], ['queue', `My queue${qn ? ` (${qn})` : ''}`], ['auto', 'Auto-pick']].map(([k, l]) => `<button type="button" data-sub="${k}" aria-pressed="${sub === k}">${l}</button>`).join('')}</nav>
         <div class="dr-avail" data-sub="${sub}"><aside class="dr-side">${queuePanel()}${autoPanel()}</aside>
         <section class="lg-card dr-main"><div class="lg-card-head"><h2>Available players</h2><span class="dr-count">${free().length} left</span></div>${toolbar('avail')}
-        ${table('avail', shown, p => `<tr><td class="c-position">${esc(p.position)}</td><td class="c-name"><button class="dr-name" data-player="${esc(p.id)}">${esc(p.name)}</button></td><td class="c-number">${esc(p.number ?? '')}</td>${ratings(p)}
+        ${table('avail', shown, p => `<tr><td class="c-position pos-${esc(p.position)}">${esc(p.position)}</td><td class="c-name"><button class="dr-name" data-player="${esc(p.id)}">${esc(p.name)}</button></td><td class="c-number">${esc(p.number ?? '')}</td>${ratings(p)}
           <td class="c-act">${code ? `<button class="dr-b" data-add="${esc(p.id)}" aria-label="${q.has(p.id) ? 'In your queue' : `Add ${esc(p.name)} to your queue`}"${q.has(p.id) ? ' disabled' : ''}>${q.has(p.id) ? `${icon('check')}<span class="dr-bt">Queued</span>` : `${icon('plus')}<span class="dr-bt">Queue</span>`}</button>` : ''}${myTurn() ? `<button class="dr-b pick" data-pick="${esc(p.id)}"${blocked(p) ? ` disabled title="${esc(blocked(p))}"` : ''}>Pick</button>` : ''}</td></tr>`, 'No players match.')}</section></div></div>`;
     }
 

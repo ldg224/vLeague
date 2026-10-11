@@ -29,6 +29,7 @@ import { dismissPosts, restorePosts } from './prefs.js';
 import { loadReactions, setReaction } from './news-reactions.js';
 import { loadHistory, trophyUrl } from './history-data.js';
 import { mountDraft } from './draft.js';
+import { accentFor, isHex } from './club-colour.js';
 import { openDraft, phase as draftPhase } from './draft-data.js';
 import { db } from './auth.js';
 import { winChance, percents } from './match-model.js';
@@ -288,7 +289,7 @@ if (ctx) {
     paint(main, '<div class="lg-draft"></div>');
     const root = main.querySelector('.lg-draft');
     draftApi = null;
-    mountDraft(root, { club: ctx.club, season, sub, crest: (c, px) => sctx.crest(c, px), onGone: () => { frameApi?.setDraft({ visible: false, live: false }); if (current?.[0] === 'draft') location.replace('#overview'); } })
+    mountDraft(root, { club: ctx.club, season, sub, crest: (c, px) => sctx.crest(c, px), colourOf: (c, theme) => { const col = (clubRows?.get(c) || sctx.club(c))?.colour; return isHex(col) ? accentFor(col, theme) : ''; }, onGone: () => { frameApi?.setDraft({ visible: false, live: false }); if (current?.[0] === 'draft') location.replace('#overview'); } })
       .then(api => { if (current?.[0] === 'draft' && root.isConnected) draftApi = api; else api.unmount(); })
       .catch(() => { if (root.isConnected) root.innerHTML = '<section class="lg-card"><div class="lg-card-head"><h2>Draft</h2></div><div class="sc-empty"><b>The draft didn’t load</b><span>Check your connection and refresh the page.</span></div></section>'; });
   };
