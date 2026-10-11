@@ -64,9 +64,15 @@ export function statCard(card, ranked, ctx, { kind = 'player' } = {}) {
 // ---------- the full page ----------
 const list = names => (names.length < 2 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`);
 
+// The line under the sentence: how many matches the leader has played (a club: how many the club has). A tie shows the one number if they share it, else the range.
+function playedLine(tied) {
+  const n = tied.map(x => x.row.apps ?? x.row.p ?? 0), lo = Math.min(...n), hi = Math.max(...n);
+  return `${lo === hi ? lo : `${lo}–${hi}`} ${hi === 1 ? 'match' : 'matches'} played`;
+}
+
 // The banner in the leader's club colour: who leads, in a sentence that says what they lead at and, when a position is picked, in which position
 // ("Ryan Zane is the top rated midfielder, with an average rating of 7.7"). A tie at the top names everyone who shares it.
-function banner(card, ranked, ctx, kind, seasonLine, position = 'all') {
+function banner(card, ranked, ctx, kind, position = 'all') {
   if (!ranked.length) return '';
   const lead = ranked[0], tied = ranked.filter(x => x.rank === 1), club = ctx.club(clubOf(lead.row, kind));
   const value = format(lead.value, card), name = x => (kind === 'team' ? ctx.club(x.row.code)?.name || x.row.code : x.row.name);
@@ -80,7 +86,7 @@ function banner(card, ranked, ctx, kind, seasonLine, position = 'all') {
     sentence = `${word && !card.sayPos ? `Among ${word[1]}, ` : ''}<b>${esc(name(lead))}</b> ${esc(say)}`;
   }
   return `<div class="sp-banner" style="${clubStyle(club)}">${face(lead.row, ctx, kind, 56)}`
-    + `<div class="sp-says"><p>${sentence}</p><span>${esc(seasonLine)}</span></div></div>`;
+    + `<div class="sp-says"><p>${sentence}</p><span>${esc(playedLine(tied))}</span></div></div>`;
 }
 
 // The stat switcher: the stat's title as a button opening a menu of every stat of this kind, grouped like the cards.
@@ -92,8 +98,8 @@ function switcher(card, cards) {
     + `<div class="sp-menu" role="menu" hidden>${items}</div></div>`;
 }
 
-// opts: kind, title ('Player stats'), back ('#stats'), cards (all cards of this kind), position ('all' | 'FWD'...), seasonLine.
-export function statPage(card, ranked, ctx, { kind = 'player', title = 'Stats', back = '#stats', cards = [card], position = 'all', seasonLine = '' } = {}) {
+// opts: kind, title ('Player stats'), back ('#stats'), cards (all cards of this kind), position ('all' | 'FWD'...).
+export function statPage(card, ranked, ctx, { kind = 'player', title = 'Stats', back = '#stats', cards = [card], position = 'all' } = {}) {
   const pills = kind === 'player'
     ? `<nav class="sp-pills" aria-label="Position">${POSITIONS.map(([key, label]) => `<a href="${listAddress(card, key)}"${key === position ? ' aria-current="true"' : ''}>${esc(label)}</a>`).join('')}</nav>`
     : '';
@@ -107,7 +113,7 @@ export function statPage(card, ranked, ctx, { kind = 'player', title = 'Stats', 
     : (position !== 'all' ? empty(card, 'Nobody in this position qualifies yet.', 'No players to show') : empty(card));
   const note = card.note ? `<p class="sc-note">${esc(card.note)}</p>` : '';
   return `<div class="sp-top"><a class="sp-back" href="${esc(back)}" aria-label="Back">${BACK}</a><b>${esc(title)}</b></div>`
-    + banner(card, ranked, ctx, kind, seasonLine, position)
+    + banner(card, ranked, ctx, kind, position)
     + `<section class="lg-card sc sc-list" aria-label="${esc(card.title)}">${switcher(card, cards)}${note}${pills}${rows}</section>`;
 }
 

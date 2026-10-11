@@ -112,7 +112,6 @@ if (ctx) {
       const [kind, c] = found, rows = kind === 'team' ? data.teams : data.players;
       return statPage(c, rank(kind === 'team' || position === 'all' ? rows : rows.filter(r => r.pos === position), c), sctx, {
         kind, title: kind === 'team' ? 'Team stats' : 'Player stats', back: '#stats', cards: KINDS[kind], position,
-        seasonLine: `${played().length} ${played().length === 1 ? 'match' : 'matches'} played`,   // (no "vLeague · Season 1": everyone knows that)
       });
     }
     const note = demo != null ? `<p class="sc-demo"><b>Demo data</b> ${realClubs ? 'Real clubs and kits, made-up players and results' : 'Made-up clubs, players and results'}, ${demo} ${demo === 1 ? 'round' : 'rounds'} (try <code>demo=0</code> to <code>demo=6</code>). Not real.</p>` : '';
