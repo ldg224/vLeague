@@ -82,7 +82,8 @@ if (ctx) {
       <section class="lg-card club-head" aria-label="${esc(club.name)}"><span class="club-hollow" aria-hidden="true">${esc(club.short_name || club.name)}</span>
         <img class="club-crest" src="${esc(crest)}" alt="" onerror="this.remove()">
         <div class="club-name"><h1>${esc(club.name)}</h1>
-          ${club.motto ? `<p class="club-motto">${esc(club.motto)}</p>` : ''}<p class="club-meta">${[manager && `Manager <b>${esc(manager)}</b>`, club.stadium && `Ground <b>${esc(club.stadium)}</b>`].filter(Boolean).map(x => `<span>${x}</span>`).join('')}</p></div>
+          ${club.motto ? `<p class="club-motto">${esc(club.motto)}</p>` : ''}<p class="club-meta">${[manager && `Manager <b>${esc(manager)}</b>`, club.stadium && `Ground <b>${esc(club.stadium)}</b>`].filter(Boolean).map(x => `<span>${x}</span>`).join('')}</p>
+          <p class="club-meta club-stand" id="club-stand"></p></div>
         <nav class="club-acts" aria-label="Club pages"><a href="team.html?c=${esc(club.code)}">Team page</a><a href="kits.html">Kits</a><a href="setup.html?edit">Edit club</a></nav>
       </section>
       <div class="club-tabs sc-toggle" role="tablist" aria-label="My club">
@@ -180,158 +181,99 @@ async function teamSheet(box, { club, squad, userId, season }) {
   let picking = false, pickWeek = null, subBusy = false, subMsg = '';
 
   box.innerHTML = `<div class="ts">
-    <section class="lg-card ts-ticket" aria-label="Your next match">
-      <div class="ts-match" id="match"></div>
-      <div class="ts-stub">
-        <p class="ts-deadline" id="deadline"></p>
-        ${subRes.error ? '' : '<div class="ts-submit" id="submit"></div>'}
-        <div class="ts-save" id="save" aria-live="polite"></div>
-      </div>
-    </section>
-    <div class="ts-view" id="ts-over">
-      <section class="lg-card ov-check" id="ov-check" aria-label="Team sheet check"></section>
-      <div class="ts-grid">
-        <section class="lg-card ts-over-left" aria-label="Line-up">
-          <div class="lg-card-head"><h2>Line-up</h2><button type="button" class="ov-edit" data-view="edit">Edit team sheet</button></div>
-          <div class="ov-pills sc-toggle" role="group" aria-label="Show on the pitch">${[['pos', 'Position'], ['att', 'Attack'], ['def', 'Defence'], ['form', 'Rating']].map(([k, n]) => `<button type="button" data-pv="${k}" aria-pressed="${k === 'pos'}">${n}</button>`).join('')}</div>
-          <div id="pitch-ro" class="ts-pitch"></div>
-          <div class="ov-rows" id="ov-takers"></div>
-        </section>
-        <div class="ts-over-right" id="ov-cards"></div>
-      </div>
+    <div class="ts-grid">
+      <section class="lg-card ts-form" aria-label="Team sheet">
+        <div class="lg-card-head"><h2>Team sheet</h2><p class="ts-deadline" id="deadline"></p></div>
+        <ul class="fm-rows" id="fm-rows"></ul>
+        <div class="fm-foot">
+          ${subRes.error ? '' : '<div class="ts-submit" id="submit"></div>'}
+          <div class="ts-save" id="save" aria-live="polite"></div>
+        </div>
+      </section>
+      <div class="ts-over-right" id="ov-cards"></div>
     </div>
-    <div class="ts-view" id="ts-edit" hidden>
-      <div class="ts-editbar"><button type="button" class="link-btn" data-view="over">Back to overview</button><h2>Team sheet</h2></div>
-      <div class="ts-grid ts-edit-grid">
-        <section class="lg-card ts-left" aria-label="Line-up editor">
+    <div id="locked"></div>
+
+    <dialog autofocus tabindex="-1" class="dlg dlg-wide" id="dlg-lineup" aria-labelledby="dlg-lineup-t">
+      <div class="dlg-head"><h2 id="dlg-lineup-t">Starting XI</h2><button type="button" class="dlg-done" data-close>Done</button></div>
+      <div class="dlg-body dlg-edit">
+        <div class="dlg-pitch">
           <div class="formations sc-toggle" role="radiogroup" aria-label="Formation">${Object.keys(FORMATIONS).map(f => `<button type="button" role="radio" data-f="${f}">${f}</button>`).join('')}</div>
           <div id="pitch" class="ts-pitch"></div>
           <p class="ts-pick" id="pick" hidden></p>
           <div class="ts-clear" id="clear"></div>
-        </section>
-        <section class="lg-card ts-panel" aria-label="Team details">
-          <div class="ts-tabs sc-toggle" role="tablist" aria-label="Team details">${[['players', 'Players'], ['pieces', 'Set pieces'], ['kit', 'Kit'], ['tactics', 'Tactics']].map(([k, n], i) => `<button type="button" role="tab" id="pt-${k}" data-ptab="${k}" aria-controls="pp-${k}" aria-selected="${i === 0}" aria-pressed="${i === 0}"${i ? ' tabindex="-1"' : ''}>${n}</button>`).join('')}</div>
-          <div class="pls-sect" id="pp-players" role="tabpanel" aria-labelledby="pt-players"><div class="sect-head"><h2 id="pls-title">Players</h2><button type="button" class="link-btn pls-close" data-cancel>Cancel</button></div><ul class="pls" id="players"></ul></div>
-          <div id="pp-pieces" role="tabpanel" aria-labelledby="pt-pieces" hidden><div class="pieces" id="pieces"></div></div>
-          <div id="pp-kit" role="tabpanel" aria-labelledby="pt-kit" hidden><div id="kitpick"></div><p class="ts-more"><a class="link-btn" href="kits.html">Design kits</a></p></div>
-          <div id="pp-tactics" role="tabpanel" aria-labelledby="pt-tactics" hidden><div id="tactics"></div></div>
-        </section>
+        </div>
+        <div class="pls-sect" id="pp-players"><div class="sect-head"><h2 id="pls-title">Players</h2><button type="button" class="link-btn pls-close" data-cancel>Cancel</button></div><ul class="pls" id="players"></ul></div>
       </div>
-    </div>
-    <div id="locked"></div>
+    </dialog>
+    <dialog autofocus tabindex="-1" class="dlg" id="dlg-piece" aria-labelledby="dlg-piece-t">
+      <div class="dlg-head"><h2 id="dlg-piece-t">Captain</h2><button type="button" class="dlg-done" data-close>Cancel</button></div>
+      <div class="dlg-body"><ul class="pk" id="piece-list"></ul></div>
+    </dialog>
+    <dialog autofocus tabindex="-1" class="dlg" id="dlg-tactics" aria-labelledby="dlg-tactics-t">
+      <div class="dlg-head"><h2 id="dlg-tactics-t">Tactics</h2><button type="button" class="dlg-done" data-close>Done</button></div>
+      <div class="dlg-body" id="tactics"></div>
+    </dialog>
+    <dialog autofocus tabindex="-1" class="dlg" id="dlg-kit" aria-labelledby="dlg-kit-t">
+      <div class="dlg-head"><h2 id="dlg-kit-t">Kit</h2><button type="button" class="dlg-done" data-close>Done</button></div>
+      <div class="dlg-body"><div id="kitpick"></div><p class="ts-more"><a class="link-btn" href="kits.html">Design kits</a></p></div>
+    </dialog>
   </div>`;
 
-  // Overview or the editor. The editor is the same page with the overview put away (the address ends #edit).
-  function showView(v, slot) {
-    const edit = v === 'edit';
-    $('#ts-over', box).hidden = edit; $('#ts-edit', box).hidden = !edit;
-    box.querySelector('.ts').classList.toggle('editing', edit);
-    if (edit) { sel = slot ? { slot } : null; redraw(); } else drawOver();
-    history.replaceState(null, '', edit ? '#edit' : location.pathname + location.search);
-    scrollTo({ top: 0 });
-  }
-
-  // The panel beside the pitch: one card, four tabs. Picking a spot on the pitch brings the players back.
-  function showPanel(k) {
-    for (const t of box.querySelectorAll('[data-ptab]')) {
-      const on = t.dataset.ptab === k;
-      t.setAttribute('aria-selected', on); t.setAttribute('aria-pressed', on); t.tabIndex = on ? 0 : -1;
-      $(`#pp-${t.dataset.ptab}`, box).hidden = !on;
-    }
-  }
-
-  // ----- the overview (read only) -----
+  // ----- the club's information (shown once) -----
 
   const hiddenIds = new Set((season.fixtures || []).filter(f => spoilerHidden(f, season)).map(f => f.id));
   const ordinal = n => `${n}${[, 'st', 'nd', 'rd'][(n % 100 >> 3) ^ 1 && n % 10] || 'th'}`;
-  const chipsOf = form => (form.length ? `<span class="tb-form" role="img" aria-label="Last ${form.length}: ${form.join(', ')}">${form.map((o, i) => `<abbr class="res-${o}${i === form.length - 1 ? ' is-latest' : ''}" title="${o}">${o}</abbr>`).join('')}</span>` : '<span class="ov-none">No results yet</span>');
+  const chipsOf = form => (form.length ? `<span class="tb-form" role="img" aria-label="Last ${form.length}: ${form.join(', ')}">${form.map((o, i) => `<abbr class="res-${o}${i === form.length - 1 ? ' is-latest' : ''}" title="${o}">${o}</abbr>`).join('')}</span>` : '');
   function fixtureRow(f, now) {
     const home = f.home === club.code, opp = home ? f.away : f.home, k = kickoff(f), st = status(f, season, now), done = st === 'ft' && f.result;
     const mine = done ? (home ? f.result.home : f.result.away) : null, theirs = done ? (home ? f.result.away : f.result.home) : null;
-    const hide = done && hiddenIds.has(f.id);
-    const right = done ? (hide ? '<span class="ov-hidden">Hidden</span>' : `<span class="ov-score res-${mine > theirs ? 'W' : mine < theirs ? 'L' : 'D'}">${mine}–${theirs}</span>`) : st === 'live' ? '<span class="ov-live">Live</span>' : `<span class="ov-when">${k ? esc(when(k, now)) : 'TBC'}</span>`;
+    const right = done ? (hiddenIds.has(f.id) ? '<span class="ov-hidden">Hidden</span>' : `<span class="ov-score res-${mine > theirs ? 'W' : mine < theirs ? 'L' : 'D'}">${mine}–${theirs}</span>`) : st === 'live' ? '<span class="ov-live">Live</span>' : `<span class="ov-when">${k ? esc(when(k, now)) : 'TBC'}</span>`;
     return `<a class="ov-fx" href="${esc(matchUrl(f))}"><img src="${esc(crestOf(opp))}" alt="" width="24" height="24" onerror="this.style.visibility='hidden'"><span class="ov-fx-name"><b>${esc(teamName(opp))}</b><small>${home ? 'Home' : 'Away'}${f.round ? ` · ${esc(f.round)}` : ''}</small></span>${right}</a>`;
   }
-  let pv = 'pos';   // what the overview pitch shows in each disc
-  const seenTotals = () => totals(hiddenIds.size ? { ...season, fixtures: season.fixtures.map(f => (hiddenIds.has(f.id) ? { ...f, result: null } : f)) } : season);
-  function drawOverPitch() {
-    const el = $('#pitch-ro', box); if (!el) return;
-    renderPitch(el, { ...sheet, players: squad, editable: true, onSlot: slot => showView('edit', slot) });
-    if (pv !== 'pos') {
-      const tot = pv === 'form' ? seenTotals() : null;
-      for (const b of el.querySelectorAll('.pt-slot[data-slot]')) {
-        const id = sheet.lineup[b.dataset.slot], pl = id != null && byId.get(String(id)), disc = b.querySelector('.pt-disc');
-        if (!pl || !disc?.firstChild) continue;
-        const t = tot?.[String(pl.id)];
-        disc.firstChild.textContent = pv === 'att' ? pl.offense : pv === 'def' ? pl.defense : t?.apps ? rating(t.rsum / t.apps) : '–';
-      }
-    }
-    for (const b of box.querySelectorAll('[data-pv]')) b.setAttribute('aria-pressed', b.dataset.pv === pv);
-  }
-
-  // What is wrong with the sheet, each with a one-tap way to put it right.
-  function checks() {
-    const slots = Object.keys(FORMATIONS[sheet.formation]), items = [];
-    const empty = slots.filter(sl => !sheet.lineup[sl]);
-    if (empty.length) items.push({ text: `${empty.length} spot${empty.length === 1 ? '' : 's'} empty in the XI`, fix: 'fill', label: 'Fill best available' });
-    for (const sl of slots) {
-      const pl = sheet.lineup[sl] && byId.get(String(sheet.lineup[sl]));
-      if (pl && pl.position !== wantOf(sl)) items.push({ text: `${pl.name} is a ${(POS_NAME[pl.position] || pl.position).toLowerCase()} playing ${sl}`, fix: `slot:${sl}`, label: 'Change' });
-    }
-    const unset = PIECES.filter(([k]) => !sheet[k]).map(([, n]) => n.toLowerCase());
-    if (unset.length) items.push({ text: `${unset.join(', ').replace(/^./, c => c.toUpperCase())} not set`, fix: 'pieces', label: 'Pick for me' });
-    return items;
-  }
-  function drawCheck() {
-    const items = checks(), el = $('#ov-check', box);
-    el.className = `lg-card ov-check${items.length ? '' : ' is-ok'}`;
-    el.innerHTML = items.length
-      ? `<p class="ov-check-head"><b>${items.length} thing${items.length === 1 ? '' : 's'} to fix</b> before this team sheet is ready</p>${items.map(i => `<div class="ov-check-row"><span>${esc(i.text)}</span><button type="button" class="ov-fix" data-fix="${esc(i.fix)}">${esc(i.label)}</button></div>`).join('')}`
-      : '<p class="ov-check-head"><b>Ready</b> Eleven players, positions fit, captain and set pieces picked.</p>';
-  }
-
-  // Your XI against the best XI the next opponent could pick, on attack and defence (the players' own ratings).
-  const mean = a => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0);
-  const strength = xi => ({ att: mean(xi.filter(p => p.position !== 'GK').map(p => Number(p.offense) || 0)), def: mean(xi.map(p => Number(p.defense) || 0)) });
-  function matchupCard(rows, now) {
-    const next = upcoming(now)[0]; if (!next) return '';
-    const opp = next.fx.home === club.code ? next.fx.away : next.fx.home;
-    const theirs = (season.players || []).filter(p => p.team === opp);
-    if (theirs.length < 7) return '';
-    const tById = new Map(theirs.map(p => [String(p.id), p]));
-    const you = strength(Object.values(sheet.lineup).map(id => byId.get(String(id))).filter(Boolean));
-    const them = strength(Object.values(autoLineup(DEFAULT_FORMATION, theirs)).map(id => tById.get(String(id))).filter(Boolean));
-    const cmp = d => (d > 0.3 ? 'ahead' : d < -0.3 ? 'behind' : 'level');
-    const bar = (k, label) => `<div class="mu-row"><span>${label}</span><div class="mu-bars"><i class="me" style="--w:${Math.min(100, you[k] * 10)}%"></i><i style="--w:${Math.min(100, them[k] * 10)}%"></i></div><b>${you[k].toFixed(1)}<small>${them[k].toFixed(1)}</small></b></div>`;
-    const row = rows.find(r => r.team.code === opp);
-    return `<section class="lg-card ov-mu" aria-label="Matchup"><div class="lg-card-head"><h2>Matchup</h2><span class="club-count">v ${esc(teamName(opp))}</span></div>
-      ${bar('att', 'Attack')}${bar('def', 'Defence')}
-      <p class="mu-line">You’re <b>${cmp(you.att - them.att)}</b> in attack and <b>${cmp(you.def - them.def)}</b> in defence, against their best XI.</p>
-      ${row ? `<div class="ov-rows"><div class="ov-row"><span>Their position</span><b>${ordinal(row.rank)} of ${rows.length}</b></div><div class="ov-row"><span>Their form</span>${chipsOf(row.form)}</div></div>` : ''}</section>`;
-  }
-
-  function drawOver(now = new Date()) {
-    drawOverPitch(); drawCheck();
-    const name = id => (id != null && byId.get(String(id))?.name) || 'Not set';
-    const preset = Object.keys(PRESETS).find(n => TACTICS.every(t => PRESETS[n][t.key] === sheet.tactics[t.key])) || 'Custom';
-    const kitLabel = sheet.kit && kitsMade[sheet.kit] ? kitName(sheet.kit, kitsMade[sheet.kit]) : 'Automatic';
-    $('#ov-takers', box).innerHTML = [['Formation', sheet.formation], ['Captain', name(sheet.captain)], ['Penalties', name(sheet.penalties)], ['Free kicks', name(sheet.freekicks)], ['Corners', name(sheet.corners)], ['Tactics', preset], ['Kit', kitLabel]]
-      .map(([k, v]) => `<div class="ov-row"><span>${k}</span><b>${esc(v)}</b></div>`).join('');
-    // Where the club stands, its games and its best players.
+  function drawInfo(now = new Date()) {
     const rows = tableRows(season, { hidden: hiddenIds, now }), me = rows.find(r => r.team.code === club.code);
-    const stand = me ? `<div class="ov-rows"><div class="ov-row"><span>Position</span><b>${ordinal(me.rank)} of ${rows.length}</b></div><div class="ov-row"><span>Points</span><b>${me.pts}</b></div>
-      <div class="ov-row"><span>Played</span><b>${me.p}<small>${me.w}W ${me.d}D ${me.l}L</small></b></div><div class="ov-row"><span>Goals</span><b>${me.gf}–${me.ga}<small>${me.gd > 0 ? '+' : ''}${me.gd}</small></b></div>
-      <div class="ov-row"><span>Form</span>${chipsOf(me.form)}</div></div>` : '<p class="quiet">The table will appear once the season has teams.</p>';
+    const stand = $('#club-stand');
+    if (me && stand) stand.innerHTML = [`Position <b>${ordinal(me.rank)}</b>`, `Points <b>${me.pts}</b>`, `Played <b>${me.p}</b> (${me.w}W ${me.d}D ${me.l}L)`, me.form.length ? `Form ${chipsOf(me.form)}` : ''].filter(Boolean).map(x => `<span>${x}</span>`).join('');
     const mineFx = (season.fixtures || []).filter(f => !f.test && !f.postponed && kickoff(f) && (f.home === club.code || f.away === club.code)).sort((a, b) => kickoff(a) - kickoff(b));
     const past = mineFx.filter(f => status(f, season, now) === 'ft' && f.result).slice(-3).reverse(), next = mineFx.filter(f => status(f, season, now) !== 'ft').slice(0, 3);
     const games = [...next, ...past].map(f => fixtureRow(f, now)).join('') || '<p class="quiet">No matches yet.</p>';
-    const seen = hiddenIds.size ? { ...season, fixtures: season.fixtures.map(f => (hiddenIds.has(f.id) ? { ...f, result: null } : f)) } : season;
-    const tot = totals(seen);
+    const tot = totals(hiddenIds.size ? { ...season, fixtures: season.fixtures.map(f => (hiddenIds.has(f.id) ? { ...f, result: null } : f)) } : season);
     const best = squad.map(p => ({ p, t: tot[String(p.id)] })).filter(x => x.t?.apps).sort((a, b) => b.t.rsum / b.t.apps - a.t.rsum / a.t.apps).slice(0, 3);
     const top = best.length ? best.map(({ p, t }) => `<div class="ov-row"><span class="ov-pl"><i class="pos-${esc(p.position)}">${esc(p.position)}</i>${esc(p.name)}</span><b>${rating(t.rsum / t.apps)}<small>${t.g} G · ${t.a} A</small></b></div>`).join('') : '<p class="quiet">No matches played yet.</p>';
-    $('#ov-cards', box).innerHTML = `${matchupCard(rows, now)}<section class="lg-card" aria-label="Standing"><div class="lg-card-head"><h2>Standing</h2></div>${stand}</section>
-      <section class="lg-card ov-games" aria-label="Matches"><div class="lg-card-head"><h2>Matches</h2></div>${games}</section>
-      <section class="lg-card" aria-label="Best players"><div class="lg-card-head"><h2>Best rated</h2></div><div class="ov-rows">${top}</div></section>`;
+    $('#ov-cards', box).innerHTML = `<section class="lg-card ov-games" aria-label="Matches"><div class="lg-card-head"><h2>Matches</h2></div>${games}</section>
+      <section class="lg-card" aria-label="Best rated"><div class="lg-card-head"><h2>Best rated</h2></div><div class="ov-rows">${top}</div></section>`;
+  }
+
+  // ----- the form: one row per thing to fill in; a row opens its menu -----
+
+  const dlg = id => $(`#dlg-${id}`, box);
+  const openDlg = id => { const d = dlg(id); if (d && !d.open) d.showModal(); };
+  let pieceKey = null;
+  const nameOf = id => (id != null && byId.get(String(id))?.name) || '';
+  function drawForm() {
+    const slots = Object.keys(FORMATIONS[sheet.formation]), n = filled();
+    const oop = slots.filter(sl => sheet.lineup[sl] && byId.get(String(sheet.lineup[sl])) && byId.get(String(sheet.lineup[sl])).position !== wantOf(sl)).length;
+    const preset = Object.keys(PRESETS).find(k => TACTICS.every(t => PRESETS[k][t.key] === sheet.tactics[t.key])) || 'Custom';
+    const kitLabel = sheet.kit && kitsMade[sheet.kit] ? kitName(sheet.kit, kitsMade[sheet.kit]) : 'Automatic';
+    const rows = [
+      ['lineup', 'Starting XI', `${n} of ${slots.length} · ${sheet.formation}${oop ? ` · ${oop} out of position` : ''}`, n === slots.length],
+      ...PIECES.map(([k, label]) => [`piece:${k}`, label, nameOf(sheet[k]) || 'Not set', Boolean(sheet[k])]),
+      ['tactics', 'Tactics', preset, true],
+      ['kit', 'Kit', kitLabel, true],
+    ];
+    $('#fm-rows', box).innerHTML = rows.map(([k, label, v, ok]) => `<li><button type="button" class="fm-row" data-open="${esc(k)}"><i class="fm-dot${ok ? ' ok' : ''}" aria-hidden="true"></i><span class="fm-k">${esc(label)}</span><span class="fm-v${ok ? '' : ' todo'}">${esc(v)}</span></button></li>`).join('');
+  }
+  function drawPieceList() {
+    const label = PIECES.find(([k]) => k === pieceKey)?.[1] || '';
+    $('#dlg-piece-t', box).textContent = label;
+    const xi = Object.keys(FORMATIONS[sheet.formation]).map(slot => ({ slot, p: byId.get(String(sheet.lineup[slot])) })).filter(x => x.p);
+    $('#piece-list', box).innerHTML = [`<li><button type="button" class="pk-row" data-set="" aria-pressed="${!sheet[pieceKey]}"><span class="pk-name">Not set</span></button></li>`,
+      ...xi.map(({ slot, p }) => `<li><button type="button" class="pk-row" data-set="${esc(p.id)}" aria-pressed="${String(sheet[pieceKey]) === String(p.id)}"><span class="pk-pos pos-${esc(p.position)}">${esc(p.position)}</span><span class="pk-name">${esc(p.name)}<small>${esc(slot)}</small></span></button></li>`)].join('');
+  }
+  for (const d of box.querySelectorAll('dialog')) {
+    d.addEventListener('close', () => { sel = null; redraw(); });
+    d.addEventListener('click', e => { if (e.target === d) d.close(); });   // a tap on the dim area
   }
 
   // ----- drawing -----
@@ -345,7 +287,6 @@ async function teamSheet(box, { club, squad, userId, season }) {
     const pick = $('#pick', box), p = sel?.player && byId.get(sel.player);
     pick.hidden = !sel;
     box.querySelector('.ts').classList.toggle('picking', Boolean(sel?.slot));
-    if (sel?.slot) showPanel('players');
     $('#pls-title', box).textContent = sel?.slot ? `Pick for ${sel.slot}` : 'Players';
     if (sel) pick.innerHTML = `<span>${sel.slot ? `Pick a player for <b>${esc(sel.slot)}</b>` : `Pick a place for <b>${esc(p?.name || '')}</b>`}</span><button type="button" class="link-btn" data-cancel>Cancel</button>`;
   }
@@ -369,12 +310,6 @@ async function teamSheet(box, { club, squad, userId, season }) {
         <span class="pl-rts"><span class="rt rt-${Number(p.offense) || 5}" title="Attack">${esc(p.offense)}</span><span class="rt rt-${Number(p.defense) || 5}" title="Defence">${esc(p.defense)}</span></span>
         <span class="pl-slot${off ? ' off' : ''}"${off ? ` title="Out of position"` : ''}>${slot ? esc(slot) : 'Bench'}</span></button></li>`;
     }).join('');
-  }
-
-  function drawPieces() {
-    const xi = Object.keys(FORMATIONS[sheet.formation]).map(slot => ({ slot, p: byId.get(sheet.lineup[slot]) })).filter(x => x.p);
-    $('#pieces', box).innerHTML = PIECES.map(([key, label]) => `<label class="piece"><span>${label}</span>
-      <span class="piece-sel"><select data-piece="${key}"><option value="">Not set</option>${xi.map(({ slot, p }) => `<option value="${esc(p.id)}"${String(sheet[key]) === String(p.id) ? ' selected' : ''}>${esc(p.name)} (${esc(slot)})</option>`).join('')}</select>${CHEV}</span></label>`).join('');
   }
 
   // Which kit the team wears (S-23): automatic, or one of the club's own kits, each shown by the name the club gave it.
@@ -412,17 +347,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
 
   const wk = w => season?.rounds?.[w]?.label || `Week ${w}`;
 
-  // The matchday ticket: your club against the next opponent, the round and kick-off, and how long until the sheet locks.
   const crestOf = code => (code === club.code && club.crest_path ? crestUrl(club.crest_path) : logoUrl(code));
-  function drawMatch(now = new Date()) {
-    const el = $('#match', box); if (!el) return;
-    const next = upcoming(now)[0];
-    if (!next) { el.innerHTML = '<p class="ts-nomatch">No match to pick a team for yet.</p>'; return; }
-    const home = next.fx.home === club.code, opp = home ? next.fx.away : next.fx.home, k = kickoff(next.fx);
-    const side = (code, name, mine) => `<div class="tm-side${mine ? ' mine' : ''}"><img class="tm-crest" src="${esc(crestOf(code))}" alt="" onerror="this.style.visibility='hidden'"><b>${esc(name)}</b><small>${mine ? 'You' : home ? 'Away' : 'Home'}</small></div>`;
-    const sides = [side(club.code, club.short_name || club.name, true), side(opp, teamName(opp), false)];
-    el.innerHTML = `<p class="tm-round">${esc(wk(next.week))}</p><div class="tm-row">${home ? sides[0] : sides[1]}<div class="tm-mid"><span class="tm-v">v</span>${k ? `<span class="tm-when">${esc(when(k, now))}</span>` : ''}</div>${home ? sides[1] : sides[0]}</div>`;
-  }
 
   function drawDeadline(now = new Date()) {
     const next = deadlines.find(d => new Date(d.locks_at) > now), el = $('#deadline', box);
@@ -430,7 +355,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
     const at = new Date(next.locks_at), m = Math.ceil((at - now) / 60000), d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60);
     const count = d ? `${d} d ${h} h` : h ? `${h} h ${m % 60} min` : `${m} min`;
     el.className = `ts-deadline${m < 1440 ? ' soon' : ''}`;
-    el.innerHTML = `<span>Team sheet locks ${esc(when(at, now))}</span><b>${esc(count)}</b>`;
+    el.innerHTML = `<span>Locks ${esc(when(at, now))}</span><b>${esc(count)}</b>`;
   }
 
   // The last week that locked: the sheet the database copied for it (or why there's none).
@@ -515,7 +440,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
     sheet.bench = benchOf(sheet.lineup, squad);
     if (state === 'saving') { again = true; return; }
     state = saved && JSON.stringify(sheet) === saved ? 'saved' : 'dirty';
-    drawSave(); if (!picking) drawSubmit(); drawOver();
+    drawSave(); if (!picking) drawSubmit(); drawForm();
     clearTimeout(timer);
     if (state === 'dirty') timer = setTimeout(save, 1200);
   }
@@ -546,7 +471,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   }
 
   function redraw(focus) {
-    drawPitch(); drawPlayers(); drawPieces(); drawKit(); drawClear();
+    drawPitch(); drawPlayers(); drawKit(); drawClear(); drawForm();
     box.querySelector(focus)?.focus();
   }
 
@@ -560,6 +485,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
       sel = null; changed();
     } else sel = { slot };
     redraw(`.pt-slot[data-slot="${slot}"]`);
+    if (sel?.slot && narrow()) $('#pp-players', box).scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   // DRAG AND DROP (S-01): drag a player from the list or a pitch spot onto a spot to place or swap them,
@@ -569,7 +495,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   box.addEventListener('pointerdown', e => {
     if (e.button !== 0) return;
     const from = e.target.closest('.pl, .pt-slot[data-slot]:not(.empty)');
-    if (!from || !box.contains(from) || from.closest('#ts-over')) return;
+    if (!from || !box.contains(from)) return;
     const slot = from.dataset.slot || null, id = slot ? sheet.lineup[slot] : from.dataset.id;
     if (!id) return;
     // By touch, the player list still scrolls: a drag from it starts with a short hold.
@@ -585,7 +511,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
       box.querySelector('.held')?.classList.remove('held');
       const p = byId.get(drag.id);
       drag.ghost = Object.assign(document.createElement('div'), { className: 'ts-ghost', textContent: p?.name || '' });
-      document.body.append(drag.ghost); box.classList.add('dragging');
+      (box.querySelector('dialog[open]') || document.body).append(drag.ghost); box.classList.add('dragging');
       try { e.target.releasePointerCapture?.(e.pointerId); } catch {}
     }
     e.preventDefault();
@@ -603,7 +529,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
     const EDGE = 50, step = () => {
       if (drag !== d || !d.ghost) { d.scroller = null; return; }
       const h = innerHeight, v = d.cy < EDGE ? -(EDGE - d.cy) : d.cy > h - EDGE ? EDGE - (h - d.cy) : 0;
-      if (v) { scrollBy(0, Math.round(v / 3)); hover(); }
+      if (v) { (box.querySelector('dialog[open] .dlg-body') || window).scrollBy(0, Math.round(v / 3)); hover(); }
       d.scroller = requestAnimationFrame(step);
     };
     d.scroller = requestAnimationFrame(step);
@@ -634,20 +560,18 @@ async function teamSheet(box, { club, squad, userId, season }) {
 
   box.addEventListener('click', e => {
     const t = e.target;
-    const pvb = t.closest('[data-pv]');
-    if (pvb) { pv = pvb.dataset.pv; drawOverPitch(); return; }
-    const fx = t.closest('[data-fix]');
-    if (fx) {
-      const k = fx.dataset.fix;
-      if (k === 'fill') { sheet.lineup = fillLineup(sheet.formation, squad, sheet.lineup); changed(); redraw(); }
-      else if (k === 'pieces') { const keep = Object.fromEntries(PIECES.map(([n]) => [n, sheet[n]])); suggestPieces(sheet, byId); for (const [n, v] of Object.entries(keep)) if (v) sheet[n] = v; changed(); drawPieces(); }
-      else if (k.startsWith('slot:')) showView('edit', k.slice(5));
+    const op = t.closest('[data-open]');
+    if (op) {
+      const k = op.dataset.open;
+      if (k === 'lineup') { sel = null; redraw(); openDlg('lineup'); }
+      else if (k.startsWith('piece:')) { pieceKey = k.slice(6); drawPieceList(); openDlg('piece'); }
+      else if (k === 'tactics') { drawTactics(); openDlg('tactics'); }
+      else if (k === 'kit') { drawKit(); openDlg('kit'); }
       return;
     }
-    const vw = t.closest('[data-view]');
-    if (vw) { showView(vw.dataset.view); return; }
-    const pt = t.closest('[data-ptab]');
-    if (pt) { showPanel(pt.dataset.ptab); return; }
+    if (t.closest('[data-close]')) { t.closest('dialog').close(); return; }
+    const st0 = t.closest('[data-set]');
+    if (st0) { sheet[pieceKey] = st0.dataset.set || null; changed(); t.closest('dialog').close(); return; }
     const f = t.closest('[data-f]'), pl = t.closest('.pl'), pr = t.closest('[data-preset]'), st = t.closest('[data-tac]');
     if (f) {
       if (f.dataset.f === sheet.formation) return;
@@ -655,11 +579,11 @@ async function teamSheet(box, { club, squad, userId, season }) {
       sheet.formation = f.dataset.f; sel = null;
       changed(); redraw(`[data-f="${f.dataset.f}"]`);
     } else if (pl) {
-      const id = pl.dataset.id;
-      if (sel?.slot) { place(sel.slot, id); sel = null; changed(); }
+      const id = pl.dataset.id, hadSlot = Boolean(sel?.slot);
+      if (hadSlot) { place(sel.slot, id); sel = null; changed(); }
       else sel = sel?.player === id ? null : { player: id };
       redraw(`.pl[data-id="${id}"]`);
-      if (sel?.player && narrow()) $('#pitch', box).scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if ((sel?.player || hadSlot) && narrow()) $('#pitch', box).scrollIntoView({ behavior: 'smooth', block: 'center' });
     } else if (t.closest('[data-cancel]')) { sel = null; redraw(); }
     else if (pr) { sheet.tactics = { ...PRESETS[pr.dataset.preset] }; changed(); drawTactics(); box.querySelector(`[data-preset="${pr.dataset.preset}"]`)?.focus(); }
     else if (st) { sheet.tactics[st.dataset.tac] = Number(st.dataset.v); changed(); drawTactics(); box.querySelector(`[data-tac="${st.dataset.tac}"][data-v="${st.dataset.v}"]`)?.focus(); }
@@ -679,23 +603,14 @@ async function teamSheet(box, { club, squad, userId, season }) {
     else if (t.closest('[data-sub-go]')) submitFor(pickWeek);
     else if (t.closest('[data-withdraw]')) { e.preventDefault(); withdraw(Number(t.closest('[data-withdraw]').dataset.withdraw)); }
   });
-  box.addEventListener('keydown', e => {
-    const t = e.target.closest?.('[data-ptab]');
-    if (!t || !['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
-    const all = [...box.querySelectorAll('[data-ptab]')], n = all[(all.indexOf(t) + (e.key === 'ArrowRight' ? 1 : all.length - 1)) % all.length];
-    showPanel(n.dataset.ptab); n.focus();
-  });
   box.addEventListener('change', e => {
     if (e.target.name === 'sub-week') { pickWeek = Number(e.target.value); drawSubmit(); $('#submit input[name="sub-week"]:checked', box)?.focus(); return; }
-    const s = e.target.closest('[data-piece]');
-    if (s) { sheet[s.dataset.piece] = s.value || null; changed(); drawPitch(); }
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && sel) { sel = null; redraw(); } });
   // Leaving the page: send what's waiting rather than lose it.
   document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'dirty') save(); });
 
-  drawPitch(); drawPlayers(); drawPieces(); drawKit(); drawClear(); drawTactics(); drawSave(); drawMatch(); drawDeadline(); drawLocked(); drawSubmit(); drawOver();
-  if (location.hash === '#edit') showView('edit');
+  drawPitch(); drawPlayers(); drawKit(); drawClear(); drawTactics(); drawSave(); drawDeadline(); drawLocked(); drawSubmit(); drawForm(); drawInfo();
   if (state === 'new') save();
 
   // The deadline counts down; once one passes, read the deadlines again until the database has locked that week.
@@ -706,6 +621,6 @@ async function teamSheet(box, { club, squad, userId, season }) {
       const r = await ok(c.from('deadlines').select('*').order('locks_at'));
       if (!r.error) deadlines = r.data || [];
     }
-    drawMatch(now); drawDeadline(now); drawLocked(now); if (!picking) drawSubmit(now);
+    drawDeadline(now); drawLocked(now); if (!picking) drawSubmit(now);
   }, 30000);
 }
