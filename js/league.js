@@ -20,6 +20,7 @@ import { paint, quietly } from './paint.js';
 import { spoilerHidden, revealScore, fmtTime } from './prefs.js';
 import { fixturesView, parseSub, roundWidget, rounds } from './league-fixtures.js';
 import { teamOfWeekCard } from './team-of-week.js';
+import { loadPlayers } from './players-data.js';
 import { winChance, percents } from './match-model.js';
 import { VERSION } from './version.js';
 
@@ -175,11 +176,14 @@ if (ctx) {
   };
   const fixturesHtml = sub => fixturesView(season, fixturesCtx(), parseSub(sub));
   // Team of the week (WR-21): the best XI of a round, from the matches the viewer may see (results hidden by spoiler-free mode stay out).
+  // Shirt numbers come from the players list (read once, a moment after the page; the demo's made-up players get a number worked out from their id).
+  let numbers = null;
+  const shirt = id => numbers?.get(String(id)) ?? (demo != null ? String(1 + [...String(id)].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 99, 7)) : undefined);
   let twWeek = null;   // the round shown (null = the latest played)
   const teamHtml = () => {
     if (!season) return teamOfWeekCard([], sctx);
     const now = tableNow(), all = played(), seen = all.filter(f => !spoilerHidden(f, season, now)), labels = new Map(rounds(season).map(r => [r.week, r.label]));
-    return teamOfWeekCard(seen, { ...sctx, mine: ctx.club?.code }, { week: twWeek, labelOf: w => labels.get(w) || `Round ${w}`, hiddenCount: all.length - seen.length });
+    return teamOfWeekCard(seen, { ...sctx, mine: ctx.club?.code, number: shirt }, { week: twWeek, labelOf: w => labels.get(w) || `Round ${w}`, hiddenCount: all.length - seen.length });
   };
   // The three leader cards under the table (WR-19): the top three of each stat, each with its ">" link to the full list.
   const leaders = () => {
@@ -196,13 +200,14 @@ if (ctx) {
   };
   const rerender = (timed = false) => (current ? draw(VIEWS[current[0]](current[2], current[1]), timed) : false);
 
-  // The grounds arrive a moment after the page: draw them in when nobody is mid-tap, trying again a few times if someone is.
-  clubs().then(rows => {
-    stadiums = Object.fromEntries(rows.filter(c => c.stadium).map(c => [c.code, c.stadium]));
+  // Things that arrive a moment after the page (the grounds, the shirt numbers) are drawn in when nobody is mid-tap, trying again a few times if someone is.
+  const drawInSoon = () => {
     let tries = 0;
     const put = () => { if (['fixtures', 'overview'].includes(current?.[0]) && !rerender(true) && ++tries < 8) setTimeout(put, 1500); };
     put();
-  }).catch(() => {});
+  };
+  clubs().then(rows => { stadiums = Object.fromEntries(rows.filter(c => c.stadium).map(c => [c.code, c.stadium])); drawInSoon(); }).catch(() => {});
+  if (demo == null) loadPlayers().then(list => { numbers = new Map(list.filter(p => p.number != null).map(p => [String(p.id), p.number])); drawInSoon(); }).catch(() => {});
 
   main.addEventListener('click', async e => {
     const menuBtn = e.target.closest('[data-twmenu]'), twPick = e.target.closest('[data-tw]');

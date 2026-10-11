@@ -68,3 +68,9 @@ test('empty and hidden states', () => {
   assert.match(teamOfWeekCard([], ctx, { hiddenCount: 2 }), /2 results hidden[\s\S]*data-reveal-all/);
   assert.doesNotMatch(teamOfWeekCard(fixtures, ctx), /d+ results? hidden/);
 });
+
+test('shirt numbers show before the name when the page knows them', () => {
+  const html = teamOfWeekCard(fixtures, { ...ctx, number: id => (id === teamOfWeek(fixtures, 2).lines.GK[0].id ? 1 : undefined) });
+  assert.match(html, /<span class="tw-n"><i>1<\/i> Player \d+<\/span>/);
+  assert.equal((html.match(/<i>\d+<\/i> /g) || []).length, 1);   // only the player with a number
+});

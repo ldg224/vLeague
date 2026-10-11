@@ -8,7 +8,7 @@
 // `fixtures` are the counted, finished league matches the viewer may see (the page leaves out the ones hidden by spoiler-free mode, so the team
 // never gives a score away). A player's rating for the round is his average over that round's matches; a line short of players (a round only part
 // played) shows the ones it has. The best rating in the XI gets the star (Player of the week); ties go to goals + assists, minutes, then name.
-// ctx = { crest(code, px) -> html (the club's logo stands for the player), mine?: club code }
+// ctx = { crest(code, px) -> html (the club's logo stands for the player), mine?: club code, number?(playerId) -> the shirt number }
 // opts = { week (default: the latest round with a match), labelOf(week) -> 'Round 7', hiddenCount (results left out, with a "Show all" line) }
 import { lineOf } from './season-stats.js';
 
@@ -54,9 +54,10 @@ const STAR = '<svg class="tw-star" viewBox="0 0 24 24" aria-hidden="true" focusa
 const tone = r => (r >= 7 ? 'hi' : 'lo');   // green from 7.0, orange below (as FotMob)
 
 function player(p, isStar, ctx) {
+  const num = ctx.number?.(p.id);
   return `<li class="tw-p${ctx.mine === p.team ? ' is-mine' : ''}">`
     + `<span class="tw-av">${ctx.crest(p.team, 44)}<b class="tw-r is-${isStar ? 'star' : tone(p.rating)}" aria-label="Rating ${p.rating.toFixed(1)}${isStar ? ', player of the week' : ''}">${p.rating.toFixed(1)}${isStar ? STAR : ''}</b></span>`
-    + `<span class="tw-n">${esc(p.name)}</span></li>`;
+    + `<span class="tw-n">${num != null && num !== '' ? `<i>${esc(num)}</i> ` : ''}${esc(p.name)}</span></li>`;
 }
 
 const PITCH = '<svg class="tw-lines" viewBox="0 0 300 360" preserveAspectRatio="none" aria-hidden="true" focusable="false">'
