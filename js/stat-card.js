@@ -32,11 +32,9 @@ export const initialsCrest = (club, code, px) => {
 const clubName = club => club?.short_name || club?.name || '';
 const clubOf = (r, kind) => (kind === 'team' ? r.code : r.team);
 
-// The avatar: a player in his club's kit (with the club crest on the corner when `badge`), or a club's crest.
-function face(r, ctx, kind, px, big, badge) {
-  if (kind === 'team') return ctx.crest(r.code, px);
-  const kit = ctx.avatar?.(r.team) || '';
-  return `<span class="sc-av${big ? ' is-big' : ''}${kit ? ' is-kit' : ''}" aria-hidden="true">${kit}${badge ? `<span class="sp-badge">${ctx.crest(r.team, 18)}</span>` : ''}</span>`;
+// The avatar: the player's club crest (players have no kit pill any more), or a club's crest.
+function face(r, ctx, kind, px) {
+  return ctx.crest(kind === 'team' ? r.code : r.team, px || 30);
 }
 
 // One row of a card: a player (avatar pill, name, crest and club) or a club (rank, crest, name), then the value.
@@ -47,8 +45,8 @@ function row({ row: r, value, rank }, card, ctx, kind, lead, big) {
     return `<li class="sc-row${lead ? ' is-lead' : ''}" style="${clubStyle(club)}"><span class="sc-rank">${rank}</span>${ctx.crest(r.code, 30)}`
       + `<span class="sc-who"><b class="sc-name">${esc(club?.name || r.code)}</b></span>${val}</li>`;
   }
-  return `<li class="sc-row${lead ? ' is-lead' : ''}" style="${clubStyle(club)}">${face(r, ctx, kind, 0, big, false)}`
-    + `<span class="sc-who"><b class="sc-name">${esc(r.name)}</b><span class="sc-club">${ctx.crest(r.team, 16)}<span>${esc(clubName(club))}</span></span></span>${val}</li>`;
+  return `<li class="sc-row${lead ? ' is-lead' : ''}" style="${clubStyle(club)}">${face(r, ctx, kind, 30)}`
+    + `<span class="sc-who"><b class="sc-name">${esc(r.name)}</b><span class="sc-club">${esc(clubName(club))}</span></span>${val}</li>`;
 }
 
 const empty = (card, line, head = 'No matches played yet') => `<div class="sc-empty"><b>${esc(head)}</b><span>${esc(line || card.note || 'Fills in as the season is played.')}</span></div>`;
@@ -74,7 +72,7 @@ function banner(card, ranked, ctx, kind, seasonLine) {
   const sentence = tied.length > 1
     ? `${list(tied.length > 3 ? [...shown.slice(0, 2), `${tied.length - 2} others`] : shown)} share the top spot with ${esc(value)}`
     : `<b>${esc(name(lead))}</b> ${esc(card.say ? card.say(value) : `leads with ${value}`)}`;
-  return `<div class="sp-banner" style="${clubStyle(club)}">${face(lead.row, ctx, kind, 56, true, true)}`
+  return `<div class="sp-banner" style="${clubStyle(club)}">${face(lead.row, ctx, kind, 56)}`
     + `<div class="sp-says"><p>${sentence}</p><span>${esc(seasonLine)}</span></div></div>`;
 }
 
@@ -95,7 +93,7 @@ export function statPage(card, ranked, ctx, { kind = 'player', title = 'Stats', 
   const rows = ranked.length
     ? `<ol class="sc-rows is-full">${ranked.map(x => {
       const club = ctx.club(clubOf(x.row, kind)), sub = [kind === 'team' ? '' : clubName(club), card.sub ? card.sub(x.row) : matchesOf(x.row)].filter(Boolean).join(' · ');
-      return `<li class="sc-row" data-rank="${x.rank}" style="${clubStyle(club)}"><span class="sp-rank">${x.rank}</span>${face(x.row, ctx, kind, 40, false, true)}`
+      return `<li class="sc-row" data-rank="${x.rank}" style="${clubStyle(club)}"><span class="sp-rank">${x.rank}</span>${face(x.row, ctx, kind, 40)}`
         + `<span class="sc-who"><b class="sc-name">${esc(kind === 'team' ? club?.name || x.row.code : x.row.name)}</b><span class="sc-sub">${esc(sub)}</span></span>`
         + `<span class="sc-val">${esc(format(x.value, card))}</span></li>`;
     }).join('')}</ol>`
