@@ -1,5 +1,5 @@
 // Editor -> History (0.66): the league's past seasons, for history.html and the team pages' trophy cabinets.
-//   League names: the names the league has run under, oldest first (0053). Seasons 1 and 2 ran under an earlier name; after the rebrand the count restarted.
+//   League names: the names the league has run under, oldest first (0053). an earlier name can have seasons of its own after a rebrand.
 //   Competitions: the trophies a season can have, each with a default picture for the winner and the runner-up.
 //   Past teams: clubs that have left (name, code, manager), so they can still be credited.
 //   Seasons: for each competition, who won and who was runner-up (a current club or a past team), and that award's own
@@ -46,7 +46,7 @@ export async function mountHistory(ctx) {
   function leaguesHtml() {
     const count = l => seasons.filter(x => leagueOf(x)?.id === l.id).length;
     return `<section class="hi-sect"><h2>League names</h2>
-      <p class="quiet">The names the league has run under, oldest first. Each season belongs to one, and the Seasons tab groups the previous seasons by it. After a rebrand, add the new name last: the season being played now is numbered after every season recorded here.</p>
+      <p class="quiet">The names the league has run under, oldest first. Each season belongs to one, and the Seasons tab groups the previous seasons by it. After a rebrand, add the new name last.</p>
       <ul class="hi-list">${leagues.map((l, i) => `<li class="hi-comp" data-league="${l.id}">
         <input class="hi-name" data-league-name value="${esc(l.name)}" maxlength="40" aria-label="League name">
         <span class="quiet">${count(l)} season${count(l) === 1 ? '' : 's'}${i === leagues.length - 1 ? ' · current name' : ''}</span>

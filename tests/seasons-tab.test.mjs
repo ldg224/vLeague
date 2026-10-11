@@ -51,27 +51,36 @@ test('previous seasons come from History, newest first, with past teams on a bad
   assert.match(html, /<crest SKS 28><b>SKS FC<\/b>/); assert.match(html, /<span class="ss-badge" aria-hidden="true">PCF<\/span><b>Pectorial Flys<\/b>/);
   assert.match(html, /No winners recorded yet/);                               // a season with no awards still has a card
   const alone = seasonsView(o({ history: null }));   // History not loaded (or empty): just the current season
-  assert.match(alone, /Season 1/); assert.doesNotMatch(alone, /overall|Season 2/);
+  assert.match(alone, /Season 1/); assert.doesNotMatch(alone, /Season 2/);
 });
 
 test('seasons are grouped by the name the league ran under, newest name first, the current season leading its group', () => {
   const html = seasonsView(o());
-  const v = html.indexOf('<h3>vLeague</h3>'), old = html.indexOf('<h3>Old League</h3>');
+  const v = html.indexOf('>vLeague</h3>'), old = html.indexOf('>Old League</h3>');
   assert.ok(v > 0 && old > v, 'the newest name comes first');
   assert.ok(html.indexOf('In progress') > v && html.indexOf('In progress') < old, 'the current season sits in the newest name\'s group');
   assert.ok(html.indexOf('>Season 2<') > old);   // the old seasons sit under the old name
 });
 
-test('numbers overall count every recorded season: two under the old name, so the current season is the third', () => {
+test('the headings: the newest name in vLeague blue, earlier names in green, and no number overall anywhere', () => {
   const html = seasonsView(o());
-  assert.match(html, /<h3>Season 1<\/h3><span class="ss-pill is-live">In progress<\/span><\/header><p class="ss-sub">Season 4 overall/);   // three recorded seasons (one empty) + 1
-  assert.match(html, /Season 1 overall/); assert.match(html, /Season 2 overall/);
-  const two = { ...history, seasons: history.seasons.slice(0, 2) };
-  assert.match(seasonsView(o({ history: two })), /Season 3 overall/);
+  assert.match(html, /<h3 class="ss-league is-now">vLeague<\/h3>/); assert.match(html, /<h3 class="ss-league is-before">Old League<\/h3>/);
+  assert.doesNotMatch(html, /overall/);
 });
 
 test('a season with no league counts as the newest name', () => {
   const h = { ...history, seasons: [{ id: 9, name: 'Season 1b', sort: 5, league: null }] };
   const html = seasonsView(o({ history: h }));
-  assert.ok(html.indexOf('Season 1b') > html.indexOf('<h3>vLeague</h3>') && !html.includes('<h3>Old League</h3>'));
+  assert.ok(html.indexOf('Season 1b') > html.indexOf('>vLeague</h3>') && !html.includes('>Old League</h3>'));
+});
+
+test('the current season recorded in History shows once: in progress until it has a winner, then as that record', () => {
+  const rec = { id: 8, name: 'Season 1', sort: 3, league: 2 };
+  const h = { ...history, seasons: [rec, ...history.seasons] };
+  const open = seasonsView(o({ history: h }));
+  assert.equal((open.match(/<h3>Season 1<\/h3>/g) || []).length, 2);   // the old league's Season 1 and the current one: not three
+  assert.match(open, /In progress/); assert.match(open, /To be decided/);
+  const won = seasonsView(o({ history: { ...h, awards: [...history.awards, { id: 9, season: 8, competition: 1, place: 'winner', club: 'SKS', past_team: null, art_path: null }] } }));
+  assert.equal((won.match(/<h3>Season 1<\/h3>/g) || []).length, 2);
+  assert.doesNotMatch(won, /In progress/); assert.match(won, /<crest SKS 28>/);
 });

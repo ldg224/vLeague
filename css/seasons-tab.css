@@ -2,7 +2,6 @@
 .ss { display: grid; gap: 4px; align-content: start; }
 .ss-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
 .ss-head h3 { margin: 0; font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; letter-spacing: .01em; color: var(--text-strong); }
-.ss-sub { margin: -2px 0 6px; color: var(--muted); font: 400 var(--fs-s) var(--font); }
 .ss-pill {
   flex: none; display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line);
   color: var(--muted); font: 600 var(--fs-s) var(--font);
@@ -28,3 +27,8 @@
 .ss .crest img { width: 100%; height: 100%; object-fit: contain; }
 .ss .crest i { display: none; }
 .ss .crest.none i { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--c); color: var(--on, #fff); font: 700 calc(var(--s) * .34)/1 var(--font-display); font-style: normal; }
+
+/* The league name over each group: big display type, vLeague blue for the current name, green for the names before it. */
+.sc-group h3.ss-league { margin: 0 0 12px; font: 900 var(--fs-xl)/1.15 var(--font-display); font-stretch: 125%; text-transform: uppercase; letter-spacing: .01em; }
+.ss-league.is-now { color: var(--brand); }
+.ss-league.is-before { color: var(--res-w); }
