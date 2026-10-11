@@ -37,10 +37,10 @@ a.fx-arrow { text-decoration: none; }
 .fx-day + .fx-row { border-top: 0; }
 .fx-row.has-mine { background-color: color-mix(in oklab, var(--club, var(--blue-700)) 9%, transparent); }
 .fx-row a {
-  display: grid; grid-template-columns: 54px minmax(0, 1fr) 112px minmax(0, 1fr); align-items: center; gap: 8px; min-height: 60px; padding: 6px 12px;
+  display: grid; grid-template-columns: 54px minmax(0, 1fr) 148px minmax(0, 1fr); align-items: center; gap: 8px; min-height: 60px; padding: 6px 12px;
   color: var(--text); text-decoration: none;
 }
-.fx-row.with-res a { grid-template-columns: 54px minmax(0, 1fr) 112px minmax(0, 1fr) 28px; }
+.fx-row.with-res a { grid-template-columns: 54px minmax(0, 1fr) 148px minmax(0, 1fr) 28px; }
 .fx-tag { color: var(--muted); font: 600 var(--fs-xs) var(--font); white-space: nowrap; }
 .fx-tag.is-live { color: var(--res-l); }
 .fx-tag.is-live::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: currentColor; vertical-align: 1px; }
@@ -58,7 +58,7 @@ a.fx-arrow { text-decoration: none; }
 .fx-reds { display: inline-flex; gap: 2px; flex: none; }
 .fx-reds i { width: 8px; height: 11px; border-radius: 2px; background: var(--res-l); }
 
-.fx-mid { display: grid; justify-items: center; align-content: center; gap: 6px; }
+.fx-mid { display: grid; justify-items: center; align-content: center; gap: 5px; padding-block: 3px; }
 .fx-score, .fx-ko {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 84px; padding: 5px 12px; border-radius: 10px;
   font-variant-numeric: tabular-nums; white-space: nowrap;
@@ -71,7 +71,9 @@ a.fx-arrow { text-decoration: none; }
 .fx-score.is-live b { color: var(--res-l); }
 .fx-score.is-hidden b, .fx-score.is-hidden i { color: var(--muted); }
 .fx-ko { border: 1px solid var(--line); font: 600 var(--fs-m)/1.2 var(--font); color: var(--text-strong); padding-block: 4px; }
-.fx-chance { display: flex; gap: 2px; width: 84px; height: 4px; overflow: hidden; border-radius: 2px; }
+.fx-chance { display: flex; gap: 2px; width: 136px; height: 8px; overflow: hidden; border-radius: 4px; }
+.fx-pcts { display: flex; justify-content: space-between; width: 136px; color: var(--text-soft); font: 600 var(--fs-xs)/1 var(--font); font-variant-numeric: tabular-nums; }
+.fx-pcts b { font-weight: inherit; }
 .fx-chance i { display: block; min-width: 3px; }
 .fx-chance .ch { background: var(--hc); }
 .fx-chance .cd { background: var(--line); }
@@ -84,19 +86,19 @@ a.fx-arrow { text-decoration: none; }
 
 /* wide: the ground fills the right-hand side */
 @container fx (min-width: 760px) {
-  .fx-row a { grid-template-columns: 54px minmax(0, 1fr) 112px minmax(0, 1fr) minmax(0, 128px); }
-  .fx-row.with-res a { grid-template-columns: 54px minmax(0, 1fr) 112px minmax(0, 1fr) minmax(0, 128px) 28px; }
+  .fx-row a { grid-template-columns: 54px minmax(0, 1fr) 148px minmax(0, 1fr) minmax(0, 128px); }
+  .fx-row.with-res a { grid-template-columns: 54px minmax(0, 1fr) 148px minmax(0, 1fr) minmax(0, 128px) 28px; }
   .fx-venue { display: block; padding-left: 6px; }
 }
 /* narrow (a phone): short names, the tag under the score */
 @container fx (max-width: 560px) {
   .fx-day { padding-inline: 16px; margin-inline: -16px; }
   .fx-full { display: none; } .fx-short { display: inline; }
-  .fx-row a, .fx-row.with-res a { grid-template-columns: minmax(0, 1fr) 90px minmax(0, 1fr); row-gap: 0; padding: 6px 10px; min-height: 64px; }
+  .fx-row a, .fx-row.with-res a { grid-template-columns: minmax(0, 1fr) 108px minmax(0, 1fr); row-gap: 0; padding: 6px 10px; min-height: 64px; }
   .fx-card .fx-team .crest { --s: 22px !important; }
   .fx-team { gap: 6px; }
   .fx-score, .fx-ko { min-width: 0; padding-inline: 10px; }
-  .fx-chance { width: 56px; }
+  .fx-chance, .fx-pcts { width: 96px; }
   .fx-tag { grid-row: 2; grid-column: 2; justify-self: center; line-height: 1.2; margin-top: 2px; }
   .fx-tag:empty { display: none; }
   .fx-row.with-res .fx-tag { display: none; }

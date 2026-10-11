@@ -66,7 +66,7 @@ const hues = (ctx, fx) => ['home', 'away'].map(side => {
 
 const bar = p => `<i class="ch" style="flex:${Math.max(p.h, 1)}"></i><i class="cd" style="flex:${Math.max(p.d, 1)}"></i><i class="ca" style="flex:${Math.max(p.a, 1)}"></i>`;
 const chanceBar = p => (p
-  ? `<span class="fx-chance" role="img" aria-label="Win chance: home ${p.h} percent, draw ${p.d} percent, away ${p.a} percent" title="Win chance: ${p.h}% · ${p.d}% · ${p.a}%">${bar(p)}</span>`
+  ? `<span class="fx-chance" role="img" aria-label="Win chance: home ${p.h} percent, draw ${p.d} percent, away ${p.a} percent" title="Win chance: ${p.h}% · ${p.d}% · ${p.a}%">${bar(p)}</span><span class="fx-pcts" aria-hidden="true"><b>${p.h}%</b><b>${p.a}%</b></span>`
   : '');
 
 // ---------- one match row ----------
