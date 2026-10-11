@@ -6,9 +6,11 @@
 // Works on localhost and for the office only; it is never real data and the pages say so.
 import { enterPlace, paintClub } from './shell.js';
 import { mountFrame } from './frame.js';
-import { esc, crestUrl } from './member.js';
+import { esc, crestUrl, clubs } from './member.js';
 import { finished, logoUrl } from './dashboard-data.js';
-import { crest as crestHtml } from './places.js';
+import { crest as crestHtml, useClubs } from './places.js';
+import { loadKits } from './kits-data.js';
+import { kitSprite, startDesign } from './kit.js';
 import { countedFixtures, totals, rank, PLAYER_CARDS, TEAM_CARDS } from './season-stats.js';
 import { statCard, statList, initialsCrest } from './stat-card.js';
 import { demoSeason } from './demo-season.js';
@@ -41,10 +43,34 @@ if (ctx) {
 
   // ---- Stats (WR-08 to WR-10) ----
   const demo = params.has('demo') && (preview || office) ? Number(params.get('demo') || 6) : null;
-  const season = demo != null ? demoSeason({ rounds: demo }) : ctx.season;
+  let season = ctx.season, kitPics = {}, realClubs = false;
+  if (demo != null) {
+    // The league's real clubs (names, colours, crests) and their real home kits, with made-up players and results.
+    // Kits and clubs are readable by anyone with the public key. If they don't load, the demo uses invented clubs.
+    const image = url => new Promise(res => { if (!url) return res(null); const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
+    const [rows, kits] = await Promise.all([clubs().catch(() => []), loadKits()]);
+    const active = rows.filter(r => r.status === 'active' && r.colour);
+    season = demoSeason({ rounds: demo, clubs: active.length >= 4 ? active : undefined });
+    if (active.length >= 4) {
+      realClubs = true;
+      useClubs(active);
+      for (const t of season.teams) t.crest_path = active.find(r => r.code === t.code)?.crest_path;
+      await Promise.all(season.teams.map(async t => {
+        const k = kits[t.code]?.home;   // a club with no kit yet wears the default one, made from its colours
+        try {
+          const [art, logo] = await Promise.all([image(k?.artUrl), image(k?.logoUrl)]);
+          kitPics[t.code] = kitSprite({ ...(k?.design || startDesign(t)), text: { name: '', number: '', colour: '' } }, { art, logo }, 128).toDataURL();
+        } catch { /* a kit that won't draw falls back to the plain capsule */ }
+      }));
+    }
+  }
   const teamOf = code => season?.teams.find(t => t.code === code) || { code, name: code, colour: '#64748b' };
   // A club's logo when it has one, else its colour (the page's crest() would draw a blank image for a club without a logo).
-  const sctx = { club: teamOf, crest: (code, px) => (logoUrl(code).startsWith('data:') ? initialsCrest(teamOf(code), code, px) : crestHtml(teamOf(code), px)) };
+  const sctx = {
+    club: teamOf,
+    crest: (code, px) => (teamOf(code).crest_path || !logoUrl(code).startsWith('data:') ? crestHtml(teamOf(code), px) : initialsCrest(teamOf(code), code, px)),
+    avatar: code => (kitPics[code] ? `<img src="${kitPics[code]}" alt="">` : ''),
+  };
   const played = () => (!season ? [] : demo != null ? countedFixtures(season.fixtures) : countedFixtures(finished(season)));
   const KINDS = { player: PLAYER_CARDS, team: TEAM_CARDS };
   let moved = 0;   // in-page address changes so far, so "Back" can go back to the tab you came from
@@ -62,7 +88,7 @@ if (ctx) {
       const [kind, c] = found;
       return statList(c, rank(data[kind === 'team' ? 'teams' : 'players'], c), sctx, { kind, back: '#stats' });
     }
-    const note = demo != null ? `<p class="sc-demo"><b>Demo data</b> Made-up results, ${demo} ${demo === 1 ? 'round' : 'rounds'} (try <code>demo=0</code> to <code>demo=6</code>). Not real.</p>` : '';
+    const note = demo != null ? `<p class="sc-demo"><b>Demo data</b> ${realClubs ? 'Real clubs and kits, made-up players and results' : 'Made-up clubs, players and results'}, ${demo} ${demo === 1 ? 'round' : 'rounds'} (try <code>demo=0</code> to <code>demo=6</code>). Not real.</p>` : '';
     if (!data.players.length && demo == null) {
       return `<section class="lg-card sc-none"><div class="sc-empty"><b>No matches played yet</b><span>Player and team stats appear here as the season is played.</span></div></section>`;
     }

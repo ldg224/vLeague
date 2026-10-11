@@ -5,7 +5,9 @@
 //   statList(card, rank(rows, card), ctx, { kind, back })                      the whole ranking (a card's ">" opens it)
 //   listAddress(card) -> '#stats/scorers'                                       where a card's full list lives
 //
-// ctx = { club(code) -> { name, short_name, colour }, crest(code, px) -> html }, so the page decides where names and crests come from.
+// ctx = { club(code) -> { name, short_name, colour }, crest(code, px) -> html, avatar?(code) -> html }, so the page decides where names,
+// crests and kits come from. avatar draws the player's pill in the club's real kit; without it (or when it gives nothing) the pill is
+// a plain capsule in the club colour.
 // Look: FotMob's stat cards, in vLeague's own style (css/stat-card.css): the leader's value in a pill in their club's colour,
 // readable on any club colour; a player's avatar is vLeague's own pill in the club's colour; clubs show their crest.
 import { onColour, isHex } from './club-colour.js';
@@ -37,7 +39,8 @@ function row({ row: r, value, rank }, card, ctx, kind, lead, big) {
     return `<li class="sc-row${lead ? ' is-lead' : ''}" style="${clubStyle(club)}"><span class="sc-rank">${rank}</span>${ctx.crest(r.code, 30)}`
       + `<span class="sc-who"><b class="sc-name">${esc(club?.name || r.code)}</b></span>${val}</li>`;
   }
-  return `<li class="sc-row${lead ? ' is-lead' : ''}" style="${clubStyle(club)}"><span class="sc-av${big ? ' is-big' : ''}" aria-hidden="true"></span>`
+  const kit = ctx.avatar?.(r.team) || '';
+  return `<li class="sc-row${lead ? ' is-lead' : ''}" style="${clubStyle(club)}"><span class="sc-av${big ? ' is-big' : ''}${kit ? ' is-kit' : ''}" aria-hidden="true">${kit}</span>`
     + `<span class="sc-who"><b class="sc-name">${esc(r.name)}</b><span class="sc-club">${ctx.crest(r.team, 16)}<span>${esc(clubName(club))}</span></span></span>${val}</li>`;
 }
 

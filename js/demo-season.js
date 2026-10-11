@@ -1,5 +1,6 @@
-// A made-up season for looking at the stats pages before any real match is played (WR-09 on). Never real data: eight invented
-// clubs, 11 invented players each and six rounds of results in the same shape a saved result has (js/simulate.js,
+// A made-up season for looking at the stats pages before any real match is played (WR-09 on). Never real data: invented players
+// (11 a club) and invented results, six rounds by default. The clubs are eight invented ones, or the league's real clubs when the
+// page passes them in (demoSeason({ clubs })), so crests, colours and kits can be judged. The results in the same shape a saved result has (js/simulate.js,
 // summariseMatch). The league page only uses it with `?demo` for the office or on localhost, and the tests use it too.
 // Deterministic: the same call gives the same season.
 
@@ -15,13 +16,16 @@ const SHAPE = [['GK', 'GK'], ['DEF', 'LB'], ['DEF', 'LCB'], ['DEF', 'RCB'], ['DE
 const nameOf = k => `${FIRST[k % 24]} ${LAST[(k % 24 * 7 + Math.floor(k / 24) * 11) % 24]}`;
 const GOAL_WEIGHT = { GK: 0, DEF: 1, MID: 3, FWD: 8 }, ASSIST_WEIGHT = { GK: 0, DEF: 1, MID: 5, FWD: 4 };
 
-export function demoSeason({ rounds = 6 } = {}) {
+export function demoSeason({ rounds = 6, clubs } = {}) {
   let seed = 20261011;
   const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
   const pick = (weights) => { let t = rnd() * weights.reduce((a, b) => a + b, 0); return weights.findIndex(w => (t -= w) < 0); };
   const dec = (v, dp = 2) => Math.round(v * 10 ** dp) / 10 ** dp;
 
-  const teams = CLUBS.map(([code, name, colour], i) => ({ code, name, short_name: name.split(' ')[0], colour, strength: 0.75 + ((i * 7) % 8) * 0.07 }));
+  // Real clubs when given (an even number, at most 12, so every round pairs everyone), else the eight invented ones.
+  const given = (clubs || []).filter(c => c.code && c.colour).slice(0, 12);
+  const list = given.length >= 4 ? given.slice(0, given.length - (given.length % 2)) : CLUBS.map(([code, name, colour]) => ({ code, name, short_name: name.split(' ')[0], colour }));
+  const teams = list.map((c, i) => ({ ...c, short_name: c.short_name || c.name, strength: 0.75 + ((i * 7) % 8) * 0.07 }));
   const squads = Object.fromEntries(teams.map((t, i) => [t.code, SHAPE.map(([line, slot], n) => ({
     id: `${t.code}${n}`, name: nameOf(i * 11 + n), line, slot, form: 0.7 + rnd() * 0.6,
   }))]));
@@ -52,9 +56,9 @@ export function demoSeason({ rounds = 6 } = {}) {
   const fixtures = [];
   const codes = teams.map(t => t.code);
   for (let w = 1; w <= rounds; w++) {
-    const order = [codes[0], ...codes.slice(1).map((_, i) => codes[1 + ((i + w - 1) % 7)])];
-    for (let m = 0; m < 4; m++) {
-      const home = teams.find(t => t.code === order[m]), away = teams.find(t => t.code === order[7 - m]);
+    const rest = codes.slice(1), order = [codes[0], ...rest.map((_, i) => rest[(i + w - 1) % rest.length])];   // the circle method: everyone plays everyone
+    for (let m = 0; m < codes.length / 2; m++) {
+      const home = teams.find(t => t.code === order[m]), away = teams.find(t => t.code === order[order.length - 1 - m]);
       const lam = [1.7 * home.strength / away.strength, 1.4 * away.strength / home.strength];
       const goals = lam.map(l => { let n = 0, p = Math.exp(-l), s = p, u = rnd(); while (u > s && n < 8) { n++; p *= l / n; s += p; } return n; });
       const shots = [goals[0] * 3 + 6 + Math.floor(rnd() * 8), goals[1] * 3 + 5 + Math.floor(rnd() * 8)];
