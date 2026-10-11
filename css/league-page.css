@@ -247,10 +247,10 @@
 .lg::before {
   content: ""; position: fixed; inset: -12%; z-index: -1; pointer-events: none;
   background: url("../assets/img/topo.png") 0 0 / 700px 700px repeat;
-  opacity: .1;
+  opacity: .06;
   animation: lg-topo-breathe 24s ease-in-out infinite alternate, lg-topo-drift 90s linear infinite;
 }
-:root[data-theme="light"] .lg::before { opacity: .5; }
+:root[data-theme="light"] .lg::before { opacity: .3; }
 @keyframes lg-topo-breathe { from { transform: scale(1) rotate(0deg); } to { transform: scale(1.06) rotate(.6deg); } }
 @keyframes lg-topo-drift { to { background-position: 700px 350px; } }
 @media (prefers-reduced-motion: reduce) { .lg::before { animation: none; } }
