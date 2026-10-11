@@ -10,7 +10,7 @@ import { tableRows } from './league-table.js';
 import { rating } from './places.js';
 import { prefsNow, spoilerHidden, revealScore } from './prefs.js';
 import { kitSprite, cleanDesign, kitName, FIELD_SLOTS } from './kit.js';
-import { renderPitch, FORMATIONS, TACTICS, STEPS, PRESETS, POS_ORDER, normaliseSheet, reshape, benchOf } from './pitch.js';
+import { renderPitch, FORMATIONS, DEFAULT_FORMATION, TACTICS, STEPS, PRESETS, POS_ORDER, normaliseSheet, reshape, benchOf, autoLineup, fillLineup } from './pitch.js';
 
 const POS_NAME = { GK: 'Goalkeeper', DEF: 'Defender', MID: 'Midfielder', FWD: 'Forward' };
 const PIECES = [['captain', 'Captain'], ['penalties', 'Penalties'], ['freekicks', 'Free kicks'], ['corners', 'Corners']];
@@ -189,9 +189,11 @@ async function teamSheet(box, { club, squad, userId, season }) {
       </div>
     </section>
     <div class="ts-view" id="ts-over">
+      <section class="lg-card ov-check" id="ov-check" aria-label="Team sheet check"></section>
       <div class="ts-grid">
         <section class="lg-card ts-over-left" aria-label="Line-up">
           <div class="lg-card-head"><h2>Line-up</h2><button type="button" class="ov-edit" data-view="edit">Edit team sheet</button></div>
+          <div class="ov-pills sc-toggle" role="group" aria-label="Show on the pitch">${[['pos', 'Position'], ['att', 'Attack'], ['def', 'Defence'], ['form', 'Rating']].map(([k, n]) => `<button type="button" data-pv="${k}" aria-pressed="${k === 'pos'}">${n}</button>`).join('')}</div>
           <div id="pitch-ro" class="ts-pitch"></div>
           <div class="ov-rows" id="ov-takers"></div>
         </section>
@@ -220,11 +222,11 @@ async function teamSheet(box, { club, squad, userId, season }) {
   </div>`;
 
   // Overview or the editor. The editor is the same page with the overview put away (the address ends #edit).
-  function showView(v) {
+  function showView(v, slot) {
     const edit = v === 'edit';
     $('#ts-over', box).hidden = edit; $('#ts-edit', box).hidden = !edit;
     box.querySelector('.ts').classList.toggle('editing', edit);
-    if (edit) { sel = null; redraw(); } else drawOver();
+    if (edit) { sel = slot ? { slot } : null; redraw(); } else drawOver();
     history.replaceState(null, '', edit ? '#edit' : location.pathname + location.search);
     scrollTo({ top: 0 });
   }
@@ -250,8 +252,66 @@ async function teamSheet(box, { club, squad, userId, season }) {
     const right = done ? (hide ? '<span class="ov-hidden">Hidden</span>' : `<span class="ov-score res-${mine > theirs ? 'W' : mine < theirs ? 'L' : 'D'}">${mine}–${theirs}</span>`) : st === 'live' ? '<span class="ov-live">Live</span>' : `<span class="ov-when">${k ? esc(when(k, now)) : 'TBC'}</span>`;
     return `<a class="ov-fx" href="${esc(matchUrl(f))}"><img src="${esc(crestOf(opp))}" alt="" width="24" height="24" onerror="this.style.visibility='hidden'"><span class="ov-fx-name"><b>${esc(teamName(opp))}</b><small>${home ? 'Home' : 'Away'}${f.round ? ` · ${esc(f.round)}` : ''}</small></span>${right}</a>`;
   }
+  let pv = 'pos';   // what the overview pitch shows in each disc
+  const seenTotals = () => totals(hiddenIds.size ? { ...season, fixtures: season.fixtures.map(f => (hiddenIds.has(f.id) ? { ...f, result: null } : f)) } : season);
+  function drawOverPitch() {
+    const el = $('#pitch-ro', box); if (!el) return;
+    renderPitch(el, { ...sheet, players: squad, editable: true, onSlot: slot => showView('edit', slot) });
+    if (pv !== 'pos') {
+      const tot = pv === 'form' ? seenTotals() : null;
+      for (const b of el.querySelectorAll('.pt-slot[data-slot]')) {
+        const id = sheet.lineup[b.dataset.slot], pl = id != null && byId.get(String(id)), disc = b.querySelector('.pt-disc');
+        if (!pl || !disc?.firstChild) continue;
+        const t = tot?.[String(pl.id)];
+        disc.firstChild.textContent = pv === 'att' ? pl.offense : pv === 'def' ? pl.defense : t?.apps ? rating(t.rsum / t.apps) : '–';
+      }
+    }
+    for (const b of box.querySelectorAll('[data-pv]')) b.setAttribute('aria-pressed', b.dataset.pv === pv);
+  }
+
+  // What is wrong with the sheet, each with a one-tap way to put it right.
+  function checks() {
+    const slots = Object.keys(FORMATIONS[sheet.formation]), items = [];
+    const empty = slots.filter(sl => !sheet.lineup[sl]);
+    if (empty.length) items.push({ text: `${empty.length} spot${empty.length === 1 ? '' : 's'} empty in the XI`, fix: 'fill', label: 'Fill best available' });
+    for (const sl of slots) {
+      const pl = sheet.lineup[sl] && byId.get(String(sheet.lineup[sl]));
+      if (pl && pl.position !== wantOf(sl)) items.push({ text: `${pl.name} is a ${(POS_NAME[pl.position] || pl.position).toLowerCase()} playing ${sl}`, fix: `slot:${sl}`, label: 'Change' });
+    }
+    const unset = PIECES.filter(([k]) => !sheet[k]).map(([, n]) => n.toLowerCase());
+    if (unset.length) items.push({ text: `${unset.join(', ').replace(/^./, c => c.toUpperCase())} not set`, fix: 'pieces', label: 'Pick for me' });
+    return items;
+  }
+  function drawCheck() {
+    const items = checks(), el = $('#ov-check', box);
+    el.className = `lg-card ov-check${items.length ? '' : ' is-ok'}`;
+    el.innerHTML = items.length
+      ? `<p class="ov-check-head"><b>${items.length} thing${items.length === 1 ? '' : 's'} to fix</b> before this team sheet is ready</p>${items.map(i => `<div class="ov-check-row"><span>${esc(i.text)}</span><button type="button" class="ov-fix" data-fix="${esc(i.fix)}">${esc(i.label)}</button></div>`).join('')}`
+      : '<p class="ov-check-head"><b>Ready</b> Eleven players, positions fit, captain and set pieces picked.</p>';
+  }
+
+  // Your XI against the best XI the next opponent could pick, on attack and defence (the players' own ratings).
+  const mean = a => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0);
+  const strength = xi => ({ att: mean(xi.filter(p => p.position !== 'GK').map(p => Number(p.offense) || 0)), def: mean(xi.map(p => Number(p.defense) || 0)) });
+  function matchupCard(rows, now) {
+    const next = upcoming(now)[0]; if (!next) return '';
+    const opp = next.fx.home === club.code ? next.fx.away : next.fx.home;
+    const theirs = (season.players || []).filter(p => p.team === opp);
+    if (theirs.length < 7) return '';
+    const tById = new Map(theirs.map(p => [String(p.id), p]));
+    const you = strength(Object.values(sheet.lineup).map(id => byId.get(String(id))).filter(Boolean));
+    const them = strength(Object.values(autoLineup(DEFAULT_FORMATION, theirs)).map(id => tById.get(String(id))).filter(Boolean));
+    const cmp = d => (d > 0.3 ? 'ahead' : d < -0.3 ? 'behind' : 'level');
+    const bar = (k, label) => `<div class="mu-row"><span>${label}</span><div class="mu-bars"><i class="me" style="--w:${Math.min(100, you[k] * 10)}%"></i><i style="--w:${Math.min(100, them[k] * 10)}%"></i></div><b>${you[k].toFixed(1)}<small>${them[k].toFixed(1)}</small></b></div>`;
+    const row = rows.find(r => r.team.code === opp);
+    return `<section class="lg-card ov-mu" aria-label="Matchup"><div class="lg-card-head"><h2>Matchup</h2><span class="club-count">v ${esc(teamName(opp))}</span></div>
+      ${bar('att', 'Attack')}${bar('def', 'Defence')}
+      <p class="mu-line">You’re <b>${cmp(you.att - them.att)}</b> in attack and <b>${cmp(you.def - them.def)}</b> in defence, against their best XI.</p>
+      ${row ? `<div class="ov-rows"><div class="ov-row"><span>Their position</span><b>${ordinal(row.rank)} of ${rows.length}</b></div><div class="ov-row"><span>Their form</span>${chipsOf(row.form)}</div></div>` : ''}</section>`;
+  }
+
   function drawOver(now = new Date()) {
-    renderPitch($('#pitch-ro', box), { ...sheet, players: squad });
+    drawOverPitch(); drawCheck();
     const name = id => (id != null && byId.get(String(id))?.name) || 'Not set';
     const preset = Object.keys(PRESETS).find(n => TACTICS.every(t => PRESETS[n][t.key] === sheet.tactics[t.key])) || 'Custom';
     const kitLabel = sheet.kit && kitsMade[sheet.kit] ? kitName(sheet.kit, kitsMade[sheet.kit]) : 'Automatic';
@@ -269,7 +329,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
     const tot = totals(seen);
     const best = squad.map(p => ({ p, t: tot[String(p.id)] })).filter(x => x.t?.apps).sort((a, b) => b.t.rsum / b.t.apps - a.t.rsum / a.t.apps).slice(0, 3);
     const top = best.length ? best.map(({ p, t }) => `<div class="ov-row"><span class="ov-pl"><i class="pos-${esc(p.position)}">${esc(p.position)}</i>${esc(p.name)}</span><b>${rating(t.rsum / t.apps)}<small>${t.g} G · ${t.a} A</small></b></div>`).join('') : '<p class="quiet">No matches played yet.</p>';
-    $('#ov-cards', box).innerHTML = `<section class="lg-card" aria-label="Standing"><div class="lg-card-head"><h2>Standing</h2></div>${stand}</section>
+    $('#ov-cards', box).innerHTML = `${matchupCard(rows, now)}<section class="lg-card" aria-label="Standing"><div class="lg-card-head"><h2>Standing</h2></div>${stand}</section>
       <section class="lg-card ov-games" aria-label="Matches"><div class="lg-card-head"><h2>Matches</h2></div>${games}</section>
       <section class="lg-card" aria-label="Best players"><div class="lg-card-head"><h2>Best rated</h2></div><div class="ov-rows">${top}</div></section>`;
   }
@@ -291,11 +351,11 @@ async function teamSheet(box, { club, squad, userId, season }) {
   }
 
   // Clear all positions: everyone back to the list to redo the XI, with an undo until the next change.
-  let cleared = null;
+  let cleared = null, undoMsg = 'Positions cleared.';
   function drawClear() {
     $('#clear', box).innerHTML = cleared
-      ? `<span>Positions cleared.</span> <button type="button" class="link-btn" data-unclear>Undo</button>`
-      : `<button type="button" class="link-btn" data-clear${filled() ? '' : ' disabled'}>Clear all positions</button>`;
+      ? `<span>${undoMsg}</span> <button type="button" class="link-btn" data-unclear>Undo</button>`
+      : `<button type="button" class="link-btn" data-best>Pick best XI</button><button type="button" class="link-btn" data-clear${filled() ? '' : ' disabled'}>Clear all positions</button>`;
   }
 
   function drawPlayers() {
@@ -509,7 +569,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   box.addEventListener('pointerdown', e => {
     if (e.button !== 0) return;
     const from = e.target.closest('.pl, .pt-slot[data-slot]:not(.empty)');
-    if (!from || !box.contains(from)) return;
+    if (!from || !box.contains(from) || from.closest('#ts-over')) return;
     const slot = from.dataset.slot || null, id = slot ? sheet.lineup[slot] : from.dataset.id;
     if (!id) return;
     // By touch, the player list still scrolls: a drag from it starts with a short hold.
@@ -574,6 +634,16 @@ async function teamSheet(box, { club, squad, userId, season }) {
 
   box.addEventListener('click', e => {
     const t = e.target;
+    const pvb = t.closest('[data-pv]');
+    if (pvb) { pv = pvb.dataset.pv; drawOverPitch(); return; }
+    const fx = t.closest('[data-fix]');
+    if (fx) {
+      const k = fx.dataset.fix;
+      if (k === 'fill') { sheet.lineup = fillLineup(sheet.formation, squad, sheet.lineup); changed(); redraw(); }
+      else if (k === 'pieces') { const keep = Object.fromEntries(PIECES.map(([n]) => [n, sheet[n]])); suggestPieces(sheet, byId); for (const [n, v] of Object.entries(keep)) if (v) sheet[n] = v; changed(); drawPieces(); }
+      else if (k.startsWith('slot:')) showView('edit', k.slice(5));
+      return;
+    }
     const vw = t.closest('[data-view]');
     if (vw) { showView(vw.dataset.view); return; }
     const pt = t.closest('[data-ptab]');
@@ -596,7 +666,10 @@ async function teamSheet(box, { club, squad, userId, season }) {
     else if (t.closest('[data-kit]')) { sheet.kit = t.closest('[data-kit]').dataset.kit || null; changed(); drawKit(); box.querySelector(`[data-kit="${sheet.kit || ''}"]`)?.focus(); }
     else if (t.closest('[data-clear]')) {
       const was = { lineup: { ...sheet.lineup }, ...Object.fromEntries(PIECES.map(([k]) => [k, sheet[k]])) };
-      sheet.lineup = {}; sel = null; changed(); cleared = was; redraw('[data-unclear]');
+      sheet.lineup = {}; sel = null; changed(); cleared = was; undoMsg = 'Positions cleared.'; redraw('[data-unclear]');
+    } else if (t.closest('[data-best]')) {
+      const was = { lineup: { ...sheet.lineup }, ...Object.fromEntries(PIECES.map(([k]) => [k, sheet[k]])) };
+      sheet.lineup = autoLineup(sheet.formation, squad); sel = null; changed(); cleared = was; undoMsg = 'Best XI picked.'; redraw('[data-unclear]');
     } else if (t.closest('[data-unclear]')) {
       Object.assign(sheet, cleared); cleared = null; changed(); redraw('[data-clear]');
     }

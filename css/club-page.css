@@ -284,3 +284,26 @@
 }
 .ov-rows > .quiet, .ov-games > .quiet { padding: 8px 16px 16px; }
 @media (min-width: 768px) { .ts-ticket { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); } }
+
+/* ---------- overview: check strip, pitch view, matchup ---------- */
+.ov-check { display: grid; gap: 0; padding: 0; overflow: hidden; }
+.ov-check-head { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 0; padding: 14px 16px; color: var(--muted); font: 400 var(--fs-m) var(--font); }
+.ov-check-head b { color: var(--text-strong); font-weight: 700; }
+.ov-check.is-ok .ov-check-head::before { content: ''; align-self: center; width: 8px; height: 8px; border-radius: 50%; background: var(--res-w); }
+.ov-check:not(.is-ok) .ov-check-head::before { content: ''; align-self: center; width: 8px; height: 8px; border-radius: 50%; background: var(--amber); }
+.ov-check-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 8px 16px; border-top: 1px solid var(--line); font: 400 var(--fs-m) var(--font); color: var(--text); }
+.lg-sub .ov-fix { flex: none; min-height: 36px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-sunk); color: var(--brand); cursor: pointer; font: 600 var(--fs-s) var(--font); }
+@media (hover: hover) { .lg-sub .ov-fix:hover { background: var(--surface-hover); } }
+.ov-pills { margin: 0 0 12px; flex-wrap: wrap; gap: 6px; }
+.ts-over-left .pt-edit .pt-slot:not(.empty) { touch-action: auto; cursor: pointer; }
+.ts-clear { gap: 16px; }
+.mu-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) 64px; align-items: center; gap: 12px; min-height: 44px; font: 400 var(--fs-m) var(--font); }
+.mu-row > span { color: var(--muted); }
+.mu-bars { display: grid; gap: 4px; }
+.mu-bars i { display: block; width: var(--w); height: 6px; border-radius: 3px; background: color-mix(in oklab, var(--text) 28%, transparent); }
+.mu-bars i.me { background: var(--club-accent, var(--brand)); }
+.mu-row b { display: grid; justify-items: end; color: var(--text-strong); font: 700 var(--fs-m) var(--font); font-variant-numeric: tabular-nums; }
+.mu-row b small { color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.mu-line { margin: 4px 0 0; color: var(--text-soft); font: 400 var(--fs-m)/1.45 var(--font); }
+.mu-line b { color: var(--text-strong); font-weight: 700; }
+.ov-mu .ov-rows { margin-top: 12px; }

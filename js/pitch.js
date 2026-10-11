@@ -68,6 +68,7 @@ function fill(formation, squad, lineup = {}) {
   return out;
 }
 export const autoLineup = (formation, squad) => fill(formation, squad);
+export const fillLineup = fill;   // keeps who is already placed and fills the empty spots with the best of the rest
 export function reshape(lineup, from, to, squad) {
   const keep = {};
   for (const [slot, id] of Object.entries(lineup)) if (slotsOf(to)[slot]) keep[slot] = id;
