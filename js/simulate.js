@@ -240,7 +240,15 @@ export function summariseMatch(d) {
       sh: s.shots, sot: s.shots_on_target, xg: s.xg, kp: s.key_passes, pas: s.passes, pc: s.passes_completed,
       tk: s.tackles_won, int: s.interceptions, clr: s.clearances, blk: s.blocks, sv: s.saves, gc: s.goals_conceded,
       yc: s.yellow, rc: s.red, km: s.distance_km, r: s.rating,
+      // Kept from WR-07 on, for the season stats module: fouls, times fouled, dribbles (take-ons), aerial duels won, offsides,
+      // crosses, touches, and penalties won and conceded (counted below from the fouls that gave one).
+      fl: s.fouls, fd: s.fouled, dr: s.take_ons, aw: s.aerials_won, off: s.offsides, cr: s.crosses, tch: s.touches, pw: 0, pcn: 0,
     };
+  }
+  for (const e of d.events) {
+    if (e.type !== 'foul' || !e.penalty) continue;
+    if (players[e.on]) players[e.on].pw++;
+    if (players[e.player]) players[e.player].pcn++;
   }
   const motm = Object.keys(players).reduce((best, id) => (!best || players[id].r > players[best].r ? id : best), null);
   const fr = d.frames.data;

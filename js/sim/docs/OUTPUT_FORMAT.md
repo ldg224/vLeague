@@ -123,7 +123,7 @@ it increases every time possession changes team, so events with the same `poss` 
 | `take_on` | `won`, `opponent` | beat a defender |
 | `miscontrol`, `deflection` | | ball bounced off a player |
 | `aerial_duel` | `won`, `opponent` | header contest |
-| `foul` | `on` (fouled player id) | foul |
+| `foul` | `on` (fouled player id), `penalty` (true when the foul was in the box and gave a penalty; absent otherwise) | foul |
 | `card` | `card`: yellow / second_yellow / red | card |
 | `position_change` | `new_slot`, `old_slot` | e.g. an outfield player going in goal |
 | `offside` | | offside called against `player` |

@@ -916,6 +916,7 @@ class Match:
         p.action = None
         in_box = vax > PITCH_LENGTH - BOX_DEPTH and BOX_Y1 < vay < BOX_Y2
         if in_box:
+            e['penalty'] = True   # the foul gave a penalty (the saved result counts penalties won and conceded from this)
             spot = victim_team.from_att(PITCH_LENGTH - PENALTY_SPOT, 34)
             self._start_restart('penalty', victim_team, spot, (30, 50))
         else:
