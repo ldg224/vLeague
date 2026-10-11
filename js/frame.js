@@ -1,7 +1,7 @@
 // The league page's frame (website revamp, WR-03): the header card (crest, name, season, Club / Settings / Editor) and the
 // row of tabs, modelled on FotMob's league page. Each tab has its own address (league.html#table), so refresh, the back
 // button and shared links land on the right tab.
-//   mountFrame(el, { office, draft, onTab })  -> draws the frame into el and calls onTab(id) now and on every change
+//   mountFrame(el, { office, draft, crest, onTab }) -> draws the frame into el and calls onTab(id) now and on every change
 //   TABS                                       -> the tabs in order
 import { esc } from './member.js';
 import { icon } from './icons.js';
@@ -20,7 +20,7 @@ export const TABS = [
 // One season for now (WR-05 makes this a real choice).
 const SEASON = 'Season 1';
 
-export function mountFrame(el, { office = false, draft = false, onTab } = {}) {
+export function mountFrame(el, { office = false, draft = false, crest = '', onTab } = {}) {
   const tabs = TABS.filter(t => !t.when || t.when({ draft }));
   el.innerHTML = `<div class="lg-head">
       <div class="lg-id">
@@ -31,7 +31,7 @@ export function mountFrame(el, { office = false, draft = false, onTab } = {}) {
         </div>
       </div>
       <nav class="lg-tools" aria-label="Your club and account">
-        <a class="lg-tool is-club" href="club.html">${icon('shield')}<span>Club</span></a>
+        <a class="lg-tool is-club" href="club.html">${crest ? `<img class="lg-tool-crest" src="${esc(crest)}" alt="" onerror="this.replaceWith(document.createRange().createContextualFragment(this.dataset.alt))" data-alt="${esc(icon('shield'))}">` : icon('shield')}<span>Club</span></a>
         <a class="lg-tool" href="settings.html">${icon('settings-2')}<span>Settings</span></a>
         ${office ? `<a class="lg-tool" href="editor.html">${icon('pencil')}<span>Editor</span></a>` : ''}
       </nav>

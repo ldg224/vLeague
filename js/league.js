@@ -4,7 +4,7 @@
 // Local preview (screenshots only, never on the live site): http://localhost:8767/league.html?preview&club=%23c8102e&theme=light&office
 import { enterPlace, paintClub } from './shell.js';
 import { mountFrame } from './frame.js';
-import { esc } from './member.js';
+import { esc, crestUrl } from './member.js';
 import { VERSION } from './version.js';
 
 const params = new URLSearchParams(location.search);
@@ -60,6 +60,7 @@ if (ctx) {
 
   mountFrame(document.getElementById('frame'), {
     office,
+    crest: ctx.club?.crest_path ? crestUrl(ctx.club.crest_path) : '',
     onTab: id => {
       main.innerHTML = VIEWS[id]();
     },

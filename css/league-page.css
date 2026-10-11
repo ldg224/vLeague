@@ -14,8 +14,12 @@
 }
 :root[data-theme="light"] .lg { --club-accent: var(--club-accent-light, var(--blue-800)); --tab-accent: var(--blue-700); }
 /* The tinge: a faint wash of the manager's club colour on the page between the cards. Cards stay neutral. */
-.lg.has-club { background: color-mix(in oklab, var(--club) 7%, var(--bg)); }
-:root[data-theme="light"] .lg.has-club { background: color-mix(in oklab, var(--club) 5%, var(--bg)); }
+.lg.has-club { background: color-mix(in oklab, var(--club) 12%, var(--bg)); }
+:root[data-theme="light"] .lg.has-club { background: color-mix(in oklab, var(--club) 9%, var(--bg)); }
+/* Your club along the top of the header card, and on the Club button (filled with the club's colour). */
+.lg.has-club .lg-frame { box-shadow: inset 0 4px 0 var(--club); }
+.lg.has-club .lg-tool.is-club { background: var(--club); border-color: transparent; color: var(--on-club); }
+.lg.has-club .lg-tool.is-club .ic { color: currentColor; }
 
 .lg-frame, .lg-content, .lg-foot { width: 100%; max-width: 1280px; margin: 0 auto; }
 .lg-frame, .lg-foot { flex: none; }   /* never squash the header when the page is taller than the screen */
@@ -48,6 +52,7 @@
 }
 .lg-tool .ic { width: 18px; height: 18px; color: var(--muted); }
 .lg-tool.is-club .ic { color: var(--club-accent); }
+.lg-tool-crest { width: 22px; height: 22px; object-fit: contain; }
 
 /* ---------- Tabs ---------- */
 .lg-tabs { border-top: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }

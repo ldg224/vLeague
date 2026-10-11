@@ -1,4 +1,4 @@
-// The sign-in page: send an already signed-in visitor to their home (editor.html for the league office, home.html for managers),
+// The sign-in page: send an already signed-in visitor to their home (the league page, league.html),
 // otherwise handle the form. index.html?reset opens "Forgot password?" straight away (from an expired email link).
 import { signIn, currentUser, myProfile, landingPage, sendPasswordReset, ready } from './auth.js';
 import { startPage } from './prefs.js';
