@@ -35,12 +35,12 @@
 .fx-day { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 11px 20px; margin-inline: -20px; background: var(--surface-sunk); }
 .fx-day h3 { margin: 0; color: var(--text-strong); font-weight: 700; font-size: var(--fs-xs); line-height: 1.3; font-stretch: 125%; text-transform: uppercase; letter-spacing: .08em; }
 .fx-day span { color: var(--muted); font: 600 var(--fs-xs) var(--font); }
-.fx-row { border-top: 1px solid var(--line); }
+.fx-row { border-top: 1px solid var(--line); margin-inline: -20px; }   /* rows run edge to edge, like the day strips, so the hollow names reach the card's sides */
 .fx-day + .fx-row { border-top: 0; }
 .fx-row.has-mine { background-color: color-mix(in oklab, var(--club, var(--blue-700)) 8%, transparent); }
 .fx-row a {
   position: relative; overflow: hidden;
-  display: grid; grid-template-columns: 64px minmax(0, 1fr) 168px minmax(0, 1fr) 64px; align-items: center; gap: 10px; min-height: 84px; padding: 8px 20px;
+  display: grid; grid-template-columns: 64px minmax(0, 1fr) 168px minmax(0, 1fr) 64px; align-items: center; gap: 10px; min-height: 84px; padding: 8px 40px;
   color: var(--text); text-decoration: none;
 }
 .fx-row a > :not(.fx-ghost) { position: relative; z-index: 1; }
@@ -109,7 +109,7 @@
 }
 /* medium: a little less room, the same layout */
 @container fx (max-width: 760px) {
-  .fx-row a { grid-template-columns: 52px minmax(0, 1fr) 150px minmax(0, 1fr) 52px; gap: 8px; padding-inline: 14px; }
+  .fx-row a { grid-template-columns: 52px minmax(0, 1fr) 150px minmax(0, 1fr) 52px; gap: 8px; padding-inline: 34px; }
   .fx-score, .fx-ko { min-width: 104px; padding-inline: 14px; }
   .fx-chance, .fx-pcts { width: 124px; }
   .fx-name { font-size: var(--fs-m); }
@@ -119,8 +119,9 @@
 /* narrow (a phone): short names with the crest above, the tag under the plate */
 @container fx (max-width: 560px) {
   .fx-day { padding-inline: 16px; margin-inline: -16px; }
+  .fx-row { margin-inline: -16px; }
   .fx-full { display: none; } .fx-short { display: inline; }
-  .fx-row a { grid-template-columns: minmax(0, 1fr) 112px minmax(0, 1fr); row-gap: 3px; padding: 10px 8px; min-height: 92px; }
+  .fx-row a { grid-template-columns: minmax(0, 1fr) 112px minmax(0, 1fr); row-gap: 3px; padding: 10px 24px; min-height: 92px; }
   .fx-card .fx-team .crest { --s: 34px !important; }
   .fx-team, .fx-team.is-home { flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 5px; }
   .fx-team .crest { order: -1; }
