@@ -19,8 +19,8 @@ import { VERSION } from './version.js';
 const params = new URLSearchParams(location.search);
 const preview = ['localhost', '127.0.0.1'].includes(location.hostname) && params.has('preview');
 
-// The contour lines and scratches fade in once both pictures are loaded, instead of popping in half way through the page loading.
-Promise.all(['assets/img/topo.png', 'assets/img/scratches.png'].map(src => { const i = new Image(); i.src = src; return i.decode().catch(() => {}); }))
+// The contour lines fade in once the picture is loaded, instead of popping in half way through the page loading.
+(() => { const i = new Image(); i.src = 'assets/img/topo.png'; return i.decode().catch(() => {}); })()
   .then(() => requestAnimationFrame(() => document.body.classList.add('topo-ready')));
 
 let ctx;

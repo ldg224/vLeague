@@ -247,20 +247,11 @@
 .lg::before {
   content: ""; position: fixed; inset: -12%; z-index: -1; pointer-events: none;
   background: url("../assets/img/topo.png") 0 0 / 700px 700px repeat;
-  opacity: 0; transition: opacity 1.6s ease;
+  opacity: 0; transition: opacity 2.6s cubic-bezier(.22,.61,.36,1) .15s;
   animation: lg-topo-breathe 24s ease-in-out infinite alternate, lg-topo-drift 90s linear infinite;
 }
 .lg.topo-ready::before { opacity: .06; }
 :root[data-theme="light"] .lg.topo-ready::before { opacity: .3; }
 @keyframes lg-topo-breathe { from { transform: scale(1) rotate(0deg); } to { transform: scale(1.06) rotate(.6deg); } }
 @keyframes lg-topo-drift { to { background-position: 700px 350px; } }
-@media (prefers-reduced-motion: reduce) { .lg::before { animation: none; } .lg::before, .lg::after { transition: none; } }
-
-/* A little worn texture over the contour lines (user, 11 Oct 2026): white scratches and specks, fixed and still, very faint. */
-.lg::after {
-  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
-  background: url("../assets/img/scratches.png") 0 0 / 735px 437px repeat;
-  opacity: 0; transition: opacity 1.6s ease;
-}
-.lg.topo-ready::after { opacity: .22; }
-:root[data-theme="light"] .lg.topo-ready::after { opacity: .6; }
+@media (prefers-reduced-motion: reduce) { .lg::before { animation: none; } .lg::before { transition: none; } }
