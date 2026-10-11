@@ -303,6 +303,8 @@
     lg-silk-slide 56s ease-in-out var(--fph, 0s) infinite alternate,
     lg-silk-breathe 24s ease-in-out var(--fph2, 0s) infinite alternate-reverse;
 }
+/* After the first fade-in, cards made by a redraw (a tab, an arrow) show their silk straight away and carry on moving where the last one was. */
+.lg.topo-ready.silk-seen .lg-card::before { animation: lg-silk-slide 56s ease-in-out var(--fph, 0s) infinite alternate, lg-silk-breathe 24s ease-in-out var(--fph2, 0s) infinite alternate-reverse; }
 @keyframes lg-silk-in { from { opacity: 0; } }
 @keyframes lg-silk-slide { from { background-position: 100% 100%; } to { background-position: 0% 0%; } }
 @keyframes lg-silk-breathe { from { background-size: 135% 135%; } to { background-size: 150% 150%; } }

@@ -178,7 +178,7 @@
   background-origin: padding-box, padding-box, padding-box, border-box;
   background-clip: padding-box, padding-box, padding-box, border-box;
   box-shadow: 0 0 14px color-mix(in oklab, var(--ring) 38%, transparent), 0 0 2px color-mix(in oklab, var(--ring) 60%, transparent);
-  animation: sc-shine 7s linear infinite, lg-splash var(--sd, 30s) ease-in-out var(--sp, 0s) infinite alternate;
+  animation: sc-shine 7s linear var(--sh, 0s) infinite, lg-splash var(--sd, 30s) ease-in-out var(--sp, 0s) infinite alternate;
 }
 :root[data-theme="light"] .is-pinned .sc.has-lead { --ring: var(--cl, var(--line)); box-shadow: 0 0 12px color-mix(in oklab, var(--ring) 30%, transparent); }
 @keyframes sc-shine { to { --ang: 360deg; } }
