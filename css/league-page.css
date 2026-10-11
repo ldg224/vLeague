@@ -136,13 +136,3 @@
 /* The three stat-leader cards sit side by side in a narrow column: a smaller title so "TOP SCORERS" stays on one line. */
 .lg-trio .lg-card-head h2 { font-size: .9375rem; }
 @media (min-width: 992px) and (max-width: 1179px) { .lg-trio .lg-card-head h2 { font-size: .8125rem; } .lg-trio .lg-card { padding-inline: 16px; } }
-/* The three stat-leader cards sit side by side in a narrow column: a smaller title so "TOP SCORERS" stays on one line. */
-.lg-trio .lg-card-head h2 { font-size: .9375rem; }
-@media (min-width: 992px) and (max-width: 1179px) { .lg-trio .lg-card-head h2 { font-size: .8125rem; } .lg-trio .lg-card { padding-inline: 16px; } }
-/* ---- Colour-pop trials (preview only, ?pop=line|wash|panel) ---- */
-.pop-line .lg-frame, .pop-wash .lg-frame, .pop-panel .lg-frame { box-shadow: none !important; }
-.pop-line .lg-tabs { border-top: 2px solid var(--club); }
-.pop-wash .lg-head { background: color-mix(in oklab, var(--club) 16%, var(--surface)); }
-:root[data-theme="light"] .pop-wash .lg-head { background: color-mix(in oklab, var(--club) 11%, var(--surface)); }
-.pop-panel .lg-tool.is-club { height: 56px; padding: 0 20px 0 14px; border-radius: 14px; font-size: 1rem; }
-.pop-panel .lg-tool.is-club .ic { width: 24px; height: 24px; }
