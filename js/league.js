@@ -14,7 +14,7 @@ import { kitSprite, startDesign } from './kit.js';
 import { countedFixtures, totals, rank, PLAYER_CARDS, TEAM_CARDS } from './season-stats.js';
 import { statCard, statPage, wireStatPage, initialsCrest } from './stat-card.js';
 import { demoSeason } from './demo-season.js';
-import { tableRows, tableCard } from './league-table.js';
+import { tableRows, tableCard, rowTops, reshuffle } from './league-table.js';
 import { spoilerHidden, revealScore } from './prefs.js';
 import { VERSION } from './version.js';
 
@@ -125,7 +125,13 @@ if (ctx) {
     if (pill) tableFilter = pill.dataset.tfilter;
     if (all) await revealScore(season.fixtures.filter(f => f.result && spoilerHidden(f, season, tableNow())).map(f => f.id)).catch(() => {});
     const el = main.querySelector('.lg-table');
-    if (el) { el.outerHTML = tableHtml(); main.querySelector(`.lg-table [data-tfilter="${tableFilter}"]`)?.focus(); }
+    if (el) {
+      const before = rowTops(el);
+      el.outerHTML = tableHtml();
+      const fresh = main.querySelector('.lg-table');
+      fresh.querySelector(`[data-tfilter="${tableFilter}"]`)?.focus();
+      reshuffle(fresh, before);
+    }
   });
 
   const VIEWS = {

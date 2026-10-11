@@ -86,7 +86,7 @@ export function tableCard(rows, ctx, { filter = 'all', filters = true, hiddenCou
     const club = ctx.club(r.team.code), zone = !anyPlayed ? '' : r.rank <= zones.finals ? 'finals' : zones.spoon && r.rank === rows.length ? 'spoon' : '';
     const opp = r.next ? ctx.club(r.next.code) : null;
     const next = r.next ? `<span class="tb-next" title="Next: ${r.next.home ? 'vs' : 'at'} ${esc(opp?.name || r.next.code)}">${ctx.crest(r.next.code, 22)}</span>` : '<span class="tb-none">–</span>';
-    return `<tr${ctx.mine === r.team.code ? ' class="is-mine"' : ''}${zone ?` data-zone="${zone}"` : ''}>`
+    return `<tr data-code="${esc(r.team.code)}"${ctx.mine === r.team.code ? ' class="is-mine"' : ''}${zone ?` data-zone="${zone}"` : ''}>`
       + `<td class="tb-pos">${r.rank}</td>`
       + `<th scope="row" class="tb-club"><span>${ctx.crest(r.team.code, 24)}<b class="tb-full">${esc(club?.name || r.team.name)}</b><b class="tb-short">${esc(clubName(club) || r.team.name)}</b></span></th>`
       + `<td>${r.p}</td><td class="t-wdl">${r.w}</td><td class="t-wdl">${r.d}</td><td class="t-wdl">${r.l}</td>`
@@ -107,4 +107,25 @@ export function tableCard(rows, ctx, { filter = 'all', filters = true, hiddenCou
       + `<th scope="col">Form</th><th scope="col" class="t-next">Next</th></tr></thead><tbody>${body}</tbody></table></div>`
     : empty;
   return `<section class="lg-card lg-table" aria-label="${esc(title)}"><div class="lg-card-head"><h2>${esc(title)}</h2></div>${pills}${hid}${table}${key}</section>`;
+}
+
+// ---------- the reshuffle (browser only) ----------
+// When a filter changes the rows jump to their new places, as on FotMob: note where every row was (`rowTops` before the card is
+// redrawn), then `reshuffle` slides each moved row from its old place to its new one. Cells move rather than the <tr> (Safari is
+// unreliable with transforms on table rows), and a moving row is painted over the ones it passes. Skipped for reduced motion.
+export const rowTops = card => new Map([...card.querySelectorAll('tbody tr[data-code]')].map(tr => [tr.dataset.code, tr.getBoundingClientRect().top]));
+
+export function reshuffle(card, before) {
+  if (!before?.size || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  for (const tr of card.querySelectorAll('tbody tr[data-code]')) {
+    const from = before.get(tr.dataset.code), dy = from == null ? 0 : from - tr.getBoundingClientRect().top;
+    if (Math.abs(dy) < 2) continue;
+    const mine = tr.classList.contains('is-mine');
+    for (const cell of tr.children) {
+      cell.style.position = 'relative'; cell.style.zIndex = '1';
+      if (!mine) cell.style.background = 'var(--surface)';
+      const a = cell.animate([{ transform: `translateY(${dy}px)` }, { transform: 'translateY(0)' }], { duration: 650, easing: 'cubic-bezier(.22,.61,.36,1)' });
+      a.onfinish = a.oncancel = () => { cell.style.position = cell.style.zIndex = cell.style.background = ''; };
+    }
+  }
 }
