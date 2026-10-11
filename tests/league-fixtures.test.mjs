@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 globalThis.location ??= { hostname: '', search: '', href: 'http://localhost/' };   // dashboard-data.js reads location when it loads
-const { fixturesView, byDate, byRound, byTeam, rowHtml, dayLabel, rangeLabel, weekOfDate, defaultDate, parseSub, fixturesAddress, rounds } = await import('../js/league-fixtures.js');
+const { fixturesView, byDate, byRound, byTeam, rowHtml, dayLabel, rangeLabel, weekOfDate, defaultDate, parseSub, fixturesAddress, rounds, roundWidget } = await import('../js/league-fixtures.js');
 
 const NOW = new Date('2026-10-14T12:00:00');   // a Wednesday
 const teams = ['AAA', 'BBB', 'CCC', 'DDD'].map(c => ({ code: c, name: `${c} United`, short_name: c, colour: '#336699' }));
@@ -147,3 +147,14 @@ test('a match still to play carries the win-chance bar, the ground shows for the
   assert.equal(count(rowHtml(season.fixtures[4], season, ctx(), {}), /fx-chance/g), 0);   // a postponed match has no chance bar
 });
 
+
+test('the Overview round widget: the current round, arrows that step by button, the same rows as Fixtures', () => {
+  const w = roundWidget(season, ctx());
+  assert.match(w, /fx-widget/); assert.match(w, /Round 1/);
+  assert.equal(count(w, /class="fx-row /g), 2);                           // the two Round 1 matches (the Test match never shows)
+  assert.doesNotMatch(w, /Previous round"[^>]*data-wround/);              // no earlier round: the arrow is disabled
+  assert.match(w, /data-wround="2"[^>]*aria-label="Next round"/);
+  const second = roundWidget(season, ctx(), 2);
+  assert.match(second, /Round 2/); assert.match(second, /data-wround="1"[^>]*aria-label="Previous round"/);
+  assert.match(roundWidget(null, ctx()), /No fixtures yet/);
+});

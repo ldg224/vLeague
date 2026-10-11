@@ -17,7 +17,7 @@ import { statCard, statPage, wireStatPage, initialsCrest } from './stat-card.js'
 import { demoSeason } from './demo-season.js';
 import { tableRows, tableCard, rowTops, reshuffle } from './league-table.js';
 import { spoilerHidden, revealScore, fmtTime } from './prefs.js';
-import { fixturesView, parseSub } from './league-fixtures.js';
+import { fixturesView, parseSub, roundWidget } from './league-fixtures.js';
 import { winChance, percents } from './match-model.js';
 import { VERSION } from './version.js';
 
@@ -148,8 +148,9 @@ if (ctx) {
   // ---- The Fixtures tab (WR-15 to WR-17) ----
   let current = null;   // the tab on screen: [id, picked, sub]
   let stadiums = null;   // club code -> ground, read once from the clubs table
-  const fixturesHtml = sub => {
-    const now = tableNow(), { mode, arg } = parseSub(sub);
+  let widgetWeek = null;   // the round the Overview widget shows (null = the current one)
+  const fixturesCtx = () => {
+    const now = tableNow();
     const hidden = new Set(season ? season.fixtures.filter(f => f.result && !f.test && spoilerHidden(f, season, now)).map(f => f.id) : []);
     // The win chance never sees a result the viewer has hidden, so it can't give one away.
     const seen = hidden.size ? { ...season, fixtures: season.fixtures.map(f => (hidden.has(f.id) ? { ...f, result: null } : f)) } : season, memo = new Map();
@@ -157,7 +158,13 @@ if (ctx) {
       if (!memo.has(fx.id)) { try { const [h, d, a] = percents(winChance(seen, fx, { now })); memo.set(fx.id, { h, d, a }); } catch { memo.set(fx.id, null); } }
       return memo.get(fx.id);
     };
-    return fixturesView(season, { ...sctx, now, hidden, mine: ctx.club?.code, time: fmtTime, chance, venue: code => stadiums?.[code] || '' }, { mode, arg });
+    return { ...sctx, now, hidden, mine: ctx.club?.code, time: fmtTime, chance, venue: code => stadiums?.[code] || '' };
+  };
+  const fixturesHtml = sub => fixturesView(season, fixturesCtx(), parseSub(sub));
+  // The three leader cards under the table (WR-19): the top three of each stat, each with its ">" link to the full list.
+  const leaders = () => {
+    const data = totals(played());
+    return ['rating', 'scorers', 'assists'].map(id => { const c = PLAYER_CARDS.find(x => x.id === id); return statCard(c, rank(data.players, c, 3), sctx, { kind: 'player' }); }).join('');
   };
   const rerender = () => {
     if (!current) return;
@@ -167,15 +174,17 @@ if (ctx) {
     scrollTo(0, y);
   };
 
-  clubs().then(rows => { stadiums = Object.fromEntries(rows.filter(c => c.stadium).map(c => [c.code, c.stadium])); if (current?.[0] === 'fixtures') rerender(); }).catch(() => {});
+  clubs().then(rows => { stadiums = Object.fromEntries(rows.filter(c => c.stadium).map(c => [c.code, c.stadium])); if (current?.[0] === 'fixtures' || current?.[0] === 'overview') rerender(); }).catch(() => {});
 
   main.addEventListener('click', async e => {
+    const step = e.target.closest('[data-wround]');
+    if (step) { widgetWeek = Number(step.dataset.wround); rerender(); main.querySelector('.fx-widget [data-wround]')?.focus({ preventScroll: true }); return; }
     const pill = e.target.closest('[data-tfilter]'), all = e.target.closest('[data-reveal-all]'), go2 = e.target.closest('[data-fxgo]');
     if (go2?.getAttribute('href')) { e.preventDefault(); go(go2.getAttribute('href')); return; }   // week, round, club and view changes replace the entry, so Back leaves the tab
     if (!pill && !all) return;
     if (pill) tableFilter = pill.dataset.tfilter;
     if (all) await revealScore(season.fixtures.filter(f => f.result && spoilerHidden(f, season, tableNow())).map(f => f.id)).catch(() => {});
-    if (current?.[0] === 'fixtures') { rerender(); return; }
+    if (current?.[0] === 'fixtures' || (all && current?.[0] === 'overview')) { rerender(); return; }
     const el = main.querySelector('.lg-table');
     if (el) {
       const before = rowTops(el);
@@ -187,21 +196,17 @@ if (ctx) {
     }
   });
   // A live match moves on its own: the Fixtures tab redraws every 15 seconds while one is showing.
-  setInterval(() => { if (!document.hidden && current?.[0] === 'fixtures' && main.querySelector('.fx-row.is-live')) rerender(); }, 15000);
+  setInterval(() => { if (!document.hidden && ['fixtures', 'overview'].includes(current?.[0]) && main.querySelector('.fx-row.is-live')) rerender(); }, 15000);
 
   const VIEWS = {
     overview: () => `<div class="lg-cols">
         <div class="lg-main">
           ${tableHtml()}
-          <div class="lg-trio">
-            ${card('Top rated')}
-            ${card('Top scorers')}
-            ${card('Top assists')}
-          </div>
+          <div class="lg-trio">${leaders()}</div>
         </div>
         <aside class="lg-side">
+          ${roundWidget(season, fixturesCtx(), widgetWeek)}
           ${card('Team of the week')}
-          ${card('This round')}
         </aside>
       </div>`,
     fixtures: sub => fixturesHtml(sub),

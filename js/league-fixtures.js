@@ -181,6 +181,19 @@ export function byTeam(season, ctx, arg) {
   return `${strip}<div class="fx-head is-team"><b class="fx-title">${esc(club?.name || code)}</b></div>${fixtures.length ? `<ul class="fx-list">${groups.join('')}</ul>` : none('No matches yet', 'This club has no fixtures so far.')}`;
 }
 
+// ---------- the Overview widget (WR-20) ----------
+// "This round": the same rows as Fixtures for one round, with arrows that step through the rounds without leaving Overview
+// (buttons with data-wround, not links, so the address stays #overview). `week` is a round number; default: the current round.
+export function roundWidget(season, ctx, week = null) {
+  const list = season ? rounds(season) : [];
+  if (!list.length) return `<section class="lg-card fx-card fx-widget" aria-label="This round"><div class="lg-card-head"><h2>This round</h2></div>${none('No fixtures yet', 'Rounds appear here once the office has set the fixtures.')}</section>`;
+  const i = Math.max(0, list.findIndex(r => r.week === (list.some(r => r.week === week) ? week : activeWeek(season, ctx.now)))), r = list[i];
+  const step = (to, icon, what) => (to ? `<button type="button" class="fx-arrow" data-wround="${to.week}" aria-label="${what} round">${icon}</button>` : `<span class="fx-arrow" aria-disabled="true" aria-label="${what} round">${icon}</span>`);
+  const fixtures = season.fixtures.filter(f => f.week === r.week && !f.test).sort(byKickoff);
+  return `<section class="lg-card fx-card fx-widget" aria-label="This round"><div class="fx-head">${step(list[i - 1], PREV, 'Previous')}<b class="fx-title">${esc(r.label)}</b>${step(list[i + 1], NEXT, 'Next')}</div>`
+    + `<ul class="fx-list">${dayGroups(fixtures, season, ctx, {})}</ul></section>`;
+}
+
 // ---------- the tab ----------
 export const MODES = [['round', 'By round'], ['date', 'By date'], ['team', 'By team']];
 
