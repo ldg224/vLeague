@@ -184,6 +184,10 @@
 :root:not([data-theme="light"]) .lg {
   /* Under the sheen, white silk (assets/img/fabric.png, made from the user's fabric picture, 0.3 to 2.3% white) so the grey boxes have folds. */
   --fabric: url("../assets/img/fabric.png");
+}
+/* The splash is defined on the card itself: a custom property that uses var() is worked out where it is declared, so declared higher up
+   it would never see each card's own --gx and --gy (which is why every splash sat in the top left corner at first). */
+:root:not([data-theme="light"]) .lg-card {
   --sheen:
     radial-gradient(75% 60% at var(--gx, 20%) var(--gy, 20%), color-mix(in oklab, var(--blue-400, #42a5f5) 11%, transparent), transparent 72%),
     linear-gradient(transparent, transparent);

@@ -118,6 +118,7 @@ if (ctx) {
   const sheen = root => root.querySelectorAll('.lg-card:not([data-sheen])').forEach((c, i) => {
     let h = 2166136261;
     for (const ch of `${c.querySelector('h2')?.textContent || ''}${i}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+    h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16;   // mix the bits so similar titles still land in different places
     const r = n => ((h >>> n) & 255) / 255;
     c.dataset.sheen = '';
     c.style.setProperty('--gx', `${Math.round(r(0) * 100)}%`);
