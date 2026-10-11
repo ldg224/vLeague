@@ -282,3 +282,9 @@
 /* every card here pads 16px so the rows that run edge to edge (margin -16px) line up on any width */
 .lg-sub .club .lg-card { padding: 16px; }
 .dlg:focus { outline: none; }
+
+/* the club's facts: their own card under the identity card */
+.club-facts dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 14px 16px; margin: 0; }
+.club-facts dt { margin: 0 0 2px; color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.club-facts dd { margin: 0; color: var(--text-strong); font: 600 var(--fs-m) var(--font); min-width: 0; overflow-wrap: anywhere; }
+.club-facts dd small { color: var(--muted); font: 400 var(--fs-s) var(--font); }

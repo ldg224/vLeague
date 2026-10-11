@@ -82,10 +82,13 @@ if (ctx) {
       <section class="lg-card club-head" aria-label="${esc(club.name)}"><span class="club-hollow" aria-hidden="true">${esc(club.short_name || club.name)}</span>
         <img class="club-crest" src="${esc(crest)}" alt="" onerror="this.remove()">
         <div class="club-name"><h1>${esc(club.name)}</h1>
-          ${club.motto ? `<p class="club-motto">${esc(club.motto)}</p>` : ''}<p class="club-meta">${[manager && `Manager <b>${esc(manager)}</b>`, club.stadium && `Ground <b>${esc(club.stadium)}</b>`].filter(Boolean).map(x => `<span>${x}</span>`).join('')}</p>
-          <p class="club-meta club-stand" id="club-stand"></p></div>
+          ${club.motto ? `<p class="club-motto">${esc(club.motto)}</p>` : ''}</div>
         <nav class="club-acts" aria-label="Club pages"><a href="team.html?c=${esc(club.code)}">Team page</a><a href="kits.html">Kits</a><a href="setup.html?edit">Edit club</a></nav>
       </section>
+      <section class="lg-card club-facts" aria-label="Club facts"><dl>
+        ${manager ? `<div><dt>Manager</dt><dd>${esc(manager)}</dd></div>` : ''}${club.stadium ? `<div><dt>Ground</dt><dd>${esc(club.stadium)}</dd></div>` : ''}
+        <div><dt>Position</dt><dd id="f-pos">–</dd></div><div><dt>Points</dt><dd id="f-pts">–</dd></div><div><dt>Played</dt><dd id="f-p">–</dd></div><div><dt>Form</dt><dd id="f-form">–</dd></div>
+      </dl></section>
       <div class="club-tabs sc-toggle" role="tablist" aria-label="My club">
         <button type="button" role="tab" id="tab-sheet" aria-controls="sheet" aria-selected="true" aria-pressed="true">Overview</button>
         <button type="button" role="tab" id="tab-squad" aria-controls="squad" aria-selected="false" aria-pressed="false" tabindex="-1">Squad</button>
@@ -233,8 +236,11 @@ async function teamSheet(box, { club, squad, userId, season }) {
   }
   function drawInfo(now = new Date()) {
     const rows = tableRows(season, { hidden: hiddenIds, now }), me = rows.find(r => r.team.code === club.code);
-    const stand = $('#club-stand');
-    if (me && stand) stand.innerHTML = [`Position <b>${ordinal(me.rank)}</b>`, `Points <b>${me.pts}</b>`, `Played <b>${me.p}</b> (${me.w}W ${me.d}D ${me.l}L)`, me.form.length ? `Form ${chipsOf(me.form)}` : ''].filter(Boolean).map(x => `<span>${x}</span>`).join('');
+    if (me) {
+      const set = (id, h) => { const el = $(id); if (el) el.innerHTML = h; };
+      set('#f-pos', `${ordinal(me.rank)} <small>of ${rows.length}</small>`); set('#f-pts', String(me.pts));
+      set('#f-p', `${me.p} <small>${me.w}W ${me.d}D ${me.l}L</small>`); set('#f-form', chipsOf(me.form) || '–');
+    }
     const mineFx = (season.fixtures || []).filter(f => !f.test && !f.postponed && kickoff(f) && (f.home === club.code || f.away === club.code)).sort((a, b) => kickoff(a) - kickoff(b));
     const past = mineFx.filter(f => status(f, season, now) === 'ft' && f.result).slice(-3).reverse(), next = mineFx.filter(f => status(f, season, now) !== 'ft').slice(0, 3);
     const games = [...next, ...past].map(f => fixtureRow(f, now)).join('') || '<p class="quiet">No matches yet.</p>';
