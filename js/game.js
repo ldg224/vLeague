@@ -19,7 +19,7 @@ import { byPlace, pitchHtml } from './lineup-pitch.js';
 import { ratingsAt } from './live-rating.js';
 import { icon } from './icons.js';
 import { liveReactions } from './reactions.js';
-import { loadKits, matchKits } from './kits-data.js';
+import { loadKits, loadFixtureKits, matchKits } from './kits-data.js';
 
 chrome();
 const main = document.getElementById('main');
@@ -128,7 +128,8 @@ async function run() {
   // What each side wears (S-23): their kit's main colour if they have designed one, else the club colour (as before).
   const kitsAll = await loadKits();
   const clubColour = code => clubsRows.find(c => c.code === code)?.colour || teamOf(season, code)?.colour;
-  const kitPicks = () => Object.fromEntries(sheets.filter(s => s.kit).map(s => [s.club, s.kit]));
+  let editorKits = {};   // the kits the Editor chose for this match; they win over a team's own sheet pick
+  const kitPicks = () => ({ ...Object.fromEntries(sheets.filter(s => s.kit).map(s => [s.club, s.kit])), ...editorKits });
   let wear = matchKits(kitsAll, fx.home, fx.away, { [fx.home]: clubColour(fx.home), [fx.away]: clubColour(fx.away) }, kitPicks());
   const kitColour = code => (code === fx.home ? wear.home.field?.main : code === fx.away ? wear.away.field?.main : null) || clubColour(code);
   const sameColour = (x, y) => !!x && !!y && String(x).toLowerCase() === String(y).toLowerCase();
@@ -320,6 +321,7 @@ async function run() {
   }
 
   await loadSheets();
+  editorKits = await loadFixtureKits(fx.id, fx.home, fx.away);
   wear = matchKits(kitsAll, fx.home, fx.away, { [fx.home]: clubColour(fx.home), [fx.away]: clubColour(fx.away) }, kitPicks());   // now that the locked sheets (and the kits they picked) are in
   if (['live', 'ft'].includes(st())) await loadFile();
   draw();

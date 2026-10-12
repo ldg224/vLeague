@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.69.0 (2026-10-12)
+
+Headlines: the Editor can choose which kit each team wears in a match
+
+**Database change:** run `supabase/migrations/0052_fixture_kits.sql` (adds `home_kit` and `away_kit` to fixtures). Until it is run, the new choice is hidden and nothing else changes. If anything goes wrong, `v0.68.2` is the version to go back to (`docs/RELEASING.md`).
+
+- **Added, Editor > Fixtures:** each match has a kit choice for the home side and the away side, listing the kits that club has made in the kit studio (Home, Away, Special, under the names the club gave them). "Automatic" leaves it as before.
+- **Changed, Game centre and match views:** a kit chosen in the Editor wins over the kit a team picked on its own team sheet, which still wins over the automatic choice. Changing a match's teams clears the choice.
+
 ## 0.68.2 (2026-10-11)
 
 Headlines: Home is back to how it was before 0.68

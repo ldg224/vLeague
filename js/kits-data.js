@@ -19,10 +19,19 @@ export async function loadKits() {
   } catch { return {}; }   // no kits table yet, or offline: the views use club colours
 }
 
+// The kits the Editor chose for one match (0052): { [CODE]: slot }, only for the sides it chose for. Empty before that migration is run.
+export async function loadFixtureKits(id, home, away) {
+  try {
+    const { data } = await (await db()).from('fixtures').select('home_kit, away_kit').eq('id', id).limit(1);
+    const r = data?.[0] || {};
+    return { ...(r.home_kit ? { [home]: r.home_kit } : {}), ...(r.away_kit ? { [away]: r.away_kit } : {}) };
+  } catch { return {}; }
+}
+
 const wrap = k => (k ? { ...k, main: k.design.colours[0] } : null);
 
 // colours: { CODE: '#rrggbb' } the clubs' own colours, used to judge a clash when a side has no kit yet.
-// picks: { CODE: 'home' | 'away' | 'special' } the kit each team's locked sheet chose; no pick (or a kit that no longer exists) = automatic.
+// picks: { CODE: 'home' | 'away' | 'special' } the kit each team wears: the Editor's choice for this match, else the team's locked sheet; no pick (or a kit that no longer exists) = automatic.
 export function matchKits(kits, homeCode, awayCode, colours = {}, picks = {}) {
   const h = kits?.[homeCode] || {}, a = kits?.[awayCode] || {};
   const home = h[picks[homeCode]] || h.home || null;

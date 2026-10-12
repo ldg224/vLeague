@@ -443,3 +443,8 @@
 .hi-notes { display: grid; gap: 6px; font-size: .88rem; color: var(--muted); }
 .hi-notes textarea { width: 100%; max-width: 40em; resize: vertical; }
 @media (max-width: 640px) { .hi-award { grid-template-columns: 46px minmax(0, 1fr); } .hi-award select, .hi-award-pic { grid-column: 2; } .hi-acts { margin-left: 0; } }
+
+/* Kit choice for each side of a match (0.69) */
+.fx-kits { display: flex; flex-wrap: wrap; gap: 6px 12px; flex: 1 1 100%; font-size: .85rem; color: var(--muted); }
+.fx-kits label { display: flex; align-items: center; gap: 6px; }
+.fx-kits select { min-width: 0; max-width: 100%; }
