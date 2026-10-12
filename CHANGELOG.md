@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.69.1 (2026-10-12)
+
+Headlines: the Test page can choose kits too
+
+Needs 0052 (already run). If anything goes wrong, `v0.69.0` is the version to go back to.
+
+- **Added, Editor > Test:** a Home kit and an Away kit choice for the test match, listing the kits of the clubs you picked (a random club stays automatic).
+
 ## 0.69.0 (2026-10-12)
 
 Headlines: the Editor can choose which kit each team wears in a match

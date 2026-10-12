@@ -163,7 +163,7 @@ const throwOn = (r, what) => { if (r.error) throw new Error(`${what} (${r.error.
 // Options from the Editor's Test tab: `homeCode` / `awayCode` pick the clubs (blank = random), `script` is a list of events at set minutes
 // ([{ minute, team: 'home' | 'away', kind: 'penalty_scored' | 'penalty_saved' | 'penalty_missed' | 'yellow' | 'red' | 'second_yellow' }]),
 // and `onlyScriptGoals` makes the scripted goals the only ones, so the final score is exactly what was asked for, and `skipToHighlights` makes the match already finished.
-export async function startTestMatch(c, clubs, { look = 'random', looks = [], homeCode = '', awayCode = '', script = [], onlyScriptGoals = false, skipToHighlights = false, onProgress, onStatus = () => {} } = {}) {
+export async function startTestMatch(c, clubs, { look = 'random', looks = [], homeCode = '', awayCode = '', homeKit = '', awayKit = '', script = [], onlyScriptGoals = false, skipToHighlights = false, onProgress, onStatus = () => {} } = {}) {
   const active = clubs.filter(x => x.status === 'active');
   if (active.length < 2) throw new Error('A test match needs at least two active clubs.');
   const byCode = code => active.find(x => x.code === code);
@@ -189,7 +189,10 @@ export async function startTestMatch(c, clubs, { look = 'random', looks = [], ho
   if (r.error) r = await c.from('rounds').upsert({ week: TEST_WEEK, name: 'Test match', kind: 'special', look: pickLook, lock_minutes_before: 0 }, { onConflict: 'week' });   // older databases without the newer columns
   throwOn(r, 'The test round couldn’t be made');
   const id = `test-${home.code}-${away.code}-${Date.now().toString(36)}`.toLowerCase();
-  throwOn(await c.from('fixtures').insert({ id, week: TEST_WEEK, home: home.code, away: away.code, starts_at: null }), 'The test match couldn’t be made');
+  const row = { id, week: TEST_WEEK, home: home.code, away: away.code, starts_at: null };
+  let ins = await c.from('fixtures').insert({ ...row, home_kit: homeKit || null, away_kit: awayKit || null });
+  if (ins.error) ins = await c.from('fixtures').insert(row);   // a database without 0052_fixture_kits.sql
+  throwOn(ins, 'The test match couldn’t be made');
   try {
     const now = melb(new Date());
     const data = await runEngine(league, home.code, away.code, Math.floor(Math.random() * 2 ** 31), { fixture_id: id, week: TEST_WEEK, date: now.date, time: now.time, stage: null, suspended: [], test: true, script, only_script_goals: !!onlyScriptGoals }, onProgress);
