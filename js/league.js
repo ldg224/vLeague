@@ -7,6 +7,7 @@
 // (default: after every demo match), to see upcoming matches.
 import { enterPlace, paintClub } from './shell.js';
 import { mountFrame } from './frame.js';
+import { watchLineupDue } from './lineup-due.js';
 import { esc, crestUrl, clubs } from './member.js';
 import { finished, logoUrl } from './dashboard-data.js';
 import { crest as crestHtml, useClubs } from './places.js';
@@ -391,4 +392,5 @@ if (ctx) {
       main.querySelector('.sp-back')?.addEventListener('click', e => { if (moved) { e.preventDefault(); history.back(); } });
     },
   });
+  if (!preview) watchLineupDue(ctx.club?.code);
 }

@@ -356,3 +356,16 @@
 .lg a.cl { text-decoration: none; }
 .lg a.cl:not(.sc-club) { color: inherit; }
 .lg a.sc-link { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+
+/* WR-44: the pulsing dot on the Club button while a line-up is due (js/lineup-due.js) */
+.lg-tool.is-club { position: relative; }
+.lg-due {
+  position: absolute; top: -2px; right: -2px; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--amber); box-shadow: 0 0 0 2px var(--surface);
+}
+.lg-due::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--amber);
+  animation: lg-due-ping 1.6s ease-out infinite;
+}
+@keyframes lg-due-ping { from { transform: scale(1); opacity: .7; } to { transform: scale(2.4); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .lg-due::after { animation: none; } }

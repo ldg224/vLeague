@@ -9,6 +9,7 @@ import { db } from './auth.js';
 import { loadSeason } from './dashboard-data.js';
 import { icon } from './icons.js';
 import { mountSubFrame } from './frame.js';
+import { watchLineupDue } from './lineup-due.js';
 
 // The old menu (Home, My club, Inbox, Matches, League, Draft, Settings) is gone (WR-06): the league page is the whole site and
 // its tabs do those jobs. The pages behind its header buttons (My club, Settings, Kits, Draft) keep one way back.
@@ -45,6 +46,7 @@ function drawSubFrame(place, me, club) {
   if (!el || place === 'league') return;
   document.body.classList.toggle('has-club', Boolean(club));
   mountSubFrame(el, { office: me?.profile?.role === 'office', crest: club?.crest_path ? crestUrl(club.crest_path) : '', here: ['settings', 'editor'].includes(place) ? place : 'club', title: document.body.dataset.title || PAGE_TITLES[place] || '' });
+  if (place !== 'club' && club?.code && me?.user?.id !== 'preview') watchLineupDue(club.code);   // WR-44
   // The contour lines and the silk fade in once their pictures are loaded, as on the league page (js/league.js).
   if (!document.body.classList.contains('topo-ready')) {
     Promise.all(['assets/img/topo.png', 'assets/img/fabric.png'].map(src => { const i = new Image(); i.src = src; return i.decode().catch(() => {}); }))
