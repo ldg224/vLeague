@@ -11,6 +11,7 @@
 // the left and the away side's on the right, "+4 minutes added" and "HT 1 - 0" between. Only what the engine really records: no substitutions, VAR or injuries exist.
 import { esc } from './member.js';
 import { icon } from './icons.js';
+import { goalMark, cardMark } from './match-marks.js';
 import { onColour } from './club-colour.js';
 
 const W = 640, H = 170, MID = 85;   // the chart's own coordinates
@@ -104,7 +105,7 @@ function events(fx, file, ctx) {
       list.push({ t: e.t + 0.01, divider: `${e.period === 1 ? 'HT' : 'FT'} ${score.home} – ${score.away}`, strong: true });
     }
   }
-  const ic = { ball: icon('ball'), yellow: '<i class="ev-card is-y"></i>', red: '<i class="ev-card is-r"></i>', wood: icon('map-pin') };
+  const ic = { ball: goalMark(), yellow: cardMark('yellow'), red: cardMark('red'), wood: icon('map-pin') };
   const row = it => it.divider
     ? `<li class="ev-div${it.strong ? ' is-strong' : ''}"><span>${esc(it.divider)}</span></li>`
     : `<li class="ev-row is-${it.side}${it.goal ? ' is-goal' : ''}"><div class="ev-text">${it.who ? `<b>${esc(it.who)}</b>` : ''}${it.sub ? `<small>${esc(it.sub)}</small>` : ''}</div>`

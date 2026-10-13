@@ -1,8 +1,6 @@
 /* The Lineup tab of a played or live match (WR-39): the Predicted Lineup's pitch (css/match-lineup.css) plus the card marks, the red-card minute and the bench. */
-.ml-off { position: absolute; left: -14px; top: 50%; translate: 0 -50%; display: inline-flex; align-items: center; gap: 3px; height: 18px; padding: 0 5px; border-radius: 999px;
-  background: var(--surface); box-shadow: 0 0 0 1px var(--line); color: var(--text-strong); font: 700 var(--fs-xs)/1 var(--font); font-variant-numeric: tabular-nums; }
-.ml-cd { display: block; width: 8px; height: 11px; border-radius: 1.5px; }
-.ml-cd.is-yellow { background: #f4c20d; } .ml-cd.is-red { background: var(--res-l); }
+.ml-off { position: absolute; left: -10px; top: 50%; translate: 0 -50%; display: inline-flex; align-items: center; }
+.ml-off em { position: absolute; bottom: 100%; left: 0; margin-bottom: 2px; color: var(--text-strong); font: 700 var(--fs-xs)/1 var(--font); font-style: normal; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .mp-subs { padding: 16px 20px 20px; border-top: 1px solid var(--line); }
 .mp-subs h3 { margin: 0 0 4px; font: 900 var(--fs-m)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: var(--text-strong); }
 .mp-note { margin: 0 0 12px; color: var(--muted); font: 400 var(--fs-s) var(--font); }
@@ -18,7 +16,7 @@
 @media (max-width: 767px) {
   .mp-subs { padding: 16px; }
   .mp-cols { grid-template-columns: 1fr; gap: 12px; }
-  .ml-off { left: -16px; }
+  .ml-off { left: -12px; }
 }
 /* the team average rating chip wears the same colours as a player's rating badge */
 .ml-chip.is-hi { background: var(--res-w); border-color: transparent; color: #fff; font-weight: 700; }

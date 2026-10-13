@@ -16,6 +16,7 @@ import { kitSprite, startDesign } from './kit.js';
 import { onColour } from './club-colour.js';
 import { esc } from './member.js';
 import { icon } from './icons.js';
+import { goalMark, assistMark, captainMark } from './match-marks.js';
 
 const image = url => new Promise(res => { if (!url) return res(null); const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
 const filled = row => Boolean(row && row.lineup && Object.keys(row.lineup).length);
@@ -81,18 +82,18 @@ function players(side, L, ctx, cls, star) {
     const p = byId.get(String(id)); if (!p) return '';
     const gk = slots[slot].want === 'GK', pic = L.kits[side]?.[gk ? 'gk' : 'field'] || L.kits[side]?.field;
     const face = pic ? `<img src="${pic}" alt=""><i class="ml-sn">${esc(p.number ?? '')}</i>` : `<i class="ml-disc" style="--c:${esc(colour)};--on:${esc(onColour(colour))}">${esc(p.number ?? '')}</i>`;
-    const cap = String(sheet.captain) === String(id) ? '<b class="ml-cap" aria-label="Captain">C</b>' : '';
+    const cap = String(sheet.captain) === String(id) ? captainMark() : '';
     const st = ctx.stats?.get(String(id)), avg = avgOf(ctx.stats, id);
     let mark = '';
     if (ctx.view === 'rating' && avg != null) {
       const top = String(id) === star;
       mark = `<b class="ml-r is-${top ? 'star' : avg >= 7 ? 'hi' : 'lo'}" aria-label="Average rating ${avg.toFixed(1)}${top ? ', the standout' : ''}">${avg.toFixed(1)}${top ? STAR : ''}</b>`;
     } else if (ctx.view === 'contrib' && st) {
-      mark = `${st.a ? `<b class="ml-m is-a" aria-label="${st.a} ${st.a === 1 ? 'assist' : 'assists'}">${icon('assist')}${st.a}</b>` : ''}${st.g ? `<b class="ml-m is-g" aria-label="${st.g} ${st.g === 1 ? 'goal' : 'goals'}">${icon('ball')}${st.g}</b>` : ''}`;
+      mark = `${st.a ? `<span class="ml-m is-a">${assistMark(st.a)}</span>` : ''}${st.g ? `<span class="ml-m is-g">${goalMark(st.g)}</span>` : ''}`;
     }
     const worth = ctx.view === 'value' ? `<b class="ml-v" aria-label="Value ${esc(money(p.value))}">${esc(money(p.value))}</b>` : '';
-    return `<li class="ml-p ${cls}" style="--x:${slots[slot].x.toFixed(1)};--y:${slots[slot].y.toFixed(1)}" data-id="${esc(id)}"><span class="ml-av">${face}${cap}${mark}${worth}</span>`
-      + `<span class="ml-n">${esc(surname(p.name))}</span></li>`;
+    return `<li class="ml-p ${cls}" style="--x:${slots[slot].x.toFixed(1)};--y:${slots[slot].y.toFixed(1)}" data-id="${esc(id)}"><span class="ml-av">${face}${mark}${worth}</span>`
+      + `<span class="ml-n">${cap}${esc(surname(p.name))}</span></li>`;
   }).join('');
 }
 

@@ -87,18 +87,14 @@
 .ml-r.is-lo { background: var(--amber); color: #0a0f19; }
 .ml-r.is-star { background: var(--blue-600, #1e88e5); color: #fff; }
 .ml-star { width: 11px; height: 11px; fill: currentColor; }
-.ml-m {
-  position: absolute; bottom: -2px; display: inline-flex; align-items: center; gap: 2px; height: 18px; padding: 0 5px; border-radius: 999px;
-  background: var(--surface); box-shadow: 0 0 0 1px var(--line); color: var(--text-strong); font: 700 var(--fs-xs)/1 var(--font); font-variant-numeric: tabular-nums;
-}
-.ml-m .ic { width: 11px; height: 11px; }
-.ml-m.is-a { left: -10px; } .ml-m.is-g { right: -10px; }
+.ml-m { position: absolute; bottom: -2px; display: inline-flex; }
+.ml-m.is-a { left: -8px; } .ml-m.is-g { right: -8px; }
 .ml-v {
   position: absolute; bottom: -6px; left: 50%; translate: -50% 0; padding: 2px 8px; border-radius: 999px; white-space: nowrap;
   background: var(--surface); box-shadow: 0 0 0 1px var(--line); color: var(--text-strong); font: 700 var(--fs-xs)/1.2 var(--font); font-variant-numeric: tabular-nums;
 }
 .ml-p:has(.ml-v) .ml-n { margin-top: 10px; }
-@media (max-width: 767px) { .ml-r { right: -12px; } .ml-m.is-a { left: -12px; } .ml-m.is-g { right: -12px; } }
+@media (max-width: 767px) { .ml-r { right: -12px; } .ml-m.is-a { left: -10px; } .ml-m.is-g { right: -10px; } }
 
 /* the shirt number, big on the shirt itself (white with a dark edge, so it reads on any kit) */
 .ml-sn { position: absolute; left: 50%; top: 46%; translate: -50% -50%; font: 900 var(--fs-l)/1 var(--font); font-style: normal; font-variant-numeric: tabular-nums; color: #fff;
@@ -106,3 +102,15 @@
 .ml-sn:empty { display: none; }
 @container (max-width: 900px) { .ml-sn { font-size: var(--fs-m); -webkit-text-stroke-width: 2.5px; } }
 @media (max-width: 767px) { .ml-sn { font-size: var(--fs-m); -webkit-text-stroke-width: 2.5px; } }
+
+/* FotMob-style round marks (js/match-marks.js): a football for a goal, a boot for an assist, a card on a dark chip, a grey C for the captain */
+.mk { position: relative; display: inline-grid; place-items: center; flex: none; width: 18px; height: 18px; border-radius: 50%; font-style: normal; }
+.mk svg { display: block; width: 18px; height: 18px; }
+.mk-goal, .mk-assist { box-shadow: 0 0 0 1.5px var(--surface); }
+.mk small { position: absolute; top: -7px; right: -7px; min-width: 14px; height: 14px; padding: 0 3px; border-radius: 999px; background: var(--text-strong); color: var(--surface);
+  font: 700 var(--fs-xs)/14px var(--font); text-align: center; font-variant-numeric: tabular-nums; }
+.mk-card { background: #2b2b2b; box-shadow: 0 0 0 1.5px var(--surface); }
+.mk-c { display: block; width: 7px; height: 10px; border-radius: 1.5px; }
+.mk-c.is-y { background: #f4c20d; } .mk-c.is-r { background: #e5322d; }
+.mk-cap { width: 15px; height: 15px; margin-right: 4px; vertical-align: -3px; background: color-mix(in oklab, var(--text) 45%, var(--surface)); color: var(--surface); font: 700 10px/1 var(--font); }
+.ev-ic .mk, .ev-ic .mk svg { width: 24px; height: 24px; } .ev-ic .mk-c { width: 9px; height: 13px; }
