@@ -59,16 +59,16 @@ export const money = v => {
   const n = Number(v) || 0;
   return n >= 1e6 ? `$${(n / 1e6).toFixed(1).replace(/\.0$/, '')}M` : `$${Math.round(n / 1e3)}K`;
 };
-const surname = n => { const w = String(n || '').trim().split(/\s+/); return w.length > 1 ? w.slice(1).join(' ') : w[0] || ''; };
-const initials = n => String(n || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+export const surname = n => { const w = String(n || '').trim().split(/\s+/); return w.length > 1 ? w.slice(1).join(' ') : w[0] || ''; };
+export const initials = n => String(n || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
 export const VIEWS = [['rating', 'Average rating'], ['contrib', 'Contributions'], ['value', 'Value']];
-const STAR = '<svg class="ml-star" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m12 2.8 2.7 5.8 6.3.7-4.7 4.3 1.3 6.2L12 16.6l-5.6 3.2 1.3-6.2L3 9.3l6.3-.7z"/></svg>';
+export const STAR = '<svg class="ml-star" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m12 2.8 2.7 5.8 6.3.7-4.7 4.3 1.3 6.2L12 16.6l-5.6 3.2 1.3-6.2L3 9.3l6.3-.7z"/></svg>';
 const avgOf = (stats, id) => { const r = stats?.get(String(id)); return r && r.apps ? r.ratingSum / r.apps : null; };
 
-const PITCH_H = '<svg class="ml-lines is-h" viewBox="0 0 105 68" preserveAspectRatio="none" aria-hidden="true" focusable="false"><rect x="1" y="1" width="103" height="66"/><line x1="52.5" y1="1" x2="52.5" y2="67"/><circle cx="52.5" cy="34" r="9.15"/>'
+export const PITCH_H = '<svg class="ml-lines is-h" viewBox="0 0 105 68" preserveAspectRatio="none" aria-hidden="true" focusable="false"><rect x="1" y="1" width="103" height="66"/><line x1="52.5" y1="1" x2="52.5" y2="67"/><circle cx="52.5" cy="34" r="9.15"/>'
   + '<rect x="1" y="13.84" width="16.5" height="40.32"/><rect x="1" y="24.84" width="5.5" height="18.32"/><rect x="87.5" y="13.84" width="16.5" height="40.32"/><rect x="98.5" y="24.84" width="5.5" height="18.32"/></svg>';
-const PITCH_V = '<svg class="ml-lines is-v" viewBox="0 0 68 105" preserveAspectRatio="none" aria-hidden="true" focusable="false"><rect x="1" y="1" width="66" height="103"/><line x1="1" y1="52.5" x2="67" y2="52.5"/><circle cx="34" cy="52.5" r="9.15"/>'
+export const PITCH_V = '<svg class="ml-lines is-v" viewBox="0 0 68 105" preserveAspectRatio="none" aria-hidden="true" focusable="false"><rect x="1" y="1" width="66" height="103"/><line x1="1" y1="52.5" x2="67" y2="52.5"/><circle cx="34" cy="52.5" r="9.15"/>'
   + '<rect x="13.84" y="1" width="40.32" height="16.5"/><rect x="24.84" y="1" width="18.32" height="5.5"/><rect x="13.84" y="87.5" width="40.32" height="16.5"/><rect x="24.84" y="98.5" width="18.32" height="5.5"/></svg>';
 
 // One side's players, placed on the whole pitch by --x (across) and --y (up the pitch from the own goal), as the team sheet's slots give them.
@@ -105,7 +105,7 @@ function bar(side, L, ctx) {
   return `<div class="ml-side is-${side}">${side === 'home' ? `${chip}${ctx.crest(team, 32)}<b>${esc(name)}</b>${form}` : `${form}<b>${esc(name)}</b>${ctx.crest(team, 32)}${chip}`}</div>`;
 }
 
-function coach(side, ctx) {
+export function coach(side, ctx) {
   const code = ctx.code[side], name = ctx.club(code)?.manager_name || '';
   if (!name) return '<span></span>';
   const colour = ctx.club(code)?.colour || ctx.team(code).colour;

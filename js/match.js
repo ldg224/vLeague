@@ -24,6 +24,7 @@ import { chanceCard, venueCard } from './match-side.js';
 import { h2hCard } from './match-h2h.js';
 import { loadMatchFile } from './match-file.js';
 import { factsView } from './match-facts.js';
+import { playedCard } from './match-played.js';
 import { loadHistory } from './history-data.js';
 
 chrome();
@@ -35,7 +36,6 @@ const TABS = {
   played: [['facts', 'Facts'], ['lineup', 'Lineup'], ['stats', 'Stats'], ['h2h', 'Head-to-Head']],
 };
 const SOON = {
-  lineup: 'The line-ups for this match are coming.',
   stats: 'The full team stats for this match are coming.',
 };
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -172,6 +172,13 @@ function start() {
       else if (fileState === 'error') main = '<section class="lg-card mh-soon"><p class="empty">The match file isn’t available yet. Try again in a moment.</p></section>';
       else if (!file) { needFile(); main = '<section class="lg-card mh-soon"><p class="empty">Loading the match…</p></section>'; }
       else main = factsView(fx, file, { team, club, accent: acc, horizon: s.st === 'live' ? liveSimTime(fx, season, s.now) : Infinity, live: s.st === 'live' });
+    } else if (tab === 'lineup') {
+      const live = s.st === 'live';
+      if (s.hid) main = `<section class="lg-card mh-soon"><p class="empty">Results hidden · <button type="button" data-reveal>Show</button></p></section>`;
+      else if (live && fileState === 'error') main = '<section class="lg-card mh-soon"><p class="empty">The match file isn’t available yet. Try again in a moment.</p></section>';
+      else if (live && !file) { needFile(); main = '<section class="lg-card mh-soon"><p class="empty">Loading the line-ups…</p></section>'; }   // a live match works its ratings out from the file
+      else if (!lineups) main = '<section class="lg-card mh-soon"><p class="empty">Loading the line-ups…</p></section>';
+      else main = playedCard(fx, lineups, { ...lctx(), file, live, horizon: live ? liveSimTime(fx, season, s.now) : Infinity });
     } else if (tab === 'h2h') {
       const h = h2hCard(season, fx, { club, team, crest, accent: acc, hide: sctx.hide, url: matchUrl, time: d => time(d), now: s.now }, { home: h2hFilter === 'home', season: h2hFilter === 'season' });
       h2hHidden = h.hidden;
