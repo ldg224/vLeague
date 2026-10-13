@@ -357,7 +357,7 @@ export async function mountFixtures(ctx) {
         status.textContent = frac < 0.02 ? 'Loading the simulator (the first time takes a moment)…' : `Playing the match… ${Math.round(frac * 100)}%`;
       } });
       bar.style.width = '100%';
-      const link = `game.html?id=${encodeURIComponent(r.id)}`;
+      const link = `match.html?id=${encodeURIComponent(r.id)}`;
       status.innerHTML = `${esc(name(r.home.code))} v ${esc(name(r.away.code))} (${esc(looks.find(l => l.key === r.look)?.name || r.look)} look) is live now. <a href="${esc(link)}" target="_blank" rel="noopener">Open the Game centre</a>. It also shows in Matches.`;
     } catch (e) {
       status.textContent = e.message;

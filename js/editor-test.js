@@ -96,7 +96,7 @@ export async function mountTest(ctx) {
         onStatus: t => { status.textContent = t; },
         onProgress: frac => { bar.style.width = `${Math.round(Math.min(1, frac) * 100)}%`; status.textContent = frac < 0.02 ? 'Loading the simulator (the first time takes a moment)…' : `Playing the match… ${Math.round(frac * 100)}%`; } });
       bar.style.width = '100%';
-      const link = `game.html?id=${encodeURIComponent(r.id)}`;
+      const link = `match.html?id=${encodeURIComponent(r.id)}`;
       msg = ''; msgHtml = `${esc(r.home.name)} v ${esc(r.away.name)} ends ${r.score[0]}–${r.score[1]} and is ${skip ? 'ready: the highlights are waiting' : 'live now'}. <a href="${esc(link)}" target="_blank" rel="noopener">Open the Game centre</a>. It also shows in Matches.`;
       await load(); busy = false; draw();
     } catch (e) {
