@@ -67,8 +67,8 @@ function render(club, team, season, won, rows) {
     .sort((a, b) => POS_ORDER.indexOf(a.position) - POS_ORDER.indexOf(b.position) || (Number(a.number) || 99) - (Number(b.number) || 99) || a.name.localeCompare(b.name));
 
   // Results this account hasn't revealed stay hidden (spoiler-free), as on the league page.
-  const fixtures = season ? season.fixtures.filter(f => (f.home === club.code || f.away === club.code) && !f.exhibition && !f.test).sort(byKickoff) : [];
-  const games = season ? finished(season, now).filter(f => fixtures.includes(f)) : [];
+  const fixtures = season ? season.fixtures.filter(f => (f.home === club.code || f.away === club.code) && !f.test).sort(byKickoff) : [];   // preseason (exhibition) matches stay in the list
+  const games = season ? finished(season, now).filter(f => fixtures.includes(f) && !f.exhibition) : [];   // but not in the form strip
   const shown = games.filter(f => !spoilerHidden(f, season, now));
   const hidden = new Set(fixtures.filter(f => spoilerHidden(f, season, now)).map(f => f.id));
   const sum = season && team ? clubSummary({ ...season, fixtures: season.fixtures.filter(f => !spoilerHidden(f, season, now)) }, club.code, now) : null;
