@@ -9,7 +9,8 @@ import { chrome, esc, clubs, crestUrl } from './member.js';
 import { currentUser, myProfile } from './auth.js';
 import { paintClub } from './shell.js';
 import { mountSubFrame } from './frame.js';
-import { loadSeason, kickoff, status, shownScore, shownGoals, liveMinute, liveState } from './dashboard-data.js';
+import { loadSeason, kickoff, status, shownScore, shownGoals, liveMinute, liveState, finished } from './dashboard-data.js';
+import { countedFixtures, totals } from './season-stats.js';
 import { crest, teamOf, nameOf, fullNameOf, useClubs, time } from './places.js';
 import { prefs, spoilerHidden, revealScore } from './prefs.js';
 import { paint, quietly } from './paint.js';
@@ -120,10 +121,20 @@ function start() {
   };
   // The Predicted Lineup (WR-32) loads once, then the Preview tab draws it.
   let lineups = null;
-  const lctx = { season, code: { home: fx.home, away: fx.away }, club, team: code => teamOf(season, code), crest };
+  // Season numbers for the lineup pills (WR-33), from the results this account may see (spoiler-free keeps hidden ones out). The choice lasts while the page is open.
+  let view = preview && ['contrib', 'value'].includes(q.get('view')) ? q.get('view') : 'rating';   // ?view= : localhost preview only
+  const seasonStats = () => {
+    if (preview && q.has('fake')) {   // localhost preview only: made-up numbers, to look at the pills while no real season is played
+      const h = id => [...String(id)].reduce((n, c) => (n * 31 + c.charCodeAt(0)) >>> 0, 7);
+      return new Map((season.players || []).map(p => [String(p.id), { id: p.id, apps: 3, ratingSum: 3 * (5.6 + (h(p.id) % 25) / 10), g: h(p.id) % 4 === 0 ? 2 : h(p.id) % 5 === 0 ? 1 : 0, a: h(p.id) % 3 === 0 ? 1 : 0 }]));
+    }
+    const now = new Date(), seen = finished(season, now).filter(f => !spoilerHidden(f, season, now));
+    return new Map(totals(countedFixtures(seen)).players.map(p => [String(p.id), p]));
+  };
+  const lctx = () => ({ season, code: { home: fx.home, away: fx.away }, club, team: code => teamOf(season, code), crest, stats: seasonStats(), view });
   const body = s => {
     const tab = tabNow(s.st);
-    if (tab === 'preview') return lineups ? lineupCard(lineups, lctx) : '<section class="lg-card mh-soon"><p class="empty">Loading the line-ups…</p></section>';
+    if (tab === 'preview') return lineups ? lineupCard(lineups, lctx()) : '<section class="lg-card mh-soon"><p class="empty">Loading the line-ups…</p></section>';
     return `<section class="lg-card mh-soon"><p class="empty">${esc(SOON[tab])}</p></section>`;
   };
 
@@ -141,6 +152,8 @@ function start() {
   loadLineups(fx, season, rows, { fake: preview && q.has('fake') }).then(l => { lineups = l; draw(); }).catch(() => { lineups = { home: { sheet: null, locked: false }, away: { sheet: null, locked: false }, kits: {} }; draw(); });
   addEventListener('hashchange', draw);
   main.addEventListener('click', async e => {
+    const pick = e.target.closest('[data-lview]');
+    if (pick) { view = pick.dataset.lview; draw(); return; }
     if (!e.target.closest('[data-reveal]')) return;
     await revealScore([fx.id]).catch(() => {});   // a person's own click, so it redraws straight away
     draw();

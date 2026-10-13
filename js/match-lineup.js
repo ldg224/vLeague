@@ -2,7 +2,10 @@
 // (home above away on a phone), each player a kit shirt with the number and surname under it, a bar of crest, name, formation and team value
 // above, and the coaches below.
 //   loadLineups(fx, season, rows) -> { home, away, kits } once: each side is { sheet, locked }; kits are small shirt pictures (data URLs)
-//   lineupCard(L, ctx)            -> the card's html. ctx = { season, club(code) -> clubs row | undefined, team(code) -> team, crest(team, px) -> html }
+//   lineupCard(L, ctx)            -> the card's html. ctx = { season, club(code) -> clubs row | undefined, team(code) -> team, crest(team, px) -> html,
+//                                  stats: Map of player id -> season totals (js/season-stats.js), view: 'rating' | 'contrib' | 'value' }
+// Three views of the same pitch (WR-33), picked with the pills: Average rating (season average match rating as a badge, orange under 7.0, green from 7.0,
+// blue with a star for the standout), Contributions (goals and assists, nothing for zero) and Value (the editor's value under the shirt).
 // LINEUP LOCK RULE (the user, 11 Oct 2026): a club's XI only appears once its line-up has locked (the week's deadline has passed and the
 // locked sheet, week_sheets, exists). An unlocked club's half stays an empty half-pitch saying so; nothing it has picked is ever shown, and
 // its formation and team value stay out too.
@@ -57,13 +60,17 @@ export const money = v => {
 const surname = n => { const w = String(n || '').trim().split(/\s+/); return w.length > 1 ? w.slice(1).join(' ') : w[0] || ''; };
 const initials = n => String(n || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
+export const VIEWS = [['rating', 'Average rating'], ['contrib', 'Contributions'], ['value', 'Value']];
+const STAR = '<svg class="ml-star" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m12 2.8 2.7 5.8 6.3.7-4.7 4.3 1.3 6.2L12 16.6l-5.6 3.2 1.3-6.2L3 9.3l6.3-.7z"/></svg>';
+const avgOf = (stats, id) => { const r = stats?.get(String(id)); return r && r.apps ? r.ratingSum / r.apps : null; };
+
 const PITCH_H = '<svg class="ml-lines is-h" viewBox="0 0 105 68" preserveAspectRatio="none" aria-hidden="true" focusable="false"><rect x="1" y="1" width="103" height="66"/><line x1="52.5" y1="1" x2="52.5" y2="67"/><circle cx="52.5" cy="34" r="9.15"/>'
   + '<rect x="1" y="13.84" width="16.5" height="40.32"/><rect x="1" y="24.84" width="5.5" height="18.32"/><rect x="87.5" y="13.84" width="16.5" height="40.32"/><rect x="98.5" y="24.84" width="5.5" height="18.32"/></svg>';
 const PITCH_V = '<svg class="ml-lines is-v" viewBox="0 0 68 105" preserveAspectRatio="none" aria-hidden="true" focusable="false"><rect x="1" y="1" width="66" height="103"/><line x1="1" y1="52.5" x2="67" y2="52.5"/><circle cx="34" cy="52.5" r="9.15"/>'
   + '<rect x="13.84" y="1" width="40.32" height="16.5"/><rect x="24.84" y="1" width="18.32" height="5.5"/><rect x="13.84" y="87.5" width="40.32" height="16.5"/><rect x="24.84" y="98.5" width="18.32" height="5.5"/></svg>';
 
 // One side's players, placed on the whole pitch by --x (across) and --y (up the pitch from the own goal), as the team sheet's slots give them.
-function players(side, L, ctx, cls) {
+function players(side, L, ctx, cls, star) {
   const sheet = L[side].sheet;
   const formation = FORMATIONS[sheet.formation] ? sheet.formation : DEFAULT_FORMATION, slots = FORMATIONS[formation];
   const byId = new Map((ctx.season.players || []).map(p => [String(p.id), p]));
@@ -73,7 +80,16 @@ function players(side, L, ctx, cls) {
     const gk = slots[slot].want === 'GK', pic = L.kits[side]?.[gk ? 'gk' : 'field'] || L.kits[side]?.field;
     const face = pic ? `<img src="${pic}" alt="">` : `<i class="ml-disc" style="--c:${esc(colour)};--on:${esc(onColour(colour))}">${esc(p.number ?? '')}</i>`;
     const cap = String(sheet.captain) === String(id) ? '<b class="ml-cap" aria-label="Captain">C</b>' : '';
-    return `<li class="ml-p ${cls}" style="--x:${slots[slot].x.toFixed(1)};--y:${slots[slot].y.toFixed(1)}" data-id="${esc(id)}"><span class="ml-av">${face}${cap}</span>`
+    const st = ctx.stats?.get(String(id)), avg = avgOf(ctx.stats, id);
+    let mark = '';
+    if (ctx.view === 'rating' && avg != null) {
+      const top = String(id) === star;
+      mark = `<b class="ml-r is-${top ? 'star' : avg >= 7 ? 'hi' : 'lo'}" aria-label="Average rating ${avg.toFixed(1)}${top ? ', the standout' : ''}">${avg.toFixed(1)}${top ? STAR : ''}</b>`;
+    } else if (ctx.view === 'contrib' && st) {
+      mark = `${st.a ? `<b class="ml-m is-a" aria-label="${st.a} ${st.a === 1 ? 'assist' : 'assists'}">${icon('assist')}${st.a}</b>` : ''}${st.g ? `<b class="ml-m is-g" aria-label="${st.g} ${st.g === 1 ? 'goal' : 'goals'}">${icon('ball')}${st.g}</b>` : ''}`;
+    }
+    const worth = ctx.view === 'value' ? `<b class="ml-v" aria-label="Value ${esc(money(p.value))}">${esc(money(p.value))}</b>` : '';
+    return `<li class="ml-p ${cls}" style="--x:${slots[slot].x.toFixed(1)};--y:${slots[slot].y.toFixed(1)}" data-id="${esc(id)}"><span class="ml-av">${face}${cap}${mark}${worth}</span>`
       + `<span class="ml-n">${p.number != null && p.number !== '' ? `<i>${esc(p.number)}</i> ` : ''}${esc(surname(p.name))}</span></li>`;
   }).join('');
 }
@@ -96,11 +112,17 @@ function coach(side, ctx) {
 
 export function lineupCard(L, ctx) {
   ctx = { ...ctx, code: ctx.code };
+  // The standout: the best average rating among the players shown on the pitch (blue, with a star).
+  const shown = ['home', 'away'].flatMap(s => (L[s].sheet ? Object.values(L[s].sheet.lineup).map(String) : []));
+  const best = shown.map(id => [id, avgOf(ctx.stats, id)]).filter(x => x[1] != null).sort((a, b) => b[1] - a[1])[0];
+  const star = best ? best[0] : null;
+  const pills = `<nav class="ml-pills sc-toggle" aria-label="Lineup view">${VIEWS.map(([k, l]) => `<button type="button" data-lview="${k}" aria-pressed="${k === ctx.view}">${esc(l)}</button>`).join('')}</nav>`;
   const half = side => (L[side].sheet ? '' : `<div class="ml-empty is-${side}">${icon('lock')}<b>Lineup not submitted yet</b><span>It shows once the club locks its team.</span></div>`);
   return `<section class="lg-card ml" aria-labelledby="ml-h">
     <div class="ml-bar">${bar('home', L, ctx)}<h2 id="ml-h">Predicted lineup</h2>${bar('away', L, ctx)}</div>
+    ${pills}
     <div class="ml-pitch" role="group" aria-label="Predicted line-ups on a pitch">${PITCH_H}${PITCH_V}
-      <ul class="ml-xi">${L.home.sheet ? players('home', L, ctx, 'is-home') : ''}${L.away.sheet ? players('away', L, ctx, 'is-away') : ''}</ul>
+      <ul class="ml-xi">${L.home.sheet ? players('home', L, ctx, 'is-home', star) : ''}${L.away.sheet ? players('away', L, ctx, 'is-away', star) : ''}</ul>
       ${half('home')}${half('away')}
     </div>
     <div class="ml-coaches">${coach('home', ctx)}<b>Coach</b>${coach('away', ctx)}</div>

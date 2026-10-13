@@ -33,6 +33,7 @@ const ICONS = {
   'plus': '<path d="M5 12h14" /><path d="M12 5v14" />',
   'map-pin': '<path d="M20 10c0 4.99-5.54 10.19-7.4 11.8a1 1 0 0 1-1.2 0C9.54 20.19 4 14.99 4 10a8 8 0 0 1 16 0" /><circle cx="12" cy="10" r="3" />',
   'ball': '<circle cx="12" cy="12" r="10" /><path d="m12 8 3.8 2.8-1.45 4.45h-4.7L8.2 10.8z" /><path d="M12 8V2M15.8 10.8l5.6-1.8M14.35 15.25l3.5 4.8M9.65 15.25l-3.5 4.8M8.2 10.8 2.6 9" />',
+  'assist': '<path d="M6 18 18 6" /><path d="M9 6h9v9" />',
   'circle-help': '<circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><path d="M12 17h.01" />',
   'chevron-left': '<path d="m15 18-6-6 6-6" />',
   'chevron-right': '<path d="m9 18 6-6-6-6" />',
