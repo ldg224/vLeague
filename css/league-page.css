@@ -398,3 +398,17 @@
 .lu-later { background: transparent; color: #fff; border: 1px solid rgba(255, 255, 255, .5); }
 .lu-pop :focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .lu-silk { animation: none; } }
+
+/* Neon glow round the pop-up: a bright orange edge with a red halo that breathes. Still when reduced motion is on. */
+.lu-pop {
+  border-color: #ffb066;
+  box-shadow: 0 0 6px 1px #ff9a1f, 0 0 22px 4px rgba(255, 90, 31, .65), 0 0 60px 12px rgba(229, 59, 31, .4), 0 24px 80px rgba(0, 0, 0, .6);
+  animation: lu-neon 1.8s ease-in-out infinite alternate;
+}
+@keyframes lu-neon {
+  to {
+    border-color: #ffd9a8;
+    box-shadow: 0 0 10px 2px #ffb347, 0 0 36px 9px rgba(255, 90, 31, .85), 0 0 100px 26px rgba(229, 59, 31, .55), 0 24px 80px rgba(0, 0, 0, .6);
+  }
+}
+@media (prefers-reduced-motion: reduce) { .lu-pop { animation: none; } }
