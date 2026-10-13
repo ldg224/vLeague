@@ -1,0 +1,18 @@
+/* The match page's Insights card (WR-35): one-line facts in rows split by hairlines, each club's group with its crest in a left gutter and a slim strip in
+   that club's colour for the current theme on every row (the same strip as the table's own-club row), never a box inside the card. */
+
+.mi .mi-head { padding: 14px 20px; border-bottom: 1px solid var(--line); }
+.mi-head h2 { margin: 0; text-align: center; font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: var(--text-strong); }
+.mi-list { list-style: none; margin: 0; padding: 0; }
+.mi-group { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; border-top: 1px solid var(--line); }
+.mi-group:first-child { border-top: 0; }
+.mi-crest { display: grid; place-items: center; padding: 8px 0 8px 12px; }
+.mi-rows { margin: 0; padding: 0; list-style: none; min-width: 0; }
+.mi-rows li { padding: 12px 16px 12px 14px; border-left: 3px solid var(--tag, var(--line)); color: var(--text-strong); font: 600 var(--fs-m)/1.35 var(--font); }
+.mi-rows li + li { border-top: 1px solid var(--line); }
+.mi .empty { margin: 0; padding: 20px; color: var(--muted); font: 400 var(--fs-m) var(--font); }
+
+/* the Preview tab's two columns: the lineup and form on the left, the insights (and later the win chance and ground) on the right */
+.mh-cols, .mh-main, .mh-side { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
+.mh-main, .mh-side { align-content: start; }
+@media (min-width: 992px) { .mh-cols { grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); } }

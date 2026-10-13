@@ -19,6 +19,7 @@ import { icon } from './icons.js';
 import { accentFor, isHex } from './club-colour.js';
 import { loadLineups, lineupCard } from './match-lineup.js';
 import { formCard } from './match-form.js';
+import { insights, insightsCard } from './match-insights.js';
 
 chrome();
 const main = document.getElementById('main');
@@ -150,7 +151,8 @@ function start() {
     if (tab === 'preview') {
       const form = formCard(season, fx, { club, team: code => teamOf(season, code), crest, hide: f => spoilerHidden(f, season, s.now), url: matchUrl }, s.now);
       formHidden = form.hidden;
-      return (lineups ? lineupCard(lineups, lctx()) : '<section class="lg-card mh-soon"><p class="empty">Loading the line-ups…</p></section>') + form.html;
+      const facts = insightsCard(insights(season, fx, { club, hide: f => spoilerHidden(f, season, s.now), now: s.now }), { team: code => teamOf(season, code), crest, accent: acc });
+      return `<div class="mh-cols"><div class="mh-main">${lineups ? lineupCard(lineups, lctx()) : '<section class="lg-card mh-soon"><p class="empty">Loading the line-ups…</p></section>'}${form.html}</div><aside class="mh-side" aria-label="About these clubs">${facts}</aside></div>`;
     }
     return `<section class="lg-card mh-soon"><p class="empty">${esc(SOON[tab])}</p></section>`;
   };

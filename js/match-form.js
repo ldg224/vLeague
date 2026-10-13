@@ -6,7 +6,7 @@
 //           (spoiler-free), url(f) -> the match's address }
 // Only played matches of this season (not Test matches or exhibitions); fewer than five shows what exists; none says "No matches played yet."
 // A result the viewer has not opened shows a plain dash chip (no colour, nothing given away); the card then offers "Show" for all of them.
-import { finished, byKickoff } from './dashboard-data.js';
+import { finished, byKickoff, kickoff } from './dashboard-data.js';
 import { esc } from './member.js';
 
 const outcome = (f, code) => {
@@ -19,7 +19,7 @@ export function formCard(season, fx, ctx, now = new Date()) {
   const hidden = [];
   const nameOf = code => ctx.club(code)?.short_name || ctx.club(code)?.name || ctx.team(code).name;
   const last = code => finished(season, now)
-    .filter(f => (f.home === code || f.away === code) && !f.test && !f.exhibition && f.id !== fx.id)
+    .filter(f => (f.home === code || f.away === code) && !f.test && !f.exhibition && f.id !== fx.id && (!kickoff(fx) || kickoff(f) < kickoff(fx)))
     .sort((a, b) => byKickoff(b, a)).slice(0, 5);
   const col = (code, side) => {
     const games = last(code);

@@ -12,7 +12,7 @@
 .ml-chip { padding: 2px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--text-soft); font: 600 var(--fs-s) var(--font); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* the pitch: wide on a desktop, tall on a phone */
-.ml-pitch { position: relative; aspect-ratio: 2 / 1; min-height: 340px; overflow: hidden;
+.ml-pitch { position: relative; aspect-ratio: 8 / 5; min-height: 340px; container-type: inline-size; overflow: hidden;
   background:
     radial-gradient(55% 120% at 0% 50%, color-mix(in oklab, var(--ha, transparent) 14%, transparent), transparent 80%),
     radial-gradient(55% 120% at 100% 50%, color-mix(in oklab, var(--aa, transparent) 14%, transparent), transparent 80%),
@@ -22,8 +22,8 @@
 .ml-lines.is-v { display: none; }
 .ml-xi { position: absolute; inset: 0; margin: 0; padding: 0; list-style: none; }
 .ml-p { position: absolute; display: grid; justify-items: center; gap: 4px; width: 96px; translate: -50% -50%; text-align: center; }
-.ml-p.is-home { left: calc(3% + var(--y) * .44%); top: calc(8% + var(--x) * .84%); }
-.ml-p.is-away { left: calc(100% - (3% + var(--y) * .44%)); top: calc(100% - (8% + var(--x) * .84%)); }
+.ml-p.is-home { left: calc(3% + var(--y) * .5%); top: calc(8% + var(--x) * .84%); }
+.ml-p.is-away { left: calc(100% - (3% + var(--y) * .5%)); top: calc(100% - (8% + var(--x) * .84%)); }
 .ml-av { position: relative; display: grid; place-items: center; width: 64px; height: 64px; }
 .ml-av img { width: 64px; height: 64px; object-fit: contain; }
 .ml-disc { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--c); color: var(--on); font: 700 var(--fs-s) var(--font); font-style: normal; font-variant-numeric: tabular-nums; }
@@ -43,6 +43,14 @@
 .ml-coach.is-away { justify-content: flex-end; }
 .ml-coach b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .ml-coach .ml-disc { width: 32px; height: 32px; flex: none; font-size: var(--fs-xs); }
+
+/* a narrower pitch (the lineup beside the Insights card): smaller shirts and names so neighbours don't touch */
+@container (max-width: 900px) {
+  .ml-p { width: 72px; }
+  .ml-av, .ml-av img { width: 52px; height: 52px; }
+  .ml-n { font-size: var(--fs-xs); }
+  .ml-disc { width: 40px; height: 40px; }
+}
 
 @media (max-width: 767px) {
   .ml .ml-bar { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 12px 16px; row-gap: 12px; }
