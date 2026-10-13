@@ -208,9 +208,14 @@ export function kitSprite(design, imgs = {}, size = 128, side = 'front') {
   return out;
 }
 
-// Two shirts too alike to tell apart on a pitch? (main colours, the colour that fills most of the shirt)
+// Two shirts too alike to tell apart on a pitch? Compared on the colours the shirt really shows: the main colour, plus the second one on a patterned shirt
+// (stripes, hoops, halves...). They clash if the main colours are close, or if every colour of each shirt has a close match on the other (a navy and maroon
+// striped shirt against a maroon and navy one: the main colours differ but the shirts look the same from a distance).
 const rgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+const near = (x, y, limit) => Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]) < limit;
+const shown = d => ((d?.pattern && d.pattern !== 'plain' && d.pattern !== 'custom' ? [0, 1] : [0]).map(i => rgb(col(d?.colours?.[i], i))));
 export function kitsClash(a, b, limit = 70) {
-  const x = rgb(col(a?.colours?.[0], 0)), y = rgb(col(b?.colours?.[0], 0));
-  return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]) < limit;
+  const x = shown(a), y = shown(b);
+  if (near(x[0], y[0], limit)) return true;
+  return x.every(c => y.some(o => near(c, o, limit))) && y.every(c => x.some(o => near(c, o, limit)));
 }
