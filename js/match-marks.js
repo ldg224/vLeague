@@ -1,8 +1,12 @@
-// Match marks, drawn with Icons8 icons (Color pack, downloaded to assets/icons): a football for a goal (84301), the player kicking the ball for an assist
-// (16897), a yellow card (31081) and a red card (16914), plus a grey "C" for the captain. One look everywhere they appear (the Lineup pitch, the Events timeline).
-//   goalMark(n?) / assistMark(n?) / cardMark('yellow' | 'red') / captainMark() -> html; the optional n is the count shown beside the icon when more than one.
-const mark = (cls, file, label, n = 1) => `<b class="mk ${cls}" role="img" aria-label="${n > 1 ? `${n} ${label}s` : label}"><img src="assets/icons/mark-${file}.png" alt="" width="26" height="26">${n > 1 ? `<small>${n}</small>` : ''}</b>`;
-export const goalMark = n => mark('mk-goal', 'goal', 'Goal', n);
-export const assistMark = n => mark('mk-assist', 'assist', 'Assist', n);
-export const cardMark = which => mark('mk-card', which === 'red' ? 'red-card' : 'yellow-card', which === 'red' ? 'Red card' : 'Yellow card');
+// Match marks: a round black chip carrying a white football (goal) or a boot (assist), a card chip (yellow or red) and a grey "C" for the captain, as on FotMob.
+// The football and the boot are Phosphor icons (Fill weight, MIT licence, phosphoricons.com), inlined so they take the chip's colours. One look everywhere they
+// appear (the Lineup pitch, the Events timeline).
+//   goalMark(n?) / assistMark(n?) / cardMark('yellow' | 'red') / captainMark() -> html; the optional n is the count shown beside the chip when more than one.
+const glyph = d => `<svg viewBox="0 0 256 256" aria-hidden="true" focusable="false"><path fill="currentColor" d="${d}"/></svg>`;
+const BALL = glyph('M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm8,39.38,24.79-17.05a88.41,88.41,0,0,1,36.18,27l-8,26.94c-.2,0-.41.1-.61.17l-22.82,7.41a7.59,7.59,0,0,0-1,.4L136,88.62c0-.2,0-.41,0-.62V64C136,63.79,136,63.58,136,63.38ZM95.24,46.33,120,63.38c0,.2,0,.41,0,.62V88c0,.21,0,.42,0,.62L91.44,108.29a7.59,7.59,0,0,0-1-.4l-22.82-7.41c-.2-.07-.41-.12-.61-.17l-8-26.94A88.41,88.41,0,0,1,95.24,46.33Zm-13,129.09H53.9a87.4,87.4,0,0,1-13.79-43.07l22-16.88a5.77,5.77,0,0,0,.58.22l22.83,7.42a7.83,7.83,0,0,0,.93.22l10.79,31.42c-.15.18-.3.36-.44.55L82.7,174.71A7.8,7.8,0,0,0,82.24,175.42ZM150.69,213a88.16,88.16,0,0,1-45.38,0L95.25,184.6c.13-.16.27-.31.39-.48l14.11-19.42a7.66,7.66,0,0,0,.46-.7h35.58a7.66,7.66,0,0,0,.46.7l14.11,19.42c.12.17.26.32.39.48Zm23.07-37.61a7.8,7.8,0,0,0-.46-.71L159.19,155.3c-.14-.19-.29-.37-.44-.55l10.79-31.42a7.83,7.83,0,0,0,.93-.22l22.83-7.42a5.77,5.77,0,0,0,.58-.22l22,16.88a87.4,87.4,0,0,1-13.79,43.07Z');
+const BOOT = glyph('M228.65,129.11l-28.06-9.35a4,4,0,0,0-2.63,0l-43.23,15.72A8.14,8.14,0,0,1,152,136a8,8,0,0,1-7.71-5.88,8.17,8.17,0,0,1,5.22-9.73L168,113.67a2.54,2.54,0,0,0-.06-4.8,23.93,23.93,0,0,1-8.8-5.25,4,4,0,0,0-4.17-.91l-24.22,8.8a8,8,0,0,1-10.44-5.39,8.17,8.17,0,0,1,5.22-9.73L146,88.93a4,4,0,0,0,2.31-5.34l-3.06-7.16a4,4,0,0,0-5.05-2.19l-25.5,9.27a8,8,0,0,1-10.44-5.39,8.17,8.17,0,0,1,5.22-9.73l24-8.73a4,4,0,0,0,2.31-5.33L130.39,41.6s0-.07,0-.1A16,16,0,0,0,110.25,33L34.53,60.49A16.05,16.05,0,0,0,24,75.53V192a16,16,0,0,0,16,16H240a16,16,0,0,0,16-16V167.06A40,40,0,0,0,228.65,129.11ZM240,192H40V176H240Z');
+const chip = (cls, inner, label, n = 1) => `<b class="mk ${cls}" role="img" aria-label="${n > 1 ? `${n} ${label}s` : label}">${inner}${n > 1 ? `<small>${n}</small>` : ''}</b>`;
+export const goalMark = n => chip('mk-goal', BALL, 'Goal', n);
+export const assistMark = n => chip('mk-assist', BOOT, 'Assist', n);
+export const cardMark = which => chip('mk-card', `<i class="mk-c is-${which === 'red' ? 'r' : 'y'}"></i>`, which === 'red' ? 'Red card' : 'Yellow card');
 export const captainMark = () => '<b class="mk mk-cap" role="img" aria-label="Captain">C</b>';
