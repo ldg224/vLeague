@@ -17,10 +17,20 @@
 .mh-info .ic { width: 16px; height: 16px; flex: none; color: var(--faint); }
 
 /* ---------- the clubs' band ---------- */
+/* The two washes drift a little, each at its own slow pace (registered properties so the gradient centres can animate); still when reduced motion is on. */
+@property --hx { syntax: "<percentage>"; inherits: false; initial-value: 0%; }
+@property --hy { syntax: "<percentage>"; inherits: false; initial-value: 55%; }
+@property --ax { syntax: "<percentage>"; inherits: false; initial-value: 100%; }
+@property --ay { syntax: "<percentage>"; inherits: false; initial-value: 55%; }
+@property --hs { syntax: "<percentage>"; inherits: false; initial-value: 60%; }
+@property --as { syntax: "<percentage>"; inherits: false; initial-value: 60%; }
+@keyframes mh-drift-h { from { --hx: -6%; --hy: 35%; --hs: 52%; } to { --hx: 12%; --hy: 80%; --hs: 68%; } }
+@keyframes mh-drift-a { from { --ax: 106%; --ay: 75%; --as: 54%; } to { --ax: 88%; --ay: 30%; --as: 68%; } }
 .mh-band {
   background:
-    radial-gradient(60% 100% at 0% 55%, color-mix(in oklab, var(--ha, transparent) 26%, transparent), transparent 78%),
-    radial-gradient(60% 100% at 100% 55%, color-mix(in oklab, var(--aa, transparent) 26%, transparent), transparent 78%);
+    radial-gradient(var(--hs) 100% at var(--hx) var(--hy), color-mix(in oklab, var(--ha, transparent) 28%, transparent), transparent 78%),
+    radial-gradient(var(--as) 100% at var(--ax) var(--ay), color-mix(in oklab, var(--aa, transparent) 28%, transparent), transparent 78%);
+  animation: mh-drift-h 17s ease-in-out infinite alternate, mh-drift-a 23s ease-in-out -9s infinite alternate;
 }
 .mh-teams {
   position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, auto) minmax(0, 1fr); align-items: center; gap: 0 24px;
@@ -41,8 +51,8 @@
 .mh-short { display: none; }
 .mh-nm { display: grid; gap: 2px; min-width: 0; }
 .mh-badge { display: grid; justify-items: center; gap: 6px; min-width: 0; }
-.mh-mgr { color: var(--muted); font: 400 var(--fs-s)/1.2 var(--font); text-align: center; text-transform: none; }
-.mh-mgr.is-sm { display: none; }
+.mh-mgr { color: var(--muted); font: 400 var(--fs-s)/1.2 var(--font); text-transform: none; }
+.mh-team.is-home .mh-nm { justify-items: end; } .mh-team.is-away .mh-nm { justify-items: start; }
 @media (hover: hover) { .mh-team:hover .mh-name { text-decoration: underline; } }
 
 .mh-mid { display: grid; justify-items: center; gap: 8px; text-align: center; }
@@ -92,8 +102,7 @@
   /* phone: the crest over the short name in each corner, the middle block between; the ghost shows the club's code */
   .mh-teams { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; padding: 24px 12px 20px; }
   .mh-band:has(.mh-scorers) .mh-teams { padding-bottom: 16px; }
-  .mh .mh-badge .mh-mgr { display: none; } .mh-mgr.is-sm { display: block; }
-  .mh-nm { justify-items: center; }
+  .mh .mh-team .mh-nm { justify-items: center; }
   .mh .mh-team, .mh .mh-team.is-home { flex-direction: column-reverse; gap: 10px; justify-content: flex-end; text-align: center; }
   .mh-team .crest { --s: 56px !important; }
   .mh-name { font: 700 var(--fs-m)/1.2 var(--font); text-transform: none; font-stretch: normal; }
@@ -106,4 +115,4 @@
   .mh-scorers .is-home, .mh-scorers .is-away { padding-inline: 0; }
   .mh-tabs { padding: 0 6px; }
 }
-@media (prefers-reduced-motion: reduce) { .mh * { transition: none; animation: none; } }
+@media (prefers-reduced-motion: reduce) { .mh * { transition: none; animation: none; } .mh-band { animation: none; --hx: 0%; --hy: 55%; --ax: 100%; --ay: 55%; --hs: 60%; --as: 60%; } }

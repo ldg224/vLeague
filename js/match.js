@@ -116,8 +116,8 @@ function start() {
     const k = kickoff(fx), ground = club(fx.home)?.stadium || '', list = tabsFor(s.st), cur = tabNow(s.st);
     const side = (code, t, cls) => {
       const mgr = club(code)?.manager_name || '';
-      return `<a class="mh-team ${cls}" href="team.html?c=${esc(code)}"><span class="mh-nm"><b class="mh-name"><span class="mh-full">${esc(fullNameOf(t))}</span><span class="mh-short">${esc(nameOf(t))}</span></b>${mgr ? `<small class="mh-mgr is-sm">${esc(mgr)}</small>` : ''}</span>`
-        + `<span class="mh-badge">${crest(t, 88)}${mgr ? `<small class="mh-mgr">${esc(mgr)}</small>` : ''}</span></a>`;
+      return `<a class="mh-team ${cls}" href="team.html?c=${esc(code)}"><span class="mh-nm"><b class="mh-name"><span class="mh-full">${esc(fullNameOf(t))}</span><span class="mh-short">${esc(nameOf(t))}</span></b>${mgr ? `<small class="mh-mgr">${esc(mgr)}</small>` : ''}</span>`
+        + `<span class="mh-badge">${crest(t, 88)}</span></a>`;
     };
     const ghost = (code, t, cls) => `<span class="mh-ghost ${cls}" aria-hidden="true"><b class="mh-full">${esc(fullNameOf(t))}</b><b class="mh-code">${esc(code)}</b></span>`;
     return `<section class="lg-card mh-head" aria-label="Match">
