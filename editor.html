@@ -11,22 +11,22 @@
   <link rel="apple-touch-icon" href="assets/brand/app-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Figtree:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Oswald:wght@500;700&family=Figtree:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="css/site.css">
   <link rel="stylesheet" href="css/member.css">
+  <link rel="stylesheet" href="css/league-page.css">
+  <link rel="stylesheet" href="css/places.css">
+  <link rel="stylesheet" href="css/stat-card.css">
+  <link rel="stylesheet" href="css/menus.css">
   <link rel="stylesheet" href="css/editor.css">
   <link rel="stylesheet" href="css/draft-grid.css">
   <script type="module" src="js/editor.js"></script>
 </head>
-<body class="member">
-  <header class="member-top">
-    <a class="brand" href="editor.html"><img src="assets/brand/crest.svg" alt=""><span>v<b>LEAGUE</b></span><em>Editor</em></a>
-    <a class="to-home" id="to-home" href="league.html" hidden>League</a>
-    <button class="account" id="signout" type="button">Sign out</button>
-  </header>
-  <main class="member-main wide" id="main" aria-busy="true">
+<body class="lg lg-sub is-editor" data-title="Editor">
+  <header class="lg-frame" id="frame"></header>
+  <main class="member-main wide editor-main" id="main" aria-busy="true">
     <p class="quiet">Loading…</p>
   </main>
-  <footer class="member-foot"><a id="version" href="https://github.com/ldg224/vLeague/releases" target="_blank" rel="noopener"></a></footer>
+  <footer class="lg-foot"><a id="version" href="https://github.com/ldg224/vLeague/releases" target="_blank" rel="noopener"></a></footer>
 </body>
 </html>

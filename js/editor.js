@@ -2,7 +2,8 @@
 // approve or send back, and every registration it sent. The other tabs live in their own files.
 // The database checks everything again (supabase/migrations/0003_club_setup.sql); this page only asks.
 import { snapshotInputs, restoreInputs } from './paint.js';
-import { enter, clubs, chrome, esc, safeColour, crestUrl } from './member.js';
+import { clubs, esc, safeColour, crestUrl } from './member.js';
+import { enterPlace } from './shell.js';
 import { db, sendPasswordReset } from './auth.js';
 import { loadSeason } from './dashboard-data.js';
 import { prefs, setPref } from './prefs.js';
@@ -15,9 +16,9 @@ import { testView, mountTest } from './editor-test.js';
 import { draftView, mountDraft } from './editor-draft.js';
 import { icon } from './icons.js';
 
-chrome();
-const me = await enter('editor.html');
-const main = document.getElementById('main');
+const ctx = await enterPlace('editor', { neutral: true });
+if (!ctx) throw new Error('redirected');   // sent to sign in or to the visitor's own page
+const me = ctx.me, main = ctx.main;
 const TABS = { clubs: 'Clubs', players: 'Players', fixtures: 'Fixtures', news: 'News', draft: 'Draft', history: 'History', test: 'Test' };
 // `open` is which club panels and submissions are expanded, kept across redraws so nothing snaps shut after an action.
 let state = { clubs: [], requests: [], accounts: [], phones: null, deadlines: null, locked: [], season: null, digest: true, open: new Set() };
@@ -76,8 +77,8 @@ function render() {
   lastTab = t;
   const pending = state.requests.filter(r => r.status === 'pending').length;
   const y = scrollY;
-  main.innerHTML = `<nav class="ed-tabs" aria-label="Editor">${Object.entries(TABS).map(([k, label]) =>
-    `<a href="#${k}" ${k === t ? 'aria-current="page"' : ''}>${label}${k === 'clubs' && pending ? ` <span class="ed-count">${pending}</span>` : ''}</a>`).join('')}</nav>
+  main.innerHTML = `<header class="sc-head ed-head"><h1 class="sc-title">Editor</h1><nav class="sc-toggle ed-tabs" aria-label="Editor">${Object.entries(TABS).map(([k, label]) =>
+    `<a href="#${k}" ${k === t ? 'aria-current="true"' : ''}>${label}${k === 'clubs' && pending ? ` <span class="ed-count">${pending}</span>` : ''}</a>`).join('')}</nav></header>
     <section id="view">${{ clubs: clubsView, players: playersView, fixtures: fixturesView, news: () => newsView() + instagramView(), draft: draftView, history: historyView, test: testView }[t]()}</section>`;
   if (y) scrollTo(0, y);   // a redraw after an action keeps your place
   if (t === 'players') mountPlayers({ db, esc, explain, clubs: state.clubs });
@@ -626,6 +627,5 @@ async function refresh() {
 }
 
 if (me) {
-  document.getElementById('to-home').hidden = !me.profile?.club;
   await refresh();
 }

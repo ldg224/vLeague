@@ -44,7 +44,7 @@ function drawSubFrame(place, me, club) {
   const el = document.getElementById('frame');
   if (!el || place === 'league') return;
   document.body.classList.toggle('has-club', Boolean(club));
-  mountSubFrame(el, { office: me?.profile?.role === 'office', crest: club?.crest_path ? crestUrl(club.crest_path) : '', here: place === 'settings' ? 'settings' : 'club', title: document.body.dataset.title || PAGE_TITLES[place] || '' });
+  mountSubFrame(el, { office: me?.profile?.role === 'office', crest: club?.crest_path ? crestUrl(club.crest_path) : '', here: ['settings', 'editor'].includes(place) ? place : 'club', title: document.body.dataset.title || PAGE_TITLES[place] || '' });
   // The contour lines and the silk fade in once their pictures are loaded, as on the league page (js/league.js).
   if (!document.body.classList.contains('topo-ready')) {
     Promise.all(['assets/img/topo.png', 'assets/img/fabric.png'].map(src => { const i = new Image(); i.src = src; return i.decode().catch(() => {}); }))
@@ -58,7 +58,7 @@ function drawSubFrame(place, me, club) {
 // club: the Supabase clubs row (null if the account has none). season: the league's season.json (null if it didn't
 // load). team: the season's entry for this club (matched on code; the two stay in step until fixtures move to
 // Supabase in 0.11).
-export async function enterPlace(place) {
+export async function enterPlace(place, { neutral = false } = {}) {   // neutral: the Editor stays vLeague navy and blue, with no club tinge
   chrome();
   drawNav();
   // Localhost only, for looking at the header and the page's frame without signing in (screenshots): ?preview&club=%23c8102e&office
@@ -69,7 +69,8 @@ export async function enterPlace(place) {
     const real = rows.find(c => c.code === q.get('mine'));
     const club = real ? { ...real, ...(q.get('club') ? { colour: q.get('club') } : {}) } : q.get('club') ? { code: q.get('mine') || 'XXX', name: 'Preview club', colour: q.get('club') } : null;
     const me = { user: { id: 'preview' }, profile: { role: q.has('office') ? 'office' : 'manager', club: club?.code, display_name: club?.manager_name || 'Manager' } };
-    paintClub(club); drawSubFrame(place, me, club);
+    if (!neutral) paintClub(club);
+    drawSubFrame(place, me, neutral ? null : club);
     return { me, club, season, team: club && season ? season.teams.find(t => t.code === club.code) || null : null, prefs: {}, main: document.getElementById('main') };
   }
   const me = await enter(`${place}.html`);
@@ -80,8 +81,8 @@ export async function enterPlace(place) {
     loadSeason().catch(() => null),
     prefs(),
   ]);
-  paintClub(club);
-  drawSubFrame(place, me, club);
+  if (!neutral) paintClub(club);
+  drawSubFrame(place, me, neutral ? null : club);
   const team = club && season ? season.teams.find(t => t.code === club.code) || null : null;
   return { me, club, season, team, prefs: settings, main: document.getElementById('main') };
 }

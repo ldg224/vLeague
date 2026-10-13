@@ -1,10 +1,8 @@
 /* vLeague Editor (0.4): tabs, the requests queue, manager accounts. Builds on site.css and member.css.
    Each club row sets --club to that club's primary colour. */
 
-.ed-tabs { display: flex; gap: 4px; margin: 0 0 28px; border-bottom: 1px solid var(--line); min-width: 0; max-width: 100%; }   /* min-width 0: the tabs scroll instead of widening the page on phones */
-.ed-tabs a { flex: none; white-space: nowrap; padding: 10px 14px; color: var(--muted); font-weight: 600; text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
-.ed-tabs a:hover { color: var(--text); }
-.ed-tabs a[aria-current] { color: var(--text); border-bottom-color: var(--brand); }
+.ed-head { margin: 8px 4px 20px; }
+.ed-tabs { flex-wrap: wrap; }
 .ed-count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; margin-left: 4px; border-radius: 999px; background: var(--brand); color: var(--bg); font-size: .75rem; font-weight: 700; }
 
 .member-main h2 { font-family: var(--font-display); font-weight: 500; font-size: 1.1rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 32px 0 10px; }
@@ -58,7 +56,6 @@
 .ed-fields label i { font-style: normal; font-weight: 500; color: var(--faint); }
 
 @media (max-width: 640px) {
-  .ed-tabs { overflow-x: auto; }
   .ed-fields { grid-template-columns: 1fr; }
   .ed-diff th { width: 90px; }
 }
