@@ -1,22 +1,25 @@
-// Team pages (S-04, redesigned 0.67): one page per club (team.html?c=CODE), signed-in only since WR-02.
-// The top is a band of the club's own home-kit fabric with the crest on its edge; the name, motto and last five results sit
-// below it on the page, so they read the same whatever the club's colours. The squad hangs in a dressing room: one shirt per
-// player in the club's home kit with their number on it. Then the trophy cabinet (from Editor -> History, history-data.js),
-// the kits, squad value against the weekly cap and club details. A club's history is its trophy cabinet (B-19).
+// Team pages (S-04; WR-43 redone 13 Oct 2026 the FotMob way, from the league page's own pieces): one page per club (team.html?c=CODE),
+// signed-in only since WR-02. A header card (crest, the name in the display type with the name huge and hollow behind it, as on the
+// Fixtures rows; manager, ground, form, table place), then the site toggle for Overview / Squad / Fixtures (kept in the address).
+//   Overview: next match and last result as Fixtures rows, the table with this club marked in its own colour, the club's top rated,
+//             scorers and assists (the Stats tab's cards) and a Club card (facts, the weekly cap, honours as rows).
+//   Squad:    a list grouped by position under grey strips: number, name, attack and defence, value.
+//   Fixtures: every match the club plays, by day, as the Fixtures tab draws them.
 import { chrome, esc, clubs, safeColour, crestUrl } from './member.js';
 import { currentUser, myProfile } from './auth.js';
 import { paintClub, styleCards } from './shell.js';
 import { mountSubFrame } from './frame.js';
-import { rowHtml, fixturesAddress } from './league-fixtures.js';
-import { loadSeason, finished, matchUrl, status, byKickoff } from './dashboard-data.js';
+import { rowHtml, dayLabel } from './league-fixtures.js';
+import { loadSeason, finished, matchUrl, status, byKickoff, kickoff } from './dashboard-data.js';
 import { crest, teamOf, useClubs } from './places.js';
 import { prefs, spoilerHidden, fmtTime } from './prefs.js';
 import { clubSummary } from './match-model.js';
-import { loadKits } from './kits-data.js';
-import { loadHistory, cabinet, trophyUrl } from './history-data.js';
-import { kitSprite, kitName, drawKit, cleanDesign } from './kit.js';
-import { onColour } from './club-colour.js';
+import { loadHistory, cabinet } from './history-data.js';
+import { accentFor, onColour } from './club-colour.js';
 import { POS_ORDER } from './pitch.js';
+import { tableRows, tableCard } from './league-table.js';
+import { countedFixtures, totals, rank, PLAYER_CARDS } from './season-stats.js';
+import { statCard } from './stat-card.js';
 
 chrome();
 const main = document.getElementById('main');
@@ -24,9 +27,10 @@ const code = String(new URLSearchParams(location.search).get('c') || '').toUpper
 const CAP = 125000;   // the weekly cap per team (js/draft.js)
 const POS_NAME = { GK: 'Goalkeepers', DEF: 'Defenders', MID: 'Midfielders', FWD: 'Forwards' };
 const RESULT = { W: 'Won', D: 'Drew', L: 'Lost' };
-const KIT_ORDER = ['home', 'away', 'special', 'gk'];
-function money(n) { return `$${Number(n || 0).toLocaleString('en-AU')}`; }
-function ordinal(n) { return `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th'}`; }
+const TABS = [['overview', 'Overview'], ['squad', 'Squad'], ['fixtures', 'Fixtures']];
+const money = n => `$${Number(n || 0).toLocaleString('en-AU')}`;
+const ordinal = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th'}`;
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 // Localhost only, for screenshots without signing in: team.html?c=SKS&preview&mine=TUR&theme=light
 const q = new URLSearchParams(location.search), preview = ['localhost', '127.0.0.1'].includes(location.hostname) && q.has('preview');
@@ -36,7 +40,7 @@ try {
   // Signed-out visitors see nothing but sign-in (WR-02).
   if (!user) { location.replace('index.html?signin'); await new Promise(() => {}); }
   if (preview && q.get('theme')) document.documentElement.dataset.theme = q.get('theme');
-  const [rows, season, kits, hist] = await Promise.all([clubs().catch(() => []), loadSeason().catch(() => null), loadKits(), loadHistory()]);
+  const [rows, season, hist] = await Promise.all([clubs().catch(() => []), loadSeason().catch(() => null), loadHistory()]);
   useClubs(rows);
   if (!preview) await prefs().catch(() => null);
   const prof = preview ? { role: q.has('office') ? 'office' : 'manager', club: q.get('mine') } : await myProfile().catch(() => null);
@@ -47,92 +51,85 @@ try {
   mountSubFrame(document.getElementById('frame'), { office: prof?.role === 'office', crest: mine?.crest_path ? crestUrl(mine.crest_path) : '', here: '', title: '' });
   const club = rows.find(c => c.code === code), team = season?.teams.some(t => t.code === code) ? teamOf(season, code) : null;   // teamOf makes up a team for any code
   if (!club && !team) {
-    main.innerHTML = `<div class="tm"><h1 class="tm-name" tabindex="-1">Club not found</h1><p class="empty">There’s no club with the code “${esc(code)}”. <a href="league.html">See the league</a></p></div>`;
+    main.innerHTML = `<div class="tm"><section class="lg-card"><h1 class="tm-name" tabindex="-1">Club not found</h1><p class="empty">There’s no club with the code “${esc(code)}”. <a href="league.html">See the league</a></p></section></div>`;
   } else {
-    await document.fonts?.ready;   // the shirt numbers are drawn in Oswald
-    render(club || { code, name: team.name, colour: team.colour }, team, season, kits[code] || {}, cabinet(hist, code), rows);
-    styleCards();
+    render(club || { code, name: team.name, colour: team.colour }, team, season, cabinet(hist, code), rows);
   }
 } catch (e) {
   main.innerHTML = `<p class="empty">This team page didn’t load. ${esc(e.message || '')} <a href="team.html?c=${esc(code)}">Try again</a></p>`;
 }
 main.setAttribute('aria-busy', 'false');
 
-function render(club, team, season, kits, won, rows) {
+function render(club, team, season, won, rows) {
   document.title = `${club.name} | vLeague`;
-  const c1 = safeColour(club.colour), c2 = /^#[0-9a-f]{6}$/i.test(club.colour2 || '') ? club.colour2 : onColour(c1);
-  // The shirt the club plays in: its home kit, or a plain shirt in its colours until it designs one.
-  const home = kits.home?.design || cleanDesign({ pattern: 'plain', colours: [c1, c2] });
+  const c1 = safeColour(club.colour), now = new Date(), byCode = new Map(rows.map(r => [r.code, r]));
   const squad = (season?.players || []).filter(p => p.team === club.code)
     .sort((a, b) => POS_ORDER.indexOf(a.position) - POS_ORDER.indexOf(b.position) || (Number(a.number) || 99) - (Number(b.number) || 99) || a.name.localeCompare(b.name));
 
-  // Results this account hasn't revealed stay hidden (spoiler-free), as on League.
-  const now = new Date();
-  const games = season ? finished(season, now).filter(f => (f.home === club.code || f.away === club.code) && !f.exhibition && !f.test) : [];
+  // Results this account hasn't revealed stay hidden (spoiler-free), as on the league page.
+  const fixtures = season ? season.fixtures.filter(f => (f.home === club.code || f.away === club.code) && !f.exhibition && !f.test).sort(byKickoff) : [];
+  const games = season ? finished(season, now).filter(f => fixtures.includes(f)) : [];
   const shown = games.filter(f => !spoilerHidden(f, season, now));
+  const hidden = new Set(fixtures.filter(f => spoilerHidden(f, season, now)).map(f => f.id));
   const sum = season && team ? clubSummary({ ...season, fixtures: season.fixtures.filter(f => !spoilerHidden(f, season, now)) }, club.code, now) : null;
 
-  const about = [club.manager_name && `Managed by ${esc(club.manager_name)}`, club.stadium && `${club.manager_name ? 'at' : 'Plays at'} ${esc(club.stadium)}`].filter(Boolean).join(' ');
+  // What the league page's pieces need: clubs (with their saved names and colours), crests, times, spoilers.
+  const clubFor = c => { const t = season ? teamOf(season, c) : { code: c, name: c }, r = byCode.get(c); return { ...t, ...(r ? { name: r.name, short_name: r.short_name, colour: r.colour, crest_path: r.crest_path } : {}) }; };
+  const ctx = { now, mine: club.code, club: clubFor, crest: (c, px) => crest(clubFor(c), px), time: fmtTime, hidden, avatar: () => '' };
 
-  main.innerHTML = `<article class="tm" style="--c1:${c1};--c2:${c2};--on1:${onColour(c1)}">
+  const about = [club.manager_name && `Managed by ${esc(club.manager_name)}`, club.stadium && `${club.manager_name ? 'at' : 'Plays at'} ${esc(club.stadium)}`].filter(Boolean).join(' ');
+  let tab = TABS.some(([k]) => k === location.hash.slice(1)) ? location.hash.slice(1) : 'overview';
+
+  // The club's own colour marks it on its own page (its table row, its leader pills), in the shade that reads in each theme.
+  main.innerHTML = `<article class="tm" style="--club:${c1};--club-accent-dark:${accentFor(c1, 'dark')};--club-accent-light:${accentFor(c1, 'light')};--on-club:${onColour(c1)}">
     <header class="lg-card tm-head">
-      <div class="tm-fabric" aria-hidden="true"><canvas></canvas></div>
+      <span class="tm-ghost" aria-hidden="true">${esc(club.short_name || club.name)}</span>
       <div class="tm-id">
-        <div class="tm-crest">${crest(team || club, 112)}</div>
+        <div class="tm-crest">${crest(clubFor(club.code), 72)}</div>
         <div class="tm-titles">
           <h1 class="tm-name" tabindex="-1">${esc(club.name)}</h1>
+          ${about ? `<p class="tm-about">${about}</p>` : ''}
           ${club.motto ? `<p class="tm-motto">${esc(club.motto)}</p>` : ''}
-          ${about ? `<p class="tm-about">${about}.</p>` : ''}
         </div>
         <div class="tm-now">${formHtml(shown.slice(-5), club.code, games.length - shown.length)}
-          ${sum?.rank ? `<p class="tm-rank"><b>${ordinal(sum.rank)}</b> on the ladder, <b>${sum.pts}</b> point${sum.pts === 1 ? '' : 's'} from ${sum.p}</p>` : ''}</div>
+          ${sum?.rank ? `<p class="tm-rank"><b>${ordinal(sum.rank)}</b> in the table, <b>${sum.pts}</b> point${sum.pts === 1 ? '' : 's'}</p>` : ''}</div>
       </div>
+      <nav class="sc-toggle tm-tabs" aria-label="${esc(club.name)}">${TABS.map(([k, l]) => `<button type="button" data-tab="${k}" aria-pressed="${k === tab}">${l}</button>`).join('')}</nav>
     </header>
-
-    <div class="tm-cols">
-      <div class="tm-main">
-        ${matchesHtml(club, season, rows)}
-        <section class="lg-card tm-room" aria-labelledby="tm-room-h">
-          <div class="lg-card-head"><h2 id="tm-room-h">Squad</h2>${squad.length ? `<span class="tm-cnote">${squad.length} players</span>` : ''}</div>
-          ${squadHtml(squad)}
-        </section>
-      </div>
-      <div class="tm-side">
-        ${cabinetHtml(won)}
-        ${kitsHtml(kits)}
-        ${capHtml(squad)}
-        ${factsHtml(club)}
-      </div>
-    </div>
+    <div id="tm-panel"></div>
   </article>`;
 
-  // Draw straight away in the kit's colours; a custom (uploaded) home design then replaces them once its picture has loaded,
-  // so the band and the shirts show the club's real kit, not its average colour (B-17).
-  drawFabric(home);
-  drawShirts(home);
-  drawKits(kits);
-  if (kits.home?.artUrl) {
-    const art = new Image(); art.crossOrigin = 'anonymous';
-    art.onload = () => { drawFabric(home, art); drawShirts(home, art); };
-    art.src = kits.home.artUrl;
-  }
+  const panels = {
+    overview: () => overviewHtml(club, season, ctx, fixtures, squad, won, sum),
+    squad: () => squadHtml(squad),
+    fixtures: () => fixturesHtml(club, season, ctx, fixtures),
+  };
+  const draw = () => {
+    main.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-pressed', b.dataset.tab === tab));
+    main.querySelector('#tm-panel').innerHTML = panels[tab]();
+    // The stat cards and the table link to the league page's own lists.
+    main.querySelectorAll('#tm-panel a[href^="#stats"]').forEach(a => a.setAttribute('href', `league.html${a.getAttribute('href')}`));
+    styleCards();
+  };
+  main.querySelector('.tm-tabs').addEventListener('click', e => {
+    const b = e.target.closest('[data-tab]');
+    if (!b || b.dataset.tab === tab) return;
+    tab = b.dataset.tab; history.replaceState(null, '', `#${tab}`); draw();
+  });
+  main.querySelector('.tm-tabs').addEventListener('keydown', e => {
+    if (!['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+    const all = [...main.querySelectorAll('[data-tab]')], i = all.findIndex(b => b.dataset.tab === tab);
+    const n = all[(i + (e.key === 'ArrowRight' ? 1 : all.length - 1)) % all.length];
+    n.focus(); n.click(); e.preventDefault();
+  });
+  addEventListener('hashchange', () => { const h = location.hash.slice(1); if (panels[h] && h !== tab) { tab = h; draw(); } });
+  draw();
 }
 
 // ---------- header ----------
 
-// The band is the club's home-kit fabric (its pattern and colours, no crest or print), stretched across the page.
-function drawFabric(design, art = null) {
-  const cv = main.querySelector('.tm-fabric canvas'), d = cleanDesign({ ...design, text: { ...cleanDesign(design).text, name: '', number: '' } });
-  cv.width = 1200; cv.height = 240;
-  const ctx = cv.getContext('2d');
-  // a slice of the unrolled shirt, drawn wide; patterns repeat so a slice reads as fabric
-  const tmp = document.createElement('canvas'); tmp.width = 600; tmp.height = 408;
-  drawKit(tmp.getContext('2d'), art ? d : { ...d, pattern: d.pattern === 'custom' ? 'plain' : d.pattern }, 600, 408, art ? { art } : {});
-  ctx.drawImage(tmp, 150, 120, 300, 120, 0, 0, 1200, 240);
-}
-
 function formHtml(list, code, hidden) {
-  if (!list.length) return `<p class="tm-form-none">${hidden ? 'Results hidden (spoiler-free).' : 'No results yet this season.'}</p>`;
+  if (!list.length) return `<p class="tm-form-none">${hidden ? 'Results hidden' : 'No results yet'}</p>`;
   return `<ol class="tm-form" aria-label="Last ${list.length} results, oldest first">${list.map(f => {
     const home = f.home === code, gf = home ? f.result.home : f.result.away, ga = home ? f.result.away : f.result.home;
     const o = gf > ga ? 'W' : gf < ga ? 'L' : 'D', opp = home ? f.away : f.home;
@@ -140,108 +137,81 @@ function formHtml(list, code, hidden) {
   }).join('')}</ol>`;
 }
 
-// ---------- matches: the last results and what's next, as the Fixtures tab draws them ----------
+// ---------- overview ----------
 
-function matchesHtml(club, season, rows) {
-  if (!season) return '';
-  const now = new Date(), byCode = new Map(rows.map(r => [r.code, r]));
-  const list = season.fixtures.filter(f => (f.home === club.code || f.away === club.code) && !f.exhibition && !f.test).sort(byKickoff);
-  const past = list.filter(f => ['ft', 'live'].includes(status(f, season, now))).slice(-3);
-  const next = list.filter(f => status(f, season, now) === 'upcoming').slice(0, 2);
-  if (!past.length && !next.length) return '';
-  const teamFor = c => { const t = teamOf(season, c), r = byCode.get(c); return { ...t, ...(r ? { name: r.name, short_name: r.short_name, colour: r.colour } : {}) }; };
-  const ctx = { now, mine: mine?.code, club: teamFor, crest: (c, px) => crest(teamFor(c), px), time: fmtTime,
-    hidden: new Set(past.filter(f => spoilerHidden(f, season, now)).map(f => f.id)) };
-  const group = (title, fx) => (fx.length ? `<li class="fx-day"><h3>${title}</h3><span>${fx.length} match${fx.length === 1 ? '' : 'es'}</span></li>${fx.map(f => rowHtml(f, season, ctx, { forTeam: club.code })).join('')}` : '');
-  return `<section class="lg-card fx-card tm-games" aria-labelledby="tm-games-h">
-    <div class="lg-card-head"><h2 id="tm-games-h">Matches</h2><a class="tm-all" href="league.html${esc(fixturesAddress('team', club.code))}">All fixtures</a></div>
-    <ul class="fx-list">${group('Last results', past)}${group('Coming up', next)}</ul></section>`;
+function dayOf(f, now) { const k = kickoff(f); return k ? dayLabel(ymd(new Date(k)), ymd(now)) : 'Date to be confirmed'; }
+
+function overviewHtml(club, season, ctx, fixtures, squad, won, sum) {
+  const { now } = ctx;
+  const last = [...fixtures].reverse().find(f => ['ft', 'live'].includes(status(f, season, now)));
+  const next = fixtures.find(f => status(f, season, now) === 'upcoming');
+  const games = [[next, 'Next match'], [last, 'Last result']].filter(([f]) => f);
+  const matches = `<section class="lg-card fx-card tm-games" aria-labelledby="tm-games-h">
+      <div class="lg-card-head"><h2 id="tm-games-h">Matches</h2><a class="tm-all" href="#fixtures" data-go="fixtures">All fixtures</a></div>
+      ${games.length ? `<ul class="fx-list">${games.map(([f, what]) => `<li class="fx-day"><h3>${what}</h3><span>${esc(dayOf(f, now))}</span></li>${rowHtml(f, season, ctx, { forTeam: club.code })}`).join('')}</ul>`
+        : '<p class="empty">No fixtures yet.</p>'}</section>`;
+
+  const table = season ? tableCard(tableRows(season, { now, hidden: ctx.hidden }), ctx, { filters: false, title: 'Table' }) : '';
+
+  // The club's own leaders, from the same numbers as the Stats tab.
+  const played = season ? countedFixtures(finished(season, now)).filter(f => !ctx.hidden.has(f.id)) : [];
+  const players = played.length ? totals(played).players.filter(r => r.team === club.code) : [];
+  const leaders = players.length
+    ? ['rating', 'scorers', 'assists'].map(id => { const c = PLAYER_CARDS.find(x => x.id === id); return statCard(c, rank(players, c, 3), ctx, { kind: 'player' }); }).join('')
+    : '<section class="lg-card sc is-empty" aria-label="Top players"><div class="lg-card-head"><h2>Top players</h2></div><div class="sc-empty"><b>No matches played yet</b><span>The club’s top rated, scorers and assists fill in as the season is played.</span></div></section>';
+
+  const used = squad.reduce((t, p) => t + (Number(p.value) || 0), 0), pct = Math.min(100, used / CAP * 100);
+  const sw = c => (/^#[0-9a-f]{6}$/i.test(c || '') ? `<i class="tm-sw" style="background:${c}" title="${c}"></i>` : '');
+  const facts = [
+    ['Manager', esc(club.manager_name || '')], ['Ground', esc(club.stadium || '')],
+    ['Position', sum?.rank ? `${ordinal(sum.rank)}` : ''], ['Played', sum ? String(sum.p) : ''],
+    ['Code', esc(club.code)], ['Colours', `${sw(club.colour)}${sw(club.colour2)}`],
+  ].filter(([, v]) => v);
+  const cap = `<li class="tm-capline${used > CAP ? ' over' : used >= CAP * 0.9 ? ' warn' : ''}"><span>Weekly cap</span><b>${money(used)} <small>of ${money(CAP)}</small></b>
+      <i class="tm-bar" role="progressbar" aria-label="Weekly cap used" aria-valuemin="0" aria-valuemax="${CAP}" aria-valuenow="${used}"><i style="width:${pct.toFixed(1)}%"></i></i></li>`;
+  const honours = won.length ? `<li class="fx-day"><h3>Honours</h3></li>${won.map(w => `<li class="tm-fact"><span>${esc(w.comp.name)}, ${w.place === 'winner' ? 'winners' : 'runners-up'}</span><b>${w.seasons.map(x => esc(x.name)).join(', ')}</b></li>`).join('')}` : '';
+  const clubCard = `<section class="lg-card tm-club" aria-labelledby="tm-club-h"><div class="lg-card-head"><h2 id="tm-club-h">Club</h2></div>
+      <ul class="tm-facts">${facts.map(([k, v]) => `<li class="tm-fact"><span>${k}</span><b>${v}</b></li>`).join('')}${squad.length ? cap : ''}${honours}</ul></section>`;
+
+  return `<div class="tm-cols">
+      <div class="tm-main">${matches}${table}</div>
+      <div class="tm-side">${leaders}${clubCard}</div>
+    </div>`;
 }
 
-// ---------- the dressing room ----------
+// ---------- squad ----------
 
 function squadHtml(squad) {
-  if (!squad.length) return '<p class="empty">No players yet. The squad appears here after the draft.</p>';
-  return POS_ORDER.filter(pos => squad.some(p => p.position === pos)).map(pos => `<div class="tm-rail pos-${esc(pos)}">
-    <h3>${POS_NAME[pos] || esc(pos)}<span>${squad.filter(p => p.position === pos).length}</span></h3>
-    <ul>${squad.filter(p => p.position === pos).map(p => `<li class="tm-pl">
-      <span class="tm-shirt" data-no="${esc(p.number ?? '')}"></span>
-      <b>${esc(p.name)}</b>
-      <span class="tm-rt"><span title="Attack">Att <span class="rt rt-${Number(p.offense) || 5}">${esc(p.offense)}</span></span> <span title="Defence">Def <span class="rt rt-${Number(p.defense) || 5}">${esc(p.defense)}</span></span></span>
-      ${p.value != null ? `<small>${money(p.value)}</small>` : ''}</li>`).join('')}</ul></div>`).join('');
+  if (!squad.length) return '<section class="lg-card tm-squad"><p class="empty">No players yet. The squad appears here after the draft.</p></section>';
+  const used = squad.reduce((t, p) => t + (Number(p.value) || 0), 0);
+  return `<section class="lg-card tm-squad" aria-labelledby="tm-squad-h">
+    <div class="lg-card-head"><h2 id="tm-squad-h">Squad</h2><span class="tm-cnote">${squad.length} players, ${money(used)}</span></div>
+    <ul class="tm-list"><li class="tm-cols-head" aria-hidden="true"><span></span><span>Name</span><span>Att</span><span>Def</span><span>Value</span></li>${POS_ORDER.filter(pos => squad.some(p => p.position === pos)).map(pos => {
+      const list = squad.filter(p => p.position === pos);
+      return `<li class="tm-strip pos-${esc(pos)}"><h3>${POS_NAME[pos] || esc(pos)}</h3><span>${list.length}</span></li>
+        ${list.map(p => `<li class="tm-pl pos-${esc(p.position)}"><span class="tm-no">${esc(p.number ?? '')}</span><b>${esc(p.name)}</b>
+          <span class="rt rt-${Number(p.offense) || 5}" title="Attack">${esc(p.offense)}</span><span class="rt rt-${Number(p.defense) || 5}" title="Defence">${esc(p.defense)}</span>
+          <span class="tm-val">${p.value != null ? money(p.value) : '–'}</span></li>`).join('')}`;
+    }).join('')}</ul></section>`;
 }
 
-// A shirt outline (collar, sleeves, body) filled with a kit's front. Returns the path for clipping.
-function shirtPath(w, h) {
-  const p = new Path2D(), u = w / 100, v = h / 100;
-  p.moveTo(36 * u, 4 * v); p.quadraticCurveTo(50 * u, 13 * v, 64 * u, 4 * v);
-  p.lineTo(86 * u, 12 * v); p.lineTo(100 * u, 36 * v); p.lineTo(82 * u, 44 * v); p.lineTo(79 * u, 37 * v);
-  p.lineTo(79 * u, 98 * v); p.lineTo(21 * u, 98 * v); p.lineTo(21 * u, 37 * v);
-  p.lineTo(18 * u, 44 * v); p.lineTo(0, 36 * v); p.lineTo(14 * u, 12 * v); p.closePath();
-  return p;
-}
-function shirt(design, w, { art = null, number = '' } = {}) {
-  const d = cleanDesign(design), h = Math.round(w * 1.02), cv = document.createElement('canvas'), x = cv.getContext('2d');
-  cv.width = w * 2; cv.height = h * 2; x.scale(2, 2);
-  const p = shirtPath(w, h), front = kitSprite({ ...d, text: { ...d.text, name: '', number: '' } }, art ? { art } : {}, 200);
-  x.save(); x.clip(p);
-  // the body takes the middle of the kit's front; the sleeves take its sides, so stripes and hoops line up as on a real shirt
-  x.drawImage(front, 0, 0, front.width, front.height, -w * 0.06, 0, w * 1.12, h);
-  x.restore();
-  x.strokeStyle = 'rgba(0,0,0,.35)'; x.lineWidth = 1; x.stroke(p);
-  if (number !== '') {
-    x.fillStyle = d.text.colour || onColour(d.colours[0]); x.textAlign = 'center'; x.textBaseline = 'middle';
-    x.font = `700 ${Math.round(w * 0.36)}px Oswald, 'Arial Narrow', sans-serif`;
-    x.lineJoin = 'round'; x.lineWidth = Math.max(3, w * 0.07); x.strokeStyle = 'rgba(0,0,0,.55)'; x.strokeText(String(number), w / 2, h * 0.6);   // an outline, as real shirt numbers have, so it reads over any stripe
-    x.fillText(String(number), w / 2, h * 0.6);
-  }
-  cv.style.width = `${w}px`; cv.setAttribute('aria-hidden', 'true');
-  return cv;
-}
-function drawShirts(home, art = null) {
-  for (const el of main.querySelectorAll('.tm-shirt')) el.replaceChildren(shirt(home, 64, { art, number: el.dataset.no }));
+// ---------- fixtures ----------
+
+function fixturesHtml(club, season, ctx, fixtures) {
+  if (!fixtures.length) return '<section class="lg-card"><p class="empty">No fixtures yet.</p></section>';
+  const days = [...new Set(fixtures.map(f => f.date || ''))];
+  return `<section class="lg-card fx-card tm-games" aria-labelledby="tm-fx-h"><div class="lg-card-head"><h2 id="tm-fx-h">Fixtures</h2><span class="tm-cnote">${fixtures.length} match${fixtures.length === 1 ? '' : 'es'}</span></div>
+    <ul class="fx-list">${days.map(d => {
+      const list = fixtures.filter(f => (f.date || '') === d);
+      return `<li class="fx-day"><h3>${d ? esc(dayLabel(d, ymd(ctx.now))) : 'Date to be confirmed'}</h3><span>Round ${esc(list[0].week ?? '')}</span></li>${list.map(f => rowHtml(f, season, ctx, { forTeam: club.code })).join('')}`;
+    }).join('')}</ul></section>`;
 }
 
-// ---------- cabinet, kits, cap, details ----------
-
-function cabinetHtml(won) {
-  if (!won.length) return '';
-  return `<section class="lg-card tm-cabinet" aria-labelledby="tm-cab-h"><div class="lg-card-head"><h2 id="tm-cab-h">Trophy cabinet</h2><a class="tm-all" href="league.html#seasons">League history</a></div>
-    <ul>${won.map(w => `<li class="${w.place === 'winner' ? 'won' : 'runner'}">
-      <span class="tm-cup">${w.art ? `<img src="${esc(trophyUrl(w.art))}" alt="" loading="lazy">` : '<i aria-hidden="true"></i>'}${w.seasons.length > 1 ? `<b class="tm-times" aria-hidden="true">${w.seasons.length}</b>` : ''}</span>
-      <span class="tm-cup-t"><b>${esc(w.comp.name)}</b>${w.place === 'winner' ? 'Winners' : 'Runners-up'}${w.seasons.length > 1 ? `, ${w.seasons.length} times` : ''}</span>
-      <small>${w.seasons.map(x => esc(x.name)).join(', ')}</small></li>`).join('')}</ul></section>`;
-}
-
-function kitsHtml(kits) {
-  const slots = KIT_ORDER.filter(s => kits[s]);
-  return `<section class="lg-card tm-kits" aria-labelledby="tm-kits-h"><div class="lg-card-head"><h2 id="tm-kits-h">Kits</h2></div>
-    ${slots.length ? `<ul>${slots.map(s => `<li><span class="tm-kit" data-kit="${s}"></span><span>${esc(kitName(s, kits[s].design))}</span></li>`).join('')}</ul>` : '<p class="quiet">No kits designed yet. The team plays in its club colours.</p>'}</section>`;
-}
-function drawKits(kits) {
-  for (const el of main.querySelectorAll('[data-kit]')) {
-    const k = kits[el.dataset.kit], put = art => el.replaceChildren(shirt(k.design, 76, { art }));
-    put(null);
-    if (k.artUrl) { const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => put(i); i.src = k.artUrl; }
-  }
-}
-
-function capHtml(squad) {
-  const used = squad.reduce((t, p) => t + (Number(p.value) || 0), 0), pct = Math.min(100, used / CAP * 100);
-  const state = used > CAP ? ' over' : used >= CAP * 0.9 ? ' warn' : '';
-  return `<section class="lg-card tm-cap${state}" aria-labelledby="tm-cap-h"><div class="lg-card-head"><h2 id="tm-cap-h">Weekly cap</h2></div>
-    <p class="tm-cap-n"><b>${money(used)}</b> of ${money(CAP)}</p>
-    <div class="tm-bar" role="progressbar" aria-label="Weekly cap used" aria-valuemin="0" aria-valuemax="${CAP}" aria-valuenow="${used}"><i style="width:${pct.toFixed(1)}%"></i></div>
-    <p class="tm-cap-left">${used > CAP ? `${money(used - CAP)} over the cap` : `${money(CAP - used)} left`}</p></section>`;
-}
-
-function factsHtml(club) {
-  const sw = c => (/^#[0-9a-f]{6}$/i.test(c || '') ? `<i class="tm-sw" style="background:${c}" title="${c}"></i>` : '');
-  const rows = [
-    ['Short name', club.short_name && club.short_name !== club.name ? esc(club.short_name) : ''],
-    ['Code', esc(club.code)],
-    ['Colours', `${sw(club.colour)}${sw(club.colour2)}`],
-  ].filter(([, v]) => v);
-  return `<section class="lg-card tm-facts" aria-labelledby="tm-facts-h"><div class="lg-card-head"><h2 id="tm-facts-h">Club</h2></div>
-    <dl>${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl></section>`;
-}
+// "All fixtures" on the Overview opens the Fixtures tab.
+main.addEventListener('click', e => {
+  const go = e.target.closest('[data-go]');
+  if (!go) return;
+  e.preventDefault();
+  main.querySelector(`.tm-tabs [data-tab="${go.dataset.go}"]`)?.click();
+  main.querySelector('.tm-tabs')?.scrollIntoView({ block: 'nearest' });
+});
