@@ -17,13 +17,17 @@
 .mh-info .ic { width: 16px; height: 16px; flex: none; color: var(--faint); }
 
 /* ---------- the clubs' band ---------- */
+.mh-band {
+  border-top: 1px solid var(--line);
+  background:
+    radial-gradient(60% 100% at 0% 50%, color-mix(in oklab, var(--ha, transparent) 26%, transparent), transparent 75%),
+    radial-gradient(60% 100% at 100% 50%, color-mix(in oklab, var(--aa, transparent) 26%, transparent), transparent 75%);
+}
 .mh-teams {
   position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, auto) minmax(0, 1fr); align-items: center; gap: 0 24px;
-  padding: 36px 32px 28px; border-top: 1px solid var(--line);
-  background:
-    radial-gradient(60% 130% at 0% 50%, color-mix(in oklab, var(--ha, transparent) 26%, transparent), transparent 75%),
-    radial-gradient(60% 130% at 100% 50%, color-mix(in oklab, var(--aa, transparent) 26%, transparent), transparent 75%);
+  padding: 36px 32px 28px;
 }
+.mh-band:has(.mh-scorers) .mh-teams { padding-bottom: 20px; }
 .mh-ghost {
   position: absolute; z-index: 0; top: 50%; width: 50%; translate: 0 -50%; overflow: hidden; pointer-events: none; white-space: nowrap;
   color: transparent; opacity: .3; font: 900 96px/1 var(--font-display); font-stretch: 125%; text-transform: uppercase; letter-spacing: -.01em;
@@ -36,6 +40,10 @@
 .mh .mh-team.is-home { justify-content: flex-end; text-align: right; }
 .mh-name { min-width: 0; font: 900 var(--fs-xl)/1.15 var(--font-display); font-stretch: 125%; text-transform: uppercase; overflow-wrap: anywhere; }
 .mh-short { display: none; }
+.mh-nm { display: grid; gap: 2px; min-width: 0; }
+.mh-badge { display: grid; justify-items: center; gap: 6px; min-width: 0; }
+.mh-mgr { color: var(--muted); font: 400 var(--fs-s)/1.2 var(--font); text-align: center; text-transform: none; }
+.mh-mgr.is-sm { display: none; }
 @media (hover: hover) { .mh-team:hover .mh-name { text-decoration: underline; } }
 
 .mh-mid { display: grid; justify-items: center; gap: 8px; text-align: center; }
@@ -48,10 +56,10 @@
 .mh-sub.is-live { background: color-mix(in oklab, var(--res-l) 22%, transparent); color: var(--text-strong); font-weight: 700; }
 .mh-hide { margin: 0; color: var(--muted); font: 400 var(--fs-s) var(--font); }
 .mh-hide button { padding: 0; border: 0; background: none; color: var(--brand); font: 600 var(--fs-s) var(--font); cursor: pointer; }
-.mh-redrow { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; width: 100%; min-height: 13px; }
+.mh-redrow { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; width: 100%; min-height: 15px; }
 .mh-redrow > :first-child { justify-self: end; } .mh-redrow > :last-child { justify-self: start; }
 .mh-reds { display: inline-flex; gap: 3px; }
-.mh-reds i { width: 9px; height: 13px; border-radius: 2px; background: var(--res-l); }
+.mh-reds i { width: 11px; height: 15px; border-radius: 2px; background: var(--res-l); }
 /* TEMP (WR-31 until WR-41): the way to the old viewer */
 .lg-sub .mh a.mh-watch { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text-strong); font: 600 var(--fs-m) var(--font); text-decoration: none; }
 .mh-watch .ic { width: 16px; height: 16px; color: var(--brand); }
@@ -84,6 +92,9 @@
   .mh-info { padding: 10px 16px; gap: 4px 12px; }
   /* phone: the crest over the short name in each corner, the middle block between; the ghost shows the club's code */
   .mh-teams { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; padding: 24px 12px 20px; }
+  .mh-band:has(.mh-scorers) .mh-teams { padding-bottom: 16px; }
+  .mh .mh-badge .mh-mgr { display: none; } .mh-mgr.is-sm { display: block; }
+  .mh-nm { justify-items: center; }
   .mh .mh-team, .mh .mh-team.is-home { flex-direction: column-reverse; gap: 10px; justify-content: flex-end; text-align: center; }
   .mh-team .crest { --s: 56px !important; }
   .mh-name { font: 700 var(--fs-m)/1.2 var(--font); text-transform: none; font-stretch: normal; }

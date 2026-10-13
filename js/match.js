@@ -87,9 +87,8 @@ function start() {
       const sc = shownScore(fx, season, now), live = st === 'live' ? liveState(fx, season, now) : null;
       const reds = side => (live ? live.reds[side] : redsOf(side === 'home' ? fx.home : fx.away));
       const mark = n => (n ? `<span class="mh-reds" aria-label="${n === 1 ? 'Sent off' : `${n} sent off`}">${'<i></i>'.repeat(Math.min(n, 3))}</span>` : '<span></span>');
-      return `<strong class="mh-score${live ? ' is-live' : ''}"><b>${sc.home}</b><i>–</i><b>${sc.away}</b></strong>
-        <span class="mh-sub${live ? ' is-live' : ''}">${live ? `LIVE ${liveMinute(fx, season, now) ?? ''}′` : 'Full time'}</span>
-        ${reds('home') || reds('away') ? `<span class="mh-redrow">${mark(reds('home'))}${mark(reds('away'))}</span>` : ''}${watch(st)}`;
+      return `${reds('home') || reds('away') ? `<span class="mh-redrow">${mark(reds('home'))}${mark(reds('away'))}</span>` : ''}<strong class="mh-score${live ? ' is-live' : ''}"><b>${sc.home}</b><i>–</i><b>${sc.away}</b></strong>
+        <span class="mh-sub${live ? ' is-live' : ''}">${live ? `LIVE ${liveMinute(fx, season, now) ?? ''}′` : 'Full time'}</span>${watch(st)}`;
     }
     if (st === 'postponed') return '<strong class="mh-ko">Postponed</strong>';
     const k = kickoff(fx);
@@ -114,13 +113,19 @@ function start() {
 
   const header = s => {
     const k = kickoff(fx), ground = club(fx.home)?.stadium || '', list = tabsFor(s.st), cur = tabNow(s.st);
-    const side = (code, t, cls) => `<a class="mh-team ${cls}" href="team.html?c=${esc(code)}"><b class="mh-name"><span class="mh-full">${esc(fullNameOf(t))}</span><span class="mh-short">${esc(nameOf(t))}</span></b>${crest(t, 88)}</a>`;
+    const side = (code, t, cls) => {
+      const mgr = club(code)?.manager_name || '';
+      return `<a class="mh-team ${cls}" href="team.html?c=${esc(code)}"><span class="mh-nm"><b class="mh-name"><span class="mh-full">${esc(fullNameOf(t))}</span><span class="mh-short">${esc(nameOf(t))}</span></b>${mgr ? `<small class="mh-mgr is-sm">${esc(mgr)}</small>` : ''}</span>`
+        + `<span class="mh-badge">${crest(t, 88)}${mgr ? `<small class="mh-mgr">${esc(mgr)}</small>` : ''}</span></a>`;
+    };
     const ghost = (code, t, cls) => `<span class="mh-ghost ${cls}" aria-hidden="true"><b class="mh-full">${esc(fullNameOf(t))}</b><b class="mh-code">${esc(code)}</b></span>`;
     return `<section class="lg-card mh-head" aria-label="Match">
       <p class="mh-round">${esc(fx.round || `Round ${fx.week}`)}</p>
       <p class="mh-info">${k ? `<span>${icon('calendar-days')}${esc(when(k))}</span>` : ''}${ground ? `<span>${icon('map-pin')}${esc(ground)}</span>` : ''}</p>
-      <div class="mh-teams">${ghost(fx.home, home, 'is-home')}${ghost(fx.away, away, 'is-away')}${side(fx.home, home, 'is-home')}<div class="mh-mid">${middle(s)}</div>${side(fx.away, away, 'is-away')}</div>
-      ${scorers(s)}
+      <div class="mh-band">
+        <div class="mh-teams">${ghost(fx.home, home, 'is-home')}${ghost(fx.away, away, 'is-away')}${side(fx.home, home, 'is-home')}<div class="mh-mid">${middle(s)}</div>${side(fx.away, away, 'is-away')}</div>
+        ${scorers(s)}
+      </div>
       <nav class="mh-tabs" aria-label="Match">${list.map(([t, l]) => `<a href="#${t}"${t === cur ? ' aria-current="page"' : ''}>${esc(l)}</a>`).join('')}</nav>
     </section>`;
   };
