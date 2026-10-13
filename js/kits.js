@@ -3,7 +3,7 @@
 // tap target, and there is a first-time tour. Undo and redo, "surprise me", copy from another kit, ready-made colour schemes, and a
 // logo you drag straight on the shirt. A logo or uploaded design goes live as soon as it's saved (0.60.1; the office can take one down). Saved to Supabase club_kits (migration 0043).
 // The shirt itself is drawn by js/kit.js, the same drawing the match views use. The office can pick any club.
-import { enterPlace } from './shell.js';
+import { enterPlace, styleCards } from './shell.js';
 import { esc, crestUrl, clubs } from './member.js';
 import { db } from './auth.js';
 import { SUPABASE_URL } from './config.js';
@@ -333,20 +333,21 @@ async function run(init) {
 
   async function page() {
     main.innerHTML = `<div class="kits">
-      <div class="kt-head"><div><h1 class="page-title" tabindex="-1">Kits</h1><p class="kt-club-name">${esc(club.name)}</p></div>
+      <div class="sc-head kt-head"><div class="kt-title"><h1 class="sc-title" tabindex="-1">Kits</h1><p class="kt-club-name">${esc(club.name)}</p></div>
         <div class="kt-head-r">${office ? `<label class="kt-club">Club <select data-club>${rows.map(r => `<option value="${esc(r.code)}"${r.code === club.code ? ' selected' : ''}>${esc(r.name)}</option>`).join('')}</select></label>` : '<a class="kt-link" href="club.html">My club</a>'}
         <button type="button" class="kt-help" data-tour><b>?</b> How it works</button></div></div>
       ${office ? '<p class="kt-office" role="note"><b>League office.</b> You can design kits for any club. Managers can only change their own.</p>' : ''}
-      <div class="kt-chips" id="kt-chips" role="tablist" aria-label="Which kit"></div>
+      <section class="lg-card kt-slots" aria-label="Your kits"><div class="kt-chips" id="kt-chips" role="tablist" aria-label="Which kit"></div></section>
       <div class="kt-work">
         <div class="kt-stage"><div class="kt-poster" aria-hidden="true"><span id="kt-poster"></span></div><canvas id="kt-3d" role="img" aria-label="3D preview of the kit. Drag to turn it, scroll or pinch to zoom."></canvas><canvas id="kt-flat" hidden role="img" aria-label="Front and back of the kit"></canvas>
           <p class="kt-hint">Drag to turn · pinch to zoom</p>
           <div class="kt-view" role="group" aria-label="Preview controls"><button type="button" data-view="front">Front</button><button type="button" data-view="back">Back</button><button type="button" data-spin aria-pressed="${!reduceMotion()}">Spin</button><button type="button" data-zoom="0.85" aria-label="Zoom in">+</button><button type="button" data-zoom="1.18" aria-label="Zoom out">−</button></div></div>
-        <div class="kt-side"><div class="kt-start" id="kt-start" hidden></div>
+        <section class="lg-card kt-side" aria-label="Change the kit"><div class="kt-start" id="kt-start" hidden></div>
           <div class="kt-tabs" role="tablist" aria-label="What to change">${[['style', 'Style'], ['colours', 'Colours'], ['text', 'Text'], ['logo', 'Logo']].map(([t, l]) => `<button type="button" role="tab" data-tab="${t}" aria-selected="${t === tab}"><svg viewBox="0 0 24 24" aria-hidden="true">${TAB_ICON[t]}</svg><span>${l}</span></button>`).join('')}</div>
-          <div class="kt-panel" id="kt-panel" role="tabpanel"></div></div></div>
+          <div class="kt-panel" id="kt-panel" role="tabpanel"></div></section></div>
       <div class="kt-bar" id="kt-bar"></div>
-      ${office ? '<section class="kt-approve" id="kt-approve"></section>' : ''}</div>`;
+      ${office ? '<section class="lg-card kt-approve" id="kt-approve"></section>' : ''}</div>`;
+    styleCards();
     await stage.mount(main.querySelector('#kt-3d'), main.querySelector('#kt-flat'));
     await loadLogo(); refresh(); if (office) approvals();
   }
