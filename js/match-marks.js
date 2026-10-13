@@ -1,11 +1,10 @@
-// FotMob-style marks for the match page: a round chip carrying a football (goal), a boot (assist), a card (yellow or red) or a "C" (captain). One look everywhere
+// FotMob-style marks for the match page: a black round chip carrying a white football (goal), a white boot (assist), a card (yellow or red) or a "C" (captain). One look everywhere
 // they appear (the Lineup pitch, the Events timeline), drawn here as small inline SVG, not from the icon set, so they stay the same size and colour in both themes.
 //   goalMark(n?) / assistMark(n?) / cardMark('yellow' | 'red') / captainMark() -> html; the optional n is the count shown beside the chip when more than one.
-const BALL = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="9.2" fill="#fff" stroke="#111" stroke-opacity=".4"/><path fill="#111" d="m10 6.1 3.4 2.5-1.3 4H7.9l-1.3-4z"/>'
-  + '<path fill="none" stroke="#111" stroke-width="1.3" stroke-linecap="round" d="M10 6.1V2.6M13.4 8.6l3.3-1.1M12.1 12.6l2 2.8M7.9 12.6l-2 2.8M6.6 8.6 3.3 7.5"/></svg>';
-const BOOT = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="9.2" fill="#fff" stroke="#111" stroke-opacity=".4"/>'
-  + '<path fill="#111" d="M4.6 6.2c0-.5.4-.8.9-.7l2.4.5c.4.1.7.4.8.8l.3 1.2 3.7 1.4c1.5.6 2.5 1.9 2.7 3.5.1.5-.3.9-.8.9H5.4c-.5 0-.8-.4-.8-.8z"/>'
-  + '<path fill="#111" d="M6 14.2h1.5v1.1H6zM8.7 14.2h1.5v1.1H8.7zM11.4 14.2h1.5v1.1h-1.5z"/></svg>';
+const BALL = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><defs><clipPath id="mkc"><circle cx="10" cy="10" r="8.6"/></clipPath></defs><circle cx="10" cy="10" r="9" fill="#111" stroke="#fff" stroke-width="1.2"/><g clip-path="url(#mkc)" fill="#fff"><path d="M10.00 6.90 L12.95 9.04 L11.82 12.51 L8.18 12.51 L7.05 9.04Z"/><path d="M12.47 -4.00 L13.99 0.70 L10.00 3.60 L6.01 0.70 L7.53 -4.00Z"/><path d="M24.08 8.02 L20.08 10.92 L16.09 8.02 L17.61 3.33 L22.55 3.33Z"/><path d="M16.23 22.78 L12.24 19.87 L13.76 15.18 L18.70 15.18 L20.22 19.87Z"/><path d="M-0.22 19.87 L1.30 15.18 L6.24 15.18 L7.76 19.87 L3.77 22.78Z"/><path d="M-2.55 3.33 L2.39 3.33 L3.91 8.02 L-0.08 10.92 L-4.08 8.02Z"/></g><path fill="none" stroke="#fff" stroke-width="1" stroke-linecap="round" d="M10.00 6.90L10.00 3.60M12.95 9.04L16.09 8.02M11.82 12.51L13.76 15.18M8.18 12.51L6.24 15.18M7.05 9.04L3.91 8.02"/></svg>';
+const BOOT = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="9" fill="#111" stroke="#fff" stroke-width="1.2"/>'
+  + '<path fill="#fff" d="M5 6.6c0-.5.4-.8.9-.7l2.2.5c.4.1.7.4.8.8l.3 1.1 3.3 1.3c1.4.5 2.3 1.7 2.5 3.1.1.5-.3.9-.7.9H5.7c-.4 0-.7-.3-.7-.7z"/>'
+  + '<path fill="#fff" d="M6.3 14.3h1.3v1.2H6.3zM8.8 14.3h1.3v1.2H8.8zM11.3 14.3h1.3v1.2h-1.3z"/></svg>';
 const chip = (cls, inner, label, n) => `<b class="mk ${cls}" role="img" aria-label="${label}">${inner}${n > 1 ? `<small>${n}</small>` : ''}</b>`;
 export const goalMark = (n = 1) => chip('mk-goal', BALL, n > 1 ? `${n} goals` : 'Goal', n);
 export const assistMark = (n = 1) => chip('mk-assist', BOOT, n > 1 ? `${n} assists` : 'Assist', n);
