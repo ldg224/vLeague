@@ -11,37 +11,36 @@
   <link rel="apple-touch-icon" href="assets/brand/app-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Figtree:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Oswald:wght@500;700&family=Figtree:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="css/site.css">
   <link rel="stylesheet" href="css/member.css">
+  <link rel="stylesheet" href="css/league-page.css">
+  <link rel="stylesheet" href="css/places.css">
+  <link rel="stylesheet" href="css/stat-card.css">
+  <link rel="stylesheet" href="css/league-fixtures.css">
   <link rel="stylesheet" href="css/setup.css">
   <script type="module" src="js/setup.js"></script>
 </head>
-<body class="member setup">
-  <div class="club-band on" id="band" aria-hidden="true"></div>
-  <header class="member-top">
-    <a class="brand" id="brand" href="league.html"><img src="assets/brand/crest.svg" alt=""><span>v<b>LEAGUE</b></span><em id="page-label">Set up your club</em></a>
-    <a class="to-home" id="to-home" href="league.html" hidden>Home</a>
-    <button class="account" id="signout" type="button">Sign out</button>
-  </header>
+<body class="lg lg-sub su">
+  <header class="lg-frame" id="frame"></header>
 
-  <main class="member-main su-main" id="main" aria-busy="true">
+  <main class="member-main wide su-main" id="main" aria-busy="true">
     <p class="quiet" id="loading">Loading…</p>
 
     <form id="form" novalidate hidden>
-      <div class="su-head">
-        <p class="su-kicker" id="kicker"></p>
-        <h1 id="title">Set up your club</h1>
+      <div class="sc-head su-head">
+        <div class="su-titles"><h1 class="sc-title" id="title">Set up your club</h1><p class="su-kicker" id="kicker"></p></div>
         <ol class="su-steps" id="steps" aria-label="Steps">
           <li data-go="1"><span>1</span>Club</li>
           <li data-go="2"><span>2</span>Colours</li>
           <li data-go="3"><span>3</span>Details</li>
         </ol>
       </div>
+      <div class="su-cols"><div class="su-cards">
 
       <!-- 1: Club. In the edit view this card goes to the league office for approval. -->
-      <section class="su-step" data-step="1" id="step-1" aria-labelledby="h1-club">
-        <div class="su-step-head"><h2 id="h1-club">Club</h2></div>
+      <section class="lg-card su-step" data-step="1" id="step-1" aria-labelledby="h1-club">
+        <div class="lg-card-head su-step-head"><h2 id="h1-club">Club</h2><span class="su-cnote" data-edit-only>Changes go to the league office</span></div>
         <div class="msg info" id="request-note" hidden></div>
         <div class="su-field">
           <label for="name">Club name</label>
@@ -85,8 +84,8 @@
       </section>
 
       <!-- 2: Colours -->
-      <section class="su-step" data-step="2" aria-labelledby="h2-col">
-        <div class="su-step-head"><h2 id="h2-col">Colours</h2></div>
+      <section class="lg-card su-step" data-step="2" aria-labelledby="h2-col">
+        <div class="lg-card-head su-step-head"><h2 id="h2-col">Colours</h2><span class="su-cnote" data-edit-only>Live as soon as you save</span></div>
         <div class="su-colours">
           <div class="su-field">
             <label for="colour">Main</label>
@@ -98,7 +97,6 @@
           </div>
         </div>
         <p class="su-check" id="check" aria-live="polite"></p>
-        <div class="su-preview" id="club-preview"></div>
         <div class="su-card-act" data-edit-only>
           <button class="btn" type="submit" value="style"><span class="spin" aria-hidden="true"></span>Save</button>
           <p class="su-msg" role="status"></p>
@@ -106,8 +104,8 @@
       </section>
 
       <!-- 3: Details -->
-      <section class="su-step" data-step="3" aria-labelledby="h3-det">
-        <div class="su-step-head"><h2 id="h3-det">Details</h2></div>
+      <section class="lg-card su-step" data-step="3" aria-labelledby="h3-det">
+        <div class="lg-card-head su-step-head"><h2 id="h3-det">Details</h2><span class="su-cnote" data-edit-only>Live as soon as you save</span></div>
         <div class="su-field">
           <label for="manager_name">Manager name</label>
           <input id="manager_name" name="manager_name" maxlength="40" autocomplete="name">
@@ -134,6 +132,12 @@
         <button class="btn ghost" type="button" id="back">Back</button>
         <button class="btn" type="submit" id="next" value="next"><span class="spin" aria-hidden="true"></span><span id="next-label">Continue</span></button>
       </div>
+      </div>
+      <aside class="lg-card su-view" aria-labelledby="h-view">
+        <div class="lg-card-head"><h2 id="h-view">How it looks</h2></div>
+        <div class="fx-card su-fx" id="club-preview"></div>
+      </aside>
+      </div>
     </form>
 
     <div class="su-done" id="done" hidden>
@@ -143,6 +147,6 @@
       <a class="btn" href="league.html">Go to the league</a>
     </div>
   </main>
-  <footer class="member-foot"><a class="to-editor" href="editor.html">Editor</a><a id="version" href="https://github.com/ldg224/vLeague/releases" target="_blank" rel="noopener"></a></footer>
+  <footer class="lg-foot"><a id="version" href="https://github.com/ldg224/vLeague/releases" target="_blank" rel="noopener"></a></footer>
 </body>
 </html>

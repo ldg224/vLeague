@@ -6,6 +6,11 @@ import { enter, chrome, esc, crestUrl } from './member.js';
 import { db } from './auth.js';
 import { contrast, onColour } from './club-colour.js';
 import { prepareCrest, uploadCrest } from './crest.js';
+import { mountSubFrame } from './frame.js';
+import { paintClub, styleCards } from './shell.js';
+import { rowHtml, dayLabel } from './league-fixtures.js';
+import { loadSeason } from './dashboard-data.js';
+import { crest as crestHtml } from './places.js';
 
 const $ = id => document.getElementById(id);
 const form = $('form');
@@ -93,9 +98,7 @@ function checkCode() {
 function paintColours() {
   const v = values();
   const club1 = /^#[0-9a-f]{6}$/i.test(v.colour) ? v.colour : '#64b5f6';
-  document.body.style.setProperty('--club', club1);
-  document.body.style.setProperty('--on-club', onColour(club1));
-  document.body.classList.add('themed');
+  paintClub({ colour: club1 });   // the header's club panel and every accent follow the colour as it's picked
   for (const k of ['colour', 'colour2']) {
     if (v[k]) $(`${k}-pick`).value = v[k];
     form.elements[k].setAttribute('aria-invalid', v[k] ? 'false' : 'true');
@@ -109,16 +112,34 @@ function paintColours() {
   paintCrest();
 }
 
+// How it looks: the club as the league page draws it, with what's typed so far. Your next match as a Fixtures row (your name huge and
+// hollow behind your half), then your line in the table. The header above is the real one, already in the colour picked.
+let season = null;
 function preview(v, colour) {
-  return `<div class="su-phone" style="--club:${colour}">
-      <div class="su-phone-band"></div>
-      <div class="su-phone-top"><img src="assets/brand/crest.svg" alt=""><span>v<b>LEAGUE</b></span></div>
-      <div class="su-phone-body">
-        ${crestSrc() ? `<img class="su-phone-crest" src="${esc(crestSrc())}" alt="">` : `<span class="su-phone-crest su-nocrest">${esc(v.code || club.code)}</span>`}
-        <b class="su-phone-name">${esc(v.name || club.name)}</b>
-        <span class="su-phone-chip">Next match · Sat 3:00 pm</span>
-      </div>
-    </div>`;
+  const code = v.code || club.code, name = v.name || club.name, short = v.short_name || name;
+  const me = { code, name, short_name: short, colour, crest_path: null };
+  const them = season?.teams?.find(t => t.code !== club.code) || { code: 'OPP', name: 'Your opponent', colour: '#8a8a8a' };
+  const src = crestSrc();
+  // Your crest as it stands (a new one shows before it's sent), else your code on your colour; the opponent's as the league page draws it.
+  const crestOf = (c, px) => (c === code
+    ? `<span class="crest${src ? '' : ' none'}" style="--s:${px}px;--c:${esc(colour)};--on:${onColour(colour)}">${src ? `<img src="${esc(src)}" alt="">` : ''}<i>${esc(code)}</i></span>`
+    : crestHtml(them, px));
+  const at = new Date(); at.setDate(at.getDate() + ((6 - at.getDay() + 7) % 7 || 7)); at.setHours(15, 0, 0, 0);
+  const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const fx = { id: 'preview', home: code, away: them.code, date: ymd(at), time: '15:00' };
+  const fctx = { now: new Date(), mine: code, club: c => (c === code ? me : them), crest: crestOf,
+    time: d => new Date(d).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' }).replace(/\s+/g, ' ') };
+  let row = '';
+  try { row = rowHtml(fx, season || { fixtures: [], teams: [] }, fctx); } catch { row = ''; }
+  return `<ul class="fx-list">
+      <li class="fx-day"><h3>Next match</h3><span>${esc(dayLabel(ymd(at), ymd(new Date())))}</span></li>${row}
+      <li class="fx-day"><h3>Table</h3><span>Pts</span></li>
+      <li class="su-trow"><b>1</b>${crestOf(code, 24)}<span>${esc(short)}</span><i>0</i></li>
+      <li class="fx-day"><h3>Your club</h3></li>
+      <li class="su-fact"><span>Manager</span><b>${esc(v.manager_name || '–')}</b></li>
+      <li class="su-fact"><span>Ground</span><b>${esc(v.stadium || '–')}</b></li>
+      ${v.motto ? `<li class="su-fact su-motto"><span>${esc(v.motto)}</span></li>` : ''}
+    </ul>`;
 }
 
 function paintCrest() {
@@ -297,27 +318,33 @@ function unlockCode(focus = true) {
 
 // ---------------------------------------------------------------- start
 chrome();
-const me = await enter('setup.html');
+// Localhost only, for screenshots without signing in: setup.html?preview&mine=TUR (&edit for the edit view).
+const q = new URLSearchParams(location.search);
+const me = ['localhost', '127.0.0.1'].includes(location.hostname) && q.has('preview')
+  ? (() => { if (q.get('theme')) document.documentElement.dataset.theme = q.get('theme'); return { user: { id: 'preview' }, profile: { role: 'manager', club: q.get('mine'), display_name: 'Manager', needs_setup: !q.has('edit') } }; })()
+  : await enter('setup.html');
 if (me) {
   const main = $('main');
   try {
+    season = await loadSeason().catch(() => null);
     // The wizard shows once per round: only while the club's setup_at is null (the office can reopen it). After that,
     // setup.html sends people Home; ?edit (from Home's "Edit club" and "Fix and resend") is the later-changes page.
     editMode = new URLSearchParams(location.search).has('edit');
     if (!editMode && !me.profile.needs_setup) { location.replace('league.html'); throw 'redirect'; }
     document.body.classList.toggle('su-edit', editMode);
     const draft = await load();
+    // The league page's header card. While a club is first being set up there's nowhere else to go yet, so no buttons and no way back.
+    document.body.classList.add('has-club');
+    document.body.classList.toggle('su-wizard', !editMode);
+    mountSubFrame($('frame'), { office: me.profile.role === 'office', crest: club.crest_path ? crestUrl(club.crest_path) : '', here: 'club', title: editMode ? 'My club' : 'Set up your club' });
 
-    $('to-home').hidden = !editMode;
     if (editMode) {
       document.title = `Edit ${club.name} | vLeague`;
-      $('page-label').textContent = 'Edit club';
       $('title').textContent = 'Edit your club';
       $('kicker').textContent = club.name;
       $('steps').hidden = true;
       $('nav').hidden = true;
     } else {
-      $('brand').removeAttribute('href');   // no Home to go to until the club is sent
       form.querySelectorAll('[data-edit-only]').forEach(el => { el.hidden = true; });
     }
 
@@ -374,6 +401,7 @@ if (me) {
 
     $('loading').remove();
     form.hidden = false;
+    styleCards();
     go(editMode ? 0 : Math.min(Math.max(Number(draft?.step) || 1, 1), STEPS));
   } catch (e) {
     if (e !== 'redirect') main.innerHTML = `<p class="quiet">${esc(explain(e, 'Your club didn’t load.'))} <a href="setup.html${location.search}">Try again</a></p>`;
