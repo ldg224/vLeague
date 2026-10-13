@@ -2,8 +2,8 @@
 // sheets, home or away record, the clubs' meetings, the top scorer) and, needing no match at all, from the squads (attack and defence ratings, team value, the league's
 // strongest and weakest, the most valuable player), the table, and the league's history (reigning champions, titles, runners-up). Pure functions, no page code.
 //   insights(season, fx, { club(code) -> clubs row | undefined, hide(f) -> true when the viewer hasn't opened that result, now }) -> [{ code, text, w }]
-// Each fact has a weight (how striking it is); the best nine are kept (at most five about one club), grouped home club, away club, then ordered best
-// first inside each group. Only played league matches before this one count (no Test matches, exhibitions or finals), and a result the viewer has not
+// Each fact has a weight (how striking it is) and a family; nine are drawn by weight, match results most often and a motto barely ever, the two clubs taking
+// turns and never getting the same kind of fact. The draw is seeded by the match, so a match always shows the same facts. Grouped home club, away club, best first. Only played league matches before this one count (no Test matches, exhibitions or finals), and a result the viewer has not
 // opened (spoiler-free) is left out. Nothing here is made up: no history gives an empty list.
 import { finished, byKickoff, kickoff, ladder } from './dashboard-data.js';
 import { squadRatings, startingXI } from './match-model.js';
@@ -13,6 +13,41 @@ import { countedFixtures, totals } from './season-stats.js';
 import { cabinet } from './history-data.js';
 import { money } from './match-lineup.js';
 import { esc } from './member.js';
+
+
+// What sort of fact each line is (its kind) and which family it belongs to (its category), told from the words, so the picking below can weigh the families
+// and give the two clubs different sorts of fact. Match-result facts ('stat') come up most; a club's motto barely at all.
+const KINDS = [
+  [/ is .*'s motto$/, 'motto', 'character'],
+  [/out of position/, 'out-of-position', 'tactics'], [/extra player in midfield/, 'midfield', 'tactics'], [/line up in/, 'formations', 'tactics'],
+  [/best attacker on the pitch/, 'best-attacker', 'tactics'], [/in goal for/, 'goalkeeper', 'tactics'],
+  [/first match of the season/, 'first-match', 'calendar'], [/first home match/, 'first-home', 'calendar'], [/first away match/, 'first-away', 'calendar'],
+  [/fresher side/, 'rest', 'calendar'], [/last round of the league/, 'last-round', 'calendar'],
+  [/^A win would|bottom of the table/, 'race', 'table'], [/ face .*\(\d/, 'table-position', 'table'],
+  [/^Home sides have won/, 'home-win-rate', 'league'], [/^Matches involving/, 'goals-avg', 'league'],
+  [/top scorer, with/, 'lg-scorer', 'league'], [/leads the league for assists/, 'lg-assist', 'league'], [/best average rating in the league/, 'lg-rating', 'league'],
+  [/scored the most goals in the league/, 'lg-goals', 'league'], [/best defensive record/, 'lg-defence', 'league'], [/let in the most goals/, 'lg-leaky', 'league'],
+  [/yellow cards/, 'lg-yellow', 'league'], [/most red cards/, 'lg-red', 'league'], [/possession, the most/, 'lg-possession', 'league'], [/expected goals a match/, 'lg-xg', 'league'],
+  [/attack has the edge/, 'edge-attack', 'squad'], [/defence has the edge/, 'edge-defence', 'squad'], [/starting XI is worth/, 'value-gap', 'squad'],
+  [/most valuable player on the pitch/, 'star-value', 'squad'], [/(strongest|weakest) attack in the league/, 'rank-attack', 'squad'],
+  [/(strongest|weakest) defence in the league/, 'rank-defence', 'squad'], [/(most|least) valuable squad/, 'rank-value', 'squad'],
+  [/reigning champions/, 'champs', 'history'], [/won the title/, 'titles', 'history'], [/runners-up/, 'runner', 'history'], [/still chasing/, 'chasing', 'history'],
+  [/lost (all|both)|won (all|both)|unbeaten in \d+ (home|away)|haven't won in \d+ (home|away)/, 'venue-record', 'stat'],
+  [/scored \d+ goals? in their last/, 'five-goals', 'stat'], [/conceded \d+ goals? in their last/, 'five-conceded', 'stat'], [/clean sheet/, 'clean-sheet', 'stat'],
+  [/have won their last|unbeaten in their last|have lost their last|haven't won in their last/, 'run', 'stat'], [/failed to score|scored in each of/, 'scoring-run', 'stat'],
+  [/biggest win/, 'big-win', 'stat'], [/goals this season$/, 'club-scorer', 'stat'], [/league meetings|drawn \d+ of their last|last meeting/, 'meetings', 'stat'],
+];
+// Facts about the league, not one club: shown last, under the league's crest instead of a club's.
+const NEUTRAL = new Set(['home-win-rate', 'last-round', 'formations', 'table-position', 'meetings']);
+const CATEGORY_WEIGHT = { stat: 10, league: 5, table: 4, squad: 3, tactics: 3, calendar: 2, history: 2, character: 1.5 };
+const kindOf = text => { const k = KINDS.find(x => x[0].test(text)); return k ? { kind: k[1], cat: k[2] } : { kind: text, cat: 'stat' }; };
+
+// A repeatable pseudo-random number from the match's own id, so the same match always shows the same facts (no flicker on a redraw, the same for everyone).
+function seeded(text) {
+  let h = 2166136261;
+  for (const c of text) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return () => { h += 0x6D2B79F5; let t = Math.imul(h ^ (h >>> 15), 1 | h); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return (((t ^ (t >>> 14)) >>> 0) / 4294967296) || 1e-9; };
+}
 
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 const gf = (f, code) => (f.home === code ? f.result.home : f.result.away);
@@ -245,15 +280,28 @@ export function insights(season, fx, { club, hide = () => false, now = new Date(
     if (motto) add(code, `“${motto}” is ${name(code)}'s motto`, 3);
   }
 
-  // the best nine, at most five about one club
-  const kept = [], count = {};
-  for (const i of [...out].sort((a, b) => b.w - a.w)) {
-    if (!i.text || (count[i.code] || 0) >= 5 || kept.length >= 9) continue;
-    count[i.code] = (count[i.code] || 0) + 1;
-    kept.push(i);
+  // The nine shown. Each fact's chance is its own weight times its family's (match results most, mottos barely), drawn without replacement from a
+  // generator seeded by the match. The two clubs take turns, and never get the same kind of fact, nor the same kind twice.
+  const rnd = seeded(`${fx.id}`);
+  const pool = out.filter(i => i.text).map(i => { const { kind, cat } = kindOf(i.text); const w = i.w * CATEGORY_WEIGHT[cat]; return { ...i, kind, cat, code: NEUTRAL.has(kind) ? '' : i.code, key: Math.pow(rnd(), 1 / w) }; })
+    .sort((a, b) => b.key - a.key);
+  const kept = [], used = { [fx.home]: new Set(), [fx.away]: new Set() }, count = { [fx.home]: 0, [fx.away]: 0 };
+  const other = c => (c === fx.home ? fx.away : fx.home);
+  const take = code => {
+    const i = pool.find(x => x.code === code && !kept.includes(x) && !used[code].has(x.kind) && !used[other(code)].has(x.kind));
+    if (!i) return false;
+    kept.push(i); used[code].add(i.kind); count[code]++;
+    return true;
+  };
+  for (let turn = 0; kept.length < 8 && turn < 30; turn++) {
+    const [a, b] = count[fx.home] <= count[fx.away] ? [fx.home, fx.away] : [fx.away, fx.home];   // the club with fewer facts goes first
+    if (!take(a) && !take(b)) break;
   }
-  const order = { [fx.home]: 0, [fx.away]: 1 };
-  return kept.sort((a, b) => order[a.code] - order[b.code] || b.w - a.w);
+  const neutral = pool.find(x => x.code === '');   // one league-wide fact, if there is one, makes the ninth
+  if (neutral) kept.push(neutral);
+  else for (let turn = 0; kept.length < 9 && turn < 4; turn++) { const [a, b] = count[fx.home] <= count[fx.away] ? [fx.home, fx.away] : [fx.away, fx.home]; if (!take(a) && !take(b)) break; }
+  const order = { [fx.home]: 0, [fx.away]: 1, '': 2 };
+  return kept.sort((a, b) => order[a.code] - order[b.code] || b.w * CATEGORY_WEIGHT[b.cat] - a.w * CATEGORY_WEIGHT[a.cat]);
 }
 
 // The card: groups of consecutive facts about one club, the club's crest in the gutter and its colour on each row's edge.
@@ -262,7 +310,7 @@ export function insightsCard(list, ctx) {
   const groups = [];
   for (const i of list) { const g = groups[groups.length - 1]; if (g && g.code === i.code) g.rows.push(i); else groups.push({ code: i.code, rows: [i] }); }
   const body = groups.length
-    ? `<ul class="mi-list">${groups.map(g => `<li class="mi-group" style="--tag:${esc(ctx.accent(g.code) || 'var(--line)')}"><span class="mi-crest">${ctx.crest(ctx.team(g.code), 32)}</span>`
+    ? `<ul class="mi-list">${groups.map(g => `<li class="mi-group${g.code ? '' : ' is-league'}" style="--tag:${esc(g.code ? ctx.accent(g.code) || 'var(--line)' : 'var(--line)')}"><span class="mi-crest">${g.code ? ctx.crest(ctx.team(g.code), 32) : '<img src="assets/brand/crest.svg" alt="" width="28" height="28">'}</span>`
       + `<ul class="mi-rows">${g.rows.map(r => `<li>${esc(r.text)}</li>`).join('')}</ul></li>`).join('')}</ul>`
     : '<p class="empty">Insights appear after a few matches.</p>';
   return `<section class="lg-card mi" aria-labelledby="mi-h"><div class="mi-head"><h2 id="mi-h">Insights</h2></div>${body}</section>`;
