@@ -506,3 +506,5 @@
 .editor-main .link-btn { padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--text); font: 600 var(--fs-s) var(--font); cursor: pointer; }
 .editor-main .link-btn:disabled { opacity: .45; cursor: default; }
 @media (hover: hover) { .editor-main .link-btn:not(:disabled):hover { background: var(--surface-hover); } }
+.editor-main details.lg-card:not([open]) { padding-block: 14px; }
+.editor-main details.lg-card:not([open]) > summary { margin: 0; }
