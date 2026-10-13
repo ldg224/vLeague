@@ -29,7 +29,7 @@ const initials = n => String(n || '').split(/\s+/).filter(Boolean).slice(0, 3).m
 
 function who(code, o) {
   const c = o.club(code);
-  return `<span class="ss-team">${o.crest(code, 28)}<b>${esc(c?.name || code)}</b></span>`;
+  return `<a class="cl ss-team" href="team.html?c=${esc(code)}">${o.crest(code, 28)}<b>${esc(c?.name || code)}</b></a>`;
 }
 
 const row = (label, html, cup = '') => `<div class="ss-row"><dt>${label}</dt><dd>${html}${cup}</dd></div>`;

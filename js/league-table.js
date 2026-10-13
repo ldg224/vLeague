@@ -88,7 +88,7 @@ export function tableCard(rows, ctx, { filter = 'all', filters = true, hiddenCou
     const next = r.next ? `<span class="tb-next" title="Next: ${r.next.home ? 'vs' : 'at'} ${esc(opp?.name || r.next.code)}">${ctx.crest(r.next.code, 22)}</span>` : '<span class="tb-none">–</span>';
     return `<tr data-code="${esc(r.team.code)}"${ctx.mine === r.team.code ? ' class="is-mine"' : ''}${zone ?` data-zone="${zone}"` : ''}>`
       + `<td class="tb-pos">${r.rank}</td>`
-      + `<th scope="row" class="tb-club"><span>${ctx.crest(r.team.code, 24)}<b class="tb-full">${esc(club?.name || r.team.name)}</b><b class="tb-short">${esc(clubName(club) || r.team.name)}</b></span></th>`
+      + `<th scope="row" class="tb-club"><a class="cl" href="team.html?c=${esc(r.team.code)}">${ctx.crest(r.team.code, 24)}<b class="tb-full">${esc(club?.name || r.team.name)}</b><b class="tb-short">${esc(clubName(club) || r.team.name)}</b></a></th>`
       + `<td>${r.p}</td><td class="t-wdl">${r.w}</td><td class="t-wdl">${r.d}</td><td class="t-wdl">${r.l}</td>`
       + `<td class="t-pm">${r.gf}-${r.ga}</td><td>${signed(r.gd)}</td><td class="tb-pts">${r.pts}</td>`
       + `<td class="tb-formcell">${chips(r.form)}</td><td class="t-next">${next}</td></tr>`;

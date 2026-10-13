@@ -112,7 +112,7 @@
 .sp-rank { flex: none; width: 24px; text-align: center; color: var(--muted); font: 600 var(--fs-s) var(--font); font-variant-numeric: tabular-nums; }
 .sc-row[data-rank="1"] .sp-rank { color: var(--text-strong); }
 .sc-rows.is-full .sc-av.is-kit { width: 30px; height: 44px; margin: 0 6px 0 2px; }
-.sc-rows.is-full > li > .crest { margin: 0 2px; }
+.sc-rows.is-full > li > .crest, .sc-rows.is-full a.sc-link > .crest { margin: 0 2px; }
 .sc-sub { color: var(--muted); font-size: var(--fs-s); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sc-rows.is-full .sc-val { font-size: var(--fs-l); }
 

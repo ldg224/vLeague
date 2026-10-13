@@ -42,11 +42,11 @@ function row({ row: r, value, rank }, card, ctx, kind, lead, big) {
   const club = ctx.club(clubOf(r, kind));
   const val = `<span class="sc-val${lead ? ' is-lead' : ''}">${esc(format(value, card))}</span>`;
   if (kind === 'team') {
-    return `<li class="sc-row${lead ? ' is-lead' : ''}" style="${clubStyle(club)}"><span class="sc-rank">${rank}</span>${ctx.crest(r.code, 30)}`
-      + `<span class="sc-who"><b class="sc-name">${esc(club?.name || r.code)}</b></span>${val}</li>`;
+    return `<li class="sc-row${lead ? ' is-lead' : ''}" style="${clubStyle(club)}"><span class="sc-rank">${rank}</span><a class="cl sc-link" href="team.html?c=${esc(r.code)}">${ctx.crest(r.code, 30)}`
+      + `<span class="sc-who"><b class="sc-name">${esc(club?.name || r.code)}</b></span></a>${val}</li>`;
   }
   return `<li class="sc-row${lead ? ' is-lead' : ''}" style="${clubStyle(club)}">${face(r, ctx, kind, 30)}`
-    + `<span class="sc-who"><b class="sc-name">${esc(r.name)}</b><span class="sc-club">${esc(clubName(club))}</span></span>${val}</li>`;
+    + `<span class="sc-who"><b class="sc-name">${esc(r.name)}</b><a class="cl sc-club" href="team.html?c=${esc(r.team)}">${esc(clubName(club))}</a></span>${val}</li>`;
 }
 
 const empty = (card, line, head = 'No matches played yet') => `<div class="sc-empty"><b>${esc(head)}</b><span>${esc(line || card.note || 'Fills in as the season is played.')}</span></div>`;

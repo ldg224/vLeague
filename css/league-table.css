@@ -19,7 +19,7 @@
 .tb tr[data-zone="spoon"] .tb-pos { background-image: linear-gradient(var(--z-spoon), var(--z-spoon)); color: var(--text-strong); }
 .tb .tb-club { text-align: left; width: 100%; max-width: 0; padding-left: 4px; }
 .tb tbody .tb-club { font-weight: 600; color: var(--text-strong); }
-.tb .tb-club span { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.tb .tb-club a { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .tb .tb-club b { font-weight: inherit; overflow: hidden; text-overflow: ellipsis; }
 .tb .tb-short { display: none; }   /* the full name where there is room; the short one on phones */
 .tb .tb-pts { font-weight: 700; color: var(--text-strong); }
@@ -46,7 +46,7 @@
   .tb .tb-pos { width: 30px; }
   .tb-form { gap: 2px; }
   .tb-form abbr { width: 17px; height: 17px; border-radius: 4px; }
-  .tb .tb-club span { gap: 8px; }
+  .tb .tb-club a { gap: 8px; }
 }
 
 /* Small phones (360 to 399 px): everything a little tighter so club names still fit beside the form. */
@@ -55,7 +55,7 @@
   .tb th, .tb td { padding: 0 3px; }
   .tb .tb-pos { width: 24px; }
   .tb .tb-club { padding-left: 2px; }
-  .tb .tb-club span { gap: 6px; }
+  .tb .tb-club a { gap: 6px; }
   .tb .tb-club .crest { width: 20px; height: 20px; }
   .tb-form { gap: 2px; }
   .tb-form abbr { width: 17px; height: 17px; }

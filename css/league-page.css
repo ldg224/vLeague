@@ -351,3 +351,8 @@
 /* The Draft tab (WR-27): the draft page mounted inside the content area. It is a grid item, so it must be allowed to be narrower than its widest table:
    the board and the player list scroll inside themselves, never the page. */
 .lg-draft, .lg-draft > .draft { min-width: 0; max-width: 100%; }
+
+/* Club names that open the club's team page look like plain text (user, 13 Oct 2026): no blue, no underline. */
+.lg a.cl { text-decoration: none; }
+.lg a.cl:not(.sc-club) { color: inherit; }
+.lg a.sc-link { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
