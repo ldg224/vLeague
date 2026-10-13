@@ -13,7 +13,7 @@ import { icon } from './icons.js';
 const BASIS = { 'line-ups': 'From the locked line-ups', squads: 'From the squads', results: 'From the season’s results' };
 
 export function chanceCard(season, fx, ctx) {
-  const st = status(fx, season, ctx.now), name = code => ctx.club(code)?.short_name || ctx.club(code)?.name || ctx.team(code).name;
+  const st = ctx.st ?? status(fx, season, ctx.now), name = code => ctx.club(code)?.short_name || ctx.club(code)?.name || ctx.team(code).name;
   const tone = code => (ctx.accent(code) ? `style="--k:${esc(ctx.accent(code))}"` : '');
   const crest = code => ctx.crest(ctx.team(code), 48);
 

@@ -152,7 +152,7 @@ function start() {
   const body = s => {
     const tab = tabNow(s.st), team = code => teamOf(season, code);
     const sheets = lineups ? [lineups.home.sheet, lineups.away.sheet].filter(Boolean).map(r => ({ ...r, week: fx.week })) : [];
-    const sctx = { club, team, crest, accent: acc, hide: f => spoilerHidden(f, season, s.now), now: s.now, sheets };
+    const sctx = { st: s.st, club, team, crest, accent: acc, hide: f => spoilerHidden(f, season, s.now), now: s.now, sheets };
     let main, extra = '';
     if (tab === 'preview') {
       const form = formCard(season, fx, { club, team, crest, hide: sctx.hide, url: matchUrl }, s.now);
