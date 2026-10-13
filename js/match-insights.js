@@ -18,27 +18,27 @@ import { esc } from './member.js';
 // What sort of fact each line is (its kind) and which family it belongs to (its category), told from the words, so the picking below can weigh the families
 // and give the two clubs different sorts of fact. Match-result facts ('stat') come up most; a club's motto barely at all.
 const KINDS = [
-  [/ is .*'s motto$/, 'motto', 'character'],
+  [/'s motto: /, 'motto', 'character'],
   [/out of position/, 'out-of-position', 'tactics'], [/extra player in midfield/, 'midfield', 'tactics'], [/line up in/, 'formations', 'tactics'],
-  [/best attacker on the pitch/, 'best-attacker', 'tactics'], [/in goal for/, 'goalkeeper', 'tactics'],
-  [/first match of the season/, 'first-match', 'calendar'], [/first home match/, 'first-home', 'calendar'], [/first away match/, 'first-away', 'calendar'],
+  [/best attacker on the pitch/, 'best-attacker', 'tactics'], [/goalkeeper .* has a defence rating/, 'goalkeeper', 'tactics'],
+  [/their opening match/, 'first-match', 'calendar'], [/Neither club has played/, 'first-both', 'calendar'], [/first home match/, 'first-home', 'calendar'], [/first away match/, 'first-away', 'calendar'],
   [/fresher side/, 'rest', 'calendar'], [/last round of the league/, 'last-round', 'calendar'],
   [/^A win would|bottom of the table/, 'race', 'table'], [/ face .*\(\d/, 'table-position', 'table'],
   [/^Home sides have won/, 'home-win-rate', 'league'], [/^Matches involving/, 'goals-avg', 'league'],
-  [/top scorer, with/, 'lg-scorer', 'league'], [/leads the league for assists/, 'lg-assist', 'league'], [/best average rating in the league/, 'lg-rating', 'league'],
+  [/top scorer, with/, 'lg-scorer', 'league'], [/leads the league for assists/, 'lg-assist', 'league'], [/best average match rating/, 'lg-rating', 'league'],
   [/scored the most goals in the league/, 'lg-goals', 'league'], [/best defensive record/, 'lg-defence', 'league'], [/let in the most goals/, 'lg-leaky', 'league'],
-  [/yellow cards/, 'lg-yellow', 'league'], [/most red cards/, 'lg-red', 'league'], [/possession, the most/, 'lg-possession', 'league'], [/expected goals a match/, 'lg-xg', 'league'],
-  [/attack has the edge/, 'edge-attack', 'squad'], [/defence has the edge/, 'edge-defence', 'squad'], [/starting XI is worth/, 'value-gap', 'squad'],
-  [/most valuable player on the pitch/, 'star-value', 'squad'], [/(strongest|weakest) attack in the league/, 'rank-attack', 'squad'],
-  [/(strongest|weakest) defence in the league/, 'rank-defence', 'squad'], [/(most|least) valuable squad/, 'rank-value', 'squad'],
-  [/reigning champions/, 'champs', 'history'], [/won the title/, 'titles', 'history'], [/runners-up/, 'runner', 'history'], [/still chasing/, 'chasing', 'history'],
+  [/yellow cards/, 'lg-yellow', 'league'], [/most red cards/, 'lg-red', 'league'], [/possession, the most/, 'lg-possession', 'league'], [/expected goals \(xG\) a match/, 'lg-xg', 'league'],
+  [/better attack on paper/, 'edge-attack', 'squad'], [/better defence on paper/, 'edge-defence', 'squad'], [/starting XI is worth/, 'value-gap', 'squad'],
+  [/most valuable player on the pitch/, 'star-value', 'squad'], [/(highest|lowest) attack rating in the league/, 'rank-attack', 'squad'],
+  [/(highest|lowest) defence rating in the league/, 'rank-defence', 'squad'], [/(most|least) valuable in the league/, 'rank-value', 'squad'],
+  [/reigning champions/, 'champs', 'history'], [/won the league title/, 'titles', 'history'], [/runners-up/, 'runner', 'history'], [/still chasing/, 'chasing', 'history'],
   [/lost (all|both)|won (all|both)|unbeaten in \d+ (home|away)|haven't won in \d+ (home|away)/, 'venue-record', 'stat'],
   [/scored \d+ goals? in their last/, 'five-goals', 'stat'], [/conceded \d+ goals? in their last/, 'five-conceded', 'stat'], [/clean sheet/, 'clean-sheet', 'stat'],
   [/have won their last|unbeaten in their last|have lost their last|haven't won in their last/, 'run', 'stat'], [/failed to score|scored in each of/, 'scoring-run', 'stat'],
   [/biggest win/, 'big-win', 'stat'], [/goals this season$/, 'club-scorer', 'stat'], [/league meetings|drawn \d+ of their last|last meeting/, 'meetings', 'stat'],
 ];
 // Facts about the league, not one club: shown last, under the league's crest instead of a club's.
-const NEUTRAL = new Set(['home-win-rate', 'last-round', 'formations', 'table-position', 'meetings']);
+const NEUTRAL = new Set(['first-both', 'home-win-rate', 'last-round', 'formations', 'table-position', 'meetings']);
 const CATEGORY_WEIGHT = { stat: 10, league: 5, table: 4, squad: 3, tactics: 3, calendar: 2, history: 2, character: 1.5 };
 const kindOf = text => { const k = KINDS.find(x => x[0].test(text)); return k ? { kind: k[1], cat: k[2] } : { kind: text, cat: 'stat' }; };
 
@@ -136,7 +136,7 @@ export function insights(season, fx, { club, hide = () => false, now = new Date(
     const one = (label, a, b) => {   // the better side of a head-to-head comparison, if the gap is worth saying
       if (Math.abs(a - b) < 0.3) return;
       const [win, lose, wv, lv] = a > b ? [fx.home, fx.away, a, b] : [fx.away, fx.home, b, a];
-      add(win, `${name(win)}'s ${label} has the edge: ${wv.toFixed(1)} against ${name(lose)}'s ${lv.toFixed(1)}`, Math.min(8, 5 + Math.abs(a - b)));
+      add(win, `${name(win)}'s starting XI has the better ${label} on paper: an average ${label} rating of ${wv.toFixed(1)} out of 10, against ${lv.toFixed(1)} for ${name(lose)}`, Math.min(8, 5 + Math.abs(a - b)));
     };
     one('attack', rh.att, ra.att);
     one('defence', rh.def, ra.def);
@@ -146,7 +146,7 @@ export function insights(season, fx, { club, hide = () => false, now = new Date(
       add(win, `${name(win)}'s starting XI is worth ${money(wv)}, ${money(wv - lv)} more than ${name(lose)}'s`, 6);
     }
     const star = [fx.home, fx.away].flatMap(c => startingXI(c, players, sheetFor(c)).xi.map(p => ({ p, c }))).sort((x, y) => (Number(y.p.value) || 0) - (Number(x.p.value) || 0))[0];
-    if (star) add(star.c, `${star.p.name} is the most valuable player on the pitch, at ${money(star.p.value)}`, 5);
+    if (star) add(star.c, `${star.p.name} (${name(star.c)}) is the most valuable player on the pitch, valued at ${money(star.p.value)}`, 5);
   }
   // where each club stands in the league's squads (best XI each, so it doesn't depend on who has locked a team)
   const field = teamsIn.map(t => ({ code: t.code, ...squadRatings(t.code, players, null), value: worth0(t.code) })).filter(r => Number.isFinite(r.att) && Number.isFinite(r.def));
@@ -157,12 +157,12 @@ export function insights(season, fx, { club, hide = () => false, now = new Date(
       // first or last only when nobody is level with it (a tie says nothing)
       const n = name(code), spot = key => (field.every(r => r.code === code || r[key] < me[key] - 0.05) ? 'top' : field.every(r => r.code === code || r[key] > me[key] + 0.05) ? 'bottom' : '');
       const att = spot('att'), def = spot('def'), val = spot('value');
-      if (att === 'top') add(code, `${n} have the strongest attack in the league (${me.att.toFixed(1)})`, 7);
-      else if (att === 'bottom') add(code, `${n} have the weakest attack in the league (${me.att.toFixed(1)})`, 6);
-      if (def === 'top') add(code, `${n} have the strongest defence in the league (${me.def.toFixed(1)})`, 7);
-      else if (def === 'bottom') add(code, `${n} have the weakest defence in the league (${me.def.toFixed(1)})`, 6);
-      if (val === 'top') add(code, `${n} have the most valuable squad in the league, worth ${money(me.value)} for the starting XI`, 7);
-      else if (val === 'bottom') add(code, `${n} have the least valuable squad in the league, worth ${money(me.value)} for the starting XI`, 5);
+      if (att === 'top') add(code, `${n}'s starting XI has the highest attack rating in the league: ${me.att.toFixed(1)} out of 10 on average`, 7);
+      else if (att === 'bottom') add(code, `${n}'s starting XI has the lowest attack rating in the league: ${me.att.toFixed(1)} out of 10 on average`, 6);
+      if (def === 'top') add(code, `${n}'s starting XI has the highest defence rating in the league: ${me.def.toFixed(1)} out of 10 on average`, 7);
+      else if (def === 'bottom') add(code, `${n}'s starting XI has the lowest defence rating in the league: ${me.def.toFixed(1)} out of 10 on average`, 6);
+      if (val === 'top') add(code, `${n}'s starting XI is the most valuable in the league, worth ${money(me.value)} in total`, 7);
+      else if (val === 'bottom') add(code, `${n}'s starting XI is the least valuable in the league, worth ${money(me.value)} in total`, 5);
     }
   }
   // the table
@@ -170,21 +170,21 @@ export function insights(season, fx, { club, hide = () => false, now = new Date(
   if (rowH && rowA && (rowH.p || rowA.p)) add(rowH.p >= rowA.p ? fx.home : fx.away, `${name(fx.home)} (${ord(rowH.rank)}, ${plural(rowH.pts, 'point')}) face ${name(fx.away)} (${ord(rowA.rank)}, ${plural(rowA.pts, 'point')})`, 4);
   // the league's history: titles, runners-up, the reigning champions
   if (history?.seasons?.length) {
-    const seasonName = s => { const lg = (history.leagues || []).find(l => l.id === s.league); return lg ? `${s.name}, ${lg.name}` : s.name; };
+    const seasonName = s => { const lg = (history.leagues || []).find(l => l.id === s.league); return lg ? `${s.name} of the ${/^the /i.test(lg.name) ? lg.name.slice(4) : lg.name}` : s.name; };
     const newest = history.seasons[0];
     const champ = history.awards.find(a => a.season === newest.id && a.place === 'winner' && a.club);
     for (const code of [fx.home, fx.away]) {
       const n = name(code), cab = cabinet(history, code);
       const titles = cab.filter(e => e.place === 'winner').flatMap(e => e.seasons), seconds = cab.filter(e => e.place === 'runner_up').flatMap(e => e.seasons);
-      if (champ?.club === code) add(code, `${n} are the reigning champions (${seasonName(newest)})`, 9);
+      if (champ?.club === code) add(code, `${n} are the reigning champions, winners of ${seasonName(newest)}`, 9);
       else if (titles.length === 1) {
         const ru = history.awards.find(a => a.season === titles[0].id && a.place === 'runner_up');
         const beaten = ru && (ru.club ? club(ru.club)?.name : (history.past || []).find(p => p.id === ru.past_team)?.name);
-        add(code, `${n} won the title in ${seasonName(titles[0])}${beaten ? `, finishing ahead of ${beaten}` : ''}`, 7);
+        add(code, `${n} won the league title in ${seasonName(titles[0])}${beaten ? `, finishing ahead of ${beaten}` : ''}`, 7);
       }
-      if (titles.length >= 2) add(code, `${n} have won the title ${titles.length} times`, 8);
-      if (!titles.length && seconds.length) add(code, `${n} finished runners-up in ${seasonName(seconds[0])}${seconds.length > 1 ? ` and ${seconds.length - 1} more time${seconds.length === 2 ? '' : 's'}` : ''}, but have never won the title`, 7);
-      if (!titles.length && !seconds.length && history.seasons.length >= 2) add(code, `${n} are still chasing their first title`, 4);
+      if (titles.length >= 2) add(code, `${n} have won the league title ${titles.length} times`, 8);
+      if (!titles.length && seconds.length) add(code, `${n} finished runners-up in ${seasonName(seconds[0])}${seconds.length > 1 ? ` and ${seconds.length - 1} more time${seconds.length === 2 ? '' : 's'}` : ''}, but have never won the league title`, 7);
+      if (!titles.length && !seconds.length && history.seasons.length >= 2) add(code, `${n} are still chasing their first league title`, 4);
     }
   }
 
@@ -200,7 +200,7 @@ export function insights(season, fx, { club, hide = () => false, now = new Date(
     const s = sh[side]; if (!s) continue;
     const code = fx[side], slots = FORMATIONS[formOf(s)];
     const off = Object.entries(s.lineup).map(([slot, id]) => ({ p: byId.get(String(id)), want: slots[slot]?.want })).filter(x => x.p && x.want && x.p.position !== x.want);
-    if (off.length) add(code, `${name(code)}'s XI has ${plural(off.length, 'player')} out of position, including ${off[0].p.name}, a ${POS_WORD[off[0].p.position]} playing as a ${POS_WORD[off[0].want]}`, 7);
+    if (off.length) add(code, `${name(code)}'s starting XI has ${plural(off.length, 'player')} out of position, including ${off[0].p.name}, a ${POS_WORD[off[0].p.position]} playing as a ${POS_WORD[off[0].want]}`, 7);
   }
   if (sh.home && sh.away) {
     const mid = s => Object.keys(s.lineup).filter(k => [2, 3].includes(lineOfSlot(formOf(s), k))).length;
@@ -210,9 +210,9 @@ export function insights(season, fx, { club, hide = () => false, now = new Date(
     const xi = c => startingXI(c, players, sheetFor(c)).xi;
     const everyone = [...xi(fx.home).map(p => ({ p, c: fx.home })), ...xi(fx.away).map(p => ({ p, c: fx.away }))];
     const att = everyone.filter(x => x.p.position !== 'GK').sort((x, y) => y.p.offense - x.p.offense);
-    if (att.length > 1 && att[0].p.offense > att[1].p.offense) add(att[0].c, `${att[0].p.name} is the best attacker on the pitch, with an attack rating of ${att[0].p.offense}`, 5);
+    if (att.length > 1 && att[0].p.offense > att[1].p.offense) add(att[0].c, `${att[0].p.name} (${name(att[0].c)}) is the best attacker on the pitch, with an attack rating of ${att[0].p.offense} out of 10`, 5);
     const gks = [fx.home, fx.away].map(c => ({ c, p: xi(c).find(p => p.position === 'GK') })).filter(x => x.p);
-    if (gks.length === 2 && gks[0].p.defense !== gks[1].p.defense) { const [g, o] = gks[0].p.defense > gks[1].p.defense ? gks : [gks[1], gks[0]]; add(g.c, `${g.p.name} in goal for ${name(g.c)} rates ${g.p.defense} for defence, against ${o.p.defense} for ${o.p.name}`, 4); }
+    if (gks.length === 2 && gks[0].p.defense !== gks[1].p.defense) { const [g, o] = gks[0].p.defense > gks[1].p.defense ? gks : [gks[1], gks[0]]; add(g.c, `${name(g.c)}'s goalkeeper ${g.p.name} has a defence rating of ${g.p.defense} out of 10, against ${o.p.defense} for ${name(o.c)}'s ${o.p.name}`, 4); }
   }
   // the calendar: first matches, first home or away match, rest, the last round
   const before = c => (cutoff ? season.fixtures.filter(f => !f.test && !f.exhibition && (f.home === c || f.away === c) && f.id !== fx.id && kickoff(f) && kickoff(f) < cutoff).sort(byKickoff) : []);
@@ -220,7 +220,7 @@ export function insights(season, fx, { club, hide = () => false, now = new Date(
   for (const code of [fx.home, fx.away]) {
     const prior = before(code), n = name(code);
     if (!cutoff) continue;
-    if (!prior.length) { add(code, `This is ${n}'s first match of the season`, 6); continue; }
+    if (!prior.length) { if (code === fx.home) { if (!before(fx.away).length) add(fx.home, 'Neither club has played yet this season: this is the opening match for both', 6); else add(code, `${n} have not played yet this season: this is their opening match`, 6); } else if (before(fx.home).length) add(code, `${n} have not played yet this season: this is their opening match`, 6); continue; }
     rest[code] = Math.round((cutoff - kickoff(prior[prior.length - 1])) / 864e5);
     if (code === fx.home && !prior.some(f => f.home === code)) add(code, `This is ${n}'s first home match of the season`, 5);
     if (code === fx.away && !prior.some(f => f.away === code)) add(code, `This is ${n}'s first away match of the season`, 5);
@@ -256,11 +256,11 @@ export function insights(season, fx, { club, hide = () => false, now = new Date(
     const stats = totals(games), who = c => c === fx.home || c === fx.away;
     const lone = (list, key) => (list.length && (list.length === 1 || list[0][key] > list[1][key]) ? list[0] : null);   // a clear leader, not a tie
     const scorer = lone([...stats.players].filter(p => p.g > 0).sort((a, b) => b.g - a.g), 'g');
-    if (scorer && scorer.g >= 2 && who(scorer.team)) add(scorer.team, `${scorer.name} is the league's top scorer, with ${plural(scorer.g, 'goal')}`, 8);
+    if (scorer && scorer.g >= 2 && who(scorer.team)) add(scorer.team, `${scorer.name} (${name(scorer.team)}) is the league's top scorer, with ${plural(scorer.g, 'goal')}`, 8);
     const helper = lone([...stats.players].filter(p => p.a > 0).sort((a, b) => b.a - a.a), 'a');
-    if (helper && helper.a >= 2 && who(helper.team)) add(helper.team, `${helper.name} leads the league for assists, with ${helper.a}`, 7);
+    if (helper && helper.a >= 2 && who(helper.team)) add(helper.team, `${helper.name} (${name(helper.team)}) leads the league for assists, with ${helper.a}`, 7);
     const rated = [...stats.players].filter(p => p.apps >= 2).map(p => ({ ...p, avg: p.ratingSum / p.apps })).sort((a, b) => b.avg - a.avg);
-    if (rated.length && (rated.length === 1 || rated[0].avg - rated[1].avg >= 0.05) && who(rated[0].team)) add(rated[0].team, `${rated[0].name} has the best average rating in the league (${rated[0].avg.toFixed(1)})`, 7);
+    if (rated.length && (rated.length === 1 || rated[0].avg - rated[1].avg >= 0.05) && who(rated[0].team)) add(rated[0].team, `${rated[0].name} (${name(rated[0].team)}) has the league's best average match rating: ${rated[0].avg.toFixed(1)}`, 7);
     const ts = stats.teams.filter(t => t.p >= 2);
     if (ts.length >= 4) {
       const lead = (key, per, dir = 1) => { const l = ts.map(t => ({ t, v: per ? t[key] / t.p : t[key] })).sort((a, b) => (b.v - a.v) * dir); return l.length > 1 && l[0].v !== l[1].v ? l[0] : null; };
@@ -271,13 +271,13 @@ export function insights(season, fx, { club, hide = () => false, now = new Date(
       note(lead('yellow_cards', false), t => `${name(t.code)} lead the league for yellow cards (${t.yellow_cards})`, 5);
       note(lead('red_cards', false), t => (t.red_cards ? `${name(t.code)} have had the most red cards in the league (${t.red_cards})` : ''), 6);
       note(lead('possession', true), (t, v) => `${name(t.code)} average ${Math.round(v)}% possession, the most in the league`, 6);
-      note(lead('xg', true), (t, v) => `${name(t.code)} create the best chances in the league: ${v.toFixed(1)} expected goals a match`, 6);
+      note(lead('xg', true), (t, v) => `${name(t.code)} create the most dangerous chances in the league: ${v.toFixed(1)} expected goals (xG) a match`, 6);
     }
   }
   // a little character
   for (const code of [fx.home, fx.away]) {
     const motto = String(club(code)?.motto || '').replace(/^["“”]+|["“”]+$/g, '').trim();
-    if (motto) add(code, `“${motto}” is ${name(code)}'s motto`, 3);
+    if (motto) add(code, `${name(code)}'s motto: “${motto}”`, 3);
   }
 
   // The nine shown. Each fact's chance is its own weight times its family's (match results most, mottos barely), drawn without replacement from a
