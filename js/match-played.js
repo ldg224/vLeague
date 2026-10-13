@@ -43,8 +43,8 @@ function xiOf(fx, ctx, code) {
   return { formation, list: src.filter(p => FORMATIONS[formation][p.slot]) };
 }
 
-// A test match's made-up players (ids 9001 to 9116) are not in the squads; their shirt number is the last two digits of the id (js/simulate.js).
-const numberOf = (p, id) => (p?.number != null && p.number !== '' ? p.number : /^9[01]\d\d$/.test(String(id)) ? Number(String(id).slice(-2)) : '');
+// A player the league has no number for (a test match's made-up players): the last two digits of the id, as the match viewer does (js/viewer/highlights.js).
+const numberOf = (p, id) => (p?.number != null && p.number !== '' ? p.number : String(Number(String(id).slice(-2)) || String(id).slice(-2)));
 const tone = r => (r >= 7 ? 'hi' : 'lo');
 
 function side(fx, L, ctx, F, star, which) {
