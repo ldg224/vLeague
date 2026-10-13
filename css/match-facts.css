@@ -11,7 +11,7 @@
 
 /* momentum */
 .mo { position: relative; }
-.mo-svg { display: block; width: 100%; height: 150px; overflow: visible; }
+.mo-svg { display: block; width: 100%; height: 170px; overflow: visible; }
 .mo-axis { stroke: color-mix(in oklab, var(--text) 18%, transparent); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .mo-ht { stroke: color-mix(in oklab, var(--text) 20%, transparent); stroke-width: 1; stroke-dasharray: 2 4; vector-effect: non-scaling-stroke; }
 .mo-h { fill: var(--ha, var(--blue-500)); opacity: .9; } .mo-a { fill: var(--aa, var(--blue-300)); opacity: .9; }

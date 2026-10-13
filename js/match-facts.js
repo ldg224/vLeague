@@ -2,8 +2,9 @@
 //   factsView(fx, file, ctx) -> html: one card with the Momentum chart beside the Top stats, then the Events card.
 //   ctx = { team(code) -> team, club(code) -> clubs row, accent(code) -> '#rrggbb' | '', horizon: match seconds seen so far (Infinity once it is over),
 //           live: bool, scoreAt?: unused }
-// Momentum: each side's shot threat (the expected goals of its shots, with a little for every shot) smoothed over a couple of minutes, the home side filling up from
-// the line in its club colour and the away side filling down in its own; goals along each side's edge, red cards just inside them, 0', HT and FT underneath.
+// Momentum: the pressure each side puts on the other's goal (touches in the final third, nearer goal counts more, plus corners and the expected goals of shots), home minus
+// away, so the home side fills up from the line in its club colour while it has the better of it and the away side fills down in its own; goals along each side's edge,
+// red cards just inside them, 0', HT and FT underneath.
 // Top stats: a possession bar, then expected goals, total shots, shots on target and big chances, the leader's figure in a pill in its club colour. (The engine does not
 // save touches in the box, so that row is not here; while a match is live there is no possession bar, since it would need the ball's whole history.)
 // Events: the goals (score after, assist, penalty, own goal), cards and woodwork in a timeline, the minute in a round badge in the middle, the home side's events on
@@ -12,7 +13,7 @@ import { esc } from './member.js';
 import { icon } from './icons.js';
 import { onColour } from './club-colour.js';
 
-const W = 640, H = 150, MID = 75;   // the chart's own coordinates
+const W = 640, H = 170, MID = 85;   // the chart's own coordinates
 
 const periodsOf = file => file.periods || [];
 const totalOf = file => periodsOf(file).reduce((m, p) => Math.max(m, p.end_t || 0), 0) || file.result?.duration_t || 5400;
@@ -20,15 +21,30 @@ const surname = n => { const w = String(n || '').trim().split(/\s+/); return w.l
 const nameOf = (file, id) => file.byId?.[id]?.name || '';
 
 // ---- the chart
+// Momentum is the pressure each side puts on the other's goal: every touch in the final third counts for more the nearer it is to goal, a corner a little extra, and a shot
+// for its expected goals. Home minus away, smoothed over about a minute and a half: above the line while the home side has the better of it, below while the away side has.
+const ATTACKING = new Set(['pass', 'control', 'take_on', 'shot', 'corner', 'free_kick', 'throw_in', 'miscontrol']);
+function pressure(fx, file, horizon) {
+  const total = totalOf(file), step = 20, n = Math.ceil(total / step) + 1, bins = new Array(n).fill(0);
+  const dir = (code, period) => { const left = periodsOf(file).find(p => p.period === period)?.home_attacks === 'left'; return (code === fx.home) === left ? 'left' : 'right'; };   // which goal this side attacks
+  for (const e of file.events) {
+    if (e.t > horizon) break;
+    if (!ATTACKING.has(e.type) || (e.team !== fx.home && e.team !== fx.away) || e.x == null) continue;
+    const d = dir(e.team, e.period) === 'left' ? e.x : 105 - e.x;
+    let w = d < 42 ? ((42 - d) / 42) ** 2 : 0;
+    if (e.type === 'corner') w += 0.5;
+    if (e.type === 'shot') w += 0.2 + 4 * (e.xg || 0);
+    bins[Math.min(n - 1, Math.floor(e.t / step))] += e.team === fx.home ? w : -w;
+  }
+  const k = 4.5, kernel = Array.from({ length: Math.ceil(4 * k) * 2 + 1 }, (_, i) => Math.exp(-0.5 * ((i - Math.ceil(4 * k)) / k) ** 2)), half = Math.ceil(4 * k);
+  return { step, total, n, net: bins.map((_, i) => { let s = 0, ws = 0; kernel.forEach((w, j) => { const v = bins[i + j - half]; if (v != null) { s += v * w; ws += w; } }); return ws ? s / ws : 0; }) };
+}
+
 function momentum(fx, file, ctx) {
-  const total = totalOf(file), step = 20, n = Math.ceil(total / step) + 1, seen = Math.min(total, ctx.horizon);
-  const raw = { [fx.home]: new Array(n).fill(0), [fx.away]: new Array(n).fill(0) };
-  for (const e of file.events) if (e.type === 'shot' && raw[e.team] && e.t <= ctx.horizon) raw[e.team][Math.min(n - 1, Math.floor(e.t / step))] += (e.xg || 0) + 0.02;
-  const smooth = a => { const k = 6, w = Array.from({ length: 4 * k + 1 }, (_, i) => Math.exp(-0.5 * ((i - 2 * k) / k) ** 2)); return a.map((_, i) => { let s = 0, ws = 0; w.forEach((wv, j) => { const x = a[i + j - 2 * k]; if (x != null) { s += x * wv; ws += wv; } }); return ws ? s / ws : 0; }); };
-  const h = smooth(raw[fx.home]), a = smooth(raw[fx.away]), peak = Math.max(0.0001, ...h, ...a);
-  const x = t => (t / total) * W, last = Math.floor(seen / step);
-  const area = (vals, sign) => {
-    const pts = vals.slice(0, last + 1).map((v, i) => `${x(i * step).toFixed(1)},${(MID - sign * (v / peak) * (MID - 24)).toFixed(1)}`);
+  const { step, total, net } = pressure(fx, file, ctx.horizon), seen = Math.min(total, ctx.horizon), last = Math.floor(seen / step);
+  const peak = Math.max(0.0001, ...net.map(Math.abs)), x = t => (t / total) * W, up = MID - 18;
+  const area = sign => {
+    const pts = net.slice(0, last + 1).map((v, i) => `${x(i * step).toFixed(1)},${(MID - sign * Math.max(0, sign * v) / peak * up).toFixed(1)}`);
     return `M${x(0).toFixed(1)},${MID} L${pts.join(' L')} L${x(last * step).toFixed(1)},${MID} Z`;
   };
   const marks = [];
@@ -39,9 +55,9 @@ function momentum(fx, file, ctx) {
     else marks.push(`<rect class="mo-red" x="${(x(e.t) - 3).toFixed(1)}" y="${top ? 24 : H - 36}" width="6" height="12" rx="1.5"/>`);
   }
   const ht = periodsOf(file)[0]?.end_t, htX = ht ? x(ht) : W / 2;
-  return `<svg class="mo-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Momentum through the match: the home side above the line, the away side below">
+  return `<svg class="mo-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Momentum through the match: the home side above the line while it has the better of it, the away side below">
       <line class="mo-axis" x1="0" x2="${W}" y1="${MID}" y2="${MID}"/><line class="mo-ht" x1="${htX.toFixed(1)}" x2="${htX.toFixed(1)}" y1="0" y2="${H}"/>
-      <path class="mo-h" d="${area(h, 1)}"/><path class="mo-a" d="${area(a, -1)}"/>${marks.join('')}</svg>
+      <path class="mo-h" d="${area(1)}"/><path class="mo-a" d="${area(-1)}"/>${marks.join('')}</svg>
     <div class="mo-labels" aria-hidden="true"><span>0′</span><span style="left:${(htX / W * 100).toFixed(1)}%">HT</span><span>FT</span></div>`;
 }
 

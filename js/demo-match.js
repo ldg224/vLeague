@@ -34,6 +34,16 @@ function demoFile(f) {
   for (const c of r.cards) events.push({ id: id++, t: T(c.minute), minute: String(c.minute), type: 'card', team: c.team, player: c.player, card: 'red' });
   for (const [pid, p] of Object.entries(r.players)) if (p.yc) { const m = 8 + (hash(`${f.id}y${pid}`) % 80); events.push({ id: id++, t: T(m), minute: String(m), type: 'card', team: p.team, player: pid, card: 'yellow' }); }
   events.push({ id: id++, t: 2700, minute: '45', type: 'added_time', minutes: 4 }, { id: id++, t: 2940, minute: '45+4', type: 'period_end', period: 1 }, { id: id++, t: 5940, minute: '90+5', type: 'period_end', period: 2 });
+  // Positions: shots near the goal they attack, plus attacking touches spread through the match, more of them for the side with more of the ball.
+  const goalDist = (code, t, dist) => { const p1 = t < 2940, homeLeft = p1; return { x: (code === f.home) === homeLeft ? dist : 105 - dist, period: p1 ? 1 : 2 }; };
+  for (const e of events) if (e.type === 'shot' || e.type === 'goal') Object.assign(e, goalDist(e.team, e.t, 8 + (hash(`${f.id}${e.id}`) % 22)));
+  for (const [code, side] of [[f.home, 'home'], [f.away, 'away']]) {
+    const share = (r.stats[side].possession || 50) / 50;
+    for (let i = 0; i < Math.round(160 * share); i++) {
+      const t = (hash(`${f.id}${code}p${i}`) % 5900) + 1, u = (hash(`${f.id}${code}d${i}`) % 1000) / 1000;
+      events.push({ id: id++, t, minute: String(Math.ceil(t / 60)), type: 'pass', team: code, ...goalDist(code, t, 105 * Math.pow(u, 1.6 - 0.5 * share)) });
+    }
+  }
   events.sort((a, b) => a.t - b.t);
   return { periods: [{ period: 1, start_t: 0, end_t: 2940, added_minutes: 4 }, { period: 2, start_t: 2940, end_t: 5940, added_minutes: 5 }], events, players, byId: Object.fromEntries(players.map(p => [p.id, p])), stats: { teams: r.stats }, result: { duration_t: 5940 } };
 }
