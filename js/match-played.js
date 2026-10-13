@@ -80,7 +80,7 @@ function side(fx, L, ctx, F, star, which) {
 
 function bar(which, S, ctx, fx) {
   const code = fx[which], team = ctx.team(code), name = ctx.club(code)?.short_name || ctx.club(code)?.name || team.name, s = S[which];
-  const chip = s.avg != null ? `<span class="ml-chip" title="Team average rating">${s.avg.toFixed(2)}</span>` : '';
+  const chip = s.avg != null ? `<span class="ml-chip is-${tone(s.avg)}" title="Team average rating">${s.avg.toFixed(2)}</span>` : '';
   const form = `<span class="ml-form">${esc(s.formation)}</span>`;
   return `<div class="ml-side is-${which}">${which === 'home' ? `${chip}${ctx.crest(team, 32)}<b>${esc(name)}</b>${form}` : `${form}<b>${esc(name)}</b>${ctx.crest(team, 32)}${chip}`}</div>`;
 }

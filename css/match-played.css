@@ -20,3 +20,6 @@
   .mp-cols { grid-template-columns: 1fr; gap: 12px; }
   .ml-off { left: -16px; }
 }
+/* the team average rating chip wears the same colours as a player's rating badge */
+.ml-chip.is-hi { background: var(--res-w); border-color: transparent; color: #fff; font-weight: 700; }
+.ml-chip.is-lo { background: var(--amber); border-color: transparent; color: #0a0f19; font-weight: 700; }
