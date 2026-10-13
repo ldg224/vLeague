@@ -15,6 +15,7 @@ import { prefs, spoilerHidden, revealScore } from './prefs.js';
 import { paint, quietly } from './paint.js';
 import { icon } from './icons.js';
 import { accentFor, isHex } from './club-colour.js';
+import { loadLineups, lineupCard } from './match-lineup.js';
 
 chrome();
 const main = document.getElementById('main');
@@ -25,7 +26,6 @@ const TABS = {
   played: [['facts', 'Facts'], ['lineup', 'Lineup'], ['stats', 'Stats'], ['h2h', 'Head-to-Head']],
 };
 const SOON = {
-  preview: 'The predicted line-ups, form and insights for this match are coming.',
   facts: 'The momentum chart, top stats and events for this match are coming.',
   lineup: 'The line-ups for this match are coming.',
   stats: 'The full team stats for this match are coming.',
@@ -66,7 +66,7 @@ function start() {
     const now = new Date(), st = status(fx, season, now);
     return { now, st, played: st === 'live' || st === 'ft', hid: spoilerHidden(fx, season, now) };
   };
-  const tabsFor = st => (st === 'live' || st === 'ft' ? TABS.played : TABS.upcoming);
+  const tabsFor = st => ((st === 'live' || st === 'ft') && !(preview && q.has('as-upcoming')) ? TABS.played : TABS.upcoming);   // as-upcoming: localhost preview only, to see the Preview tab on a played test match
   const tabNow = st => { const t = location.hash.slice(1), list = tabsFor(st); return list.some(x => x[0] === t) ? t : list[0][0]; };
   const redsOf = code => (fx.result?.cards || []).filter(c => c.team === code && (c.card === 'red' || c.card === 'second_yellow')).length;
 
@@ -97,17 +97,20 @@ function start() {
     const goals = shownGoals(fx, season, now);
     if (!goals.length) return '';
     const side = code => goals.filter(g => (g.own_goal ? g.team !== code : g.team === code)).sort((a, b) => a.t - b.t);
-    const line = g => `<li>${esc(g.scorer_name || 'Goal')} <small>${esc(g.minute)}′${g.own_goal ? ' (og)' : ''}</small></li>`;
-    return `<div class="mh-scorers"><ul class="is-home">${side(fx.home).map(line).join('')}</ul><span class="mh-ball">${icon('ball')}</span><ul class="is-away">${side(fx.away).map(line).join('')}</ul></div>`;
+    // One line per scorer with every minute after the name (Grimaldo 53′ (pen), 71′), as FotMob does.
+    const lines = list => {
+      const by = new Map();
+      for (const g of list) { const k = g.scorer_name || 'Goal'; (by.get(k) || by.set(k, []).get(k)).push(`${g.minute}′${g.own_goal ? ' (og)' : ''}`); }
+      return [...by].map(([name, mins]) => `<li>${esc(name)} <small>${esc(mins.join(', '))}</small></li>`).join('');
+    };
+    return `<div class="mh-scorers"><ul class="is-home">${lines(side(fx.home))}</ul><span class="mh-ball">${icon('ball')}</span><ul class="is-away">${lines(side(fx.away))}</ul></div>`;
   };
 
   const header = s => {
     const k = kickoff(fx), ground = club(fx.home)?.stadium || '', list = tabsFor(s.st), cur = tabNow(s.st);
     const side = (code, t, cls) => `<a class="mh-team ${cls}" href="team.html?c=${esc(code)}"><b class="mh-name"><span class="mh-full">${esc(fullNameOf(t))}</span><span class="mh-short">${esc(nameOf(t))}</span></b>${crest(t, 88)}</a>`;
-    const theme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
-    const acc = code => { const c = club(code)?.colour || teamOf(season, code).colour; return isHex(c) ? accentFor(c, theme) : ''; };
     const ghost = (code, t, cls) => `<span class="mh-ghost ${cls}" aria-hidden="true"><b class="mh-full">${esc(fullNameOf(t))}</b><b class="mh-code">${esc(code)}</b></span>`;
-    return `<section class="lg-card mh-head" aria-label="Match" style="${acc(fx.home) ? `--ha:${acc(fx.home)};` : ''}${acc(fx.away) ? `--aa:${acc(fx.away)};` : ''}">
+    return `<section class="lg-card mh-head" aria-label="Match">
       <p class="mh-round">${esc(fx.round || `Round ${fx.week}`)}</p>
       <p class="mh-info">${k ? `<span>${icon('calendar-days')}${esc(when(k))}</span>` : ''}${ground ? `<span>${icon('map-pin')}${esc(ground)}</span>` : ''}</p>
       <div class="mh-teams">${ghost(fx.home, home, 'is-home')}${ghost(fx.away, away, 'is-away')}${side(fx.home, home, 'is-home')}<div class="mh-mid">${middle(s)}</div>${side(fx.away, away, 'is-away')}</div>
@@ -115,14 +118,27 @@ function start() {
       <nav class="mh-tabs" aria-label="Match">${list.map(([t, l]) => `<a href="#${t}"${t === cur ? ' aria-current="page"' : ''}>${esc(l)}</a>`).join('')}</nav>
     </section>`;
   };
-  const body = s => `<section class="lg-card mh-soon"><p class="empty">${esc(SOON[tabNow(s.st)])}</p></section>`;
+  // The Predicted Lineup (WR-32) loads once, then the Preview tab draws it.
+  let lineups = null;
+  const lctx = { season, code: { home: fx.home, away: fx.away }, club, team: code => teamOf(season, code), crest };
+  const body = s => {
+    const tab = tabNow(s.st);
+    if (tab === 'preview') return lineups ? lineupCard(lineups, lctx) : '<section class="lg-card mh-soon"><p class="empty">Loading the line-ups…</p></section>';
+    return `<section class="lg-card mh-soon"><p class="empty">${esc(SOON[tab])}</p></section>`;
+  };
 
+  const acc = code => {
+    const c = club(code)?.colour || teamOf(season, code).colour, theme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+    return isHex(c) ? accentFor(c, theme) : '';
+  };
   const draw = () => {
     const s = state();
     document.title = `${nameOf(home)} v ${nameOf(away)} | vLeague`;
-    paint(main, `<div class="mh">${header(s)}<div id="mh-body">${body(s)}</div></div>`);
+    const ha = acc(fx.home), aa = acc(fx.away);
+    paint(main, `<div class="mh" style="${ha ? `--ha:${ha};` : ''}${aa ? `--aa:${aa};` : ''}">${header(s)}<div id="mh-body">${body(s)}</div></div>`);
   };
   draw();
+  loadLineups(fx, season, rows, { fake: preview && q.has('fake') }).then(l => { lineups = l; draw(); }).catch(() => { lineups = { home: { sheet: null, locked: false }, away: { sheet: null, locked: false }, kits: {} }; draw(); });
   addEventListener('hashchange', draw);
   main.addEventListener('click', async e => {
     if (!e.target.closest('[data-reveal]')) return;

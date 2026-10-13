@@ -1,0 +1,68 @@
+/* The match page's Predicted Lineup card (WR-32). One card: a bar (home club left, title, away club right), a pitch split down the middle
+   (home on the left half, away on the right; home above away on a phone), the coaches under it. Neutral surfaces and hairline pitch lines;
+   the players are the kits themselves. Tokens and the five type sizes. Positions come from the team sheet's slots: --x across the pitch and --y
+   up it from the club's own goal, both 0 to 100 (js/pitch.js). */
+
+.ml .ml-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--line); }
+.ml-bar h2 { margin: 0; text-align: center; font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: var(--text-strong); }
+.ml-side { display: flex; align-items: center; gap: 10px; min-width: 0; font: 600 var(--fs-m) var(--font); color: var(--text-strong); }
+.ml-side.is-away { justify-content: flex-end; text-align: right; }
+.ml-side b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.ml-form { color: var(--muted); font: 600 var(--fs-m) var(--font); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ml-chip { padding: 2px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--text-soft); font: 600 var(--fs-s) var(--font); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* the pitch: wide on a desktop, tall on a phone */
+.ml-pitch { position: relative; aspect-ratio: 2 / 1; min-height: 340px; overflow: hidden;
+  background:
+    radial-gradient(55% 120% at 0% 50%, color-mix(in oklab, var(--ha, transparent) 14%, transparent), transparent 80%),
+    radial-gradient(55% 120% at 100% 50%, color-mix(in oklab, var(--aa, transparent) 14%, transparent), transparent 80%),
+    var(--surface-sunk); }
+.ml-lines { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; stroke: color-mix(in oklab, var(--text) 13%, transparent); stroke-width: 1.5; vector-effect: non-scaling-stroke; pointer-events: none; }
+.ml-lines * { vector-effect: non-scaling-stroke; }
+.ml-lines.is-v { display: none; }
+.ml-xi { position: absolute; inset: 0; margin: 0; padding: 0; list-style: none; }
+.ml-p { position: absolute; display: grid; justify-items: center; gap: 4px; width: 96px; translate: -50% -50%; text-align: center; }
+.ml-p.is-home { left: calc(3% + var(--y) * .44%); top: calc(8% + var(--x) * .84%); }
+.ml-p.is-away { left: calc(100% - (3% + var(--y) * .44%)); top: calc(100% - (8% + var(--x) * .84%)); }
+.ml-av { position: relative; display: grid; place-items: center; width: 64px; height: 64px; }
+.ml-av img { width: 64px; height: 64px; object-fit: contain; }
+.ml-disc { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--c); color: var(--on); font: 700 var(--fs-s) var(--font); font-style: normal; font-variant-numeric: tabular-nums; }
+.ml-cap { position: absolute; top: 0; left: 2px; display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); color: var(--text-strong); font: 700 var(--fs-xs) var(--font); box-shadow: 0 0 0 1px var(--line); }
+.ml-n { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-strong); font: 600 var(--fs-s)/1.2 var(--font); }
+.ml-n i { font-style: normal; font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* a club that hasn't locked its team: an empty half-pitch that says so, and nothing about its picks */
+.ml-empty { position: absolute; display: grid; align-content: center; justify-items: center; gap: 6px; padding: 16px; text-align: center; color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.ml-empty.is-home { inset: 0 50% 0 0; } .ml-empty.is-away { inset: 0 0 0 50%; }
+.ml-empty b { color: var(--text-soft); font: 600 var(--fs-m) var(--font); }
+.ml-empty .ic { width: 22px; height: 22px; color: var(--faint); }
+
+.ml-coaches { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 12px 20px; border-top: 1px solid var(--line); }
+.ml-coaches > b { text-align: center; color: var(--muted); font: 600 var(--fs-m) var(--font); }
+.ml-coach { display: flex; align-items: center; gap: 10px; min-width: 0; font: 600 var(--fs-m) var(--font); color: var(--text-strong); }
+.ml-coach.is-away { justify-content: flex-end; }
+.ml-coach b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.ml-coach .ml-disc { width: 32px; height: 32px; flex: none; font-size: var(--fs-xs); }
+
+@media (max-width: 767px) {
+  .ml .ml-bar { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 12px 16px; row-gap: 12px; }
+  .ml-bar h2 { grid-column: 1 / -1; grid-row: 1; }
+  .ml-side { flex-wrap: wrap; gap: 6px 8px; }
+  .ml-pitch {
+    background:
+      radial-gradient(120% 55% at 50% 0%, color-mix(in oklab, var(--ha, transparent) 14%, transparent), transparent 80%),
+      radial-gradient(120% 55% at 50% 100%, color-mix(in oklab, var(--aa, transparent) 14%, transparent), transparent 80%),
+      var(--surface-sunk);
+  }
+  .ml-pitch { aspect-ratio: 1 / 1.75; min-height: 0; }
+  .ml-lines.is-h { display: none; } .ml-lines.is-v { display: block; }
+  .ml-p { width: 58px; }
+  .ml-av, .ml-av img { width: 48px; height: 48px; }
+  .ml-disc { width: 38px; height: 38px; }
+  .ml-n { font-size: var(--fs-xs); }
+  .ml-n i { display: none; }
+  .ml-p.is-home { left: calc(5% + var(--x) * .9%); top: calc(3% + var(--y) * .46%); }
+  .ml-p.is-away { left: calc(100% - (5% + var(--x) * .9%)); top: calc(100% - (3% + var(--y) * .46%)); }
+  .ml-empty.is-home { inset: 0 0 50% 0; } .ml-empty.is-away { inset: 50% 0 0 0; }
+  .ml-coaches { padding: 12px 16px; }
+}
