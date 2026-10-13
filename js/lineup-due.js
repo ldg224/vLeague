@@ -31,9 +31,11 @@ async function urgent(code) {
 
 const left = ms => { const m = Math.max(1, Math.round(ms / 6e4)), h = Math.floor(m / 60); return h ? `${h} h ${m % 60} min` : `${m} min`; };
 
+const FORCE_TEST = true;   // TEMP: shows the pop-up on every load with a pretend lock 5 h away, to judge the look. Remove after the user confirms.
+
 async function pop(code) {
-  try { if (sessionStorage.getItem('lu-seen')) return; } catch { /* shown again if storage is blocked */ }
-  const lock = await urgent(code);
+  try { if (!FORCE_TEST && sessionStorage.getItem('lu-seen')) return; } catch { /* shown again if storage is blocked */ }
+  const lock = FORCE_TEST ? new Date(Date.now() + 5 * 36e5 + 12 * 6e4) : await urgent(code);
   if (!lock || document.querySelector('.lu-pop')) return;
   try { sessionStorage.setItem('lu-seen', '1'); } catch { /* ignore */ }
   const d = document.createElement('dialog');
