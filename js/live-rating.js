@@ -1,7 +1,7 @@
 // Live match ratings (FU-05): every player's rating as it stands at match second `t`, worked out from the match file's events.
 // It is the engine's own rating formula (js/sim/hcl_sim/output.py, `_rating`) run on the events up to `t` instead of the whole match,
 // so at full time it gives the same numbers as the file's `stats.players[id].rating`. Keep the two in step.
-//   ratingsAt(data, t) -> { [player id]: rating 3.0..9.9 }
+//   ratingsAt(data, t) -> { [player id]: rating 0.0..10.0 }
 // The match result in the formula (+0.2 for a win, -0.2 for a loss) is the score at `t`, so it moves as goals go in.
 import { lineOfSlot } from './lineup-pitch.js';
 
@@ -11,7 +11,7 @@ const DEF = 1;   // the defensive line (see lineOfSlot)
 // player in that position has done by this point of the match (norm x fraction of the match played), so the average does not drift up.
 const BASE = 6.6;
 const VOLUME_NORM = { GK: 0.85, DEF: 0.50, MID: 1.33, FWD: 0.78 };
-const shape = r => (r <= 6.8 ? r : Math.min(9.9, 6.8 + 2.2 * (1 - Math.exp(-(r - 6.8) / 1.5))));
+const shape = r => { if (r <= 6.8) return r; const v = 6.8 + 2.2 * (1 - Math.exp(-(r - 6.8) / 1.5)); return v <= 8.6 ? v : Math.min(10.0, 8.6 + (v - 8.6) * 3.5); };   // B-20: ends at 10.0 (see output.py)
 
 export function ratingsAt(data, t) {
   const home = data.teams.home, S = {}, info = {};
@@ -57,12 +57,12 @@ export function ratingsAt(data, t) {
     v += 0.012 * s.done - 0.035 * (s.passes - s.done);
     v += 0.12 * s.tackles + 0.1 * s.inter + 0.05 * s.clear + 0.1 * s.blocks;
     v += 0.1 * s.takeOns + 0.05 * s.aerials - 0.05 * s.miscontrols - 0.05 * s.fouls;
-    if (i.gk) v += 0.3 * s.saves - 0.25 * s.conceded;
+    if (i.gk) v += 0.3 * s.saves - 0.25 * s.conceded - 0.15 * Math.max(0, s.conceded - 4);
     else if (i.def) v -= 0.1 * s.conceded;
     r += v - (VOLUME_NORM[i.pos] ?? VOLUME_NORM.MID) * frac;
     r -= 0.3 * s.yellow + 1.5 * s.red + 0.8 * s.own;
     r += mine > theirs ? 0.2 : mine < theirs ? -0.2 : 0;
-    out[id] = Math.round(Math.max(3.0, shape(r)) * 10) / 10;
+    out[id] = Math.round(Math.max(0.0, shape(r)) * 10) / 10;
   }
   return out;
 }

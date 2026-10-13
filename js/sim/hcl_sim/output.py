@@ -97,7 +97,10 @@ def shape_rating(r):
     (like FotMob, where 10 is practically never given). Below 6.8 the raw score is kept as it is."""
     if r <= 6.8:
         return r
-    return min(9.9, 6.8 + 2.2 * (1 - math.exp(-(r - 6.8) / 1.5)))
+    v = 6.8 + 2.2 * (1 - math.exp(-(r - 6.8) / 1.5))   # climbs towards 9.0
+    # B-20: a freak game (a double-figure scoring spree) has to be able to reach 10. Above 8.6 the last stretch is stretched so the curve ends at 10.0 instead of 9.0;
+    # everything up to a hat-trick-sized game is as before (a brace is about 8.4).
+    return v if v <= 8.6 else min(10.0, 8.6 + (v - 8.6) * 3.5)
 
 
 def _rating(p, s, m):
@@ -110,13 +113,13 @@ def _rating(p, s, m):
     v += 0.12 * s['tackles_won'] + 0.1 * s['interceptions'] + 0.05 * s['clearances'] + 0.1 * s['blocks']
     v += 0.1 * s['take_ons'] + 0.05 * s['aerials_won'] - 0.05 * s['miscontrols'] - 0.05 * s['fouls']
     if p.is_gk:
-        v += 0.3 * s['saves'] - 0.25 * s['goals_conceded']
+        v += 0.3 * s['saves'] - 0.25 * s['goals_conceded'] - 0.15 * max(0, s['goals_conceded'] - 4)   # B-20: a keeper shipping a dozen goals can reach 0
     elif p.line == 'DEF':
         v -= 0.1 * s['goals_conceded']
     r += v - VOLUME_NORM.get(p.position, VOLUME_NORM['MID'])
     r -= 0.3 * s['yellow'] + 1.5 * s['red'] + 0.8 * s['own_goals']
     r += 0.2 if won else -0.2 if lost else 0.0
-    return round(max(3.0, shape_rating(r)), 1)
+    return round(max(0.0, shape_rating(r)), 1)
 
 
 def _team_stats(m, pstats):
