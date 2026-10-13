@@ -21,6 +21,7 @@ import { loadLineups, lineupCard } from './match-lineup.js';
 import { formCard } from './match-form.js';
 import { insights, insightsCard } from './match-insights.js';
 import { chanceCard, venueCard } from './match-side.js';
+import { h2hCard } from './match-h2h.js';
 import { loadHistory } from './history-data.js';
 
 chrome();
@@ -35,7 +36,6 @@ const SOON = {
   facts: 'The momentum chart, top stats and events for this match are coming.',
   lineup: 'The line-ups for this match are coming.',
   stats: 'The full team stats for this match are coming.',
-  h2h: 'The meetings between these two clubs are coming.',
 };
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const when = d => `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}, ${time(d)}`;
@@ -135,7 +135,8 @@ function start() {
     </section>`;
   };
   // The Predicted Lineup (WR-32) loads once, then the Preview tab draws it.
-  let lineups = null, formHidden = [], history = null;
+  let lineups = null, formHidden = [], history = null, h2hHidden = [];
+  const h2hOpts = { home: false, season: false };   // the Head-to-Head filter pills, kept while the page is open
   // Season numbers for the lineup pills (WR-33), from the results this account may see (spoiler-free keeps hidden ones out). The choice lasts while the page is open.
   let view = preview && ['contrib', 'value'].includes(q.get('view')) ? q.get('view') : 'rating';   // ?view= : localhost preview only
   const seasonStats = () => {
@@ -159,6 +160,10 @@ function start() {
       formHidden = form.hidden;
       extra = insightsCard(insights(season, fx, { club, hide: sctx.hide, now: s.now, sheets, history }), { team, crest, accent: acc });
       main = `${lineups ? lineupCard(lineups, lctx()) : '<section class="lg-card mh-soon"><p class="empty">Loading the line-ups…</p></section>'}${form.html}`;
+    } else if (tab === 'h2h') {
+      const h = h2hCard(season, fx, { club, team, crest, accent: acc, hide: sctx.hide, url: matchUrl, time: d => time(d), now: s.now }, h2hOpts);
+      h2hHidden = h.hidden;
+      main = h.html;
     } else {
       main = `<section class="lg-card mh-soon"><p class="empty">${esc(SOON[tab])}</p></section>`;
     }
@@ -181,6 +186,9 @@ function start() {
   loadHistory().then(h => { history = h; draw(); }).catch(() => {});   // the league's past seasons, for the Insights
   addEventListener('hashchange', draw);
   main.addEventListener('click', async e => {
+    const fl = e.target.closest('[data-h2h]');
+    if (fl) { h2hOpts[fl.dataset.h2h] = !h2hOpts[fl.dataset.h2h]; draw(); return; }
+    if (e.target.closest('[data-reveal-h2h]')) { await revealScore(h2hHidden).catch(() => {}); draw(); return; }
     if (e.target.closest('[data-reveal-form]')) { await revealScore(formHidden).catch(() => {}); draw(); return; }
     const pick = e.target.closest('[data-lview]');
     if (pick) { view = pick.dataset.lview; draw(); return; }

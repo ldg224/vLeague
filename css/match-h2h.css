@@ -1,0 +1,42 @@
+/* The match page's Head-to-Head tab (WR-37): wins, draws, wins at the top (each club's pill in its colour for the theme), the two filter pills, then every meeting
+   in rows split by hairlines. Neutral card; tokens and the five type sizes. */
+
+.hh .hh-top { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: 12px; padding: 24px 20px 20px; border-bottom: 1px solid var(--line); }
+.hh-side { display: flex; align-items: flex-start; gap: 16px; min-width: 0; }
+.hh-side:first-child { justify-content: flex-end; } .hh-side:last-child { justify-content: flex-start; }
+.hh-num { display: grid; justify-items: center; gap: 8px; color: var(--text-strong); font: 600 var(--fs-m) var(--font); }
+.hh-pill {
+  display: inline-grid; place-items: center; min-width: 64px; height: 40px; padding: 0 16px; border-radius: 999px;
+  background: var(--k, var(--surface-sunk)); color: var(--on, var(--text-strong)); font: 900 var(--fs-xl)/1 var(--font-display); font-stretch: 125%; font-variant-numeric: tabular-nums;
+}
+.hh-num.is-draw .hh-pill { background: color-mix(in oklab, var(--text) 12%, transparent); color: var(--text-strong); }
+.hh-num > span:last-child { color: var(--muted); font-weight: 600; }
+.hh-pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 12px 20px; border-bottom: 1px solid var(--line); }
+.hh-list { list-style: none; margin: 0; padding: 0; }
+.hh-list li + li { border-top: 1px solid var(--line); }
+.hh .hh-row { display: grid; gap: 8px; padding: 12px 20px 14px; color: var(--text-strong); text-decoration: none; }
+.hh-row.is-now { background: color-mix(in oklab, var(--blue-500, #2196f3) 8%, transparent); }
+.hh-meta { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.hh-teams { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto minmax(0, 1fr); align-items: center; gap: 10px; }
+.hh-n { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 var(--fs-m) var(--font); }
+.hh-n.is-home { text-align: right; }
+.hh-s { min-width: 64px; text-align: center; font: 900 var(--fs-m) var(--font-display); font-stretch: 125%; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hh-s.is-ko { color: var(--muted); font: 600 var(--fs-m) var(--font); }
+.hh-s.is-hidden { color: var(--muted); }
+.hh-none { margin: 0; padding: 24px 20px; color: var(--muted); font: 400 var(--fs-m) var(--font); text-align: center; }
+.hh-hide { margin: 0; padding: 12px 20px; border-top: 1px solid var(--line); color: var(--muted); font: 400 var(--fs-s) var(--font); text-align: center; }
+.hh-hide button { padding: 0; border: 0; background: none; color: var(--brand); font: 600 var(--fs-s) var(--font); cursor: pointer; }
+@media (hover: hover) { .hh .hh-row:hover { background: var(--surface-hover); } }
+.hh :is(a, button):focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+
+@media (max-width: 767px) {
+  .hh .hh-top { padding: 20px 12px 16px; gap: 6px; }
+  .hh-side { gap: 8px; flex-direction: column; align-items: center; }
+  .hh-side:last-child { flex-direction: column-reverse; }
+  .hh-pill { min-width: 52px; height: 36px; padding: 0 12px; }
+  .hh-pills { padding: 12px 16px; }
+  .hh .hh-row { padding: 12px 16px 14px; }
+  .hh-teams { gap: 6px; }
+  .hh-n { font-size: var(--fs-s); }
+  .hh-s { min-width: 52px; }
+}
