@@ -1,0 +1,33 @@
+/* The match page's Team form card (WR-34): two columns of the clubs' last five results, a score chip between the names, coloured from that club's side.
+   Neutral card, hairline between rows; the chip colours are the shared result colours. Tokens and the five type sizes. */
+
+.mf .mf-head { padding: 14px 20px; border-bottom: 1px solid var(--line); }
+.mf-head h2 { margin: 0; text-align: center; font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: var(--text-strong); }
+.mf-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.mf-col { min-width: 0; padding: 8px 12px 12px; }
+.mf-col + .mf-col { border-left: 1px solid var(--line); }
+.mf-club { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0; padding: 8px 8px 12px; color: var(--text-strong); font: 700 var(--fs-m)/1.2 var(--font); }
+.mf-club span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mf-list { list-style: none; margin: 0; padding: 0; }
+.mf-list li + li { border-top: 1px solid var(--line); }
+.mf .mf-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; min-height: 52px; padding: 0 8px; color: var(--muted); text-decoration: none; }
+.mf-n { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 var(--fs-m) var(--font); }
+.mf-n:first-child { text-align: right; }
+.mf-n.is-me { color: var(--text-strong); font-weight: 600; }
+.mf-s { position: relative; display: inline-grid; place-items: center; min-width: 58px; height: 28px; padding: 0 10px; border-radius: 6px; color: #fff; font: 700 var(--fs-s) var(--font); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mf-s.res-W { background: var(--res-w); } .mf-s.res-D { background: var(--res-d); } .mf-s.res-L { background: var(--res-l); }
+.mf-s.is-hidden { background: color-mix(in oklab, var(--text) 10%, transparent); color: var(--muted); }
+.mf-s.is-new::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: 3px; height: 2px; border-radius: 2px; background: currentColor; opacity: .9; }
+.mf-none { margin: 0; padding: 16px 8px; color: var(--muted); font: 400 var(--fs-m) var(--font); text-align: center; }
+.mf-hide { margin: 0; padding: 12px 20px; border-top: 1px solid var(--line); color: var(--muted); font: 400 var(--fs-s) var(--font); text-align: center; }
+.mf-hide button { padding: 0; border: 0; background: none; color: var(--brand); font: 600 var(--fs-s) var(--font); cursor: pointer; }
+@media (hover: hover) { .mf .mf-row:hover { background: var(--surface-hover); color: var(--text-strong); } }
+.mf :is(a, button):focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+
+/* phone: the two clubs one under the other */
+@media (max-width: 767px) {
+  .mf-cols { grid-template-columns: minmax(0, 1fr); }
+  .mf-col + .mf-col { border-left: 0; border-top: 1px solid var(--line); }
+  .mf .mf-row { gap: 8px; padding: 0 4px; }
+  .mf-n { font-size: var(--fs-s); }
+}

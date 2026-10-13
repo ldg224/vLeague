@@ -9,7 +9,7 @@ import { chrome, esc, clubs, crestUrl } from './member.js';
 import { currentUser, myProfile } from './auth.js';
 import { paintClub, startSilk, styleCards } from './shell.js';
 import { mountSubFrame } from './frame.js';
-import { loadSeason, kickoff, status, shownScore, shownGoals, liveMinute, liveState, finished } from './dashboard-data.js';
+import { loadSeason, kickoff, status, shownScore, shownGoals, liveMinute, liveState, finished, matchUrl } from './dashboard-data.js';
 import { countedFixtures, totals } from './season-stats.js';
 import { demoMatchSeason } from './demo-match.js';
 import { crest, teamOf, nameOf, fullNameOf, useClubs, time } from './places.js';
@@ -18,6 +18,7 @@ import { paint, quietly } from './paint.js';
 import { icon } from './icons.js';
 import { accentFor, isHex } from './club-colour.js';
 import { loadLineups, lineupCard } from './match-lineup.js';
+import { formCard } from './match-form.js';
 
 chrome();
 const main = document.getElementById('main');
@@ -131,7 +132,7 @@ function start() {
     </section>`;
   };
   // The Predicted Lineup (WR-32) loads once, then the Preview tab draws it.
-  let lineups = null;
+  let lineups = null, formHidden = [];
   // Season numbers for the lineup pills (WR-33), from the results this account may see (spoiler-free keeps hidden ones out). The choice lasts while the page is open.
   let view = preview && ['contrib', 'value'].includes(q.get('view')) ? q.get('view') : 'rating';   // ?view= : localhost preview only
   const seasonStats = () => {
@@ -146,7 +147,11 @@ function start() {
   const lctx = () => ({ season, code: { home: fx.home, away: fx.away }, club, team: code => teamOf(season, code), crest, stats: seasonStats(), view });
   const body = s => {
     const tab = tabNow(s.st);
-    if (tab === 'preview') return lineups ? lineupCard(lineups, lctx()) : '<section class="lg-card mh-soon"><p class="empty">Loading the line-ups…</p></section>';
+    if (tab === 'preview') {
+      const form = formCard(season, fx, { club, team: code => teamOf(season, code), crest, hide: f => spoilerHidden(f, season, s.now), url: matchUrl }, s.now);
+      formHidden = form.hidden;
+      return (lineups ? lineupCard(lineups, lctx()) : '<section class="lg-card mh-soon"><p class="empty">Loading the line-ups…</p></section>') + form.html;
+    }
     return `<section class="lg-card mh-soon"><p class="empty">${esc(SOON[tab])}</p></section>`;
   };
 
@@ -165,6 +170,7 @@ function start() {
   loadLineups(fx, season, rows, { fake: preview && q.has('fake') }).then(l => { lineups = l; draw(); }).catch(() => { lineups = { home: { sheet: null, locked: false }, away: { sheet: null, locked: false }, kits: {} }; draw(); });
   addEventListener('hashchange', draw);
   main.addEventListener('click', async e => {
+    if (e.target.closest('[data-reveal-form]')) { await revealScore(formHidden).catch(() => {}); draw(); return; }
     const pick = e.target.closest('[data-lview]');
     if (pick) { view = pick.dataset.lview; draw(); return; }
     if (!e.target.closest('[data-reveal]')) return;
