@@ -98,7 +98,7 @@ function start() {
     if (st === 'postponed') return '<strong class="mh-ko">Postponed</strong>';
     const k = kickoff(fx);
     if (!k) return '<strong class="mh-ko">TBA</strong>';
-    return `<strong class="mh-ko">${esc(time(k))}</strong><span class="mh-sub mh-count" data-until="${+k}">${st === 'awaiting' ? 'Kicking off' : countdown(k - now)}</span>`;
+    return `<strong class="mh-ko">${esc(time(k))}</strong><span class="mh-sub mh-count" data-until="${+k}">${st === 'awaiting' ? 'Kicking off' : ''}</span>`;
   };
 
   // ---- scorers under each club, with a ball in the middle
@@ -136,7 +136,7 @@ function start() {
   };
   // The Predicted Lineup (WR-32) loads once, then the Preview tab draws it.
   let lineups = null, formHidden = [], history = null, h2hHidden = [];
-  const h2hOpts = { home: false, season: false };   // the Head-to-Head filter pills, kept while the page is open
+  let h2hFilter = null;   // the Head-to-Head filter pills (Home or This season, one at a time, kept while the page is open)
   // Season numbers for the lineup pills (WR-33), from the results this account may see (spoiler-free keeps hidden ones out). The choice lasts while the page is open.
   let view = preview && ['contrib', 'value'].includes(q.get('view')) ? q.get('view') : 'rating';   // ?view= : localhost preview only
   const seasonStats = () => {
@@ -161,13 +161,13 @@ function start() {
       extra = insightsCard(insights(season, fx, { club, hide: sctx.hide, now: s.now, sheets, history }), { team, crest, accent: acc });
       main = `${lineups ? lineupCard(lineups, lctx()) : '<section class="lg-card mh-soon"><p class="empty">Loading the line-ups…</p></section>'}${form.html}`;
     } else if (tab === 'h2h') {
-      const h = h2hCard(season, fx, { club, team, crest, accent: acc, hide: sctx.hide, url: matchUrl, time: d => time(d), now: s.now }, h2hOpts);
+      const h = h2hCard(season, fx, { club, team, crest, accent: acc, hide: sctx.hide, url: matchUrl, time: d => time(d), now: s.now }, { home: h2hFilter === 'home', season: h2hFilter === 'season' });
       h2hHidden = h.hidden;
       main = h.html;
     } else {
       main = `<section class="lg-card mh-soon"><p class="empty">${esc(SOON[tab])}</p></section>`;
     }
-    return `<div class="mh-cols"><div class="mh-main">${main}</div><aside class="mh-side" aria-label="About this match">${chanceCard(season, fx, sctx)}${venueCard(fx, sctx)}${extra}</aside></div>`;
+    return { main, side: `${chanceCard(season, fx, sctx)}${venueCard(fx, sctx)}${extra}` };
   };
 
   const acc = code => {
@@ -177,22 +177,34 @@ function start() {
   const draw = () => {
     const s = state();
     document.title = `${nameOf(home)} v ${nameOf(away)} | vLeague`;
-    const ha = acc(fx.home), aa = acc(fx.away);
-    const changed = paint(main, `<div class="mh" style="${ha ? `--ha:${ha};` : ''}${aa ? `--aa:${aa};` : ''}">${header(s)}<div id="mh-body">${body(s)}</div></div>`);
-    if (changed) styleCards();   // each card gets its own splash and silk phase
+    const ha = acc(fx.home), aa = acc(fx.away), page = document.getElementById('mh'), b = body(s);
+    if (ha) page.style.setProperty('--ha', ha); if (aa) page.style.setProperty('--aa', aa);
+    // Header, content and side column are painted apart, so a pill or a tab only redraws what it changes: the header's colour washes keep drifting and the
+    // other cards keep their silk instead of starting their fade again.
+    const changed = [paint(document.getElementById('mh-head'), header(s)), paint(document.getElementById('mh-main'), b.main), paint(document.getElementById('mh-side'), b.side)];
+    if (changed.some(Boolean)) styleCards();   // each card gets its own splash and silk phase
+    tickCountdown();
   };
+  // A redraw a person asked for (a pill, a tab, Show): cards made by it show their silk straight away, not through the first-load fade.
+  const instant = () => document.body.classList.add('silk-seen');
+  const tickCountdown = () => {
+    const now = Date.now();
+    main.querySelectorAll('[data-until]').forEach(el => { if (now < Number(el.dataset.until)) el.textContent = countdown(Number(el.dataset.until) - now); });
+  };
+  main.innerHTML = '<div class="mh" id="mh"><div id="mh-head"></div><div class="mh-cols"><div class="mh-main" id="mh-main"></div><aside class="mh-side" id="mh-side" aria-label="About this match"></aside></div></div>';
   draw();
   loadLineups(fx, season, rows, { fake: preview && q.has('fake') }).then(l => { lineups = l; draw(); }).catch(() => { lineups = { home: { sheet: null, locked: false }, away: { sheet: null, locked: false }, kits: {} }; draw(); });
   loadHistory().then(h => { history = h; draw(); }).catch(() => {});   // the league's past seasons, for the Insights
-  addEventListener('hashchange', draw);
+  addEventListener('hashchange', () => { instant(); draw(); });
   main.addEventListener('click', async e => {
     const fl = e.target.closest('[data-h2h]');
-    if (fl) { h2hOpts[fl.dataset.h2h] = !h2hOpts[fl.dataset.h2h]; draw(); return; }
-    if (e.target.closest('[data-reveal-h2h]')) { await revealScore(h2hHidden).catch(() => {}); draw(); return; }
-    if (e.target.closest('[data-reveal-form]')) { await revealScore(formHidden).catch(() => {}); draw(); return; }
+    if (fl) { instant(); h2hFilter = h2hFilter === fl.dataset.h2h ? null : fl.dataset.h2h; draw(); return; }
+    if (e.target.closest('[data-reveal-h2h]')) { instant(); await revealScore(h2hHidden).catch(() => {}); draw(); return; }
+    if (e.target.closest('[data-reveal-form]')) { instant(); await revealScore(formHidden).catch(() => {}); draw(); return; }
     const pick = e.target.closest('[data-lview]');
-    if (pick) { view = pick.dataset.lview; draw(); return; }
+    if (pick) { instant(); view = pick.dataset.lview; draw(); return; }
     if (!e.target.closest('[data-reveal]')) return;
+    instant();
     await revealScore([fx.id]).catch(() => {});   // a person's own click, so it redraws straight away
     draw();
   });
@@ -201,8 +213,7 @@ function start() {
   let last = key();
   setInterval(() => {
     if (document.hidden) return;
-    const now = Date.now();
-    main.querySelectorAll('[data-until]').forEach(el => { if (now < Number(el.dataset.until)) el.textContent = countdown(Number(el.dataset.until) - now); });
+    tickCountdown();
     const k = key();
     if (k !== last) { last = k; quietly(draw); }
   }, 1000);
