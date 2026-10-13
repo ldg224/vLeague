@@ -30,8 +30,9 @@ export function insights(season, fx, { club, hide = () => false, now = new Date(
     const here = mine.filter(f => f[role] === code);
     if (here.length >= 2) {
       const goalsFor = here.reduce((s, f) => s + gf(f, code), 0), goalsAgainst = here.reduce((s, f) => s + ga(f, code), 0), word = role === 'home' ? 'home' : 'away';
-      if (here.every(f => lost(f, code))) add(code, `${n} lost all ${here.length} ${word} matches, conceding ${plural(goalsAgainst, 'goal')}`, 9);
-      else if (here.every(f => won(f, code))) add(code, `${n} won all ${here.length} ${word} matches, scoring ${plural(goalsFor, 'goal')}`, 9);
+      const all = here.length === 2 ? 'both' : `all ${here.length}`;
+      if (here.every(f => lost(f, code))) add(code, `${n} lost ${all} ${word} matches, conceding ${plural(goalsAgainst, 'goal')}`, 9);
+      else if (here.every(f => won(f, code))) add(code, `${n} won ${all} ${word} matches, scoring ${plural(goalsFor, 'goal')}`, 9);
       else if (here.length >= 3 && here.every(f => !lost(f, code))) add(code, `${n} are unbeaten in ${here.length} ${word} matches`, 6);
       else if (here.length >= 3 && here.every(f => !won(f, code))) add(code, `${n} haven't won in ${here.length} ${word} matches`, 6);
     }
