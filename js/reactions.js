@@ -9,7 +9,6 @@ let box = null, channel = null, fixture = null, lastSent = 0;
 
 function float(emoji) {
   if (!box || document.hidden || box.querySelectorAll('.lr-fly').length >= MAX_FLOATING) return;
-  if (document.documentElement.classList.contains('reduce-motion')) return;
   const el = document.createElement('span');
   el.className = 'lr-fly'; el.textContent = emoji; el.setAttribute('aria-hidden', 'true');
   el.style.setProperty('--x', `${Math.round(Math.random() * 40 - 20)}px`);
@@ -20,7 +19,7 @@ function float(emoji) {
 
 async function connect() {
   try {
-    channel = (await db()).channel(`reactions-${fixture}`, { config: { broadcast: { self: true } } })
+    channel = (await db()).channel(`reactions-${fixture}`, { config: { broadcast: { self: false } } })
       .on('broadcast', { event: 'react' }, ({ payload }) => { const e = SET.find(s => s[0] === payload?.e); if (e) float(e[0]); })
       .subscribe();
   } catch { channel = null; }   // the buttons still float your own reaction
@@ -38,8 +37,9 @@ export function liveReactions(id, isLive) {
     const b = ev.target.closest('button[data-e]');
     if (!b || Date.now() - lastSent < MIN_GAP) return;
     lastSent = Date.now();
-    if (channel) channel.send({ type: 'broadcast', event: 'react', payload: { e: b.dataset.e } }).catch?.(() => float(b.dataset.e));
-    else float(b.dataset.e);
+    // Your own tap always shows at once (B-24, B-25: it used to wait for the network to echo it back, so a slow or unjoined channel showed nothing); everyone else gets it over the channel.
+    float(b.dataset.e);
+    channel?.send({ type: 'broadcast', event: 'react', payload: { e: b.dataset.e } })?.catch?.(() => {});
   });
   document.body.appendChild(box);
   connect();

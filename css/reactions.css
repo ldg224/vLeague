@@ -9,4 +9,7 @@
 .lr-bar button:active { transform: scale(1.25); }
 .lr-bar button:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
 .reduce-motion .lr-bar button { transition: none; }
-@media (prefers-reduced-motion: reduce) { .lr-fly { animation: none; display: none; } }
+/* Reduced motion (B-24, B-25: the reaction used to vanish entirely, so a tap seemed to do nothing): no travel, just a short fade where it appears. */
+@keyframes lr-fade { 0% { opacity: 0; } 15% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .lr-fly { animation: lr-fade 1.4s ease-out forwards; } }
+.reduce-motion .lr-fly { animation: lr-fade 1.4s ease-out forwards; }

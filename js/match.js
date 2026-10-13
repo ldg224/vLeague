@@ -27,6 +27,7 @@ import { factsView } from './match-facts.js';
 import { playedCard } from './match-played.js';
 import { statsView } from './match-stats.js';
 import { goalMark } from './match-marks.js';
+import { liveReactions } from './reactions.js';
 import { playerCard, MatchPlayer } from './viewer/player.js';
 import { loadKits, matchKits } from './kits-data.js';
 import { loadHistory } from './history-data.js';
@@ -220,6 +221,7 @@ function start() {
     }
     tickCountdown();
     mountViewer(s);
+    liveReactions(fx.id, s.st === 'live' && !s.hid);   // the reaction bar while the match is live (S-20A)
   };
   // The match viewer (WR-41), right under the header: highlights, full match and tactical view of a finished match, the live broadcast of a live one. It is built once
   // the match file is in, and only made again when the match changes state (live to full time); it is never redrawn under someone's hand. Hidden results keep it away.
