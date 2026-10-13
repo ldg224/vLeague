@@ -1,48 +1,76 @@
-/* Settings (WR-43): one card (who you are, the site toggle, a form of rows that open menus or flip a switch) and "Your vLeague" beside it,
-   an example drawn with your choices. The rows and menus are css/menus.css, shared with My club. Tokens only, the five type sizes. */
+/* Settings (WR-43), from the league page's own pieces: the Stats tab's heading and toggle, cards whose rows are split by grey strips like
+   the Fixtures day strips, your club's name huge and hollow behind the account card (as on Fixtures), and "Your vLeague": the Fixtures tab's
+   own rows. The rows and menus are css/menus.css, shared with My club. Tokens only, the five type sizes. */
 
 .lg-sub .member-main.settings-main > * { max-width: none; }
-.set { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; min-width: 0; }
+.set { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
+.set :is(button, a, input):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.set-head { margin: 8px 4px 0; }
+.set-cols, .set-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; min-width: 0; }
 @media (min-width: 992px) {
-  .set { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); max-width: 1040px; margin: 0 auto; width: 100%; }
+  .set-cols { grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr); }
   .set-view { position: sticky; top: 16px; }
 }
-.lg-sub .set .lg-card { padding: 16px; }
-.set :is(button, a, input):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.set .lg-card-head h2, .set-who h1 { font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: var(--text-strong); margin: 0; }
+.lg-sub .set .lg-card { padding: 16px 20px 20px; }
 
-/* who you are */
-.set-me { display: flex; align-items: center; gap: 14px; min-width: 0; }
-.set-av { flex: none; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; overflow: hidden; background: var(--club, var(--brand)); color: var(--on-club, #fff); font: 700 var(--fs-m) var(--font); }
-.set-av:has(img) { background: none; border-radius: 0; }
-.set-av img { width: 100%; height: 100%; object-fit: contain; }
-.set-who { display: grid; gap: 2px; min-width: 0; }
-.set-who h1 { overflow-wrap: anywhere; }
-.set-who p { margin: 0; color: var(--muted); font: 400 var(--fs-s) var(--font); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.set-tabs { margin: 16px 0 4px; }
-.set-tabs button { flex: 1 1 0; min-width: 0; justify-content: center; padding-left: 4px; padding-right: 4px; }
+/* ---------- who you are: your club's name huge and hollow behind you ---------- */
+.lg-sub .set .set-id { display: flex; align-items: center; gap: 16px; min-height: 112px; padding-block: 20px; overflow: hidden; }
+.set-ghost {
+  position: absolute; z-index: 0; right: 0; top: 50%; width: 75%; translate: 0 -50%; padding-right: 14px; overflow: hidden; pointer-events: none;
+  white-space: nowrap; text-align: right; color: transparent; opacity: .22;
+  font: 900 72px/1 var(--font-display); font-stretch: 125%; text-transform: uppercase; letter-spacing: -.01em;
+  -webkit-text-stroke: 1.5px var(--club-accent, var(--line));
+  -webkit-mask-image: linear-gradient(270deg, #000 28%, transparent 100%); mask-image: linear-gradient(270deg, #000 28%, transparent 100%);
+}
+.set-id > :not(.set-ghost) { position: relative; z-index: 1; }
+.set-av { position: relative; flex: none; display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: var(--club, var(--brand)); color: var(--on-club, #fff); font: 700 var(--fs-l) var(--font); }
+.set-av:has(img) { background: none; }
+.set-av:has(img) b { visibility: hidden; }
+.set-av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.set-who { display: grid; gap: 4px; min-width: 0; }
+.set-who p { margin: 0; }
+.set-name { color: var(--text-strong); font: 900 var(--fs-xl)/1.15 var(--font-display); font-stretch: 125%; text-transform: uppercase; overflow-wrap: anywhere; }
+.set-sub { color: var(--text-soft); font: 400 var(--fs-m) var(--font); }
 
-/* the rows (css/menus.css draws them); a switch row shows a switch in place of the arrow */
-.set-rows .fm-k { width: auto; flex: 1; color: var(--text); font-weight: 600; }
+/* ---------- the cards of rows ---------- */
+.set-card .lg-card-head { align-items: baseline; margin-bottom: 4px; }
+.set-cnote { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.set .set-rows { margin: 8px -20px 0; }
+.set-rows .fm-row { padding-left: 20px; }
+/* a strip names the group under it, like the Fixtures day strips */
+.set-strip { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 11px 20px; background: var(--surface-sunk); }
+.set-strip h3 { margin: 0; color: var(--text-strong); font: 700 var(--fs-xs)/1.3 var(--font-display); font-stretch: 125%; text-transform: uppercase; letter-spacing: .08em; }
+.set-strip span { color: var(--muted); font: 600 var(--fs-xs) var(--font); }
+.set-strip + li .fm-row { border-top: 0; }
+.set-rows .fm-k { width: auto; flex: 1; color: var(--text-strong); font-weight: 600; }
 .set-rows .fm-v { flex: 0 1 auto; color: var(--muted); font-weight: 400; }
 .set-rows .fm-row:disabled { opacity: .6; cursor: progress; }
 .set-act .fm-v { color: var(--brand); font-weight: 600; }
 .set-warn .fm-k { color: var(--err-text); }
 .set-warn .fm-v { color: var(--muted); font-weight: 400; }
-.set-sw { padding-right: 16px; }
+/* a switch row: the switch where the arrow would be, vLeague blue when on */
+.set-sw { padding-right: 20px; }
 .set-sw::after { display: none; }
-.set-sw .fm-v { width: 2em; text-align: right; }
-.set-switch { position: relative; flex: none; width: 44px; height: 26px; border-radius: 999px; background: color-mix(in oklab, var(--text) 14%, var(--surface)); transition: background .15s; }
-.set-switch::after { content: ''; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 2px rgba(0, 0, 0, .3); transition: transform .15s; }
-.set-sw[aria-checked="true"] .set-switch { background: var(--brand); }
-.set-sw[aria-checked="true"] .set-switch::after { transform: translateX(18px); background: #fff; }
-.set-sw[aria-checked="true"] .fm-v { color: var(--text-strong); font-weight: 600; }
+.set-switch { position: relative; flex: none; width: 44px; height: 26px; border-radius: 999px; background: color-mix(in oklab, var(--text) 16%, var(--surface)); transition: background .15s; }
+.set-switch::after { content: ''; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .3); transition: transform .15s; }
+.set-sw[aria-checked="true"] .set-switch { background: var(--tab-accent, var(--brand)); }
+.set-sw[aria-checked="true"] .set-switch::after { transform: translateX(18px); }
 
-/* the save line */
-.set-save { margin: 12px 0 0; }
+/* the save line: no room taken until there is something to say */
+.set-save { margin: 12px 0 -4px; }
 .set-save:not([class*="is-"]) { height: 0; margin: 0; overflow: hidden; }
 
-/* the field menu (name, email, password) */
+/* ---------- Your vLeague: the Fixtures rows, then what reaches you ---------- */
+.set-view .lg-card-head { margin-bottom: 8px; }
+.set-fx { padding-bottom: 0; }
+.set-fx .fx-list { margin-bottom: -20px; }
+.set-fact { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; margin-inline: -20px; padding: 8px 20px; border-top: 1px solid var(--line); font: 400 var(--fs-m) var(--font); }
+.fx-day + .set-fact { border-top: 0; }
+.set-fact span { color: var(--muted); }
+.set-fact b { min-width: 0; color: var(--text-strong); font-weight: 600; text-align: right; }
+
+/* ---------- the menus ---------- */
+.set-swatch { flex: none; width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, var(--a) 50%, var(--b) 50%); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--text) 25%, transparent); }
 .set-form { display: contents; }
 .set-flabel { display: block; margin: 0 0 8px; color: var(--muted); font: 400 var(--fs-s) var(--font); }
 .set-field { width: 100%; min-height: 48px; padding: 0 14px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-sunk); color: var(--text-strong); font: 600 var(--fs-m) var(--font); }
@@ -53,22 +81,26 @@
 .lg-sub .set-go { width: 100%; min-height: 48px; margin-top: 16px; }
 .lg-sub .set-go:disabled { opacity: .6; cursor: progress; }
 
-/* Your vLeague: an example match in the league's own style, then what each choice means */
-.sv-match { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 4px 12px; margin: 0 -16px; padding: 16px; border-top: 1px solid var(--line); background: var(--surface-sunk); }
-.sv-when { grid-column: 1 / -1; justify-self: center; display: inline-flex; gap: 6px; color: var(--muted); font: 400 var(--fs-xs) var(--font); }
-.sv-when b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
-.sv-team { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-strong); font: 600 var(--fs-m) var(--font); }
-.sv-team:first-of-type { text-align: right; }
-.sv-score { padding: 4px 10px; border-radius: 6px; background: var(--club, var(--brand)); color: var(--on-club, #fff); font: 900 var(--fs-l)/1 var(--font-display); font-stretch: 125%; font-variant-numeric: tabular-nums; }
-.sv-hid { padding: 4px 10px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--line); color: var(--muted); font: 600 var(--fs-xs) var(--font); }
-.sv-line { display: flex; align-items: center; gap: 10px; min-height: 44px; margin: 0 -16px; padding: 8px 16px; border-top: 1px solid var(--line); color: var(--text); font: 400 var(--fs-s) var(--font); }
-.sv-line::before { content: ''; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--club-accent, var(--brand)); }
-.sv-line:last-child { margin-bottom: -16px; }
-
+/* ---------- phones ---------- */
 @media (max-width: 767px) {
+  .set-head { flex-direction: column; align-items: stretch; }
+  .set-tabs button { flex: 1 1 0; min-width: 0; justify-content: center; }
   .lg-sub .set .lg-card { padding: 16px; }
-  .set-me { gap: 12px; }
-  .set-av { width: 44px; height: 44px; }
+  .set .set-rows { margin-inline: -16px; }
+  .set-rows .fm-row, .set-strip, .set-fact { padding-left: 16px; }
+  .set-strip, .set-sw, .set-fact { padding-right: 16px; }
+  .set-fact { margin-inline: -16px; }
+  .set-fx .fx-list { margin-bottom: -16px; }
+  .lg-sub .set .set-id { min-height: 96px; gap: 12px; }
+  .set-av { width: 52px; height: 52px; }
+  .set-name { font-size: var(--fs-l); }
+  .set-ghost { font-size: 48px; width: 70%; }
 }
 @media (prefers-reduced-motion: reduce) { .set-switch, .set-switch::after { transition: none; } }
 .reduce-motion .set-switch, .reduce-motion .set-switch::after { transition: none; }
+/* the heading as on the Stats tab (member.css still colours a page's h1 blue and larger) */
+.lg-sub .set-head .sc-title { margin: 0; color: var(--text-strong); font: 700 var(--fs-xl)/1.1 var(--font-display); font-stretch: 125%; letter-spacing: 0; }
+/* the last row runs to the card's foot; the save line, when it has something to say, sits under it */
+.lg-sub .set .set-card { padding-bottom: 0; }
+.set-card .set-save[class*="is-"] { margin: 0 -20px; padding: 12px 20px 16px; border-top: 1px solid var(--line); }
+@media (max-width: 767px) { .set-card .set-save[class*="is-"] { margin-inline: -16px; padding-inline: 16px; } }
