@@ -3,10 +3,22 @@
 // where the old one was). Moved out of js/league.js (WR-45) so every page that has these cards looks the same.
 const SLOW = new Set(['lg-silk-slide', 'lg-silk-breathe', 'lg-splash', 'sc-shine']);
 export const pinClock = () => { for (const a of document.getAnimations()) if (SLOW.has(a.animationName) && a.startTime !== 0) a.startTime = 0; };
+// A card's silk seed is its own name: its data-silk, else its title, else its label or class, plus which of the cards with that name it is in the page. Not its
+// place among whatever was drawn in the same pass (that is what made a card made again after a tab press land on a new spot).
+const nameOf = c => c.dataset.silk ?? (c.querySelector('h2')?.textContent?.trim() || c.getAttribute('aria-label') || c.className);
+// Cards drawn just after a person pressed, tapped or typed (a tab, a pill, a filter) show their silk at once instead of through the first-load fade, which
+// would otherwise start again from nothing on every new card.
+let lastInput = 0;
+if (typeof document !== 'undefined') for (const t of ['pointerdown', 'keydown', 'hashchange', 'popstate']) addEventListener(t, () => { lastInput = Date.now(); }, true);
 export const sheen = root => {
-  root.querySelectorAll('.lg-card:not([data-sheen])').forEach((c, i) => {
+  if (document.body.classList.contains('topo-ready') && Date.now() - lastInput < 1500) document.body.classList.add('silk-seen');
+  const seen = new Map();
+  root.querySelectorAll('.lg-card').forEach(c => {
+  const name = nameOf(c), n = seen.get(name) || 0;
+  seen.set(name, n + 1);
+  if (c.dataset.sheen !== undefined) return;
   let h = 2166136261;
-  for (const ch of (c.dataset.silk ?? `${c.querySelector('h2')?.textContent || ''}${i}`)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  for (const ch of `${name}#${n}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
   h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16;   // mix the bits so similar titles still land in different places
   const r = n => ((h >>> n) & 255) / 255;
   c.dataset.sheen = '';

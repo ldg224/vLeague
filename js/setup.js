@@ -7,7 +7,7 @@ import { db } from './auth.js';
 import { contrast, onColour } from './club-colour.js';
 import { prepareCrest, uploadCrest } from './crest.js';
 import { mountSubFrame } from './frame.js';
-import { paintClub, styleCards } from './shell.js';
+import { paintClub, styleCards, startSilk } from './shell.js';
 import { rowHtml, dayLabel } from './league-fixtures.js';
 import { loadSeason } from './dashboard-data.js';
 import { crest as crestHtml } from './places.js';
@@ -336,6 +336,7 @@ if (me) {
     // The league page's header card. While a club is first being set up there's nowhere else to go yet, so no buttons and no way back.
     document.body.classList.add('has-club');
     document.body.classList.toggle('su-wizard', !editMode);
+    startSilk();   // the contour lines and the silk in the cards, as on the league page
     mountSubFrame($('frame'), { office: me.profile.role === 'office', crest: club.crest_path ? crestUrl(club.crest_path) : '', here: 'club', title: editMode ? 'My club' : 'Set up your club' });
 
     if (editMode) {

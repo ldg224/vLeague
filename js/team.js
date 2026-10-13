@@ -7,7 +7,7 @@
 //   Fixtures: every match the club plays, by day, as the Fixtures tab draws them.
 import { chrome, esc, clubs, safeColour, crestUrl } from './member.js';
 import { currentUser, myProfile } from './auth.js';
-import { paintClub, styleCards } from './shell.js';
+import { paintClub, styleCards, startSilk } from './shell.js';
 import { mountSubFrame } from './frame.js';
 import { rowHtml, dayLabel } from './league-fixtures.js';
 import { loadSeason, finished, matchUrl, status, byKickoff, kickoff } from './dashboard-data.js';
@@ -47,6 +47,7 @@ try {
   mine = rows.find(c => c.code === prof?.club) || null;
   // The league page's header card for the viewer (their club's panel and buttons), with the way back to the league.
   paintClub(mine);
+  startSilk();   // the contour lines and the silk in the cards, as on the league page
   document.body.classList.toggle('has-club', Boolean(mine));
   mountSubFrame(document.getElementById('frame'), { office: prof?.role === 'office', crest: mine?.crest_path ? crestUrl(mine.crest_path) : '', here: '', title: '' });
   const club = rows.find(c => c.code === code), team = season?.teams.some(t => t.code === code) ? teamOf(season, code) : null;   // teamOf makes up a team for any code
