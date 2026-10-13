@@ -23,7 +23,10 @@ let crests = {};
 export const logoUrl = code => (FROM_FILE ? `${SOURCE}assets/teams/${String(code).toLowerCase()}.png`
   : crests[code] ? `${SUPABASE_URL}/storage/v1/object/public/crests/${crests[code]}` : NO_LOGO);
 // A match opens on the match page (match.html, WR-31; before that the Game centre, game.html, 0.34). A local ?src= test copy still points at the s3 site's match page.
-export const matchUrl = fx => (FROM_FILE ? `${LIVE_SITE}match.html?id=${encodeURIComponent(fx.id)}` : `match.html?id=${encodeURIComponent(fx.id)}`);
+// A page opened with the local test switches (?demo, ?preview, ...) keeps them on the links it makes, so a demo league opens demo matches.
+const KEEP = ['demo', 'preview', 'mine', 'office', 'theme', 'club'];
+const carried = () => { const q = new URLSearchParams(location.search); return KEEP.filter(k => q.has(k)).map(k => `&${k}=${encodeURIComponent(q.get(k))}`).join(''); };
+export const matchUrl = fx => (FROM_FILE ? `${LIVE_SITE}match.html?id=${encodeURIComponent(fx.id)}` : `match.html?id=${encodeURIComponent(fx.id)}${carried()}`);
 
 // Melbourne wall-clock date and time from an instant (kickoff() reads them back as the viewer's local time, as before).
 const melb = new Intl.DateTimeFormat('en-CA', { timeZone: 'Australia/Melbourne', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });

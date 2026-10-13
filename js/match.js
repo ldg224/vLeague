@@ -11,6 +11,7 @@ import { paintClub } from './shell.js';
 import { mountSubFrame } from './frame.js';
 import { loadSeason, kickoff, status, shownScore, shownGoals, liveMinute, liveState, finished } from './dashboard-data.js';
 import { countedFixtures, totals } from './season-stats.js';
+import { demoMatchSeason } from './demo-match.js';
 import { crest, teamOf, nameOf, fullNameOf, useClubs, time } from './places.js';
 import { prefs, spoilerHidden, revealScore } from './prefs.js';
 import { paint, quietly } from './paint.js';
@@ -39,7 +40,7 @@ const countdown = ms => {
   return `${d ? `${d}d ` : ''}${p(Math.floor(s % 86400 / 3600))}:${p(Math.floor(s % 3600 / 60))}:${p(s % 60)}`;
 };
 
-let season = null, fx = null, rows = [], mine = null;
+let season = null, fx = null, rows = [], mine = null, demo = null;
 try {
   const user = preview ? { id: 'preview' } : await currentUser().catch(() => null);
   if (!user) { location.replace('index.html?signin'); await new Promise(() => {}); }   // signed-out visitors only see sign-in (WR-02)
@@ -52,7 +53,10 @@ try {
   paintClub(mine);
   document.body.classList.toggle('has-club', Boolean(mine));
   mountSubFrame(document.getElementById('frame'), { office: prof?.role === 'office', crest: mine?.crest_path ? crestUrl(mine.crest_path) : '', here: '', title: '', back: { href: 'league.html#fixtures', label: 'Matches' } });
-  fx = season?.fixtures.find(f => String(f.id) === String(id)) || null;
+  // ?demo=6 (localhost or the office): made-up players, results and locked line-ups for the league's real clubs, as on the league page.
+  demo = q.has('demo') && (preview || prof?.role === 'office') ? Number(q.get('demo') || 6) : null;
+  if (demo != null) season = demoMatchSeason(rows, demo);
+  fx = season?.fixtures.find(f => String(f.id) === String(id)) || (demo != null ? season.fixtures[0] : null) || null;
   if (!fx) main.innerHTML = '<div class="mh"><section class="lg-card"><p class="empty">That match couldn’t be found. <a href="league.html#fixtures">See all matches</a></p></section></div>';
   else start();
 } catch (e) {
@@ -64,10 +68,11 @@ function start() {
   const home = teamOf(season, fx.home), away = teamOf(season, fx.away);
   const club = code => rows.find(c => c.code === code);
   const state = () => {
-    const now = new Date(), st = status(fx, season, now);
+    const now = demo != null ? new Date(q.get('now') || '2027-01-01T00:00:00') : new Date();   // the demo's matches are dated in the coming days: seen after all of them by default, or ?now=2026-10-14T12:00
+    const st = (preview || demo != null) && q.has('as-upcoming') ? 'upcoming' : status(fx, season, now);   // as-upcoming: localhost or demo only, to see the Preview tab on a played match
     return { now, st, played: st === 'live' || st === 'ft', hid: spoilerHidden(fx, season, now) };
   };
-  const tabsFor = st => ((st === 'live' || st === 'ft') && !(preview && q.has('as-upcoming')) ? TABS.played : TABS.upcoming);   // as-upcoming: localhost preview only, to see the Preview tab on a played test match
+  const tabsFor = st => (st === 'live' || st === 'ft' ? TABS.played : TABS.upcoming);
   const tabNow = st => { const t = location.hash.slice(1), list = tabsFor(st); return list.some(x => x[0] === t) ? t : list[0][0]; };
   const redsOf = code => (fx.result?.cards || []).filter(c => c.team === code && (c.card === 'red' || c.card === 'second_yellow')).length;
 
@@ -124,6 +129,7 @@ function start() {
   // Season numbers for the lineup pills (WR-33), from the results this account may see (spoiler-free keeps hidden ones out). The choice lasts while the page is open.
   let view = preview && ['contrib', 'value'].includes(q.get('view')) ? q.get('view') : 'rating';   // ?view= : localhost preview only
   const seasonStats = () => {
+    if (demo != null) return new Map(totals(countedFixtures(season.fixtures)).players.map(p => [String(p.id), p]));
     if (preview && q.has('fake')) {   // localhost preview only: made-up numbers, to look at the pills while no real season is played
       const h = id => [...String(id)].reduce((n, c) => (n * 31 + c.charCodeAt(0)) >>> 0, 7);
       return new Map((season.players || []).map(p => [String(p.id), { id: p.id, apps: 3, ratingSum: 3 * (5.6 + (h(p.id) % 25) / 10), g: h(p.id) % 4 === 0 ? 2 : h(p.id) % 5 === 0 ? 1 : 0, a: h(p.id) % 3 === 0 ? 1 : 0 }]));

@@ -32,7 +32,9 @@ export async function loadLineups(fx, season, rows, { fake = false } = {}) {
   const known = new Set((season.players || []).map(p => String(p.id)));
   const sheetOf = code => { const r = open ? ws.find(x => x.club === code) : null; return filled(r) && Object.values(r.lineup).some(id => known.has(String(id))) ? r : null; };
   const made = (code, f) => ({ club: code, formation: f, lineup: autoLineup(f, (season.players || []).filter(p => p.team === code)) });
-  const sides = { home: sheetOf(fx.home) || (fake ? made(fx.home, '4-4-2') : null), away: sheetOf(fx.away) || (fake ? made(fx.away, '4-3-3') : null) };
+  const sides = season.demoSheets   // the demo (js/demo-match.js): every club has locked its team
+    ? { home: season.demoSheets[fx.home] || null, away: season.demoSheets[fx.away] || null }
+    : { home: sheetOf(fx.home) || (fake ? made(fx.home, '4-4-2') : null), away: sheetOf(fx.away) || (fake ? made(fx.away, '4-3-3') : null) };
   const colours = { [fx.home]: rows.find(r => r.code === fx.home)?.colour, [fx.away]: rows.find(r => r.code === fx.away)?.colour };
   const wear = matchKits(kits, fx.home, fx.away, colours, { [fx.home]: sides.home?.kit, [fx.away]: sides.away?.kit });
   const pics = {};
