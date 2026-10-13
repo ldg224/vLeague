@@ -99,3 +99,10 @@
 }
 .ml-p:has(.ml-v) .ml-n { margin-top: 10px; }
 @media (max-width: 767px) { .ml-r { right: -12px; } .ml-m.is-a { left: -12px; } .ml-m.is-g { right: -12px; } }
+
+/* the shirt number, big on the shirt itself (white with a dark edge, so it reads on any kit) */
+.ml-sn { position: absolute; left: 50%; top: 46%; translate: -50% -50%; font: 900 var(--fs-l)/1 var(--font); font-style: normal; font-variant-numeric: tabular-nums; color: #fff;
+  paint-order: stroke fill; -webkit-text-stroke: 3px rgba(0, 0, 0, .65); pointer-events: none; }
+.ml-sn:empty { display: none; }
+@container (max-width: 900px) { .ml-sn { font-size: var(--fs-m); -webkit-text-stroke-width: 2.5px; } }
+@media (max-width: 767px) { .ml-sn { font-size: var(--fs-m); -webkit-text-stroke-width: 2.5px; } }

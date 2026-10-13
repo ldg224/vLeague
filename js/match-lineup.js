@@ -80,7 +80,7 @@ function players(side, L, ctx, cls, star) {
   return Object.entries(sheet.lineup).filter(([slot]) => slots[slot]).map(([slot, id]) => {
     const p = byId.get(String(id)); if (!p) return '';
     const gk = slots[slot].want === 'GK', pic = L.kits[side]?.[gk ? 'gk' : 'field'] || L.kits[side]?.field;
-    const face = pic ? `<img src="${pic}" alt="">` : `<i class="ml-disc" style="--c:${esc(colour)};--on:${esc(onColour(colour))}">${esc(p.number ?? '')}</i>`;
+    const face = pic ? `<img src="${pic}" alt=""><i class="ml-sn">${esc(p.number ?? '')}</i>` : `<i class="ml-disc" style="--c:${esc(colour)};--on:${esc(onColour(colour))}">${esc(p.number ?? '')}</i>`;
     const cap = String(sheet.captain) === String(id) ? '<b class="ml-cap" aria-label="Captain">C</b>' : '';
     const st = ctx.stats?.get(String(id)), avg = avgOf(ctx.stats, id);
     let mark = '';
@@ -92,7 +92,7 @@ function players(side, L, ctx, cls, star) {
     }
     const worth = ctx.view === 'value' ? `<b class="ml-v" aria-label="Value ${esc(money(p.value))}">${esc(money(p.value))}</b>` : '';
     return `<li class="ml-p ${cls}" style="--x:${slots[slot].x.toFixed(1)};--y:${slots[slot].y.toFixed(1)}" data-id="${esc(id)}"><span class="ml-av">${face}${cap}${mark}${worth}</span>`
-      + `<span class="ml-n">${p.number != null && p.number !== '' ? `<i>${esc(p.number)}</i> ` : ''}${esc(surname(p.name))}</span></li>`;
+      + `<span class="ml-n">${esc(surname(p.name))}</span></li>`;
   }).join('');
 }
 

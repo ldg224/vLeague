@@ -53,7 +53,7 @@ function side(fx, L, ctx, F, star, which) {
     const p = byId.get(String(id)), f = F[id] || {}, gk = slots[slot].want === 'GK';
     const pic = L?.kits?.[which]?.[gk ? 'gk' : 'field'] || L?.kits?.[which]?.field;
     const num = p?.number != null && p.number !== '' ? p.number : '';
-    const face = pic ? `<img src="${pic}" alt="">` : `<i class="ml-disc" style="--c:${esc(colour)};--on:${esc(onColour(colour))}">${esc(num)}</i>`;
+    const face = pic ? `<img src="${pic}" alt="">${num !== '' ? `<i class="ml-sn">${esc(num)}</i>` : ''}` : `<i class="ml-disc" style="--c:${esc(colour)};--on:${esc(onColour(colour))}">${esc(num)}</i>`;
     const cap = sheet && String(sheet.captain) === String(id) ? '<b class="ml-cap" aria-label="Captain">C</b>' : '';
     let marks = '';
     if (ctx.view === 'rating' && f.r != null) {
@@ -70,7 +70,7 @@ function side(fx, L, ctx, F, star, which) {
       }
     } else if (p) marks += `<b class="ml-v" aria-label="Value ${esc(money(p.value))}">${esc(money(p.value))}</b>`;
     return `<li class="ml-p is-${which}" style="--x:${slots[slot].x.toFixed(1)};--y:${slots[slot].y.toFixed(1)}"><span class="ml-av">${face}${cap}${marks}</span>`
-      + `<span class="ml-n">${num !== '' ? `<i>${esc(num)}</i> ` : ''}${esc(surname(name))}</span></li>`;
+      + `<span class="ml-n">${esc(surname(name))}</span></li>`;
   }).join('');
   const rated = xi.list.map(p => F[p.id]?.r).filter(r => r != null);
   return { html, formation: xi.formation, avg: rated.length ? rated.reduce((a, b) => a + b, 0) / rated.length : null, ids: new Set(xi.list.map(p => String(p.id))) };
