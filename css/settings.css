@@ -1,65 +1,74 @@
-/* Settings (0.7): one column of Home-style cards; each row is a label and its control, saving on change. */
+/* Settings (WR-43): one card (who you are, the site toggle, a form of rows that open menus or flip a switch) and "Your vLeague" beside it,
+   an example drawn with your choices. The rows and menus are css/menus.css, shared with My club. Tokens only, the five type sizes. */
 
-.member-main.settings-main > * { max-width: 640px; }
-.settings-main .sect-head { align-items: baseline; }
-.sect-note { font-size: .82rem; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-
-.set-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 12px 0; }
-.set-row + .set-row { border-top: 1px solid var(--line); }
-.set-label { font-weight: 600; }
-.set-ctl { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px 10px; min-width: 0; margin-left: auto; }
-
-/* Saved / error note beside a control */
-.tick { font-size: .8rem; font-weight: 600; color: var(--faint); }
-.tick:empty { display: none; }
-.tick.ok { color: var(--res-w); }
-/* the tick is drawn by css/site.css */
-.tick.err { color: var(--err-text); flex-basis: 100%; text-align: right; }
-.tick.busy::after { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--faint); border-top-color: transparent; animation: spin .7s linear infinite; }
-.tick.busy:empty { display: inline-block; }
-@keyframes spin { to { transform: rotate(1turn); } }
-
-/* Segmented choice */
-.seg { display: inline-flex; flex-wrap: wrap; gap: 3px; padding: 3px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); }
-.seg button { padding: 7px 12px; border: 0; border-radius: 9px; background: none; color: var(--muted); font: 600 .86rem var(--font); cursor: pointer; white-space: nowrap; }
-.seg button:hover { color: var(--text); }
-.seg button[aria-checked="true"] { background: var(--blue-700); color: var(--white); }
-
-/* On/off switch */
-.switch { position: relative; width: 46px; height: 28px; flex: none; padding: 0; border: 0; border-radius: 999px; background: var(--surface-raised); box-shadow: inset 0 0 0 1px var(--line); cursor: pointer; transition: background .15s; }
-.switch span { position: absolute; left: 3px; top: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--muted); transition: transform .15s, background .15s; }
-.switch[aria-checked="true"] { background: var(--blue-600); box-shadow: none; }
-.switch[aria-checked="true"] span { transform: translateX(18px); background: var(--white); }
-
-/* Text fields */
-.field { width: min(280px, 100%); padding: 9px 12px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 500 .92rem var(--font); }
-.field:focus { outline: none; border-color: var(--blue-400); box-shadow: 0 0 0 3px var(--ring); }
-select.field { width: auto; min-width: 140px; }
-.inline { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; min-width: 0; }
-.inline .field { flex: 1 1 180px; }
-.small-btn { padding: 8px 14px; border: 0; border-radius: var(--r-sm); background: var(--blue-600); color: var(--white); font: 700 .86rem var(--font); cursor: pointer; }
-.small-btn:disabled { background: var(--surface-raised); color: var(--faint); cursor: default; }
-.small-btn[hidden] { display: none; }
-
-.set-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding-top: 14px; border-top: 1px solid var(--line); }
-.ghost-btn { padding: 8px 16px; border-radius: 999px; border: 1px solid rgba(var(--ink),.28); background: transparent; color: var(--text); font: 600 .88rem var(--font); cursor: pointer; }
-.ghost-btn:hover { background: rgba(var(--ink),.06); }
-.ghost-btn:disabled { opacity: .5; cursor: default; }
-.test-result { font-size: .85rem; color: var(--muted); }
-.test-result.ok { color: var(--res-w); }
-.test-result.err { color: var(--err-text); }
-
-.sample { margin: 4px 0 2px; padding: 10px 12px; border-radius: var(--r-sm); background: var(--surface); color: var(--muted); font-size: 1rem; }
-
-@media (max-width: 520px) {
-  .set-row { flex-direction: column; align-items: stretch; }
-  .set-ctl { justify-content: flex-start; margin-left: 0; }
-  .set-row:has(.switch) { flex-direction: row; align-items: center; }
-  .set-row:has(.switch) .set-ctl { margin-left: auto; }
-  .set-ctl > .seg { display: flex; flex: 1 1 100%; }
-  .seg button { flex: 1 1 auto; padding: 8px 6px; }
-  .field, .inline { width: 100%; }
-  .tick.err { text-align: left; }
+.lg-sub .member-main.settings-main > * { max-width: none; }
+.set { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; min-width: 0; }
+@media (min-width: 992px) {
+  .set { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); max-width: 1040px; margin: 0 auto; width: 100%; }
+  .set-view { position: sticky; top: 16px; }
 }
-@media (prefers-reduced-motion: reduce) { .switch, .switch span { transition: none; } .tick.busy::after { animation-duration: 2s; } }
-.reduce-motion .switch, .reduce-motion .switch span { transition: none; }
+.lg-sub .set .lg-card { padding: 16px; }
+.set :is(button, a, input):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.set .lg-card-head h2, .set-who h1 { font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: var(--text-strong); margin: 0; }
+
+/* who you are */
+.set-me { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.set-av { flex: none; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; overflow: hidden; background: var(--club, var(--brand)); color: var(--on-club, #fff); font: 700 var(--fs-m) var(--font); }
+.set-av:has(img) { background: none; border-radius: 0; }
+.set-av img { width: 100%; height: 100%; object-fit: contain; }
+.set-who { display: grid; gap: 2px; min-width: 0; }
+.set-who h1 { overflow-wrap: anywhere; }
+.set-who p { margin: 0; color: var(--muted); font: 400 var(--fs-s) var(--font); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.set-tabs { margin: 16px 0 4px; }
+.set-tabs button { flex: 1 1 0; min-width: 0; justify-content: center; padding-left: 4px; padding-right: 4px; }
+
+/* the rows (css/menus.css draws them); a switch row shows a switch in place of the arrow */
+.set-rows .fm-k { width: auto; flex: 1; color: var(--text); font-weight: 600; }
+.set-rows .fm-v { flex: 0 1 auto; color: var(--muted); font-weight: 400; }
+.set-rows .fm-row:disabled { opacity: .6; cursor: progress; }
+.set-act .fm-v { color: var(--brand); font-weight: 600; }
+.set-warn .fm-k { color: var(--err-text); }
+.set-warn .fm-v { color: var(--muted); font-weight: 400; }
+.set-sw { padding-right: 16px; }
+.set-sw::after { display: none; }
+.set-sw .fm-v { width: 2em; text-align: right; }
+.set-switch { position: relative; flex: none; width: 44px; height: 26px; border-radius: 999px; background: color-mix(in oklab, var(--text) 14%, var(--surface)); transition: background .15s; }
+.set-switch::after { content: ''; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 2px rgba(0, 0, 0, .3); transition: transform .15s; }
+.set-sw[aria-checked="true"] .set-switch { background: var(--brand); }
+.set-sw[aria-checked="true"] .set-switch::after { transform: translateX(18px); background: #fff; }
+.set-sw[aria-checked="true"] .fm-v { color: var(--text-strong); font-weight: 600; }
+
+/* the save line */
+.set-save { margin: 12px 0 0; }
+.set-save:not([class*="is-"]) { height: 0; margin: 0; overflow: hidden; }
+
+/* the field menu (name, email, password) */
+.set-form { display: contents; }
+.set-flabel { display: block; margin: 0 0 8px; color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.set-field { width: 100%; min-height: 48px; padding: 0 14px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-sunk); color: var(--text-strong); font: 600 var(--fs-m) var(--font); }
+.set-field:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 25%, transparent); }
+.set-note { margin: 8px 0 0; color: var(--muted); font: 400 var(--fs-s)/1.45 var(--font); }
+.set-note:empty { display: none; }
+.set-note.err { color: var(--err-text); font-weight: 600; }
+.lg-sub .set-go { width: 100%; min-height: 48px; margin-top: 16px; }
+.lg-sub .set-go:disabled { opacity: .6; cursor: progress; }
+
+/* Your vLeague: an example match in the league's own style, then what each choice means */
+.sv-match { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 4px 12px; margin: 0 -16px; padding: 16px; border-top: 1px solid var(--line); background: var(--surface-sunk); }
+.sv-when { grid-column: 1 / -1; justify-self: center; display: inline-flex; gap: 6px; color: var(--muted); font: 400 var(--fs-xs) var(--font); }
+.sv-when b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.sv-team { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-strong); font: 600 var(--fs-m) var(--font); }
+.sv-team:first-of-type { text-align: right; }
+.sv-score { padding: 4px 10px; border-radius: 6px; background: var(--club, var(--brand)); color: var(--on-club, #fff); font: 900 var(--fs-l)/1 var(--font-display); font-stretch: 125%; font-variant-numeric: tabular-nums; }
+.sv-hid { padding: 4px 10px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--line); color: var(--muted); font: 600 var(--fs-xs) var(--font); }
+.sv-line { display: flex; align-items: center; gap: 10px; min-height: 44px; margin: 0 -16px; padding: 8px 16px; border-top: 1px solid var(--line); color: var(--text); font: 400 var(--fs-s) var(--font); }
+.sv-line::before { content: ''; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--club-accent, var(--brand)); }
+.sv-line:last-child { margin-bottom: -16px; }
+
+@media (max-width: 767px) {
+  .lg-sub .set .lg-card { padding: 16px; }
+  .set-me { gap: 12px; }
+  .set-av { width: 44px; height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) { .set-switch, .set-switch::after { transition: none; } }
+.reduce-motion .set-switch, .reduce-motion .set-switch::after { transition: none; }
