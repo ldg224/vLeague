@@ -4,7 +4,7 @@
 //           live: bool, scoreAt?: unused }
 // Momentum: the pressure each side puts on the other's goal (touches in the final third, nearer goal counts more, plus corners and the expected goals of shots), home minus
 // away, so the home side fills up from the line in its club colour while it has the better of it and the away side fills down in its own; goals along each side's edge,
-// red cards just inside them, 0', HT and FT underneath.
+// yellow and red cards just inside them (the chips of js/match-marks.js), 0', HT and FT underneath.
 // Top stats: a possession bar, then expected goals, total shots, shots on target and big chances, the leader's figure in a pill in its club colour. (The engine does not
 // save touches in the box, so that row is not here; while a match is live there is no possession bar, since it would need the ball's whole history.)
 // Events: the goals (score after, assist, penalty, own goal), cards and woodwork in a timeline, the minute in a round badge in the middle, the home side's events on
@@ -50,10 +50,10 @@ function momentum(fx, file, ctx) {
   };
   const marks = [];
   for (const e of file.events) {
-    if (e.t > ctx.horizon || (e.type !== 'goal' && !(e.type === 'card' && e.card !== 'yellow'))) continue;
+    if (e.t > ctx.horizon || (e.type !== 'goal' && e.type !== 'card')) continue;
     const credit = e.type === 'goal' && e.own_goal ? (e.team === fx.home ? fx.away : fx.home) : e.team, top = credit === fx.home;
     const at = `left:${(x(e.t) / W * 100).toFixed(2)}%;top:${(top ? (e.type === 'goal' ? 13 : 38) : H - (e.type === 'goal' ? 13 : 38)).toFixed(0)}px`;   // the same chips as the lineup and the events (js/match-marks.js)
-    marks.push(`<span class="mo-mk" style="${at}">${e.type === 'goal' ? goalMark() : cardMark('red')}</span>`);
+    marks.push(`<span class="mo-mk" style="${at}">${e.type === 'goal' ? goalMark() : cardMark(e.card === 'yellow' ? 'yellow' : 'red')}</span>`);
   }
   const ht = periodsOf(file)[0]?.end_t, htX = ht ? x(ht) : W / 2;
   return `<svg class="mo-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Momentum through the match: the home side above the line while it has the better of it, the away side below">
