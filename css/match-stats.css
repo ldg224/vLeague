@@ -7,17 +7,23 @@
 .st-team.is-away { justify-content: flex-end; text-align: right; }
 .st-team b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
 .st-group h3 { margin: 0; padding: 8px 20px; background: var(--surface-sunk); border-block: 1px solid var(--line); text-align: center; color: var(--text-strong); font: 700 var(--fs-m) var(--font); }
-.st-rows { padding: 14px 20px 18px; gap: 16px; }
-.st-rows li { grid-template-columns: 76px minmax(0, 1fr) 76px; row-gap: 8px; }
+.st-rows { gap: 0; padding: 4px 20px 8px; }
+.st-rows li { grid-template-columns: 76px minmax(0, 1fr) 76px; align-items: center; row-gap: 10px; padding: 14px 0; border-top: 1px solid var(--line); }
+.st-rows li:first-child { border-top: 0; }
+.st-rows li > span { color: var(--text-soft); font-weight: 600; }
+.st-rows li > .ts-v { min-width: 52px; height: 30px; box-shadow: inset 0 0 0 1px var(--line); }   /* both values are pills, so the numbers keep one rhythm; the better one is filled */
+.st-rows li > .ts-v.is-lead { box-shadow: none; }
 .st-rows li > .ts-v:nth-child(3) { justify-self: end; }
-.st-bar { grid-column: 1 / -1; display: flex; gap: 4px; height: 6px; }
-.st-bar em { display: block; height: 100%; border-radius: 999px; background: color-mix(in oklab, var(--text) 16%, transparent); }
+.st-bar { grid-column: 1 / -1; display: flex; gap: 3px; height: 8px; }
+.st-bar em { display: block; height: 100%; border-radius: 999px; background: color-mix(in oklab, var(--text) 14%, transparent); }
+.st-bar em:first-child { border-radius: 999px 3px 3px 999px; } .st-bar em:last-child { border-radius: 3px 999px 999px 3px; }
 .st-bar .is-a { flex: 1; }
 .st-bar .is-lead { background: var(--blue-600); }
-.st-group:last-child .st-rows { padding-bottom: 24px; }
+.st-group:last-child .st-rows { padding-bottom: 16px; }
 @media (max-width: 767px) {
   .st .st-head { padding: 16px 16px 12px; }
   .st-group h3 { padding: 8px 16px; }
-  .st-rows { padding: 12px 16px 16px; gap: 14px; }
+  .st-rows { padding: 4px 16px 8px; }
+  .st-rows li { padding: 12px 0; }
   .st-rows li { grid-template-columns: 64px minmax(0, 1fr) 64px; }
 }
