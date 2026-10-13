@@ -190,8 +190,6 @@ function start() {
     }
     tickCountdown();
   };
-  // A redraw a person asked for (a pill, a tab, Show): cards made by it show their silk straight away, not through the first-load fade.
-  const instant = () => document.body.classList.add('silk-seen');
   const tickCountdown = () => {
     const now = Date.now();
     main.querySelectorAll('[data-until]').forEach(el => { if (now < Number(el.dataset.until)) el.textContent = countdown(Number(el.dataset.until) - now); });
@@ -200,16 +198,15 @@ function start() {
   draw();
   loadLineups(fx, season, rows, { fake: preview && q.has('fake') }).then(l => { lineups = l; draw(); }).catch(() => { lineups = { home: { sheet: null, locked: false }, away: { sheet: null, locked: false }, kits: {} }; draw(); });
   loadHistory().then(h => { history = h; draw(); }).catch(() => {});   // the league's past seasons, for the Insights
-  addEventListener('hashchange', () => { instant(); draw(); });
+  addEventListener('hashchange', draw);
   main.addEventListener('click', async e => {
     const fl = e.target.closest('[data-h2h]');
-    if (fl) { instant(); h2hFilter = h2hFilter === fl.dataset.h2h ? null : fl.dataset.h2h; draw(); return; }
-    if (e.target.closest('[data-reveal-h2h]')) { instant(); await revealScore(h2hHidden).catch(() => {}); draw(); return; }
-    if (e.target.closest('[data-reveal-form]')) { instant(); await revealScore(formHidden).catch(() => {}); draw(); return; }
+    if (fl) { h2hFilter = h2hFilter === fl.dataset.h2h ? null : fl.dataset.h2h; draw(); return; }
+    if (e.target.closest('[data-reveal-h2h]')) { await revealScore(h2hHidden).catch(() => {}); draw(); return; }
+    if (e.target.closest('[data-reveal-form]')) { await revealScore(formHidden).catch(() => {}); draw(); return; }
     const pick = e.target.closest('[data-lview]');
-    if (pick) { instant(); view = pick.dataset.lview; draw(); return; }
+    if (pick) { view = pick.dataset.lview; draw(); return; }
     if (!e.target.closest('[data-reveal]')) return;
-    instant();
     await revealScore([fx.id]).catch(() => {});   // a person's own click, so it redraws straight away
     draw();
   });

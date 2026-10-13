@@ -6,12 +6,16 @@ export const pinClock = () => { for (const a of document.getAnimations()) if (SL
 // A card's silk seed is its own name: its data-silk, else its title, else its label or class, plus which of the cards with that name it is in the page. Not its
 // place among whatever was drawn in the same pass (that is what made a card made again after a tab press land on a new spot).
 const nameOf = c => c.dataset.silk ?? (c.querySelector('h2')?.textContent?.trim() || c.getAttribute('aria-label') || c.className);
-// Cards drawn just after a person pressed, tapped or typed (a tab, a pill, a filter) show their silk at once instead of through the first-load fade, which
-// would otherwise start again from nothing on every new card.
-let lastInput = 0;
-if (typeof document !== 'undefined') for (const t of ['pointerdown', 'keydown', 'hashchange', 'popstate']) addEventListener(t, () => { lastInput = Date.now(); }, true);
+// The first-load fade of the silk (css/league-page.css, lg-silk-in) runs from the moment `topo-ready` goes on the page. A card made later (a tab, a pill, a filter)
+// joins that fade where it has got to, by starting its animation that far in, instead of starting again from nothing (a flash) or, the other way, flipping the
+// whole page to `silk-seen` (which snaps every card still fading straight to full strength).
+let readyAt = null;
+if (typeof document !== 'undefined' && document.body) {
+  const note = () => { if (readyAt == null && document.body.classList.contains('topo-ready')) readyAt = performance.now(); };
+  note();
+  new MutationObserver(note).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+}
 export const sheen = root => {
-  if (document.body.classList.contains('topo-ready') && Date.now() - lastInput < 1500) document.body.classList.add('silk-seen');
   const seen = new Map();
   root.querySelectorAll('.lg-card').forEach(c => {
   const name = nameOf(c), n = seen.get(name) || 0;
@@ -35,7 +39,7 @@ export const sheen = root => {
   c.style.setProperty('--fph2', `${-Math.round(r(11) * 24)}s`);
   c.style.setProperty('--fsx', r(19) < .5 ? '1' : '-1');
   c.style.setProperty('--fsy', r(27) < .5 ? '1' : '-1');
-  c.style.setProperty('--fdl', `${Math.round(r(13) * 600)}ms`);
+  c.style.setProperty('--fdl', `${Math.round(r(13) * 600) - Math.round(readyAt == null ? 0 : performance.now() - readyAt)}ms`);   // staggered, and already as far in as the page's fade is
   });
   pinClock();
 };
