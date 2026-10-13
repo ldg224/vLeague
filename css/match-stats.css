@@ -1,0 +1,13 @@
+/* The Stats tab (WR-40): one card, grouped rows (home value, label, away value), a grey strip for each group's title. Rows and value pills are the Top stats ones (css/match-facts.css). */
+.st .st-head { padding: 16px 20px 0; }
+.st .st-head h2 { margin: 0 0 12px; text-align: center; font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: var(--text-strong); }
+.st-group h3 { margin: 0; padding: 8px 20px; background: var(--surface-sunk); border-block: 1px solid var(--line); text-align: center; color: var(--text-strong); font: 700 var(--fs-m) var(--font); }
+.st-rows { padding: 16px 20px 20px; }
+.st-rows li { grid-template-columns: 76px minmax(0, 1fr) 76px; }
+.st-group:last-child .st-rows { padding-bottom: 24px; }
+@media (max-width: 767px) {
+  .st .st-head { padding: 16px 16px 0; }
+  .st-group h3 { padding: 8px 16px; }
+  .st-rows { padding: 14px 16px 18px; }
+  .st-rows li { grid-template-columns: 64px minmax(0, 1fr) 64px; }
+}

@@ -25,6 +25,7 @@ import { h2hCard } from './match-h2h.js';
 import { loadMatchFile } from './match-file.js';
 import { factsView } from './match-facts.js';
 import { playedCard } from './match-played.js';
+import { statsView } from './match-stats.js';
 import { goalMark } from './match-marks.js';
 import { loadHistory } from './history-data.js';
 
@@ -37,7 +38,6 @@ const TABS = {
   played: [['facts', 'Facts'], ['lineup', 'Lineup'], ['stats', 'Stats'], ['h2h', 'Head-to-Head']],
 };
 const SOON = {
-  stats: 'The full team stats for this match are coming.',
 };
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const when = d => `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}, ${time(d)}`;
@@ -173,6 +173,11 @@ function start() {
       else if (fileState === 'error') main = '<section class="lg-card mh-soon"><p class="empty">The match file isn’t available yet. Try again in a moment.</p></section>';
       else if (!file) { needFile(); main = '<section class="lg-card mh-soon"><p class="empty">Loading the match…</p></section>'; }
       else main = factsView(fx, file, { team, club, accent: acc, horizon: s.st === 'live' ? liveSimTime(fx, season, s.now) : Infinity, live: s.st === 'live' });
+    } else if (tab === 'stats') {
+      if (s.hid) main = `<section class="lg-card mh-soon"><p class="empty">Results hidden · <button type="button" data-reveal>Show</button></p></section>`;
+      else if (fileState === 'error') main = '<section class="lg-card mh-soon"><p class="empty">The match file isn’t available yet. Try again in a moment.</p></section>';
+      else if (!file) { needFile(); main = '<section class="lg-card mh-soon"><p class="empty">Loading the stats…</p></section>'; }
+      else main = statsView(fx, file, { accent: acc, horizon: s.st === 'live' ? liveSimTime(fx, season, s.now) : Infinity, live: s.st === 'live' });
     } else if (tab === 'lineup') {
       const live = s.st === 'live';
       if (s.hid) main = `<section class="lg-card mh-soon"><p class="empty">Results hidden · <button type="button" data-reveal>Show</button></p></section>`;
