@@ -1,99 +1,113 @@
-/* Team pages (redesigned 0.67). A band of the club's home-kit fabric with the crest on its edge; every word sits on the page
-   background, so any club colour reads. The squad hangs as shirts on rails (the one bold thing); the rest stays plain:
-   sections divided by headings and rules, not boxes. --c1/--c2/--on1 come from team.js. */
+/* Team pages (WR-43, on the league page's system; the dressing room is 0.67). The header card's top is a band of the club's own home-kit
+   fabric with its crest on the edge (the one bold thing: every club's page looks like that club); below it, cards as on the league page:
+   Matches as the Fixtures tab draws them, the squad hanging as shirts on rails under grey strips, and beside them the trophy cabinet, kits,
+   the weekly cap and the club's details. Tokens only, the five type sizes. --c1/--c2/--on1 come from team.js. */
 
-.member-top .gc-back { margin-left: auto; color: var(--muted); font-weight: 600; text-decoration: none; font-size: .9rem; }
-.member-top .gc-back:hover { color: var(--text); }
+.tm { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
+.tm :is(a, button):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.lg-sub .tm .lg-card { padding: 16px 20px 20px; }
+.tm-cols, .tm-main, .tm-side { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-content: start; min-width: 0; }
+@media (min-width: 992px) { .tm-cols { grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); } }
+.tm .lg-card-head { align-items: baseline; }
+.tm .lg-card-head h2 { margin: 0; color: var(--text-strong); font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; }
+.tm-cnote { color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.tm-all { color: var(--brand); font: 600 var(--fs-s) var(--font); text-decoration: none; }
+@media (hover: hover) { .tm-all:hover { text-decoration: underline; } }
+.tm .empty, .tm .quiet { margin: 0; color: var(--muted); font: 400 var(--fs-m) var(--font); }
 
-.tm { display: grid; grid-template-columns: minmax(0, 1fr); gap: 40px; }
-.tm h2 { margin: 0 0 14px; font: 700 1.35rem/1.1 var(--font-display); color: var(--text); }
-.member-main .tm-name { margin: 0; outline: none; font: 700 clamp(2.4rem, 6vw, 4.6rem)/.95 var(--font-display); text-transform: none; letter-spacing: 0; color: var(--text); overflow-wrap: anywhere; }
-
-/* ---------- header: fabric band, crest on its edge, words on the page ---------- */
-.tm-head { display: grid; }
-.tm-fabric { height: 76px; border-radius: var(--r-md) var(--r-md) 0 0; overflow: hidden; background: var(--c1); box-shadow: inset 0 -4px 0 var(--c2); }
+/* ---------- the header card: fabric band, crest on its edge ---------- */
+.lg-sub .tm .tm-head { padding: 0; overflow: hidden; }
+.tm-fabric { height: 88px; overflow: hidden; background: var(--c1); box-shadow: inset 0 -3px 0 var(--c2); }
 .tm-fabric canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
-.tm-id { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "crest titles now"; column-gap: 28px; align-items: end; padding: 0 4px; }
-.tm-crest { grid-area: crest; margin-top: -54px; filter: drop-shadow(0 10px 18px rgba(0,0,0,.35)); }
-.tm-titles { grid-area: titles; padding-top: 18px; min-width: 0; }
-.tm-motto { margin: 10px 0 0; font-style: italic; color: var(--text-soft); font-size: 1.05rem; max-width: 52ch; }
-.tm-about { margin: 6px 0 0; color: var(--muted); }
-.tm-now { grid-area: now; display: grid; justify-items: end; gap: 8px; padding-top: 18px; }
-.tm-rank { margin: 0; color: var(--muted); font-size: .9rem; text-align: right; }
-.tm-rank b { color: var(--text); }
-.tm-form { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.tm-res { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 8px; color: #fff; font: 700 1rem var(--font-display); text-decoration: none; }
+.tm-id { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "crest titles now"; column-gap: 24px; align-items: end; padding: 0 20px 20px; }
+.tm-crest { grid-area: crest; margin-top: -48px; filter: drop-shadow(0 8px 16px rgba(0, 0, 0, .35)); }
+.tm-titles { grid-area: titles; display: grid; gap: 4px; min-width: 0; padding-top: 16px; }
+.lg-sub .tm-name { margin: 0; outline: none; color: var(--text-strong); font: 900 var(--fs-xl)/1.15 var(--font-display); font-stretch: 125%; text-transform: uppercase; letter-spacing: 0; overflow-wrap: anywhere; }
+.tm-motto { margin: 0; color: var(--text-soft); font: 400 var(--fs-m) var(--font); font-style: italic; }
+.tm-about { margin: 0; color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.tm-now { grid-area: now; display: grid; justify-items: end; gap: 8px; padding-top: 16px; }
+.tm-rank { margin: 0; color: var(--muted); font: 400 var(--fs-s) var(--font); text-align: right; }
+.tm-rank b { color: var(--text-strong); font-weight: 700; }
+/* the last five, as the table's form chips */
+.tm-form { display: flex; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.tm-res { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 6px; color: #fff; font: 700 var(--fs-s) var(--font); text-decoration: none; }
 .tm a.tm-res { color: #fff; }
-.tm-res:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.tm-form-none { margin: 0; color: var(--muted); font-size: .9rem; }
+.tm-res.res-W { background: var(--res-w); } .tm-res.res-D { background: var(--res-d); } .tm-res.res-L { background: var(--res-l); }
+.tm-form-none { margin: 0; color: var(--muted); font: 400 var(--fs-s) var(--font); }
 
-/* ---------- the dressing room ---------- */
-.tm-rail { margin: 0 0 6px; }
-.tm-rail h3 { margin: 0 0 4px; font-size: .9rem; font-weight: 600; color: var(--muted); }
+/* ---------- matches: the Fixtures rows ---------- */
+.lg-sub .tm .tm-games { padding-bottom: 0; }
+
+/* ---------- the dressing room: shirts on a rail under each strip ---------- */
+.lg-sub .tm .tm-room { padding-bottom: 4px; }
+.tm-rail { --pc: var(--muted); }
+.tm-rail.pos-GK { --pc: #f4c430; } .tm-rail.pos-DEF { --pc: #ef5350; } .tm-rail.pos-MID { --pc: #ba68c8; } .tm-rail.pos-FWD { --pc: #42a5f5; }
+:root[data-theme="light"] .tm-rail.pos-GK { --pc: #a07400; } :root[data-theme="light"] .tm-rail.pos-DEF { --pc: #c62828; }
+:root[data-theme="light"] .tm-rail.pos-MID { --pc: #7b1fa2; } :root[data-theme="light"] .tm-rail.pos-FWD { --pc: #1565c0; }
+.tm-rail h3 { display: flex; align-items: center; gap: 8px; margin: 0 -20px; padding: 11px 20px; background: var(--surface-sunk); color: var(--text-strong); font: 700 var(--fs-xs)/1.3 var(--font-display); font-stretch: 125%; text-transform: uppercase; letter-spacing: .08em; }
+.tm-rail h3::before { content: ''; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--pc); }
+.tm-rail h3 span { margin-left: auto; color: var(--muted); font: 600 var(--fs-xs) var(--font); font-stretch: 100%; letter-spacing: 0; }
 .tm-rail ul {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 14px 10px; margin: 0; padding: 16px 0 18px; list-style: none;
-  background: linear-gradient(var(--line), var(--line)) 0 6px / 100% 3px no-repeat;   /* the rail the shirts hang from */
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 16px 8px; margin: 0; padding: 16px 0 20px; list-style: none;
+  background: linear-gradient(var(--line), var(--line)) 0 22px / 100% 2px no-repeat;   /* the rail the shirts hang from */
 }
-.tm-pl { display: grid; justify-items: center; text-align: center; gap: 3px; min-width: 0; }
+.tm-pl { display: grid; justify-items: center; gap: 2px; min-width: 0; text-align: center; }
 .tm-shirt { display: block; height: 66px; }
-.tm-shirt canvas { display: block; filter: drop-shadow(0 6px 8px rgba(0,0,0,.3)); }
-.tm-pl b { font-weight: 600; font-size: .92rem; line-height: 1.25; overflow-wrap: anywhere; }
-.tm-rt { font-size: .74rem; color: var(--faint); white-space: nowrap; }
-.tm-rt .rt { min-width: 1.6em; padding: 0 4px; font-size: .74rem; }
-.tm-pl small { font-size: .74rem; color: var(--faint); font-variant-numeric: tabular-nums; }
+.tm-shirt canvas { display: block; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .3)); }
+.tm-pl b { margin-top: 4px; color: var(--text-strong); font: 600 var(--fs-s)/1.25 var(--font); overflow-wrap: anywhere; }
+.tm-rt { color: var(--faint); font: 400 var(--fs-xs) var(--font); white-space: nowrap; }
+.tm-rt .rt { min-width: 1.6em; padding: 0 4px; border-radius: 4px; font: 700 var(--fs-xs) var(--font); }
+.tm-pl small { color: var(--faint); font: 400 var(--fs-xs) var(--font); font-variant-numeric: tabular-nums; }
 
 /* ---------- trophy cabinet ---------- */
-.tm-sect-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.tm-sect-head a { font-size: .9rem; font-weight: 600; }
-.tm-cabinet ul { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 22px 34px; margin: 0; padding: 0 0 14px; list-style: none; border-bottom: 3px solid var(--line); }
-.tm-cabinet li { display: grid; justify-items: center; text-align: center; width: 140px; gap: 2px; }
-.tm-cup { position: relative; display: grid; place-items: end center; height: 112px; }
-.tm-cup img { width: 108px; height: 108px; object-fit: contain; filter: drop-shadow(0 10px 14px rgba(0,0,0,.45)); }
-.tm-cup i { display: block; width: 52px; height: 72px; border-radius: 8px 8px 22px 22px; background: rgba(var(--ink),.12); }
-.tm-cabinet li.runner .tm-cup img { width: 72px; height: 72px; }
-.tm-cabinet li.runner .tm-cup i { width: 36px; height: 50px; }
-.tm-times { position: absolute; right: -12px; top: 4px; min-width: 26px; padding: 2px 7px; border-radius: 999px; background: var(--surface-raised); box-shadow: inset 0 0 0 1px var(--line); color: var(--text); font: 700 .85rem var(--font-display); }
-.tm-cup-t { display: grid; margin-top: 8px; font-size: .84rem; color: var(--muted); line-height: 1.3; }
-.tm-cup-t b { color: var(--text); font-size: .95rem; }
-.tm-cabinet small { color: var(--faint); font-size: .76rem; line-height: 1.3; }
+.tm-cabinet ul { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 20px 24px; margin: 0; padding: 0 0 12px; list-style: none; border-bottom: 2px solid var(--line); }
+.tm-cabinet li { display: grid; justify-items: center; gap: 2px; width: 120px; text-align: center; }
+.tm-cup { position: relative; display: grid; place-items: end center; height: 96px; }
+.tm-cup img { width: 92px; height: 92px; object-fit: contain; filter: drop-shadow(0 8px 12px rgba(0, 0, 0, .4)); }
+.tm-cup i { display: block; width: 44px; height: 62px; border-radius: 8px 8px 20px 20px; background: color-mix(in oklab, var(--text) 12%, transparent); }
+.tm-cabinet li.runner .tm-cup img { width: 64px; height: 64px; }
+.tm-cabinet li.runner .tm-cup i { width: 32px; height: 44px; }
+.tm-times { position: absolute; right: -10px; top: 4px; min-width: 24px; padding: 2px 6px; border-radius: 999px; background: var(--surface-sunk); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-strong); font: 700 var(--fs-xs) var(--font); }
+.tm-cup-t { display: grid; margin-top: 8px; color: var(--muted); font: 400 var(--fs-xs)/1.3 var(--font); }
+.tm-cup-t b { color: var(--text-strong); font: 600 var(--fs-s) var(--font); }
+.tm-cabinet small { color: var(--faint); font: 400 var(--fs-xs)/1.3 var(--font); }
 
-/* ---------- kits, cap, details: three plain columns ---------- */
-.tm-more { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr); gap: 28px 40px; padding-top: 26px; border-top: 1px solid var(--line); }
-.tm-kits ul { display: flex; flex-wrap: wrap; gap: 10px 18px; margin: 0; padding: 0; list-style: none; }
-.tm-kits li { display: grid; justify-items: center; gap: 6px; font-size: .82rem; color: var(--muted); text-align: center; max-width: 92px; }
-.tm-kit canvas { display: block; filter: drop-shadow(0 6px 8px rgba(0,0,0,.3)); }
-.tm-cap-n { margin: 0 0 10px; color: var(--muted); }
-.tm-cap-n b { color: var(--text); font: 700 1.6rem var(--font-display); margin-right: 4px; }
-.tm-bar { height: 8px; border-radius: 999px; background: rgba(var(--ink),.1); overflow: hidden; }
+/* ---------- kits, cap, details ---------- */
+.tm-kits ul { display: flex; flex-wrap: wrap; gap: 12px 16px; margin: 0; padding: 0; list-style: none; }
+.tm-kits li { display: grid; justify-items: center; gap: 6px; max-width: 84px; color: var(--muted); font: 400 var(--fs-xs) var(--font); text-align: center; }
+.tm-kit canvas { display: block; filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .3)); }
+.tm-cap-n { margin: 0 0 10px; color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.tm-cap-n b { margin-right: 4px; color: var(--text-strong); font: 900 var(--fs-xl) var(--font-display); font-stretch: 125%; font-variant-numeric: tabular-nums; }
+.tm-bar { height: 8px; overflow: hidden; border-radius: 999px; background: color-mix(in oklab, var(--text) 10%, transparent); }
 .tm-bar i { display: block; height: 100%; border-radius: inherit; background: var(--brand); }
 .tm-cap.warn .tm-bar i { background: var(--amber); }
 .tm-cap.over .tm-bar i { background: var(--res-l); }
-.tm-cap-left { margin: 8px 0 0; font-size: .88rem; color: var(--muted); }
-.tm-facts dl { display: grid; gap: 10px; margin: 0; }
-.tm-facts dl div { display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 10px; align-items: center; }
+.tm-cap-left { margin: 8px 0 0; color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.tm-facts dl { display: grid; margin: 0 -20px -20px; }
+.tm-facts dl div { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 8px 20px; border-top: 1px solid var(--line); font: 400 var(--fs-m) var(--font); }
 .tm-facts dt { color: var(--muted); }
-.tm-facts dd { margin: 0; font-weight: 600; display: flex; gap: 6px; }
-.tm-sw { display: inline-block; width: 22px; height: 22px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(var(--edge),.3); }
-
-.tm-cabinet + .tm-more { border-top: 0; padding-top: 0; }
+.tm-facts dd { display: flex; gap: 6px; margin: 0; color: var(--text-strong); font-weight: 600; }
+.tm-sw { display: inline-block; width: 22px; height: 22px; border-radius: 50%; box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--text) 30%, transparent); }
 
 @media (max-width: 899px) {
   .tm-id { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "crest titles" "now now"; }
-  .tm-now { justify-items: start; padding-top: 16px; }
+  .tm-now { justify-items: start; padding-top: 12px; }
   .tm-rank { text-align: left; }
-  .tm-more { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .tm-kits { grid-column: 1 / -1; }
+}
+@media (max-width: 767px) {
+  .lg-sub .tm .lg-card { padding: 16px; }
+  .lg-sub .tm .tm-head, .lg-sub .tm .tm-games { padding: 0; }
+  .lg-sub .tm .tm-games { padding: 16px 16px 0; }
+  .tm-id { padding: 0 16px 16px; }
+  .tm-rail h3 { margin-inline: -16px; padding-inline: 16px; }
+  .tm-facts dl { margin: 0 -16px -16px; } .tm-facts dl div { padding-inline: 16px; }
 }
 @media (max-width: 560px) {
-  .tm { gap: 32px; }
-  .tm-fabric { height: 60px; }
-  .tm-id { grid-template-columns: minmax(0, 1fr); grid-template-areas: "crest" "titles" "now"; padding: 0; }
+  .tm-fabric { height: 68px; }
+  .tm-id { grid-template-columns: minmax(0, 1fr); grid-template-areas: "crest" "titles" "now"; }
   .tm-crest { margin-top: -40px; }
-  .tm-crest .crest { --s: 92px !important; }
-  .tm-titles { padding-top: 10px; }
-  .member-main .tm-name { font-size: clamp(2rem, 10vw, 2.8rem); }
+  .tm-crest .crest { --s: 84px !important; }
+  .tm-titles { padding-top: 8px; }
   .tm-rail ul { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 6px; }
-  .tm-more { grid-template-columns: minmax(0, 1fr); }
-  .tm-cabinet ul { gap: 18px 12px; }
-  .tm-cabinet li { width: calc(50% - 6px); }
+  .tm-cabinet li { width: calc(50% - 12px); }
 }

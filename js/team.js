@@ -3,19 +3,20 @@
 // below it on the page, so they read the same whatever the club's colours. The squad hangs in a dressing room: one shirt per
 // player in the club's home kit with their number on it. Then the trophy cabinet (from Editor -> History, history-data.js),
 // the kits, squad value against the weekly cap and club details. A club's history is its trophy cabinet (B-19).
-import { chrome, esc, clubs, safeColour } from './member.js';
+import { chrome, esc, clubs, safeColour, crestUrl } from './member.js';
 import { currentUser, myProfile } from './auth.js';
-import { paintClub } from './shell.js';
-import { loadSeason, finished, matchUrl } from './dashboard-data.js';
+import { paintClub, styleCards } from './shell.js';
+import { mountSubFrame } from './frame.js';
+import { rowHtml, fixturesAddress } from './league-fixtures.js';
+import { loadSeason, finished, matchUrl, status, byKickoff } from './dashboard-data.js';
 import { crest, teamOf, useClubs } from './places.js';
-import { prefs, spoilerHidden } from './prefs.js';
+import { prefs, spoilerHidden, fmtTime } from './prefs.js';
 import { clubSummary } from './match-model.js';
 import { loadKits } from './kits-data.js';
 import { loadHistory, cabinet, trophyUrl } from './history-data.js';
 import { kitSprite, kitName, drawKit, cleanDesign } from './kit.js';
 import { onColour } from './club-colour.js';
 import { POS_ORDER } from './pitch.js';
-import { icon } from './icons.js';
 
 chrome();
 const main = document.getElementById('main');
@@ -27,32 +28,37 @@ const KIT_ORDER = ['home', 'away', 'special', 'gk'];
 function money(n) { return `$${Number(n || 0).toLocaleString('en-AU')}`; }
 function ordinal(n) { return `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th'}`; }
 
+// Localhost only, for screenshots without signing in: team.html?c=SKS&preview&mine=TUR&theme=light
+const q = new URLSearchParams(location.search), preview = ['localhost', '127.0.0.1'].includes(location.hostname) && q.has('preview');
+let mine = null;
 try {
-  const user = await currentUser().catch(() => null);
-  // Signed-out visitors see nothing but sign-in (WR-02): stop here while the page changes.
+  const user = preview ? { id: 'preview' } : await currentUser().catch(() => null);
+  // Signed-out visitors see nothing but sign-in (WR-02).
   if (!user) { location.replace('index.html?signin'); await new Promise(() => {}); }
+  if (preview && q.get('theme')) document.documentElement.dataset.theme = q.get('theme');
   const [rows, season, kits, hist] = await Promise.all([clubs().catch(() => []), loadSeason().catch(() => null), loadKits(), loadHistory()]);
   useClubs(rows);
-  if (user) {
-    const back = document.getElementById('back');
-    back.href = 'league.html'; back.innerHTML = `${icon('arrow-left')} League`;
-    await prefs().catch(() => null);
-    const prof = await myProfile().catch(() => null);
-    paintClub(rows.find(c => c.code === prof?.club) || null);
-  }
+  if (!preview) await prefs().catch(() => null);
+  const prof = preview ? { role: q.has('office') ? 'office' : 'manager', club: q.get('mine') } : await myProfile().catch(() => null);
+  mine = rows.find(c => c.code === prof?.club) || null;
+  // The league page's header card for the viewer (their club's panel and buttons), with the way back to the league.
+  paintClub(mine);
+  document.body.classList.toggle('has-club', Boolean(mine));
+  mountSubFrame(document.getElementById('frame'), { office: prof?.role === 'office', crest: mine?.crest_path ? crestUrl(mine.crest_path) : '', here: '', title: '' });
   const club = rows.find(c => c.code === code), team = season?.teams.some(t => t.code === code) ? teamOf(season, code) : null;   // teamOf makes up a team for any code
   if (!club && !team) {
     main.innerHTML = `<div class="tm"><h1 class="tm-name" tabindex="-1">Club not found</h1><p class="empty">There’s no club with the code “${esc(code)}”. <a href="league.html">See the league</a></p></div>`;
   } else {
     await document.fonts?.ready;   // the shirt numbers are drawn in Oswald
-    render(club || { code, name: team.name, colour: team.colour }, team, season, kits[code] || {}, cabinet(hist, code));
+    render(club || { code, name: team.name, colour: team.colour }, team, season, kits[code] || {}, cabinet(hist, code), rows);
+    styleCards();
   }
 } catch (e) {
   main.innerHTML = `<p class="empty">This team page didn’t load. ${esc(e.message || '')} <a href="team.html?c=${esc(code)}">Try again</a></p>`;
 }
 main.setAttribute('aria-busy', 'false');
 
-function render(club, team, season, kits, won) {
+function render(club, team, season, kits, won, rows) {
   document.title = `${club.name} | vLeague`;
   const c1 = safeColour(club.colour), c2 = /^#[0-9a-f]{6}$/i.test(club.colour2 || '') ? club.colour2 : onColour(c1);
   // The shirt the club plays in: its home kit, or a plain shirt in its colours until it designs one.
@@ -69,31 +75,34 @@ function render(club, team, season, kits, won) {
   const about = [club.manager_name && `Managed by ${esc(club.manager_name)}`, club.stadium && `${club.manager_name ? 'at' : 'Plays at'} ${esc(club.stadium)}`].filter(Boolean).join(' ');
 
   main.innerHTML = `<article class="tm" style="--c1:${c1};--c2:${c2};--on1:${onColour(c1)}">
-    <header class="tm-head">
+    <header class="lg-card tm-head">
       <div class="tm-fabric" aria-hidden="true"><canvas></canvas></div>
       <div class="tm-id">
-        <div class="tm-crest">${crest(team || club, 132)}</div>
+        <div class="tm-crest">${crest(team || club, 112)}</div>
         <div class="tm-titles">
           <h1 class="tm-name" tabindex="-1">${esc(club.name)}</h1>
           ${club.motto ? `<p class="tm-motto">${esc(club.motto)}</p>` : ''}
           ${about ? `<p class="tm-about">${about}.</p>` : ''}
         </div>
         <div class="tm-now">${formHtml(shown.slice(-5), club.code, games.length - shown.length)}
-          ${sum?.rank ? `<p class="tm-rank"><b>${ordinal(sum.rank)}</b> on the ladder with ${sum.pts} point${sum.pts === 1 ? '' : 's'} from ${sum.p} game${sum.p === 1 ? '' : 's'}</p>` : ''}</div>
+          ${sum?.rank ? `<p class="tm-rank"><b>${ordinal(sum.rank)}</b> on the ladder, <b>${sum.pts}</b> point${sum.pts === 1 ? '' : 's'} from ${sum.p}</p>` : ''}</div>
       </div>
     </header>
 
-    <section class="tm-room" aria-labelledby="tm-room-h">
-      <h2 id="tm-room-h">Squad</h2>
-      ${squadHtml(squad)}
-    </section>
-
-    ${cabinetHtml(won)}
-
-    <div class="tm-more">
-      ${kitsHtml(kits)}
-      ${capHtml(squad)}
-      ${factsHtml(club)}
+    <div class="tm-cols">
+      <div class="tm-main">
+        ${matchesHtml(club, season, rows)}
+        <section class="lg-card tm-room" aria-labelledby="tm-room-h">
+          <div class="lg-card-head"><h2 id="tm-room-h">Squad</h2>${squad.length ? `<span class="tm-cnote">${squad.length} players</span>` : ''}</div>
+          ${squadHtml(squad)}
+        </section>
+      </div>
+      <div class="tm-side">
+        ${cabinetHtml(won)}
+        ${kitsHtml(kits)}
+        ${capHtml(squad)}
+        ${factsHtml(club)}
+      </div>
     </div>
   </article>`;
 
@@ -131,12 +140,30 @@ function formHtml(list, code, hidden) {
   }).join('')}</ol>`;
 }
 
+// ---------- matches: the last results and what's next, as the Fixtures tab draws them ----------
+
+function matchesHtml(club, season, rows) {
+  if (!season) return '';
+  const now = new Date(), byCode = new Map(rows.map(r => [r.code, r]));
+  const list = season.fixtures.filter(f => (f.home === club.code || f.away === club.code) && !f.exhibition && !f.test).sort(byKickoff);
+  const past = list.filter(f => ['ft', 'live'].includes(status(f, season, now))).slice(-3);
+  const next = list.filter(f => status(f, season, now) === 'upcoming').slice(0, 2);
+  if (!past.length && !next.length) return '';
+  const teamFor = c => { const t = teamOf(season, c), r = byCode.get(c); return { ...t, ...(r ? { name: r.name, short_name: r.short_name, colour: r.colour } : {}) }; };
+  const ctx = { now, mine: mine?.code, club: teamFor, crest: (c, px) => crest(teamFor(c), px), time: fmtTime,
+    hidden: new Set(past.filter(f => spoilerHidden(f, season, now)).map(f => f.id)) };
+  const group = (title, fx) => (fx.length ? `<li class="fx-day"><h3>${title}</h3><span>${fx.length} match${fx.length === 1 ? '' : 'es'}</span></li>${fx.map(f => rowHtml(f, season, ctx, { forTeam: club.code })).join('')}` : '');
+  return `<section class="lg-card fx-card tm-games" aria-labelledby="tm-games-h">
+    <div class="lg-card-head"><h2 id="tm-games-h">Matches</h2><a class="tm-all" href="league.html${esc(fixturesAddress('team', club.code))}">All fixtures</a></div>
+    <ul class="fx-list">${group('Last results', past)}${group('Coming up', next)}</ul></section>`;
+}
+
 // ---------- the dressing room ----------
 
 function squadHtml(squad) {
   if (!squad.length) return '<p class="empty">No players yet. The squad appears here after the draft.</p>';
-  return POS_ORDER.filter(pos => squad.some(p => p.position === pos)).map(pos => `<div class="tm-rail">
-    <h3>${POS_NAME[pos] || esc(pos)}</h3>
+  return POS_ORDER.filter(pos => squad.some(p => p.position === pos)).map(pos => `<div class="tm-rail pos-${esc(pos)}">
+    <h3>${POS_NAME[pos] || esc(pos)}<span>${squad.filter(p => p.position === pos).length}</span></h3>
     <ul>${squad.filter(p => p.position === pos).map(p => `<li class="tm-pl">
       <span class="tm-shirt" data-no="${esc(p.number ?? '')}"></span>
       <b>${esc(p.name)}</b>
@@ -179,7 +206,7 @@ function drawShirts(home, art = null) {
 
 function cabinetHtml(won) {
   if (!won.length) return '';
-  return `<section class="tm-cabinet" aria-labelledby="tm-cab-h"><div class="tm-sect-head"><h2 id="tm-cab-h">Trophy cabinet</h2><a href="history.html">League history</a></div>
+  return `<section class="lg-card tm-cabinet" aria-labelledby="tm-cab-h"><div class="lg-card-head"><h2 id="tm-cab-h">Trophy cabinet</h2><a class="tm-all" href="league.html#seasons">League history</a></div>
     <ul>${won.map(w => `<li class="${w.place === 'winner' ? 'won' : 'runner'}">
       <span class="tm-cup">${w.art ? `<img src="${esc(trophyUrl(w.art))}" alt="" loading="lazy">` : '<i aria-hidden="true"></i>'}${w.seasons.length > 1 ? `<b class="tm-times" aria-hidden="true">${w.seasons.length}</b>` : ''}</span>
       <span class="tm-cup-t"><b>${esc(w.comp.name)}</b>${w.place === 'winner' ? 'Winners' : 'Runners-up'}${w.seasons.length > 1 ? `, ${w.seasons.length} times` : ''}</span>
@@ -188,7 +215,7 @@ function cabinetHtml(won) {
 
 function kitsHtml(kits) {
   const slots = KIT_ORDER.filter(s => kits[s]);
-  return `<section class="tm-kits" aria-labelledby="tm-kits-h"><h2 id="tm-kits-h">Kits</h2>
+  return `<section class="lg-card tm-kits" aria-labelledby="tm-kits-h"><div class="lg-card-head"><h2 id="tm-kits-h">Kits</h2></div>
     ${slots.length ? `<ul>${slots.map(s => `<li><span class="tm-kit" data-kit="${s}"></span><span>${esc(kitName(s, kits[s].design))}</span></li>`).join('')}</ul>` : '<p class="quiet">No kits designed yet. The team plays in its club colours.</p>'}</section>`;
 }
 function drawKits(kits) {
@@ -202,7 +229,7 @@ function drawKits(kits) {
 function capHtml(squad) {
   const used = squad.reduce((t, p) => t + (Number(p.value) || 0), 0), pct = Math.min(100, used / CAP * 100);
   const state = used > CAP ? ' over' : used >= CAP * 0.9 ? ' warn' : '';
-  return `<section class="tm-cap${state}" aria-labelledby="tm-cap-h"><h2 id="tm-cap-h">Weekly cap</h2>
+  return `<section class="lg-card tm-cap${state}" aria-labelledby="tm-cap-h"><div class="lg-card-head"><h2 id="tm-cap-h">Weekly cap</h2></div>
     <p class="tm-cap-n"><b>${money(used)}</b> of ${money(CAP)}</p>
     <div class="tm-bar" role="progressbar" aria-label="Weekly cap used" aria-valuemin="0" aria-valuemax="${CAP}" aria-valuenow="${used}"><i style="width:${pct.toFixed(1)}%"></i></div>
     <p class="tm-cap-left">${used > CAP ? `${money(used - CAP)} over the cap` : `${money(CAP - used)} left`}</p></section>`;
@@ -215,6 +242,6 @@ function factsHtml(club) {
     ['Code', esc(club.code)],
     ['Colours', `${sw(club.colour)}${sw(club.colour2)}`],
   ].filter(([, v]) => v);
-  return `<section class="tm-facts" aria-labelledby="tm-facts-h"><h2 id="tm-facts-h">Club</h2>
+  return `<section class="lg-card tm-facts" aria-labelledby="tm-facts-h"><div class="lg-card-head"><h2 id="tm-facts-h">Club</h2></div>
     <dl>${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl></section>`;
 }
