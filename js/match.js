@@ -20,6 +20,7 @@ import { accentFor, isHex } from './club-colour.js';
 import { loadLineups, lineupCard } from './match-lineup.js';
 import { formCard } from './match-form.js';
 import { insights, insightsCard } from './match-insights.js';
+import { chanceCard, venueCard } from './match-side.js';
 
 chrome();
 const main = document.getElementById('main');
@@ -146,15 +147,21 @@ function start() {
     return new Map(totals(countedFixtures(seen)).players.map(p => [String(p.id), p]));
   };
   const lctx = () => ({ season, code: { home: fx.home, away: fx.away }, club, team: code => teamOf(season, code), crest, stats: seasonStats(), view });
+  // The right-hand column (WR-36): Who will win?, Venue, and on the Preview tab the Insights. On a phone the first two sit above the match content.
   const body = s => {
-    const tab = tabNow(s.st);
+    const tab = tabNow(s.st), team = code => teamOf(season, code);
+    const sheets = lineups ? [lineups.home.sheet, lineups.away.sheet].filter(Boolean).map(r => ({ ...r, week: fx.week })) : [];
+    const sctx = { club, team, crest, accent: acc, hide: f => spoilerHidden(f, season, s.now), now: s.now, sheets };
+    let main, extra = '';
     if (tab === 'preview') {
-      const form = formCard(season, fx, { club, team: code => teamOf(season, code), crest, hide: f => spoilerHidden(f, season, s.now), url: matchUrl }, s.now);
+      const form = formCard(season, fx, { club, team, crest, hide: sctx.hide, url: matchUrl }, s.now);
       formHidden = form.hidden;
-      const facts = insightsCard(insights(season, fx, { club, hide: f => spoilerHidden(f, season, s.now), now: s.now }), { team: code => teamOf(season, code), crest, accent: acc });
-      return `<div class="mh-cols"><div class="mh-main">${lineups ? lineupCard(lineups, lctx()) : '<section class="lg-card mh-soon"><p class="empty">Loading the line-ups…</p></section>'}${form.html}</div><aside class="mh-side" aria-label="About these clubs">${facts}</aside></div>`;
+      extra = insightsCard(insights(season, fx, { club, hide: sctx.hide, now: s.now }), { team, crest, accent: acc });
+      main = `${lineups ? lineupCard(lineups, lctx()) : '<section class="lg-card mh-soon"><p class="empty">Loading the line-ups…</p></section>'}${form.html}`;
+    } else {
+      main = `<section class="lg-card mh-soon"><p class="empty">${esc(SOON[tab])}</p></section>`;
     }
-    return `<section class="lg-card mh-soon"><p class="empty">${esc(SOON[tab])}</p></section>`;
+    return `<div class="mh-cols"><div class="mh-main">${main}</div><aside class="mh-side" aria-label="About this match">${chanceCard(season, fx, sctx)}${venueCard(fx, sctx)}${extra}</aside></div>`;
   };
 
   const acc = code => {

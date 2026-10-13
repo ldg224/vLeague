@@ -16,3 +16,11 @@
 .mh-cols, .mh-main, .mh-side { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
 .mh-main, .mh-side { align-content: start; }
 @media (min-width: 992px) { .mh-cols { grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); } }
+
+/* On a phone the side column dissolves into the page's order: Who will win? and Venue first, then the match content, then Insights. */
+@media (max-width: 991px) {
+  .mh-side { display: contents; }
+  .mh-cols > .mh-main { order: 2; }
+  .mh-side > .mw, .mh-side > .mv { order: 1; }
+  .mh-side > .mi { order: 3; }
+}

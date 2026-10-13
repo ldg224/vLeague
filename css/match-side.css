@@ -1,0 +1,28 @@
+/* The match page's side cards (WR-36): "Who will win?" and "Venue". Neutral cards; the favourite's crest and percentage take its club colour for the theme
+   (--k). Tokens and the five type sizes. On a phone the two cards sit above the match content (css/match-insights.css sets the order). */
+
+.mw .mw-head, .mv .mw-head { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid var(--line); }
+.mw-head h2 { margin: 0; text-align: center; font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: var(--text-strong); }
+.mw-live { padding: 3px 10px; border-radius: 999px; background: color-mix(in oklab, var(--res-l) 22%, transparent); color: var(--text-strong); font: 700 var(--fs-xs) var(--font); font-variant-numeric: tabular-nums; }
+.mw-trio { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 20px 16px 14px; }
+.mw-cell { display: grid; justify-items: center; align-content: start; gap: 8px; min-width: 0; opacity: .72; }
+.mw-cell b { color: var(--muted); font: 900 var(--fs-xl)/1 var(--font-display); font-stretch: 125%; font-variant-numeric: tabular-nums; }
+.mw-cell.is-fav { opacity: 1; }
+.mw-cell.is-fav b { color: var(--k, var(--text-strong)); }
+.mw-cell .crest { filter: grayscale(.5); }
+.mw-cell.is-fav .crest { filter: none; }
+.mw-draw i { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid var(--line); border-radius: 50%; color: var(--text-soft); font: 700 var(--fs-m) var(--font); font-style: normal; }
+.mw-trio.is-result .mw-cell { opacity: .72; } .mw-trio.is-result .mw-cell.is-fav { opacity: 1; }
+.mw-trio.is-result .mw-x { align-self: center; justify-self: center; text-align: center; color: var(--muted); font: 600 var(--fs-s)/1.3 var(--font); }
+.mw-bar { display: flex; height: 6px; margin: 0 20px; overflow: hidden; border-radius: 999px; background: var(--line); }
+.mw-bar i { display: block; height: 100%; }
+.mw-bar i.is-d { background: color-mix(in oklab, var(--text) 25%, transparent); }
+.mw-note { margin: 0; padding: 12px 20px 16px; text-align: center; color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.mw-note button { padding: 0; border: 0; background: none; color: var(--brand); font: 600 var(--fs-s) var(--font); cursor: pointer; }
+
+.mv-row { display: flex; align-items: flex-start; gap: 12px; padding: 16px 20px; }
+.mv-row .ic { width: 20px; height: 20px; flex: none; margin-top: 2px; color: var(--faint); }
+.mv-row div { display: grid; gap: 2px; min-width: 0; }
+.mv-row b { color: var(--text-strong); font: 700 var(--fs-m)/1.3 var(--font); overflow-wrap: anywhere; }
+.mv-row span { color: var(--muted); font: 400 var(--fs-s)/1.3 var(--font); }
+.mw :is(a, button):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
