@@ -125,3 +125,7 @@
 #mh-player .mp-tabs button { color: var(--text-soft); }
 #mh-player .mp-tabs button[aria-selected="true"] { background: var(--brand, var(--blue-700)); color: #fff; }
 @media (max-width: 767px) { #mh-player .mp { padding: 12px; } }
+/* The Live pill and the "Live" button of the viewer: red on both themes (the site's navy-on-white LIVE badge disappeared on the card) */
+#mh-player .mp-pill { background: var(--res-l); color: #fff; font-weight: 700; }
+#mh-player .ctl.live { border: 1.5px solid var(--res-l); background: color-mix(in oklab, var(--res-l) 12%, var(--surface)); color: var(--res-l); font-weight: 800; }
+#mh-player .ctl.live.behind { background: var(--res-l); color: #fff; }
