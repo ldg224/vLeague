@@ -25,6 +25,7 @@ import { h2hCard } from './match-h2h.js';
 import { loadMatchFile } from './match-file.js';
 import { factsView } from './match-facts.js';
 import { playedCard } from './match-played.js';
+import { goalMark } from './match-marks.js';
 import { loadHistory } from './history-data.js';
 
 chrome();
@@ -114,7 +115,7 @@ function start() {
       for (const g of list) { const k = g.scorer_name || 'Goal'; (by.get(k) || by.set(k, []).get(k)).push(`${g.minute}′${g.own_goal ? ' (og)' : ''}`); }
       return [...by].map(([name, mins]) => `<li>${esc(name)} <small>${esc(mins.join(', '))}</small></li>`).join('');
     };
-    return `<div class="mh-scorers"><ul class="is-home">${lines(side(fx.home))}</ul><span class="mh-ball">${icon('ball')}</span><ul class="is-away">${lines(side(fx.away))}</ul></div>`;
+    return `<div class="mh-scorers"><ul class="is-home">${lines(side(fx.home))}</ul><span class="mh-ball">${goalMark()}</span><ul class="is-away">${lines(side(fx.away))}</ul></div>`;
   };
 
   const header = s => {

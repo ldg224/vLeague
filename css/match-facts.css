@@ -15,6 +15,8 @@
 .mo-axis { stroke: color-mix(in oklab, var(--text) 18%, transparent); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .mo-ht { stroke: color-mix(in oklab, var(--text) 20%, transparent); stroke-width: 1; stroke-dasharray: 2 4; vector-effect: non-scaling-stroke; }
 .mo-h { fill: var(--ha, var(--blue-500)); opacity: .9; } .mo-a { fill: var(--aa, var(--blue-300)); opacity: .9; }
+.mo-marks { position: absolute; inset: 0 0 auto 0; height: 170px; pointer-events: none; }
+.mo-mk { position: absolute; translate: -50% -50%; line-height: 0; }
 .mo-goal circle { fill: var(--surface); stroke: color-mix(in oklab, var(--text) 40%, transparent); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .mo-goal path { fill: var(--text-strong); }
 .mo-red { fill: var(--res-l); }

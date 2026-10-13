@@ -52,13 +52,14 @@ function momentum(fx, file, ctx) {
   for (const e of file.events) {
     if (e.t > ctx.horizon || (e.type !== 'goal' && !(e.type === 'card' && e.card !== 'yellow'))) continue;
     const credit = e.type === 'goal' && e.own_goal ? (e.team === fx.home ? fx.away : fx.home) : e.team, top = credit === fx.home;
-    if (e.type === 'goal') marks.push(`<g class="mo-goal" transform="translate(${x(e.t).toFixed(1)} ${top ? 11 : H - 11})"><circle r="6.5"/><path d="m0 -3 2.9 2.1-1.1 3.4h-3.6l-1.1-3.4z"/></g>`);
-    else marks.push(`<rect class="mo-red" x="${(x(e.t) - 3).toFixed(1)}" y="${top ? 24 : H - 36}" width="6" height="12" rx="1.5"/>`);
+    const at = `left:${(x(e.t) / W * 100).toFixed(2)}%;top:${(top ? (e.type === 'goal' ? 13 : 38) : H - (e.type === 'goal' ? 13 : 38)).toFixed(0)}px`;   // the same chips as the lineup and the events (js/match-marks.js)
+    marks.push(`<span class="mo-mk" style="${at}">${e.type === 'goal' ? goalMark() : cardMark('red')}</span>`);
   }
   const ht = periodsOf(file)[0]?.end_t, htX = ht ? x(ht) : W / 2;
   return `<svg class="mo-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Momentum through the match: the home side above the line while it has the better of it, the away side below">
       <line class="mo-axis" x1="0" x2="${W}" y1="${MID}" y2="${MID}"/><line class="mo-ht" x1="${htX.toFixed(1)}" x2="${htX.toFixed(1)}" y1="0" y2="${H}"/>
-      <path class="mo-h" d="${area(1)}"/><path class="mo-a" d="${area(-1)}"/>${marks.join('')}</svg>
+      <path class="mo-h" d="${area(1)}"/><path class="mo-a" d="${area(-1)}"/></svg>
+    <div class="mo-marks">${marks.join('')}</div>
     <div class="mo-labels" aria-hidden="true"><span>0′</span><span style="left:${(htX / W * 100).toFixed(1)}%">HT</span><span>FT</span></div>`;
 }
 
