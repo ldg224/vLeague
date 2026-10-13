@@ -9,7 +9,7 @@ import { chrome, esc, clubs, crestUrl } from './member.js';
 import { currentUser, myProfile } from './auth.js';
 import { paintClub, startSilk, styleCards } from './shell.js';
 import { mountSubFrame } from './frame.js';
-import { loadSeason, kickoff, status, shownScore, shownGoals, liveMinute, liveState, finished, matchUrl } from './dashboard-data.js';
+import { loadSeason, kickoff, status, shownScore, shownGoals, liveMinute, liveState, liveSimTime, finished, matchUrl } from './dashboard-data.js';
 import { countedFixtures, totals } from './season-stats.js';
 import { demoMatchSeason } from './demo-match.js';
 import { crest, teamOf, nameOf, fullNameOf, useClubs, time } from './places.js';
@@ -22,6 +22,8 @@ import { formCard } from './match-form.js';
 import { insights, insightsCard } from './match-insights.js';
 import { chanceCard, venueCard } from './match-side.js';
 import { h2hCard } from './match-h2h.js';
+import { loadMatchFile } from './match-file.js';
+import { factsView } from './match-facts.js';
 import { loadHistory } from './history-data.js';
 
 chrome();
@@ -33,7 +35,6 @@ const TABS = {
   played: [['facts', 'Facts'], ['lineup', 'Lineup'], ['stats', 'Stats'], ['h2h', 'Head-to-Head']],
 };
 const SOON = {
-  facts: 'The momentum chart, top stats and events for this match are coming.',
   lineup: 'The line-ups for this match are coming.',
   stats: 'The full team stats for this match are coming.',
 };
@@ -136,6 +137,7 @@ function start() {
   };
   // The Predicted Lineup (WR-32) loads once, then the Preview tab draws it.
   let lineups = null, formHidden = [], history = null, h2hHidden = [];
+  let file = null, fileState = 'idle';   // the saved match file (Facts, Lineup, Stats), read once the first time a tab needs it
   let h2hFilter = null;   // the Head-to-Head filter pills (Home or This season, one at a time, kept while the page is open)
   // Season numbers for the lineup pills (WR-33), from the results this account may see (spoiler-free keeps hidden ones out). The choice lasts while the page is open.
   let view = preview && ['contrib', 'value'].includes(q.get('view')) ? q.get('view') : 'rating';   // ?view= : localhost preview only
@@ -150,6 +152,11 @@ function start() {
   };
   const lctx = () => ({ season, code: { home: fx.home, away: fx.away }, club, team: code => teamOf(season, code), crest, stats: seasonStats(), view });
   // The right-hand column (WR-36): Who will win?, Venue, and on the Preview tab the Insights. On a phone the first two sit above the match content.
+  const needFile = () => {
+    if (fileState !== 'idle') return;
+    fileState = 'loading';
+    loadMatchFile(fx).then(d => { file = d; fileState = d ? 'ready' : 'error'; draw(); }).catch(() => { fileState = 'error'; draw(); });
+  };
   const body = s => {
     const tab = tabNow(s.st), team = code => teamOf(season, code);
     const sheets = lineups ? [lineups.home.sheet, lineups.away.sheet].filter(Boolean).map(r => ({ ...r, week: fx.week })) : [];
@@ -160,6 +167,11 @@ function start() {
       formHidden = form.hidden;
       extra = insightsCard(insights(season, fx, { club, hide: sctx.hide, now: s.now, sheets, history }), { team, crest, accent: acc });
       main = `${lineups ? lineupCard(lineups, lctx()) : '<section class="lg-card mh-soon"><p class="empty">Loading the line-ups…</p></section>'}${form.html}`;
+    } else if (tab === 'facts') {
+      if (s.hid) main = `<section class="lg-card mh-soon"><p class="empty">Results hidden · <button type="button" data-reveal>Show</button></p></section>`;
+      else if (fileState === 'error') main = '<section class="lg-card mh-soon"><p class="empty">The match file isn’t available yet. Try again in a moment.</p></section>';
+      else if (!file) { needFile(); main = '<section class="lg-card mh-soon"><p class="empty">Loading the match…</p></section>'; }
+      else main = factsView(fx, file, { team, club, accent: acc, horizon: s.st === 'live' ? liveSimTime(fx, season, s.now) : Infinity, live: s.st === 'live' });
     } else if (tab === 'h2h') {
       const h = h2hCard(season, fx, { club, team, crest, accent: acc, hide: sctx.hide, url: matchUrl, time: d => time(d), now: s.now }, { home: h2hFilter === 'home', season: h2hFilter === 'season' });
       h2hHidden = h.hidden;
