@@ -197,7 +197,7 @@ function secondCardPhase(s) {
   return { up: 1, col: 'red' };
 }
 // Most of each kind of moment in one video, so it isn't wall-to-wall saves.
-const KIND_CAP = { save: 2, chance: 3, woodwork: 2, yellow: 2, red: 2, goal: 99 };
+const KIND_CAP = { save: 3, chance: 4, woodwork: 3, yellow: 3, red: 2, goal: 99 };
 
 export function planHighlights(d, targetSeconds = 180) {
   const shots = d.events.filter(e => e.type === 'shot');
@@ -212,6 +212,8 @@ export function planHighlights(d, targetSeconds = 180) {
       const save = e.outcome === 'saved' && e.xg >= 0.12;
       const chance = e.outcome !== 'saved' && e.xg >= 0.2;
       if (wood || save || chance) cand.push({ kind: wood ? 'woodwork' : save ? 'save' : 'chance', score: 30 + e.xg * 70 + (wood ? 25 : 0), t: e.t, t0: attackStart(d, e), t1: e.t + 2.8, e });
+      // A quiet match (B-23): lesser shots held back, used only if the genuine moments leave the video short.
+      else if (e.xg >= (e.outcome === 'saved' ? 0.04 : 0.08)) cand.push({ kind: e.outcome === 'saved' ? 'save' : 'chance', minor: true, score: 10 + e.xg * 70, t: e.t, t0: attackStart(d, e), t1: e.t + 2.8, e });
     } else if (e.type === 'card') {
       const red = e.card !== 'yellow';
       const foul = [...d.events].reverse().find(f => f.type === 'foul' && f.player === e.player && f.t <= e.t + 0.01 && e.t - f.t < 3);
@@ -229,15 +231,19 @@ export function planHighlights(d, targetSeconds = 180) {
     if (picked.some(p => c.t >= p.t0 && c.t <= p.t1)) continue;   // already on screen in another clip
     picked.push(c); budget -= c.t1 - c.t0; used[c.kind] = (used[c.kind] || 0) + 1;
   }
-  for (const c of cand.filter(c => !must(c)).sort((a, b) => b.score - a.score)) {
-    const len = c.t1 - c.t0;
-    if ((used[c.kind] || 0) >= KIND_CAP[c.kind]) continue;
-    if (len > budget) continue;
-    if (picked.some(p => c.t0 < p.t1 + 1 && c.t1 > p.t0 - 1)) continue;   // overlaps another clip
-    picked.push(c); budget -= len; used[c.kind] = (used[c.kind] || 0) + 1;
-  }
+  // B-23: no three-minute limit. Every genuine save, chance, woodwork and booking goes in (up to KIND_CAP of each kind, so it isn't wall-to-wall), however long the video
+  // gets, and nothing is sped up to fit. If that still leaves it short of the target, the lesser shots are added too.
+  const extras = list => {
+    for (const c of list.sort((a, b) => b.score - a.score)) {
+      if ((used[c.kind] || 0) >= KIND_CAP[c.kind] + (c.minor ? 2 : 0)) continue;
+      if (picked.some(p => c.t0 < p.t1 + 1 && c.t1 > p.t0 - 1)) continue;   // overlaps another clip
+      picked.push(c); budget -= c.t1 - c.t0; used[c.kind] = (used[c.kind] || 0) + 1;
+    }
+  };
+  extras(cand.filter(c => !must(c) && !c.minor));
+  if (budget > targetSeconds * 0.4) extras(cand.filter(c => c.minor));
   picked.sort((a, b) => a.t - b.t);
-  // Spare time: widen clips a little so the video lands near the target length.
+  // Spare time (only when the video is still short of the target): widen clips a little, never speeding anything up.
   const spare = Math.max(0, budget);
   const each = picked.length ? Math.min(8, spare / picked.length) : 0;
   picked.forEach(c => {
@@ -985,7 +991,7 @@ export class HighlightsRenderer {
       const name = lastName(pl.name).toUpperCase(), fs = 24;
       c.font = `900 ${fs}px ${FONT}`; const w = c.measureText(name).width + 28;
       this.pill(bx - w / 2, top - 46, w, 36, 'rgba(6,26,56,0.88)', 10);
-      c.fillStyle = col; c.fillRect(bx - w / 2, top - 46, 6, 36);
+      c.fillStyle = (side ? this.kitArt?.away?.field?.main : this.kitArt?.home?.field?.main) || (side ? this.ac : this.hc); c.fillRect(bx - w / 2, top - 46, 6, 36);   // the team's colour, not the goalkeeper's own shirt (B-22)
       this.text(name, bx + 3, top - 20, { size: fs, weight: 900, align: 'center' });
     }
   }

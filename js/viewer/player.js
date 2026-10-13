@@ -94,7 +94,7 @@ export class MatchPlayer {
     this._raf = requestAnimationFrame(ts => this.loop(ts));
   }
 
-  destroy() { cancelAnimationFrame(this._raf); this.tactical?.destroy(); this.ro?.disconnect(); }
+  destroy() { cancelAnimationFrame(this._raf); this.tactical?.destroy(); this.ro?.disconnect(); if (this._keys) document.removeEventListener('keydown', this._keys); }
 
   // ---------- renderers ----------
 
@@ -253,6 +253,13 @@ export class MatchPlayer {
     scr.addEventListener('pointerdown', () => { this._tapWoke = this.fsWake(); }, { passive: true });
     for (const ev of ['pointermove', 'keydown']) scr.addEventListener(ev, () => this.fsWake(), { passive: true });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && this.fsFake) this.setFs(false); });
+    // Keys (S-28): the left and right arrows go 10 seconds back and forward, F is full screen. Not while typing, or on a control that uses the keys itself.
+    this._keys = e => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented || e.target.closest?.('input, select, textarea, [contenteditable]')) return;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); this.seek(this.t + (e.key === 'ArrowLeft' ? -10 : 10)); }
+      else if (e.key === 'f' || e.key === 'F') { e.preventDefault(); this.fullscreen(); }
+    };
+    document.addEventListener('keydown', this._keys);
   }
 
   // Full screen covers the picture and the controls (#mp-screen). Where the Fullscreen API
