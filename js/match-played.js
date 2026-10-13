@@ -43,6 +43,8 @@ function xiOf(fx, ctx, code) {
   return { formation, list: src.filter(p => FORMATIONS[formation][p.slot]) };
 }
 
+// A test match's made-up players (ids 9001 to 9116) are not in the squads; their shirt number is the last two digits of the id (js/simulate.js).
+const numberOf = (p, id) => (p?.number != null && p.number !== '' ? p.number : /^9[01]\d\d$/.test(String(id)) ? Number(String(id).slice(-2)) : '');
 const tone = r => (r >= 7 ? 'hi' : 'lo');
 
 function side(fx, L, ctx, F, star, which) {
@@ -52,7 +54,7 @@ function side(fx, L, ctx, F, star, which) {
   const html = xi.list.map(({ id, slot, name }) => {
     const p = byId.get(String(id)), f = F[id] || {}, gk = slots[slot].want === 'GK';
     const pic = L?.kits?.[which]?.[gk ? 'gk' : 'field'] || L?.kits?.[which]?.field;
-    const num = p?.number != null && p.number !== '' ? p.number : '';
+    const num = numberOf(p, id);
     const face = pic ? `<img src="${pic}" alt="">${num !== '' ? `<i class="ml-sn">${esc(num)}</i>` : ''}` : `<i class="ml-disc" style="--c:${esc(colour)};--on:${esc(onColour(colour))}">${esc(num)}</i>`;
     const cap = sheet && String(sheet.captain) === String(id) ? '<b class="ml-cap" aria-label="Captain">C</b>' : '';
     let marks = '';
