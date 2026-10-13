@@ -28,7 +28,7 @@ const PREV = svg('m15 6-6 6 6 6'), NEXT = svg('m9 6 6 6-6 6');
 export const fixturesAddress = (mode, arg) => `#fixtures${mode === 'round' && (arg == null || arg === '') ? '' : `/${mode || 'round'}${arg != null && arg !== '' ? `/${arg}` : ''}`}`;
 export function parseSub(sub = '') {
   const [mode, ...rest] = String(sub).split('/');
-  return { mode: ['date', 'team'].includes(mode) ? mode : 'round', arg: rest.join('/') || null };
+  return { mode: ['date', 'team', 'test'].includes(mode) ? mode : 'round', arg: rest.join('/') || null };
 }
 
 // ---------- dates ----------
@@ -181,6 +181,14 @@ export function byTeam(season, ctx, arg) {
   return `${strip}<div class="fx-head is-team"><b class="fx-title">${esc(club?.name || code)}</b></div>${fixtures.length ? `<ul class="fx-list">${groups.join('')}</ul>` : none('No matches yet', 'This club has no fixtures so far.')}`;
 }
 
+// Test matches (the office's practice matches, week 99) never show in the three views above; this one lists them, newest first, behind the yellow
+// "Test matches" pill at the right of the view pills. The pill only exists while at least one test match does.
+export function byTest(season, ctx) {
+  const list = season.fixtures.filter(f => f.test).sort((a, b) => byKickoff(b, a));
+  if (!list.length) return none('No test matches', 'Test matches the office plays appear here.');
+  return `<div class="fx-head is-team"><b class="fx-title">Test matches</b></div><ul class="fx-list">${dayGroups(list, season, ctx, {})}</ul>`;
+}
+
 // ---------- the Overview widget (WR-20) ----------
 // "This round": the same rows as Fixtures for one round, with arrows that step through the rounds without leaving Overview
 // (buttons with data-wround, not links, so the address stays #overview). `week` is a round number; default: the current round.
@@ -198,12 +206,14 @@ export function roundWidget(season, ctx, week = null) {
 export const MODES = [['round', 'By round'], ['date', 'By date'], ['team', 'By team']];
 
 export function fixturesView(season, ctx, { mode = 'round', arg = null } = {}) {
-  if (!season || !season.fixtures.some(f => !f.test)) {
+  if (!season || !season.fixtures.length) {
     return `<section class="lg-card fx-card"><div class="lg-card-head"><h2>Fixtures</h2></div>${none('No fixtures yet', 'Matches appear here once the office has set the fixtures.')}</section>`;
   }
   const hiddenCount = [...(ctx.hidden || [])].length;
-  const pills = `<nav class="fx-modes sc-toggle" aria-label="Fixtures view">${MODES.map(([key, label]) => `<a href="${fixturesAddress(key)}" data-fxgo${key === mode ? ' aria-current="true"' : ''}>${label}</a>`).join('')}</nav>`;
+  const hasTests = season.fixtures.some(f => f.test);
+  const pills = `<nav class="fx-modes sc-toggle" aria-label="Fixtures view">${MODES.map(([key, label]) => `<a href="${fixturesAddress(key)}" data-fxgo${key === mode ? ' aria-current="true"' : ''}>${label}</a>`).join('')}`
+    + `${hasTests ? `<a class="fx-test" href="${fixturesAddress('test')}" data-fxgo${mode === 'test' ? ' aria-current="true"' : ''}>Test matches</a>` : ''}</nav>`;
   const hid = hiddenCount ? `<p class="tb-hidden">${hiddenCount} result${hiddenCount === 1 ? '' : 's'} hidden. <button type="button" data-reveal-all>Show all</button></p>` : '';
-  const body = (mode === 'round' ? byRound : mode === 'team' ? byTeam : byDate)(season, ctx, arg);
+  const body = (mode === 'round' ? byRound : mode === 'team' ? byTeam : mode === 'test' && hasTests ? byTest : byDate)(season, ctx, arg);
   return `<section class="lg-card fx-card" aria-label="Fixtures"><div class="lg-card-head"><h2>Fixtures</h2></div>${pills}${hid}${body}</section>`;
 }

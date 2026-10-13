@@ -139,3 +139,8 @@
   .fx-res { grid-row: 2; grid-column: 2; justify-self: center; width: 24px; height: 18px; margin-top: 2px; }
   .fx-title { font-size: var(--fs-l); }
 }
+
+/* The yellow "Test matches" pill, far right of the view pills; only drawn while a test match exists (js/league-fixtures.js byTest). */
+.fx-modes .fx-test { margin-left: auto; border-color: var(--amber); color: var(--amber-text); }
+.fx-modes .fx-test[aria-current="true"] { background: var(--amber); border-color: var(--amber); color: #0a0f19; }
+:root:not([data-theme="light"]) .fx-modes .fx-test[aria-current="true"] { color: #0a0f19; }
