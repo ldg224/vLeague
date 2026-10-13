@@ -194,7 +194,7 @@ export function mountFrame(el, { office = false, draft = false, draftLive = fals
 
 // The pages behind the header buttons (WR-26): the same header card as the league page, with the page's name where the season pill sits and a back link to
 // the league in place of the tab row (which would make no sense here). The button of the page you are on is marked as current.
-export function mountSubFrame(el, { office = false, crest = '', here = 'club', title = '' } = {}) {
+export function mountSubFrame(el, { office = false, crest = '', here = 'club', title = '', back = null } = {}) {   // back: { href, label } where the way back isn't the league (the match page: Matches)
   // The Editor has its own header (13 Oct 2026, the user): no Club and Settings buttons and no back row, just a back button and the page's name.
   if (here === 'editor') {
     el.innerHTML = `<div class="lg-head ed-hero">
@@ -222,5 +222,5 @@ export function mountSubFrame(el, { office = false, crest = '', here = 'club', t
         ${office ? tool('editor', 'editor.html', `${icon('pencil')}<span>Editor</span>`) : ''}
       </nav>
     </div>
-    <nav class="lg-backbar" aria-label="Back"><a class="lg-backlink" href="league.html">${icon('arrow-left')}<span>League</span></a></nav>`;
+    <nav class="lg-backbar" aria-label="Back"><a class="lg-backlink" href="${esc(back?.href || 'league.html')}">${icon('arrow-left')}<span>${esc(back?.label || 'League')}</span></a></nav>`;
 }
