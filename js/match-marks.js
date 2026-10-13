@@ -7,6 +7,8 @@ const BALL = glyph('M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm8,
 const BOOT = glyph('M228.65,129.11l-28.06-9.35a4,4,0,0,0-2.63,0l-43.23,15.72A8.14,8.14,0,0,1,152,136a8,8,0,0,1-7.71-5.88,8.17,8.17,0,0,1,5.22-9.73L168,113.67a2.54,2.54,0,0,0-.06-4.8,23.93,23.93,0,0,1-8.8-5.25,4,4,0,0,0-4.17-.91l-24.22,8.8a8,8,0,0,1-10.44-5.39,8.17,8.17,0,0,1,5.22-9.73L146,88.93a4,4,0,0,0,2.31-5.34l-3.06-7.16a4,4,0,0,0-5.05-2.19l-25.5,9.27a8,8,0,0,1-10.44-5.39,8.17,8.17,0,0,1,5.22-9.73l24-8.73a4,4,0,0,0,2.31-5.33L130.39,41.6s0-.07,0-.1A16,16,0,0,0,110.25,33L34.53,60.49A16.05,16.05,0,0,0,24,75.53V192a16,16,0,0,0,16,16H240a16,16,0,0,0,16-16V167.06A40,40,0,0,0,228.65,129.11ZM240,192H40V176H240Z');
 const chip = (cls, inner, label, n = 1) => `<b class="mk ${cls}" role="img" aria-label="${n > 1 ? `${n} ${label}s` : label}">${inner}${n > 1 ? `<small>${n}</small>` : ''}</b>`;
 export const goalMark = n => chip('mk-goal', BALL, 'Goal', n);
+// The red football: an own goal, or a penalty that was saved or missed (as FotMob).
+export const redBallMark = label => chip('mk-goal is-red', BALL, label);
 export const assistMark = n => chip('mk-assist', BOOT, 'Assist', n);
 export const cardMark = which => chip('mk-card', `<i class="mk-c is-${which === 'red' ? 'r' : 'y'}"></i>`, which === 'red' ? 'Red card' : 'Yellow card');
 export const captainMark = () => '<b class="mk mk-cap" role="img" aria-label="Captain">C</b>';

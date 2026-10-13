@@ -8,10 +8,10 @@
 // Top stats: a possession bar, then expected goals, total shots, shots on target and big chances, the leader's figure in a pill in its club colour. (The engine does not
 // save touches in the box, so that row is not here; while a match is live there is no possession bar, since it would need the ball's whole history.)
 // Events: the goals (score after, assist, penalty, own goal), cards and woodwork in a timeline, the minute in a round badge in the middle, the home side's events on
-// the left and the away side's on the right, "+4 minutes added" and "HT 1 - 0" between. Only what the engine really records: no substitutions, VAR or injuries exist.
+// the left and the away side's on the right, "+4 minutes added" and "HT 1 - 0" between. Only what the engine really records: no substitutions, VAR or injuries exist. An own goal and a penalty saved or missed wear the red football.
 import { esc } from './member.js';
 import { icon } from './icons.js';
-import { goalMark, cardMark } from './match-marks.js';
+import { goalMark, cardMark, redBallMark } from './match-marks.js';
 import { onColour } from './club-colour.js';
 
 const W = 640, H = 170, MID = 85;   // the chart's own coordinates
@@ -53,7 +53,7 @@ function momentum(fx, file, ctx) {
     if (e.t > ctx.horizon || (e.type !== 'goal' && !(e.type === 'card' && e.card !== 'yellow'))) continue;   // goals and red cards only, as FotMob
     const credit = e.type === 'goal' && e.own_goal ? (e.team === fx.home ? fx.away : fx.home) : e.team, top = credit === fx.home;
     const at = `left:${(x(e.t) / W * 100).toFixed(2)}%;top:${(top ? (e.type === 'goal' ? 13 : 38) : H - (e.type === 'goal' ? 13 : 38)).toFixed(0)}px`;   // the same chips as the lineup and the events (js/match-marks.js)
-    marks.push(`<span class="mo-mk" style="${at}">${e.type === 'goal' ? goalMark() : cardMark('red')}</span>`);
+    marks.push(`<span class="mo-mk" style="${at}">${e.type === 'goal' ? (e.own_goal ? redBallMark('Own goal') : goalMark()) : cardMark('red')}</span>`);
   }
   const ht = periodsOf(file)[0]?.end_t, htX = ht ? x(ht) : W / 2;
   return `<svg class="mo-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Momentum through the match: the home side above the line while it has the better of it, the away side below">
@@ -92,7 +92,9 @@ function events(fx, file, ctx) {
     if (e.type === 'goal') {
       const own = e.own_goal, side = (own ? e.team === fx.home : e.team === fx.away) ? 'away' : 'home', s = shots.get(e.shot), pen = s?.subtype === 'penalty';
       const assist = !own && e.assist ? `Assist: ${surname(nameOf(file, e.assist))}` : '';
-      list.push({ t: e.t, minute: e.minute, side, icon: 'ball', who: nameOf(file, e.scorer), sub: [Array.isArray(e.score) ? `${e.score[0]} – ${e.score[1]}` : '', own ? 'Own goal' : pen ? 'Penalty' : '', assist].filter(Boolean).join(' · '), goal: true });
+      list.push({ t: e.t, minute: e.minute, side, icon: own ? 'own' : 'ball', who: nameOf(file, e.scorer), sub: [Array.isArray(e.score) ? `${e.score[0]} – ${e.score[1]}` : '', own ? 'Own goal' : pen ? 'Penalty' : '', assist].filter(Boolean).join(' · '), goal: true });
+    } else if (e.type === 'shot' && e.subtype === 'penalty' && (e.outcome === 'saved' || e.outcome === 'off_target')) {   // a penalty that did not go in (one that hit the post has its own row)
+      list.push({ t: e.t, minute: e.minute, side: e.team === fx.home ? 'home' : 'away', icon: 'miss', who: nameOf(file, e.player), sub: e.outcome === 'saved' ? 'Penalty saved' : 'Penalty missed' });
     } else if (e.type === 'card') {
       const red = e.card !== 'yellow';
       list.push({ t: e.t, minute: e.minute, side: e.team === fx.home ? 'home' : 'away', icon: red ? 'red' : 'yellow', who: nameOf(file, e.player), sub: e.card === 'second_yellow' ? 'Second yellow card' : red ? 'Red card' : 'Yellow card' });
@@ -106,7 +108,7 @@ function events(fx, file, ctx) {
       list.push({ t: e.t + 0.01, divider: `${e.period === 1 ? 'HT' : 'FT'} ${score.home} – ${score.away}`, strong: true });
     }
   }
-  const ic = { ball: goalMark(), yellow: cardMark('yellow'), red: cardMark('red'), wood: icon('map-pin') };
+  const ic = { ball: goalMark(), own: redBallMark('Own goal'), miss: redBallMark('Penalty not scored'), yellow: cardMark('yellow'), red: cardMark('red'), wood: icon('map-pin') };
   const row = it => it.divider
     ? `<li class="ev-div${it.strong ? ' is-strong' : ''}"><span>${esc(it.divider)}</span></li>`
     : `<li class="ev-row is-${it.side}${it.goal ? ' is-goal' : ''}"><div class="ev-text">${it.who ? `<b>${esc(it.who)}</b>` : ''}${it.sub ? `<small>${esc(it.sub)}</small>` : ''}</div>`

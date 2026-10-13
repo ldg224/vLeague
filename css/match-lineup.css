@@ -112,3 +112,4 @@
   font: 700 var(--fs-xs)/14px var(--font); text-align: center; font-variant-numeric: tabular-nums; }
 .mk-cap { width: 15px; height: 15px; margin-right: 4px; vertical-align: -3px; border-radius: 50%; background: color-mix(in oklab, var(--text) 45%, var(--surface)); color: var(--surface); font: 700 10px/1 var(--font); }
 .ev-ic .mk { width: 26px; height: 26px; } .ev-ic .mk svg { width: 18px; height: 18px; } .ev-ic .mk-c { width: 9px; height: 13px; }
+.mk.is-red { background: #e5322d; }
