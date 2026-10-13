@@ -47,12 +47,15 @@ function drawSubFrame(place, me, club) {
   document.body.classList.toggle('has-club', Boolean(club));
   mountSubFrame(el, { office: me?.profile?.role === 'office', crest: club?.crest_path ? crestUrl(club.crest_path) : '', here: ['settings', 'editor'].includes(place) ? place : 'club', title: document.body.dataset.title || PAGE_TITLES[place] || '' });
   if (place !== 'club' && club?.code && me?.user?.id !== 'preview') watchLineupDue(club.code);   // WR-44
-  // The contour lines and the silk fade in once their pictures are loaded, as on the league page (js/league.js).
-  if (!document.body.classList.contains('topo-ready')) {
-    Promise.all(['assets/img/topo.png', 'assets/img/fabric.png'].map(src => { const i = new Image(); i.src = src; return i.decode().catch(() => {}); }))
-      .then(() => requestAnimationFrame(() => { document.body.classList.add('topo-ready'); requestAnimationFrame(pinClock); }));
-    setTimeout(() => { document.body.classList.add('silk-seen'); pinClock(); }, 3500);
-  }
+  startSilk();
+}
+
+// The contour lines and the silk fade in once their pictures are loaded, as on the league page (js/league.js). Any page in the league's look calls this once.
+export function startSilk() {
+  if (document.body.classList.contains('topo-ready')) return;
+  Promise.all(['assets/img/topo.png', 'assets/img/fabric.png'].map(src => { const i = new Image(); i.src = src; return i.decode().catch(() => {}); }))
+    .then(() => requestAnimationFrame(() => { document.body.classList.add('topo-ready'); requestAnimationFrame(pinClock); }));
+  setTimeout(() => { document.body.classList.add('silk-seen'); pinClock(); }, 3500);
 }
 
 // ctx = { me: { user, profile }, club, season, team, prefs, main } or null if the visitor was sent elsewhere.

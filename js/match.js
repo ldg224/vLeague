@@ -7,7 +7,7 @@
 // Localhost only, to look at it without signing in: match.html?id=...&preview&mine=TUR&theme=light
 import { chrome, esc, clubs, crestUrl } from './member.js';
 import { currentUser, myProfile } from './auth.js';
-import { paintClub } from './shell.js';
+import { paintClub, startSilk, styleCards } from './shell.js';
 import { mountSubFrame } from './frame.js';
 import { loadSeason, kickoff, status, shownScore, shownGoals, liveMinute, liveState, finished } from './dashboard-data.js';
 import { countedFixtures, totals } from './season-stats.js';
@@ -51,6 +51,7 @@ try {
   const prof = preview ? { role: q.has('office') ? 'office' : 'manager', club: q.get('mine') } : await myProfile().catch(() => null);
   mine = rows.find(c => c.code === prof?.club) || null;
   paintClub(mine);
+  startSilk();   // the contour lines and the silk in the cards, as on the league page
   document.body.classList.toggle('has-club', Boolean(mine));
   mountSubFrame(document.getElementById('frame'), { office: prof?.role === 'office', crest: mine?.crest_path ? crestUrl(mine.crest_path) : '', here: '', title: '', back: { href: 'league.html#fixtures', label: 'Matches' } });
   // ?demo=6 (localhost or the office): made-up players, results and locked line-ups for the league's real clubs, as on the league page.
@@ -120,9 +121,9 @@ function start() {
     };
     const ghost = (code, t, cls) => `<span class="mh-ghost ${cls}" aria-hidden="true"><b class="mh-full">${esc(fullNameOf(t))}</b><b class="mh-code">${esc(code)}</b></span>`;
     return `<section class="lg-card mh-head" aria-label="Match">
-      <p class="mh-round">${esc(fx.round || `Round ${fx.week}`)}</p>
-      <p class="mh-info">${k ? `<span>${icon('calendar-days')}${esc(when(k))}</span>` : ''}${ground ? `<span>${icon('map-pin')}${esc(ground)}</span>` : ''}</p>
       <div class="mh-band">
+        <p class="mh-round">${esc(fx.round || `Round ${fx.week}`)}</p>
+        <p class="mh-info">${k ? `<span>${icon('calendar-days')}${esc(when(k))}</span>` : ''}${ground ? `<span>${icon('map-pin')}${esc(ground)}</span>` : ''}</p>
         <div class="mh-teams">${ghost(fx.home, home, 'is-home')}${ghost(fx.away, away, 'is-away')}${side(fx.home, home, 'is-home')}<div class="mh-mid">${middle(s)}</div>${side(fx.away, away, 'is-away')}</div>
         ${scorers(s)}
       </div>
@@ -157,7 +158,8 @@ function start() {
     const s = state();
     document.title = `${nameOf(home)} v ${nameOf(away)} | vLeague`;
     const ha = acc(fx.home), aa = acc(fx.away);
-    paint(main, `<div class="mh" style="${ha ? `--ha:${ha};` : ''}${aa ? `--aa:${aa};` : ''}">${header(s)}<div id="mh-body">${body(s)}</div></div>`);
+    const changed = paint(main, `<div class="mh" style="${ha ? `--ha:${ha};` : ''}${aa ? `--aa:${aa};` : ''}">${header(s)}<div id="mh-body">${body(s)}</div></div>`);
+    if (changed) styleCards();   // each card gets its own splash and silk phase
   };
   draw();
   loadLineups(fx, season, rows, { fake: preview && q.has('fake') }).then(l => { lineups = l; draw(); }).catch(() => { lineups = { home: { sheet: null, locked: false }, away: { sheet: null, locked: false }, kits: {} }; draw(); });

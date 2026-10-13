@@ -11,21 +11,20 @@
 .mh .empty { margin: 0; padding: 20px; color: var(--muted); font: 400 var(--fs-m) var(--font); }
 
 .mh-head { overflow: hidden; }
-.mh-round { margin: 0; padding: 18px 20px 14px; text-align: center; font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: var(--text-strong); }
-.mh-info { display: flex; flex-wrap: wrap; gap: 4px 20px; justify-content: center; margin: 0; padding: 10px 20px; border-top: 1px solid var(--line); color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.mh-round { margin: 0; padding: 20px 20px 8px; text-align: center; font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: var(--text-strong); }
+.mh-info { display: flex; flex-wrap: wrap; gap: 4px 20px; justify-content: center; margin: 0; padding: 0 20px; color: var(--muted); font: 400 var(--fs-s) var(--font); }
 .mh-info span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
 .mh-info .ic { width: 16px; height: 16px; flex: none; color: var(--faint); }
 
 /* ---------- the clubs' band ---------- */
 .mh-band {
-  border-top: 1px solid var(--line);
   background:
-    radial-gradient(60% 100% at 0% 50%, color-mix(in oklab, var(--ha, transparent) 26%, transparent), transparent 75%),
-    radial-gradient(60% 100% at 100% 50%, color-mix(in oklab, var(--aa, transparent) 26%, transparent), transparent 75%);
+    radial-gradient(60% 100% at 0% 55%, color-mix(in oklab, var(--ha, transparent) 26%, transparent), transparent 78%),
+    radial-gradient(60% 100% at 100% 55%, color-mix(in oklab, var(--aa, transparent) 26%, transparent), transparent 78%);
 }
 .mh-teams {
   position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, auto) minmax(0, 1fr); align-items: center; gap: 0 24px;
-  padding: 36px 32px 28px;
+  padding: 28px 32px 28px;
 }
 .mh-band:has(.mh-scorers) .mh-teams { padding-bottom: 20px; }
 .mh-ghost {
@@ -88,8 +87,8 @@
   .mh-scorers .is-home { padding-right: 48px; } .mh-scorers .is-away { padding-left: 48px; }
 }
 @media (max-width: 767px) {
-  .mh-round { padding: 14px 16px 12px; }
-  .mh-info { padding: 10px 16px; gap: 4px 12px; }
+  .mh-round { padding: 16px 16px 6px; }
+  .mh-info { padding: 0 16px; gap: 4px 12px; }
   /* phone: the crest over the short name in each corner, the middle block between; the ghost shows the club's code */
   .mh-teams { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; padding: 24px 12px 20px; }
   .mh-band:has(.mh-scorers) .mh-teams { padding-bottom: 16px; }
