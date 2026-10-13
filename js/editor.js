@@ -77,7 +77,7 @@ function render() {
   lastTab = t;
   const pending = state.requests.filter(r => r.status === 'pending').length;
   const y = scrollY;
-  main.innerHTML = `<header class="sc-head ed-head"><h1 class="sc-title">Editor</h1><nav class="sc-toggle ed-tabs" aria-label="Editor">${Object.entries(TABS).map(([k, label]) =>
+  main.innerHTML = `<header class="sc-head ed-head"><nav class="sc-toggle ed-tabs" aria-label="Editor">${Object.entries(TABS).map(([k, label]) =>
     `<a href="#${k}" ${k === t ? 'aria-current="true"' : ''}>${label}${k === 'clubs' && pending ? ` <span class="ed-count">${pending}</span>` : ''}</a>`).join('')}</nav></header>
     <section id="view">${{ clubs: clubsView, players: playersView, fixtures: fixturesView, news: () => newsView() + instagramView(), draft: draftView, history: historyView, test: testView }[t]()}</section>`;
   if (y) scrollTo(0, y);   // a redraw after an action keeps your place

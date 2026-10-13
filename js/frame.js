@@ -195,6 +195,18 @@ export function mountFrame(el, { office = false, draft = false, draftLive = fals
 // The pages behind the header buttons (WR-26): the same header card as the league page, with the page's name where the season pill sits and a back link to
 // the league in place of the tab row (which would make no sense here). The button of the page you are on is marked as current.
 export function mountSubFrame(el, { office = false, crest = '', here = 'club', title = '' } = {}) {
+  // The Editor has its own header (13 Oct 2026, the user): no Club and Settings buttons and no back row, just a back button and the page's name.
+  if (here === 'editor') {
+    el.innerHTML = `<div class="lg-head ed-hero">
+      <a class="ed-back" href="league.html">${icon('arrow-left')}<span>League</span></a>
+      <div class="ed-hero-id">
+        <img class="ed-hero-crest" src="assets/brand/crest.svg" alt="">
+        <div class="ed-hero-name"><p class="ed-hero-kicker">vLeague office</p><h1 class="ed-hero-title">Editor</h1></div>
+      </div>
+      <span class="ed-hero-ghost" aria-hidden="true">vLeague</span>
+    </div>`;
+    return;
+  }
   const tool = (id, href, inner, extra = '') => `<a class="lg-tool${extra}" href="${href}"${here === id ? ' aria-current="page"' : ''}>${inner}</a>`;
   el.innerHTML = `<div class="lg-head">
       <div class="lg-id">
