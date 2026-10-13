@@ -110,7 +110,9 @@ function start() {
       <nav class="mh-tabs" aria-label="Match">${list.map(([t, l]) => `<a href="#${t}"${t === cur ? ' aria-current="page"' : ''}>${esc(l)}</a>`).join('')}</nav>
     </section>`;
   };
-  const body = s => `<section class="lg-card mh-soon"><p class="empty">${esc(SOON[tabNow(s.st)])}</p></section>`;
+  // TEMP until WR-41 moves the viewer in: the old Game centre holds the live view, replay and highlights.
+  const viewer = s => (s.played || s.st === 'awaiting' ? `<a class="lg-card mh-viewer" href="game.html?id=${esc(fx.id)}">${icon('play')}<span>${s.st === 'live' ? 'Watch live' : 'Watch the match and highlights'}</span></a>` : '');
+  const body = s => `${viewer(s)}<section class="lg-card mh-soon"><p class="empty">${esc(SOON[tabNow(s.st)])}</p></section>`;
 
   const draw = () => {
     const s = state();

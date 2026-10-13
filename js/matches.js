@@ -1,6 +1,6 @@
 // Matches (0.34): every game of a round as a card, in the style of a football app's match list. Each card shows the two clubs
 // (league position, form), the score or kick-off time, the win chance (js/match-model.js), the stadium and each club's home or
-// away record. A card opens the Game centre (game.html), where the match is watched and its full statistics live.
+// away record. A card opens the Game centre (now match.html; game.html still holds the viewer), where the match is watched and its full statistics live.
 // Scores follow the same rules as League: hidden before kick-off, live while it plays, and behind "Show score" with
 // spoiler-free results on. Redraws every 15 s, reloads every minute.
 import { enterPlace } from './shell.js';

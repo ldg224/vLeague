@@ -65,3 +65,7 @@
   .mh-tabs { padding: 0 4px; }
 }
 @media (prefers-reduced-motion: reduce) { .mh * { transition: none; animation: none; } }
+
+/* TEMP (WR-31 until WR-41): the way to the old viewer. */
+.lg-sub .mh a.mh-viewer { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 20px; color: var(--brand); font: 600 var(--fs-m) var(--font); text-decoration: none; }
+.mh-viewer .ic { width: 18px; height: 18px; }
