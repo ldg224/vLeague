@@ -7,6 +7,8 @@ import { demoSeason } from './demo-season.js';
 import { lineOf } from './season-stats.js';
 
 const hash = id => [...String(id)].reduce((n, c) => (n * 31 + c.charCodeAt(0)) >>> 0, 7);
+// Attack and defence ratings (1 to 10) as the real players have them: forwards attack, defenders and keepers defend, a made-up spread around that.
+const BASE = { GK: [4, 8], DEF: [5, 8], MID: [7, 7], FWD: [8, 4] };
 
 export function demoMatchSeason(rows, rounds = 6) {
   const active = (rows || []).filter(r => r.status === 'active' && r.colour);
@@ -15,7 +17,7 @@ export function demoMatchSeason(rows, rounds = 6) {
   for (const f of season.fixtures) {
     const goals = [], cards = [];
     for (const [id, p] of Object.entries(f.result.players)) {
-      if (!byId.has(id)) byId.set(id, { id, name: p.name, team: p.team, position: lineOf(p.slot), number: 1 + hash(id) % 98, value: 40000 + (hash(id) % 90) * 10000, slot: p.slot });
+      if (!byId.has(id)) byId.set(id, { id, name: p.name, team: p.team, position: lineOf(p.slot), number: 1 + hash(id) % 98, value: 8000 + (hash(id) % 50) * 100, offense: Math.max(1, Math.min(10, BASE[lineOf(p.slot)][0] + (hash(id + 'o') % 3) - 1)), defense: Math.max(1, Math.min(10, BASE[lineOf(p.slot)][1] + (hash(id + 'd') % 3) - 1)), slot: p.slot });
       latest[p.team] = latest[p.team] || {};
       latest[p.team][p.slot] = id;
       for (let i = 0; i < p.g; i++) goals.push({ team: p.team, scorer: id, scorer_name: p.name, minute: 5 + (hash(`${f.id}${id}${i}`) % 85), own_goal: false });

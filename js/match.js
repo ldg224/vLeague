@@ -21,6 +21,7 @@ import { loadLineups, lineupCard } from './match-lineup.js';
 import { formCard } from './match-form.js';
 import { insights, insightsCard } from './match-insights.js';
 import { chanceCard, venueCard } from './match-side.js';
+import { loadHistory } from './history-data.js';
 
 chrome();
 const main = document.getElementById('main');
@@ -134,7 +135,7 @@ function start() {
     </section>`;
   };
   // The Predicted Lineup (WR-32) loads once, then the Preview tab draws it.
-  let lineups = null, formHidden = [];
+  let lineups = null, formHidden = [], history = null;
   // Season numbers for the lineup pills (WR-33), from the results this account may see (spoiler-free keeps hidden ones out). The choice lasts while the page is open.
   let view = preview && ['contrib', 'value'].includes(q.get('view')) ? q.get('view') : 'rating';   // ?view= : localhost preview only
   const seasonStats = () => {
@@ -156,7 +157,7 @@ function start() {
     if (tab === 'preview') {
       const form = formCard(season, fx, { club, team, crest, hide: sctx.hide, url: matchUrl }, s.now);
       formHidden = form.hidden;
-      extra = insightsCard(insights(season, fx, { club, hide: sctx.hide, now: s.now }), { team, crest, accent: acc });
+      extra = insightsCard(insights(season, fx, { club, hide: sctx.hide, now: s.now, sheets, history }), { team, crest, accent: acc });
       main = `${lineups ? lineupCard(lineups, lctx()) : '<section class="lg-card mh-soon"><p class="empty">Loading the line-ups…</p></section>'}${form.html}`;
     } else {
       main = `<section class="lg-card mh-soon"><p class="empty">${esc(SOON[tab])}</p></section>`;
@@ -177,6 +178,7 @@ function start() {
   };
   draw();
   loadLineups(fx, season, rows, { fake: preview && q.has('fake') }).then(l => { lineups = l; draw(); }).catch(() => { lineups = { home: { sheet: null, locked: false }, away: { sheet: null, locked: false }, kits: {} }; draw(); });
+  loadHistory().then(h => { history = h; draw(); }).catch(() => {});   // the league's past seasons, for the Insights
   addEventListener('hashchange', draw);
   main.addEventListener('click', async e => {
     if (e.target.closest('[data-reveal-form]')) { await revealScore(formHidden).catch(() => {}); draw(); return; }
