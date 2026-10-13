@@ -5,6 +5,7 @@ import { snapshotInputs, restoreInputs } from './paint.js';
 import { clubs, esc, safeColour, crestUrl } from './member.js';
 import { enterPlace } from './shell.js';
 import { sheen } from './silk.js';
+import { enableSelectMenus } from './select-menu.js';
 import { db, sendPasswordReset } from './auth.js';
 import { loadSeason } from './dashboard-data.js';
 import { prefs, setPref } from './prefs.js';
@@ -20,6 +21,7 @@ import { icon } from './icons.js';
 const ctx = await enterPlace('editor', { neutral: true });
 if (!ctx) throw new Error('redirected');   // sent to sign in or to the visitor's own page
 const me = ctx.me, main = ctx.main;
+enableSelectMenus(main);   // every select in the Editor opens the Seasons-toggle style menu
 const TABS = { clubs: 'Clubs', players: 'Players', fixtures: 'Fixtures', news: 'News', draft: 'Draft', history: 'History', test: 'Test' };
 // `open` is which club panels and submissions are expanded, kept across redraws so nothing snaps shut after an action.
 let state = { clubs: [], requests: [], accounts: [], phones: null, deadlines: null, locked: [], season: null, digest: true, open: new Set() };
