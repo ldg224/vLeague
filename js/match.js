@@ -167,7 +167,7 @@ function start() {
     } else {
       main = `<section class="lg-card mh-soon"><p class="empty">${esc(SOON[tab])}</p></section>`;
     }
-    return { main, side: `${chanceCard(season, fx, sctx)}${venueCard(fx, sctx)}${extra}` };
+    return { main, chance: chanceCard(season, fx, sctx), venue: venueCard(fx, sctx), extra };
   };
 
   const acc = code => {
@@ -181,8 +181,13 @@ function start() {
     if (ha) page.style.setProperty('--ha', ha); if (aa) page.style.setProperty('--aa', aa);
     // Header, content and side column are painted apart, so a pill or a tab only redraws what it changes: the header's colour washes keep drifting and the
     // other cards keep their silk instead of starting their fade again.
-    const changed = [paint(document.getElementById('mh-head'), header(s)), paint(document.getElementById('mh-main'), b.main), paint(document.getElementById('mh-side'), b.side)];
-    if (changed.some(Boolean)) styleCards();   // each card gets its own splash and silk phase
+    const at = id => document.getElementById(id);
+    const changed = [paint(at('mh-head'), header(s)), paint(at('mh-main'), b.main), paint(at('mh-chance'), b.chance), paint(at('mh-venue'), b.venue), paint(at('mh-extra'), b.extra)];
+    if (changed.some(Boolean)) {
+      // Each card names its own silk key (its title, else its class), so a card that is made again lands on the same splash and silk phase as before, not on a new one.
+      page.querySelectorAll('.lg-card:not([data-silk])').forEach(c => { c.dataset.silk = c.querySelector('h2')?.textContent || c.className; });
+      styleCards();
+    }
     tickCountdown();
   };
   // A redraw a person asked for (a pill, a tab, Show): cards made by it show their silk straight away, not through the first-load fade.
@@ -191,7 +196,7 @@ function start() {
     const now = Date.now();
     main.querySelectorAll('[data-until]').forEach(el => { if (now < Number(el.dataset.until)) el.textContent = countdown(Number(el.dataset.until) - now); });
   };
-  main.innerHTML = '<div class="mh" id="mh"><div id="mh-head"></div><div class="mh-cols"><div class="mh-main" id="mh-main"></div><aside class="mh-side" id="mh-side" aria-label="About this match"></aside></div></div>';
+  main.innerHTML = '<div class="mh" id="mh"><div id="mh-head"></div><div class="mh-cols"><div class="mh-main" id="mh-main"></div><aside class="mh-side" aria-label="About this match"><div id="mh-chance"></div><div id="mh-venue"></div><div id="mh-extra"></div></aside></div></div>';
   draw();
   loadLineups(fx, season, rows, { fake: preview && q.has('fake') }).then(l => { lineups = l; draw(); }).catch(() => { lineups = { home: { sheet: null, locked: false }, away: { sheet: null, locked: false }, kits: {} }; draw(); });
   loadHistory().then(h => { history = h; draw(); }).catch(() => {});   // the league's past seasons, for the Insights

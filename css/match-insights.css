@@ -21,6 +21,9 @@
 @media (max-width: 991px) {
   .mh-side { display: contents; }
   .mh-cols > .mh-main { order: 2; }
-  .mh-side > .mw, .mh-side > .mv { order: 1; }
-  .mh-side > .mi { order: 3; }
+  .mh-side .mw, .mh-side .mv { order: 1; }
+  .mh-side .mi { order: 3; }
 }
+
+/* The side column is painted in three parts (Who will win?, Venue, the rest) that add no box of their own. */
+.mh-side > div { display: contents; }
