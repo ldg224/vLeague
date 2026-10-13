@@ -12,7 +12,7 @@
 .dg-cell { min-width: 150px; }
 .dg-pick { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 8px; padding: 8px 10px; min-height: 42px; align-items: baseline; }
 .dg-pick + .dg-pick { border-top: 1px dashed var(--line); }
-.dg-no { font: 700 .75rem var(--font-display); color: var(--faint); letter-spacing: .02em; }
+.dg-no { font: 700 var(--fs-xs) var(--font-display); color: var(--faint); letter-spacing: .02em; }
 .dg-who { color: var(--text); font-weight: 600; overflow-wrap: anywhere; }
 .dg-who i { font-style: normal; color: var(--muted); font-weight: 500; }
 .dg-who small { color: var(--faint); font-weight: 500; margin-left: 4px; }
@@ -31,6 +31,6 @@
 
 /* The Editor's red x on a made pick: take it back so that club picks again. */
 .dg-pick { position: relative; }
-.dg-x { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #d32f2f; font: 700 1.1rem/1 var(--font-body, inherit); cursor: pointer; display: grid; place-items: center; }
-.dg-x:hover, .dg-x:focus-visible { background: #d32f2f; color: #fff; }
+.dg-x { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--res-l); font: 700 var(--fs-l)/1 var(--font-body, inherit); cursor: pointer; display: grid; place-items: center; }
+.dg-x:hover, .dg-x:focus-visible { background: var(--res-l); color: #fff; }
 .dg-pick:has(.dg-x) .dg-who { padding-right: 24px; }

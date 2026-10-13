@@ -4,6 +4,7 @@
 import { snapshotInputs, restoreInputs } from './paint.js';
 import { clubs, esc, safeColour, crestUrl } from './member.js';
 import { enterPlace } from './shell.js';
+import { sheen } from './silk.js';
 import { db, sendPasswordReset } from './auth.js';
 import { loadSeason } from './dashboard-data.js';
 import { prefs, setPref } from './prefs.js';
@@ -69,6 +70,19 @@ function tab() {
   const t = location.hash.slice(1);
   return TABS[t] ? t : 'clubs';   // the old Requests, Managers and Phones tabs are part of Clubs now
 }
+
+// Panels take the league page's card look (sheen and silk). Whatever a tab draws later (lists load after the tab opens) is picked up here.
+const PANELS = '.ed-invite, .nw-card, .fx-card, .fx-round, .hi-season, .dr-team, .dr-vis, .dr-bigbar, .pl-preview, .ed-club-list, .ed-request';
+let paintQueued = false;
+new MutationObserver(() => {
+  if (paintQueued) return;
+  paintQueued = true;
+  requestAnimationFrame(() => {
+    paintQueued = false;
+    for (const el of main.querySelectorAll(PANELS)) if (!el.classList.contains('lg-card') && !el.parentElement.closest('.lg-card')) el.classList.add('lg-card');
+    sheen(main);
+  });
+}).observe(main, { childList: true, subtree: true });
 
 let lastTab = null;
 function render() {
