@@ -86,9 +86,9 @@ function bench(which, S, ctx, fx) {
   const code = fx[which], colour = ctx.club(code)?.colour || ctx.team(code).colour;
   const rows = (ctx.season.players || []).filter(p => p.team === code && !S[which].ids.has(String(p.id)))
     .sort((a, b) => (POS[a.position] ?? 9) - (POS[b.position] ?? 9) || (Number(a.number) || 99) - (Number(b.number) || 99));
-  if (!rows.length) return `<ul class="mp-bench is-${which}"><li class="mp-none">No one on the bench.</li></ul>`;
-  return `<ul class="mp-bench is-${which}">${rows.map(p => `<li><i class="ml-disc" style="--c:${esc(colour)};--on:${esc(onColour(colour))}">${esc(p.number ?? initials(p.name))}</i>`
-    + `<span class="mp-nm"><b>${esc(p.name)}</b><small>${esc(p.position || '')}</small></span></li>`).join('')}</ul>`;
+  if (!rows.length) return `<ul class="pl-bench is-${which}"><li class="pl-none">No one on the bench.</li></ul>`;
+  return `<ul class="pl-bench is-${which}">${rows.map(p => `<li><i class="ml-disc" style="--c:${esc(colour)};--on:${esc(onColour(colour))}">${esc(p.number ?? initials(p.name))}</i>`
+    + `<span class="pl-nm"><b>${esc(p.name)}</b><small>${esc(p.position || '')}</small></span></li>`).join('')}</ul>`;
 }
 
 export function playedCard(fx, L, ctx) {
@@ -97,12 +97,12 @@ export function playedCard(fx, L, ctx) {
   const star = best ? best[0] : null;
   for (const w of ['home', 'away']) S[w] = side(fx, L, ctx, F, star, w);
   const pills = `<nav class="ml-pills sc-toggle" aria-label="Lineup view">${VIEWS.map(([k, l]) => `<button type="button" data-lview="${k}" aria-pressed="${k === ctx.view}">${esc(l)}</button>`).join('')}</nav>`;
-  return `<section class="lg-card ml mp" aria-labelledby="ml-h">
+  return `<section class="lg-card ml pl" aria-labelledby="ml-h">
     <div class="ml-bar">${bar('home', S, ctx, fx)}<h2 id="ml-h">Lineup</h2>${bar('away', S, ctx, fx)}</div>
     ${pills}
     <div class="ml-pitch" role="group" aria-label="Line-ups as played, on a pitch">${PITCH_H}${PITCH_V}<ul class="ml-xi">${S.home.html}${S.away.html}</ul></div>
     <div class="ml-coaches">${coach('home', ctx)}<b>Coach</b>${coach('away', ctx)}</div>
-    <div class="mp-subs"><h3>Substitutes</h3><p class="mp-note">Nobody is substituted in this league, so the bench stays unused.</p>
-      <div class="mp-cols">${bench('home', S, ctx, fx)}${bench('away', S, ctx, fx)}</div></div>
+    <div class="pl-subs"><h3>Substitutes</h3><p class="pl-note">Nobody is substituted in this league, so the bench stays unused.</p>
+      <div class="pl-cols">${bench('home', S, ctx, fx)}${bench('away', S, ctx, fx)}</div></div>
   </section>`;
 }

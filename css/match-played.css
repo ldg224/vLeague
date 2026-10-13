@@ -1,21 +1,21 @@
 /* The Lineup tab of a played or live match (WR-39): the Predicted Lineup's pitch (css/match-lineup.css) plus the card marks, the red-card minute and the bench. */
 .ml-off { position: absolute; left: -10px; top: 50%; translate: 0 -50%; display: inline-flex; align-items: center; }
 .ml-off em { position: absolute; bottom: 100%; left: 0; margin-bottom: 2px; color: var(--text-strong); font: 700 var(--fs-xs)/1 var(--font); font-style: normal; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.mp-subs { padding: 16px 20px 20px; border-top: 1px solid var(--line); }
-.mp-subs h3 { margin: 0 0 4px; font: 900 var(--fs-m)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: var(--text-strong); }
-.mp-note { margin: 0 0 12px; color: var(--muted); font: 400 var(--fs-s) var(--font); }
-.mp-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; }
-.mp-bench { margin: 0; padding: 0; list-style: none; }
-.mp-bench li { display: flex; align-items: center; gap: 12px; min-height: 48px; border-top: 1px solid var(--line); }
-.mp-bench li:first-child { border-top: 0; }
-.mp-bench .ml-disc { width: 32px; height: 32px; flex: none; font-size: var(--fs-xs); }
-.mp-nm { display: grid; min-width: 0; }
-.mp-nm b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-strong); font: 600 var(--fs-m) var(--font); }
-.mp-nm small { color: var(--muted); font: 400 var(--fs-s) var(--font); }
-.mp-none { color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.pl-subs { padding: 16px 20px 20px; border-top: 1px solid var(--line); }
+.pl-subs h3 { margin: 0 0 4px; font: 900 var(--fs-m)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: var(--text-strong); }
+.pl-note { margin: 0 0 12px; color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.pl-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; }
+.pl-bench { margin: 0; padding: 0; list-style: none; }
+.pl-bench li { display: flex; align-items: center; gap: 12px; min-height: 48px; border-top: 1px solid var(--line); }
+.pl-bench li:first-child { border-top: 0; }
+.pl-bench .ml-disc { width: 32px; height: 32px; flex: none; font-size: var(--fs-xs); }
+.pl-nm { display: grid; min-width: 0; }
+.pl-nm b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-strong); font: 600 var(--fs-m) var(--font); }
+.pl-nm small { color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.pl-none { color: var(--muted); font: 400 var(--fs-s) var(--font); }
 @media (max-width: 767px) {
-  .mp-subs { padding: 16px; }
-  .mp-cols { grid-template-columns: 1fr; gap: 12px; }
+  .pl-subs { padding: 16px; }
+  .pl-cols { grid-template-columns: 1fr; gap: 12px; }
   .ml-off { left: -12px; }
 }
 /* the team average rating chip wears the same colours as a player's rating badge */

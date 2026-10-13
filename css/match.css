@@ -116,3 +116,12 @@
   .mh-tabs { padding: 0 6px; }
 }
 @media (prefers-reduced-motion: reduce) { .mh * { transition: none; animation: none; } .mh-band { animation: none; --hx: 0%; --hy: 55%; --ax: 100%; --ay: 55%; --hs: 60%; --as: 60%; } }
+
+/* The match viewer (WR-41), right under the header: the old Game centre's player (css/viewer.css) set into a league-page card */
+#mh-player:not(:empty) { margin-bottom: 16px; }
+#mh-player .mp { padding: 16px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
+#mh-player .mp-head .card-title { font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: var(--text-strong); }
+#mh-player .mp-tabs { background: var(--surface-sunk); border: 1px solid var(--line); }
+#mh-player .mp-tabs button { color: var(--text-soft); }
+#mh-player .mp-tabs button[aria-selected="true"] { background: var(--brand, var(--blue-700)); color: #fff; }
+@media (max-width: 767px) { #mh-player .mp { padding: 12px; } }

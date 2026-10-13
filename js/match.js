@@ -22,11 +22,13 @@ import { formCard } from './match-form.js';
 import { insights, insightsCard } from './match-insights.js';
 import { chanceCard, venueCard } from './match-side.js';
 import { h2hCard } from './match-h2h.js';
-import { loadMatchFile } from './match-file.js';
+import { loadMatchFile, prepareMatchFile } from './match-file.js';
 import { factsView } from './match-facts.js';
 import { playedCard } from './match-played.js';
 import { statsView } from './match-stats.js';
 import { goalMark } from './match-marks.js';
+import { playerCard, MatchPlayer } from './viewer/player.js';
+import { loadKits, matchKits } from './kits-data.js';
 import { loadHistory } from './history-data.js';
 
 chrome();
@@ -65,7 +67,11 @@ try {
   if (demo != null) season = demoMatchSeason(rows, demo);
   fx = season?.fixtures.find(f => String(f.id) === String(id)) || (demo != null ? season.fixtures[0] : null) || null;
   if (!fx) main.innerHTML = '<div class="mh"><section class="lg-card"><p class="empty">That match couldn’t be found. <a href="league.html#fixtures">See all matches</a></p></section></div>';
-  else start();
+  else {
+    // Localhost preview only: ?file=_t/match.json lays a real engine match file (clubs AAA and BBB) over this demo match, to look at the match viewer.
+    if (preview && q.get('file') && fx) { const txt = (await (await fetch(q.get('file'))).text()).replaceAll('"AAA"', JSON.stringify(fx.home)).replaceAll('"BBB"', JSON.stringify(fx.away)); fx.demoFile = prepareMatchFile(JSON.parse(txt)); }
+    start();
+  }
 } catch (e) {
   main.innerHTML = `<p class="empty">The match page didn’t load. ${esc(e.message || '')} <a href="match.html?id=${esc(id)}">Try again</a></p>`;
 }
@@ -84,18 +90,17 @@ function start() {
   const redsOf = code => (fx.result?.cards || []).filter(c => c.team === code && (c.card === 'red' || c.card === 'second_yellow')).length;
 
   // ---- the middle block
-  const watch = st => `<a class="mh-watch" href="game.html?id=${esc(fx.id)}">${icon('play')}<span>${st === 'live' ? 'Watch live' : 'Watch'}</span></a>`;   // TEMP until WR-41 moves the viewer in
   const middle = ({ now, st, played, hid }) => {
     if (played && hid) {
       return `<strong class="mh-score is-hidden" aria-label="Score hidden"><b>–</b><i>·</i><b>–</b></strong><span class="mh-sub">${st === 'live' ? 'Live' : 'Full time'}</span>
-        <p class="mh-hide">Results hidden · <button type="button" data-reveal>Show</button></p>${watch(st)}`;
+        <p class="mh-hide">Results hidden · <button type="button" data-reveal>Show</button></p>`;
     }
     if (played) {
       const sc = shownScore(fx, season, now), live = st === 'live' ? liveState(fx, season, now) : null;
       const reds = side => (live ? live.reds[side] : redsOf(side === 'home' ? fx.home : fx.away));
       const mark = n => (n ? `<span class="mh-reds" aria-label="${n === 1 ? 'Sent off' : `${n} sent off`}">${'<i></i>'.repeat(Math.min(n, 3))}</span>` : '<span></span>');
       return `${reds('home') || reds('away') ? `<span class="mh-redrow">${mark(reds('home'))}${mark(reds('away'))}</span>` : ''}<strong class="mh-score${live ? ' is-live' : ''}"><b>${sc.home}</b><i>–</i><b>${sc.away}</b></strong>
-        <span class="mh-sub${live ? ' is-live' : ''}">${live ? `LIVE ${liveMinute(fx, season, now) ?? ''}′` : 'Full time'}</span>${watch(st)}`;
+        <span class="mh-sub${live ? ' is-live' : ''}">${live ? `LIVE ${liveMinute(fx, season, now) ?? ''}′` : 'Full time'}</span>`;
     }
     if (st === 'postponed') return '<strong class="mh-ko">Postponed</strong>';
     const k = kickoff(fx);
@@ -214,12 +219,31 @@ function start() {
       styleCards();
     }
     tickCountdown();
+    mountViewer(s);
   };
+  // The match viewer (WR-41), right under the header: highlights, full match and tactical view of a finished match, the live broadcast of a live one. It is built once
+  // the match file is in, and only made again when the match changes state (live to full time); it is never redrawn under someone's hand. Hidden results keep it away.
+  let viewer = null, viewerKey = '';
+  const unmountViewer = () => { viewer?.destroy(); viewer = null; viewerKey = ''; const el = document.getElementById('mh-player'); if (el) el.innerHTML = ''; };
+  async function mountViewer(s) {
+    const slot = document.getElementById('mh-player'), key = s.st;
+    if (!slot || !s.played || s.hid || (s.st !== 'live' && s.st !== 'ft')) { if (viewerKey) unmountViewer(); return; }
+    if (viewerKey === key) return;
+    if (!file) { needFile(); return; }
+    if (!file.frames?.data?.length) return;   // a demo match has no ball frames
+    viewerKey = key;
+    viewer?.destroy();
+    const colour = code => club(code)?.colour || teamOf(season, code)?.colour;
+    const wear = matchKits(await loadKits(), fx.home, fx.away, { [fx.home]: colour(fx.home), [fx.away]: colour(fx.away) }, { [fx.home]: lineups?.home?.sheet?.kit, [fx.away]: lineups?.away?.sheet?.kit });
+    if (viewerKey !== key) return;
+    slot.innerHTML = playerCard(s.st);
+    viewer = new MatchPlayer({ S: season, FX: fx, st: s.st, data: file, timeline: null, kits: wear });
+  }
   const tickCountdown = () => {
     const now = Date.now();
     main.querySelectorAll('[data-until]').forEach(el => { if (now < Number(el.dataset.until)) el.textContent = countdown(Number(el.dataset.until) - now); });
   };
-  main.innerHTML = '<div class="mh" id="mh"><div id="mh-head"></div><div class="mh-cols"><div class="mh-main" id="mh-main"></div><aside class="mh-side" aria-label="About this match"><div id="mh-chance"></div><div id="mh-venue"></div><div id="mh-extra"></div></aside></div></div>';
+  main.innerHTML = '<div class="mh" id="mh"><div id="mh-head"></div><div id="mh-player"></div><div class="mh-cols"><div class="mh-main" id="mh-main"></div><aside class="mh-side" aria-label="About this match"><div id="mh-chance"></div><div id="mh-venue"></div><div id="mh-extra"></div></aside></div></div>';
   draw();
   loadLineups(fx, season, rows, { fake: preview && q.has('fake') }).then(l => { lineups = l; draw(); }).catch(() => { lineups = { home: { sheet: null, locked: false }, away: { sheet: null, locked: false }, kits: {} }; draw(); });
   loadHistory().then(h => { history = h; draw(); }).catch(() => {});   // the league's past seasons, for the Insights
