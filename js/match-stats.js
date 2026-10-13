@@ -2,7 +2,8 @@
 // middle and the away value on the right; the better value of each row wears a pill in that club's colour (for fouls, cards and offsides the lower one is better).
 // Numbers are the saved team totals (`file.stats.teams`, the same ones the Facts tab's Top stats use); while a match is live they are counted from the events up to the
 // minute reached, without possession and distance, which need the whole match.
-//   statsView(fx, file, ctx) -> html. ctx = { accent(code) -> '#rrggbb' | '', horizon, live }
+//   statsView(fx, file, ctx) -> html. ctx = { team(code), club(code), crest(team, px), accent(code) -> '#rrggbb' | '', horizon, live }
+// Under each row a split bar shows the share of the two values: the better side in its club's colour, the other muted, so a glance down the card shows who had the match.
 import { esc } from './member.js';
 import { onColour } from './club-colour.js';
 
@@ -39,9 +40,11 @@ export function statsView(fx, file, ctx) {
     const list = rows.filter(([, key]) => h[key] != null && a[key] != null).map(([label, key, dp, unit = '', low]) => {
       const l = Number(h[key]), r = Number(a[key]), better = l === r ? 0 : (l > r) !== Boolean(low) ? 1 : -1;
       const cell = (v, code, lead) => `<b class="ts-v${lead ? ' is-lead' : ''}"${lead ? pill(code) : ''}>${num(v, dp, unit)}</b>`;
-      return `<li>${cell(l, fx.home, better === 1)}<span>${esc(label)}</span>${cell(r, fx.away, better === -1)}</li>`;
+      const total = l + r, share = total ? 100 * l / total : 50, bar = `<i class="st-bar" aria-hidden="true"><em class="is-h${better === 1 ? ' is-lead' : ''}" style="width:${share.toFixed(1)}%${better === 1 && ctx.accent(fx.home) ? `;background:${esc(ctx.accent(fx.home))}` : ''}"></em><em class="is-a${better === -1 ? ' is-lead' : ''}"${better === -1 && ctx.accent(fx.away) ? ` style="background:${esc(ctx.accent(fx.away))}"` : ''}></em></i>`;
+      return `<li>${cell(l, fx.home, better === 1)}<span>${esc(label)}</span>${cell(r, fx.away, better === -1)}${bar}</li>`;
     });
     return list.length ? `<div class="st-group"><h3>${esc(title)}</h3><ul class="ts-rows st-rows">${list.join('')}</ul></div>` : '';
   }).join('');
-  return `<section class="lg-card st" aria-labelledby="st-h"><div class="st-head"><h2 id="st-h">Stats</h2></div>${groups}</section>`;
+  const side = (code, cls) => { const t = ctx.team(code), c = ctx.club(code); return `<span class="st-team ${cls}">${cls === 'is-home' ? `${ctx.crest(t, 28)}<b>${esc(c?.short_name || c?.name || t.name)}</b>` : `<b>${esc(c?.short_name || c?.name || t.name)}</b>${ctx.crest(t, 28)}`}</span>`; };
+  return `<section class="lg-card st" aria-labelledby="st-h"><div class="st-head"><h2 id="st-h" class="st-title">Stats</h2><div class="st-teams">${side(fx.home, 'is-home')}${side(fx.away, 'is-away')}</div></div>${groups}</section>`;
 }

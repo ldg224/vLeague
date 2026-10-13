@@ -1,13 +1,23 @@
-/* The Stats tab (WR-40): one card, grouped rows (home value, label, away value), a grey strip for each group's title. Rows and value pills are the Top stats ones (css/match-facts.css). */
-.st .st-head { padding: 16px 20px 0; }
-.st .st-head h2 { margin: 0 0 12px; text-align: center; font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: var(--text-strong); }
+/* The Stats tab (WR-40): one card. A head with each club's crest and name over its column, then groups under grey title strips. Each row is home value, label, away value,
+   with a split bar beneath showing the share of the two: the better side in its club's colour, the other muted. Rows and value pills are the Top stats ones (css/match-facts.css). */
+.st .st-head { padding: 16px 20px 14px; }
+.st .st-title { margin: 0 0 14px; text-align: center; font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: var(--text-strong); }
+.st-teams { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.st-team { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--text-strong); font: 700 var(--fs-m) var(--font); }
+.st-team.is-away { justify-content: flex-end; text-align: right; }
+.st-team b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
 .st-group h3 { margin: 0; padding: 8px 20px; background: var(--surface-sunk); border-block: 1px solid var(--line); text-align: center; color: var(--text-strong); font: 700 var(--fs-m) var(--font); }
-.st-rows { padding: 16px 20px 20px; }
-.st-rows li { grid-template-columns: 76px minmax(0, 1fr) 76px; }
+.st-rows { padding: 14px 20px 18px; gap: 16px; }
+.st-rows li { grid-template-columns: 76px minmax(0, 1fr) 76px; row-gap: 8px; }
+.st-rows li > .ts-v:nth-child(3) { justify-self: end; }
+.st-bar { grid-column: 1 / -1; display: flex; gap: 4px; height: 6px; }
+.st-bar em { display: block; height: 100%; border-radius: 999px; background: color-mix(in oklab, var(--text) 16%, transparent); }
+.st-bar .is-a { flex: 1; }
+.st-bar .is-lead { background: var(--blue-600); }
 .st-group:last-child .st-rows { padding-bottom: 24px; }
 @media (max-width: 767px) {
-  .st .st-head { padding: 16px 16px 0; }
+  .st .st-head { padding: 16px 16px 12px; }
   .st-group h3 { padding: 8px 16px; }
-  .st-rows { padding: 14px 16px 18px; }
+  .st-rows { padding: 12px 16px 16px; gap: 14px; }
   .st-rows li { grid-template-columns: 64px minmax(0, 1fr) 64px; }
 }

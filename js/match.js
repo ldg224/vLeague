@@ -177,7 +177,7 @@ function start() {
       if (s.hid) main = `<section class="lg-card mh-soon"><p class="empty">Results hidden · <button type="button" data-reveal>Show</button></p></section>`;
       else if (fileState === 'error') main = '<section class="lg-card mh-soon"><p class="empty">The match file isn’t available yet. Try again in a moment.</p></section>';
       else if (!file) { needFile(); main = '<section class="lg-card mh-soon"><p class="empty">Loading the stats…</p></section>'; }
-      else main = statsView(fx, file, { accent: acc, horizon: s.st === 'live' ? liveSimTime(fx, season, s.now) : Infinity, live: s.st === 'live' });
+      else main = statsView(fx, file, { team, club, crest, accent: acc, horizon: s.st === 'live' ? liveSimTime(fx, season, s.now) : Infinity, live: s.st === 'live' });
     } else if (tab === 'lineup') {
       const live = s.st === 'live';
       if (s.hid) main = `<section class="lg-card mh-soon"><p class="empty">Results hidden · <button type="button" data-reveal>Show</button></p></section>`;
