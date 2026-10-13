@@ -14,6 +14,7 @@ import { crest, teamOf, nameOf, fullNameOf, useClubs, time } from './places.js';
 import { prefs, spoilerHidden, revealScore } from './prefs.js';
 import { paint, quietly } from './paint.js';
 import { icon } from './icons.js';
+import { accentFor, isHex } from './club-colour.js';
 
 chrome();
 const main = document.getElementById('main');
@@ -70,10 +71,11 @@ function start() {
   const redsOf = code => (fx.result?.cards || []).filter(c => c.team === code && (c.card === 'red' || c.card === 'second_yellow')).length;
 
   // ---- the middle block
+  const watch = st => `<a class="mh-watch" href="game.html?id=${esc(fx.id)}">${icon('play')}<span>${st === 'live' ? 'Watch live' : 'Watch'}</span></a>`;   // TEMP until WR-41 moves the viewer in
   const middle = ({ now, st, played, hid }) => {
     if (played && hid) {
       return `<strong class="mh-score is-hidden" aria-label="Score hidden"><b>–</b><i>·</i><b>–</b></strong><span class="mh-sub">${st === 'live' ? 'Live' : 'Full time'}</span>
-        <p class="mh-hide">Results hidden · <button type="button" data-reveal>Show</button></p>`;
+        <p class="mh-hide">Results hidden · <button type="button" data-reveal>Show</button></p>${watch(st)}`;
     }
     if (played) {
       const sc = shownScore(fx, season, now), live = st === 'live' ? liveState(fx, season, now) : null;
@@ -81,7 +83,7 @@ function start() {
       const mark = n => (n ? `<span class="mh-reds" aria-label="${n === 1 ? 'Sent off' : `${n} sent off`}">${'<i></i>'.repeat(Math.min(n, 3))}</span>` : '<span></span>');
       return `<strong class="mh-score${live ? ' is-live' : ''}"><b>${sc.home}</b><i>–</i><b>${sc.away}</b></strong>
         <span class="mh-sub${live ? ' is-live' : ''}">${live ? `LIVE ${liveMinute(fx, season, now) ?? ''}′` : 'Full time'}</span>
-        ${reds('home') || reds('away') ? `<span class="mh-redrow">${mark(reds('home'))}${mark(reds('away'))}</span>` : ''}`;
+        ${reds('home') || reds('away') ? `<span class="mh-redrow">${mark(reds('home'))}${mark(reds('away'))}</span>` : ''}${watch(st)}`;
     }
     if (st === 'postponed') return '<strong class="mh-ko">Postponed</strong>';
     const k = kickoff(fx);
@@ -101,18 +103,19 @@ function start() {
 
   const header = s => {
     const k = kickoff(fx), ground = club(fx.home)?.stadium || '', list = tabsFor(s.st), cur = tabNow(s.st);
-    const side = (code, t, cls) => `<a class="mh-team ${cls}" href="team.html?c=${esc(code)}"><b class="mh-name"><span class="mh-full">${esc(fullNameOf(t))}</span><span class="mh-short">${esc(nameOf(t))}</span></b>${crest(t, 56)}</a>`;
-    return `<section class="lg-card mh-head" aria-label="Match">
+    const side = (code, t, cls) => `<a class="mh-team ${cls}" href="team.html?c=${esc(code)}"><b class="mh-name"><span class="mh-full">${esc(fullNameOf(t))}</span><span class="mh-short">${esc(nameOf(t))}</span></b>${crest(t, 88)}</a>`;
+    const theme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+    const acc = code => { const c = club(code)?.colour || teamOf(season, code).colour; return isHex(c) ? accentFor(c, theme) : ''; };
+    const ghost = (code, t, cls) => `<span class="mh-ghost ${cls}" aria-hidden="true"><b class="mh-full">${esc(fullNameOf(t))}</b><b class="mh-code">${esc(code)}</b></span>`;
+    return `<section class="lg-card mh-head" aria-label="Match" style="${acc(fx.home) ? `--ha:${acc(fx.home)};` : ''}${acc(fx.away) ? `--aa:${acc(fx.away)};` : ''}">
       <p class="mh-round">${esc(fx.round || `Round ${fx.week}`)}</p>
       <p class="mh-info">${k ? `<span>${icon('calendar-days')}${esc(when(k))}</span>` : ''}${ground ? `<span>${icon('map-pin')}${esc(ground)}</span>` : ''}</p>
-      <div class="mh-teams">${side(fx.home, home, 'is-home')}<div class="mh-mid">${middle(s)}</div>${side(fx.away, away, 'is-away')}</div>
+      <div class="mh-teams">${ghost(fx.home, home, 'is-home')}${ghost(fx.away, away, 'is-away')}${side(fx.home, home, 'is-home')}<div class="mh-mid">${middle(s)}</div>${side(fx.away, away, 'is-away')}</div>
       ${scorers(s)}
       <nav class="mh-tabs" aria-label="Match">${list.map(([t, l]) => `<a href="#${t}"${t === cur ? ' aria-current="page"' : ''}>${esc(l)}</a>`).join('')}</nav>
     </section>`;
   };
-  // TEMP until WR-41 moves the viewer in: the old Game centre holds the live view, replay and highlights.
-  const viewer = s => (s.played || s.st === 'awaiting' ? `<a class="lg-card mh-viewer" href="game.html?id=${esc(fx.id)}">${icon('play')}<span>${s.st === 'live' ? 'Watch live' : 'Watch the match and highlights'}</span></a>` : '');
-  const body = s => `${viewer(s)}<section class="lg-card mh-soon"><p class="empty">${esc(SOON[tabNow(s.st)])}</p></section>`;
+  const body = s => `<section class="lg-card mh-soon"><p class="empty">${esc(SOON[tabNow(s.st)])}</p></section>`;
 
   const draw = () => {
     const s = state();

@@ -1,71 +1,99 @@
-/* The match page (WR-31). The match header card in FotMob's order: round, a strip with the date and the ground, the two clubs round the middle
-   block (kick-off and countdown, or the score), the scorers, then the tabs. One card, quiet greys, the display type for the round and the
-   score only. Tokens and the five type sizes; the club's own colour is not used here (both clubs share the page). */
+/* The match page (WR-31, redone 13 Oct 2026 after "it looks pretty bad"). One header card in FotMob's order: round, a strip with the date and the
+   ground, the two clubs, the scorers, the tabs. The memorable part is the clubs' band: each half carries its own club's colour as a wash
+   from the outer edge and the club's name huge and hollow behind it (as on the Fixtures rows and the team page), with big crests and the
+   score or kick-off as the loudest thing between them. The clubs' accents (--ha, --aa) are set by js/match.js for the current theme.
+   Tokens and the five type sizes; the score and kick-off are display type (the one allowed big size). */
 
 .mh { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
 .mh :is(a, button):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .lg-sub .mh .lg-card { padding: 0; }
+.mh #mh-body { display: grid; gap: 16px; min-width: 0; }
 .mh .empty { margin: 0; padding: 20px; color: var(--muted); font: 400 var(--fs-m) var(--font); }
-.mh-soon { min-height: 96px; }
 
-.mh-round { margin: 0; padding: 16px 20px; text-align: center; font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: var(--text-strong); }
-
-.mh-info { display: flex; flex-wrap: wrap; gap: 4px 20px; justify-content: center; margin: 0; padding: 12px 20px; border-block: 1px solid var(--line); color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.mh-head { overflow: hidden; }
+.mh-round { margin: 0; padding: 18px 20px 14px; text-align: center; font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: var(--text-strong); }
+.mh-info { display: flex; flex-wrap: wrap; gap: 4px 20px; justify-content: center; margin: 0; padding: 10px 20px; border-top: 1px solid var(--line); color: var(--muted); font: 400 var(--fs-s) var(--font); }
 .mh-info span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
 .mh-info .ic { width: 16px; height: 16px; flex: none; color: var(--faint); }
 
-/* the clubs and the middle block */
-.mh-teams { display: grid; grid-template-columns: minmax(0, 1fr) minmax(112px, auto) minmax(0, 1fr); align-items: center; gap: 12px 20px; padding: 28px 20px 20px; }
-.mh .mh-team, .mh .mh-team:visited { display: flex; align-items: center; gap: 16px; min-width: 0; color: var(--text-strong); text-decoration: none; }
+/* ---------- the clubs' band ---------- */
+.mh-teams {
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, auto) minmax(0, 1fr); align-items: center; gap: 0 24px;
+  padding: 36px 32px 28px; border-top: 1px solid var(--line);
+  background:
+    radial-gradient(60% 130% at 0% 50%, color-mix(in oklab, var(--ha, transparent) 26%, transparent), transparent 75%),
+    radial-gradient(60% 130% at 100% 50%, color-mix(in oklab, var(--aa, transparent) 26%, transparent), transparent 75%);
+}
+.mh-ghost {
+  position: absolute; z-index: 0; top: 50%; width: 50%; translate: 0 -50%; overflow: hidden; pointer-events: none; white-space: nowrap;
+  color: transparent; opacity: .3; font: 900 96px/1 var(--font-display); font-stretch: 125%; text-transform: uppercase; letter-spacing: -.01em;
+}
+.mh-ghost.is-home { left: 0; padding-left: 16px; -webkit-text-stroke: 1.5px var(--ha); -webkit-mask-image: linear-gradient(90deg, #000 25%, transparent 100%); mask-image: linear-gradient(90deg, #000 25%, transparent 100%); }
+.mh-ghost.is-away { right: 0; padding-right: 16px; text-align: right; -webkit-text-stroke: 1.5px var(--aa); -webkit-mask-image: linear-gradient(270deg, #000 25%, transparent 100%); mask-image: linear-gradient(270deg, #000 25%, transparent 100%); }
+.mh-ghost .mh-code { display: none; }
+.mh-teams > :not(.mh-ghost) { position: relative; z-index: 1; }
+.mh .mh-team, .mh .mh-team:visited { display: flex; align-items: center; gap: 20px; min-width: 0; color: var(--text-strong); text-decoration: none; }
 .mh .mh-team.is-home { justify-content: flex-end; text-align: right; }
-.mh-name { min-width: 0; font: 600 var(--fs-l)/1.2 var(--font); overflow-wrap: anywhere; }
+.mh-name { min-width: 0; font: 900 var(--fs-xl)/1.15 var(--font-display); font-stretch: 125%; text-transform: uppercase; overflow-wrap: anywhere; }
 .mh-short { display: none; }
 @media (hover: hover) { .mh-team:hover .mh-name { text-decoration: underline; } }
-.mh-mid { display: grid; justify-items: center; gap: 4px; text-align: center; }
-.mh-ko, .mh-score { margin: 0; color: var(--text-strong); font: 900 28px/1 var(--font-display); font-stretch: 125%; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.mh-score { display: inline-flex; align-items: center; gap: 10px; }
+
+.mh-mid { display: grid; justify-items: center; gap: 8px; text-align: center; }
+.mh-ko, .mh-score { margin: 0; color: var(--text-strong); font: 900 56px/1 var(--font-display); font-stretch: 125%; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mh-ko { font-size: 44px; }
+.mh-score { display: inline-flex; align-items: center; gap: 14px; }
 .mh-score i { font-style: normal; color: var(--faint); }
 .mh-score.is-hidden b, .mh-score.is-hidden i { color: var(--muted); }
-.mh-sub { color: var(--muted); font: 600 var(--fs-s) var(--font); font-variant-numeric: tabular-nums; }
-.mh-sub.is-live { color: var(--res-l); font-weight: 700; }
-.mh-hide { margin: 8px 0 0; color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.mh-sub { padding: 4px 12px; border-radius: 999px; background: color-mix(in oklab, var(--text) 8%, transparent); color: var(--text-soft); font: 600 var(--fs-s) var(--font); font-variant-numeric: tabular-nums; }
+.mh-sub.is-live { background: color-mix(in oklab, var(--res-l) 22%, transparent); color: var(--text-strong); font-weight: 700; }
+.mh-hide { margin: 0; color: var(--muted); font: 400 var(--fs-s) var(--font); }
 .mh-hide button { padding: 0; border: 0; background: none; color: var(--brand); font: 600 var(--fs-s) var(--font); cursor: pointer; }
 .mh-redrow { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; width: 100%; min-height: 13px; }
 .mh-redrow > :first-child { justify-self: end; } .mh-redrow > :last-child { justify-self: start; }
 .mh-reds { display: inline-flex; gap: 3px; }
 .mh-reds i { width: 9px; height: 13px; border-radius: 2px; background: var(--res-l); }
+/* TEMP (WR-31 until WR-41): the way to the old viewer */
+.lg-sub .mh a.mh-watch { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text-strong); font: 600 var(--fs-m) var(--font); text-decoration: none; }
+.mh-watch .ic { width: 16px; height: 16px; color: var(--brand); }
+@media (hover: hover) { .lg-sub .mh a.mh-watch:hover { background: var(--surface-hover); } }
 
-/* the scorers under each club, a ball between */
-.mh-scorers { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: 20px; padding: 0 20px 20px; }
-.mh-scorers ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; color: var(--text-soft); font: 400 var(--fs-s)/1.3 var(--font); }
-.mh-scorers .is-home { text-align: right; }
+/* the scorers, each under its own club, a ball between */
+.mh-scorers { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, auto) minmax(0, 1fr); gap: 0 24px; padding: 0 32px 24px; }
+.mh-scorers ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; align-content: start; color: var(--text-soft); font: 400 var(--fs-s)/1.3 var(--font); }
+.mh-scorers .is-home { text-align: right; padding-right: 76px; }
+.mh-scorers .is-away { padding-left: 76px; }
 .mh-scorers small { color: var(--muted); font: 600 var(--fs-s) var(--font); font-variant-numeric: tabular-nums; }
-.mh-ball { display: grid; place-items: center; width: 24px; }
-.mh-ball .ic { width: 16px; height: 16px; color: var(--faint); }
+.mh-ball { display: grid; place-items: start center; }
+.mh-ball .ic { width: 18px; height: 18px; color: var(--faint); }
 
 /* the tabs: a 3 px underline on the active one, as the league page's */
-.mh-tabs { display: flex; gap: 4px; padding: 0 12px; overflow-x: auto; scrollbar-width: none; border-top: 1px solid var(--line); }
+.mh-tabs { display: flex; gap: 4px; padding: 0 16px; overflow-x: auto; scrollbar-width: none; border-top: 1px solid var(--line); }
 .mh-tabs::-webkit-scrollbar { display: none; }
-.mh .mh-tabs a { position: relative; display: inline-flex; align-items: center; min-height: 48px; padding: 0 12px; flex: none; color: var(--muted); font: 600 var(--fs-m) var(--font); text-decoration: none; white-space: nowrap; }
+.mh .mh-tabs a { position: relative; display: inline-flex; align-items: center; min-height: 52px; padding: 0 14px; flex: none; color: var(--muted); font: 600 var(--fs-m) var(--font); text-decoration: none; white-space: nowrap; }
 .mh .mh-tabs a[aria-current="page"] { color: var(--text-strong); }
-.mh-tabs a[aria-current="page"]::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: var(--brand); }
-@media (hover: hover) { .mh-tabs a:hover { color: var(--text-strong); } }
+.mh .mh-tabs a[aria-current="page"]::after { content: ""; position: absolute; left: 14px; right: 14px; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: var(--brand); }
+@media (hover: hover) { .mh .mh-tabs a:hover { color: var(--text-strong); } }
 
+@media (max-width: 991px) {
+  .mh-ghost { font-size: 72px; }
+  .mh-teams, .mh-scorers { gap: 0 12px; padding-inline: 20px; }
+  .mh-scorers .is-home { padding-right: 48px; } .mh-scorers .is-away { padding-left: 48px; }
+}
 @media (max-width: 767px) {
-  .mh-round { padding: 12px 16px; }
+  .mh-round { padding: 14px 16px 12px; }
   .mh-info { padding: 10px 16px; gap: 4px 12px; }
-  /* phone: the crest over the short name, the middle block between */
-  .mh-teams { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; padding: 20px 12px 16px; }
-  .mh .mh-team, .mh .mh-team.is-home { flex-direction: column-reverse; gap: 8px; justify-content: flex-end; text-align: center; }
-  .mh-team .crest { --s: 44px !important; }
-  .mh-name { font-size: var(--fs-m); font-weight: 600; }
-  .mh-full { display: none; } .mh-short { display: inline; }
-  .mh-ko, .mh-score { font-size: 22px; }
-  .mh-scorers { gap: 8px; padding: 0 12px 16px; }
-  .mh-tabs { padding: 0 4px; }
+  /* phone: the crest over the short name in each corner, the middle block between; the ghost shows the club's code */
+  .mh-teams { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; padding: 24px 12px 20px; }
+  .mh .mh-team, .mh .mh-team.is-home { flex-direction: column-reverse; gap: 10px; justify-content: flex-end; text-align: center; }
+  .mh-team .crest { --s: 56px !important; }
+  .mh-name { font: 700 var(--fs-m)/1.2 var(--font); text-transform: none; font-stretch: normal; }
+  .mh-name .mh-full { display: none; } .mh-name .mh-short { display: inline; }
+  .mh-ghost .mh-full { display: none; } .mh-ghost .mh-code { display: inline; }
+  .mh-ghost { font-size: 64px; opacity: .22; }
+  .mh-ko, .mh-score { font-size: 36px; }
+  .mh-score { gap: 8px; }
+  .mh-scorers { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; padding: 0 12px 16px; }
+  .mh-scorers .is-home, .mh-scorers .is-away { padding-inline: 0; }
+  .mh-tabs { padding: 0 6px; }
 }
 @media (prefers-reduced-motion: reduce) { .mh * { transition: none; animation: none; } }
-
-/* TEMP (WR-31 until WR-41): the way to the old viewer. */
-.lg-sub .mh a.mh-viewer { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 20px; color: var(--brand); font: 600 var(--fs-m) var(--font); text-decoration: none; }
-.mh-viewer .ic { width: 18px; height: 18px; }
