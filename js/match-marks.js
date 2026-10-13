@@ -1,12 +1,8 @@
-// FotMob-style marks for the match page: a black round chip carrying a white football (goal), a white boot (assist), a card (yellow or red) or a "C" (captain). One look everywhere
-// they appear (the Lineup pitch, the Events timeline), drawn here as small inline SVG, not from the icon set, so they stay the same size and colour in both themes.
-//   goalMark(n?) / assistMark(n?) / cardMark('yellow' | 'red') / captainMark() -> html; the optional n is the count shown beside the chip when more than one.
-const BALL = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><defs><clipPath id="mkc"><circle cx="10" cy="10" r="8.6"/></clipPath></defs><circle cx="10" cy="10" r="9" fill="#111" stroke="#fff" stroke-width="1.2"/><g clip-path="url(#mkc)" fill="#fff"><path d="M10.00 6.90 L12.95 9.04 L11.82 12.51 L8.18 12.51 L7.05 9.04Z"/><path d="M12.47 -4.00 L13.99 0.70 L10.00 3.60 L6.01 0.70 L7.53 -4.00Z"/><path d="M24.08 8.02 L20.08 10.92 L16.09 8.02 L17.61 3.33 L22.55 3.33Z"/><path d="M16.23 22.78 L12.24 19.87 L13.76 15.18 L18.70 15.18 L20.22 19.87Z"/><path d="M-0.22 19.87 L1.30 15.18 L6.24 15.18 L7.76 19.87 L3.77 22.78Z"/><path d="M-2.55 3.33 L2.39 3.33 L3.91 8.02 L-0.08 10.92 L-4.08 8.02Z"/></g><path fill="none" stroke="#fff" stroke-width="1" stroke-linecap="round" d="M10.00 6.90L10.00 3.60M12.95 9.04L16.09 8.02M11.82 12.51L13.76 15.18M8.18 12.51L6.24 15.18M7.05 9.04L3.91 8.02"/></svg>';
-const BOOT = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="9" fill="#111" stroke="#fff" stroke-width="1.2"/>'
-  + '<path fill="#fff" d="M5 6.6c0-.5.4-.8.9-.7l2.2.5c.4.1.7.4.8.8l.3 1.1 3.3 1.3c1.4.5 2.3 1.7 2.5 3.1.1.5-.3.9-.7.9H5.7c-.4 0-.7-.3-.7-.7z"/>'
-  + '<path fill="#fff" d="M6.3 14.3h1.3v1.2H6.3zM8.8 14.3h1.3v1.2H8.8zM11.3 14.3h1.3v1.2h-1.3z"/></svg>';
-const chip = (cls, inner, label, n) => `<b class="mk ${cls}" role="img" aria-label="${label}">${inner}${n > 1 ? `<small>${n}</small>` : ''}</b>`;
-export const goalMark = (n = 1) => chip('mk-goal', BALL, n > 1 ? `${n} goals` : 'Goal', n);
-export const assistMark = (n = 1) => chip('mk-assist', BOOT, n > 1 ? `${n} assists` : 'Assist', n);
-export const cardMark = which => chip('mk-card', `<i class="mk-c is-${which === 'red' ? 'r' : 'y'}"></i>`, which === 'red' ? 'Red card' : 'Yellow card', 1);
+// Match marks, drawn with Icons8 icons (Color pack, downloaded to assets/icons): a football for a goal (84301), the player kicking the ball for an assist
+// (16897), a yellow card (31081) and a red card (16914), plus a grey "C" for the captain. One look everywhere they appear (the Lineup pitch, the Events timeline).
+//   goalMark(n?) / assistMark(n?) / cardMark('yellow' | 'red') / captainMark() -> html; the optional n is the count shown beside the icon when more than one.
+const mark = (cls, file, label, n = 1) => `<b class="mk ${cls}" role="img" aria-label="${n > 1 ? `${n} ${label}s` : label}"><img src="assets/icons/mark-${file}.png" alt="" width="26" height="26">${n > 1 ? `<small>${n}</small>` : ''}</b>`;
+export const goalMark = n => mark('mk-goal', 'goal', 'Goal', n);
+export const assistMark = n => mark('mk-assist', 'assist', 'Assist', n);
+export const cardMark = which => mark('mk-card', which === 'red' ? 'red-card' : 'yellow-card', which === 'red' ? 'Red card' : 'Yellow card');
 export const captainMark = () => '<b class="mk mk-cap" role="img" aria-label="Captain">C</b>';

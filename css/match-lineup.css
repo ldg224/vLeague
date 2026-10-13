@@ -104,13 +104,9 @@
 @media (max-width: 767px) { .ml-sn { font-size: var(--fs-m); -webkit-text-stroke-width: 2.5px; } }
 
 /* FotMob-style round marks (js/match-marks.js): a football for a goal, a boot for an assist, a card on a dark chip, a grey C for the captain */
-.mk { position: relative; display: inline-grid; place-items: center; flex: none; width: 18px; height: 18px; border-radius: 50%; font-style: normal; }
-.mk svg { display: block; width: 18px; height: 18px; }
-.mk-goal, .mk-assist { box-shadow: 0 0 0 1.5px var(--surface); background: #111; }
+.mk { position: relative; display: inline-grid; place-items: center; flex: none; width: 26px; height: 26px; font-style: normal; }
+.mk img { display: block; width: 26px; height: 26px; object-fit: contain; }
 .mk small { position: absolute; top: -7px; right: -7px; min-width: 14px; height: 14px; padding: 0 3px; border-radius: 999px; background: var(--text-strong); color: var(--surface);
   font: 700 var(--fs-xs)/14px var(--font); text-align: center; font-variant-numeric: tabular-nums; }
-.mk-card { background: #2b2b2b; box-shadow: 0 0 0 1.5px var(--surface); }
-.mk-c { display: block; width: 7px; height: 10px; border-radius: 1.5px; }
-.mk-c.is-y { background: #f4c20d; } .mk-c.is-r { background: #e5322d; }
-.mk-cap { width: 15px; height: 15px; margin-right: 4px; vertical-align: -3px; background: color-mix(in oklab, var(--text) 45%, var(--surface)); color: var(--surface); font: 700 10px/1 var(--font); }
-.ev-ic .mk, .ev-ic .mk svg { width: 24px; height: 24px; } .ev-ic .mk-c { width: 9px; height: 13px; }
+.mk-cap { width: 15px; height: 15px; margin-right: 4px; vertical-align: -3px; border-radius: 50%; background: color-mix(in oklab, var(--text) 45%, var(--surface)); color: var(--surface); font: 700 10px/1 var(--font); }
+.ev-ic .mk, .ev-ic .mk img { width: 30px; height: 30px; }
