@@ -214,6 +214,8 @@ export class MatchPlayer {
     this.syncUi();
   }
   pause() { if (this.view === 'tactical') this.tactical.pause(); this.playing = false; this.follow = false; this.syncUi(); }
+  // Match seconds that pass in one second of picture: 1 in the highlights, the live rate while following a live match, else the speed chosen.
+  videoRate() { return this.view === 'highlights' ? 1 : this.st === 'live' ? liveSpeed(this.FX, this.S, this.t) : this.speed || 1; }
   seek(t) {
     if (this.view === 'tactical') { this.tactical.seek(t); this.t = this.tactical.t; return this.syncUi(); }
     const [a, b] = this.range();
@@ -254,10 +256,10 @@ export class MatchPlayer {
     scr.addEventListener('pointerdown', () => { this._tapWoke = this.fsWake(); }, { passive: true });
     for (const ev of ['pointermove', 'keydown']) scr.addEventListener(ev, () => this.fsWake(), { passive: true });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && this.fsFake) this.setFs(false); });
-    // Keys (S-28): the left and right arrows go 10 seconds back and forward, F is full screen. Not while typing, or on a control that uses the keys itself.
+    // Keys (S-28): the left and right arrows go 10 seconds of video back and forward (more match time at a faster speed), F is full screen. Not while typing, or on a control that uses the keys itself.
     this._keys = e => {
       if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented || e.target.closest?.('input, select, textarea, [contenteditable]')) return;
-      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); this.seek(this.t + (e.key === 'ArrowLeft' ? -10 : 10)); }
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); this.seek(this.t + (e.key === 'ArrowLeft' ? -10 : 10) * this.videoRate()); }
       else if (e.key === 'f' || e.key === 'F') { e.preventDefault(); this.fullscreen(); }
     };
     document.addEventListener('keydown', this._keys);
