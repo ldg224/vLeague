@@ -94,7 +94,7 @@ function bench(which, S, ctx, fx) {
 export function playedCard(fx, L, ctx) {
   const F = facts(fx, ctx), S = {};
   const best = Object.entries(F).map(([id, f]) => [id, f.r]).filter(x => x[1] != null).sort((a, b) => b[1] - a[1])[0];
-  const star = best ? best[0] : null;
+  const star = best && !ctx.live ? best[0] : null;   // the blue star (best on the pitch) waits for full time
   for (const w of ['home', 'away']) S[w] = side(fx, L, ctx, F, star, w);
   const pills = `<nav class="ml-pills sc-toggle" aria-label="Lineup view">${VIEWS.map(([k, l]) => `<button type="button" data-lview="${k}" aria-pressed="${k === ctx.view}">${esc(l)}</button>`).join('')}</nav>`;
   return `<section class="lg-card ml pl" aria-labelledby="ml-h">
