@@ -1,5 +1,5 @@
 // The match page's Lineup tab for a played or live match (WR-39): the Predicted Lineup's pitch (js/match-lineup.js) with what happened. Each player wears
-// this match's rating (orange under 7.0, green from 7.0, blue with a star for the best on the pitch), small marks for goals, assists and cards, the minute a
+// this match's rating (red under 5.0, orange under 7.0, green from 7.0, blue with a star for the best on the pitch), small marks for goals, assists and cards, the minute a
 // red card sent them off, and the captain's "C". Pills switch between Average rating (this match), Contributions (goals and assists only) and Value.
 // Numbers come from the saved result (`fx.result.players`, js/simulate.js summariseMatch); while a match is live they are worked out from the match file up to
 // the minute reached (js/live-rating.js), so nothing from later shows. Nobody is substituted in this league, so the bench is simply the squad that was not picked,
@@ -45,7 +45,7 @@ function xiOf(fx, ctx, code) {
 
 // A player the league has no number for (a test match's made-up players): the last two digits of the id, as the match viewer does (js/viewer/highlights.js).
 const numberOf = (p, id) => (p?.number != null && p.number !== '' ? p.number : String(Number(String(id).slice(-2)) || String(id).slice(-2)));
-const tone = r => (r >= 7 ? 'hi' : 'lo');
+const tone = r => (r >= 7 ? 'hi' : r >= 5 ? 'lo' : 'bad');   // green from 7.0, orange from 5.0, red below 5.0 (as FotMob)
 
 function side(fx, L, ctx, F, star, which) {
   const code = fx[which], xi = xiOf(fx, ctx, code), sheet = L?.[which]?.sheet, team = ctx.team(code), colour = ctx.club(code)?.colour || team.colour;

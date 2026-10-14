@@ -4,7 +4,7 @@
 //   loadLineups(fx, season, rows) -> { home, away, kits } once: each side is { sheet, locked }; kits are small shirt pictures (data URLs)
 //   lineupCard(L, ctx)            -> the card's html. ctx = { season, club(code) -> clubs row | undefined, team(code) -> team, crest(team, px) -> html,
 //                                  stats: Map of player id -> season totals (js/season-stats.js), view: 'rating' | 'contrib' | 'value' }
-// Three views of the same pitch (WR-33), picked with the pills: Average rating (season average match rating as a badge, orange under 7.0, green from 7.0,
+// Three views of the same pitch (WR-33), picked with the pills: Average rating (season average match rating as a badge, red under 5.0, orange under 7.0, green from 7.0,
 // blue with a star for the standout), Contributions (goals and assists, nothing for zero) and Value (the editor's value under the shirt).
 // LINEUP LOCK RULE (the user, 11 Oct 2026): a club's XI only appears once its line-up has locked (the week's deadline has passed and the
 // locked sheet, week_sheets, exists). An unlocked club's half stays an empty half-pitch saying so; nothing it has picked is ever shown, and
@@ -87,7 +87,7 @@ function players(side, L, ctx, cls, star) {
     let mark = '';
     if (ctx.view === 'rating' && avg != null) {
       const top = String(id) === star;
-      mark = `<b class="ml-r is-${top ? 'star' : avg >= 7 ? 'hi' : 'lo'}" aria-label="Average rating ${avg.toFixed(1)}${top ? ', the standout' : ''}">${avg.toFixed(1)}${top ? STAR : ''}</b>`;
+      mark = `<b class="ml-r is-${top ? 'star' : avg >= 7 ? 'hi' : avg >= 5 ? 'lo' : 'bad'}" aria-label="Average rating ${avg.toFixed(1)}${top ? ', the standout' : ''}">${avg.toFixed(1)}${top ? STAR : ''}</b>`;
     } else if (ctx.view === 'contrib' && st) {
       mark = `${st.a ? `<span class="ml-m is-a">${assistMark(st.a)}</span>` : ''}${st.g ? `<span class="ml-m is-g">${goalMark(st.g)}</span>` : ''}`;
     }

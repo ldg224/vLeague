@@ -226,7 +226,7 @@ function start() {
   // The match viewer (WR-41), right under the header: highlights, full match and tactical view of a finished match, the live broadcast of a live one. It is built once
   // the match file is in, and only made again when the match changes state (live to full time); it is never redrawn under someone's hand. Hidden results keep it away.
   let viewer = null, viewerKey = '';
-  const unmountViewer = () => { viewer?.destroy(); viewer = null; viewerKey = ''; const el = document.getElementById('mh-player'); if (el) el.innerHTML = ''; };
+  const unmountViewer = () => { viewer?.destroy(); viewer = null; viewerKey = ''; document.documentElement.classList.remove('mp-watching'); const el = document.getElementById('mh-player'); if (el) el.innerHTML = ''; };
   async function mountViewer(s) {
     const slot = document.getElementById('mh-player'), key = s.st;
     if (!slot || !s.played || s.hid || (s.st !== 'live' && s.st !== 'ft')) { if (viewerKey) unmountViewer(); return; }
@@ -236,10 +236,11 @@ function start() {
     viewerKey = key;
     viewer?.destroy();
     const colour = code => club(code)?.colour || teamOf(season, code)?.colour;
-    const wear = matchKits(await loadKits(), fx.home, fx.away, { [fx.home]: colour(fx.home), [fx.away]: colour(fx.away) }, { [fx.home]: lineups?.home?.sheet?.kit, [fx.away]: lineups?.away?.sheet?.kit });
+    const wear = matchKits(await loadKits(), fx.home, fx.away, { [fx.home]: colour(fx.home), [fx.away]: colour(fx.away) }, { [fx.home]: lineups?.home?.sheet?.kit || file.test_kits?.[fx.home], [fx.away]: lineups?.away?.sheet?.kit || file.test_kits?.[fx.away] });
     if (viewerKey !== key) return;
     slot.innerHTML = playerCard(s.st);
     viewer = new MatchPlayer({ S: season, FX: fx, st: s.st, data: file, timeline: null, kits: wear });
+    document.documentElement.classList.add('mp-watching');   // the page's drifting silk and contour lines hold still while the picture plays (they re-blend the whole page every frame)
   }
   const tickCountdown = () => {
     const now = Date.now();

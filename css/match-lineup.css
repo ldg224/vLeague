@@ -85,6 +85,7 @@
 }
 .ml-r.is-hi { background: var(--res-w); color: #fff; }
 .ml-r.is-lo { background: var(--amber); color: #0a0f19; }
+.ml-r.is-bad { background: var(--res-l); color: #fff; }
 .ml-r.is-star { background: var(--blue-600, #1e88e5); color: #fff; }
 .ml-star { width: 11px; height: 11px; fill: currentColor; }
 .ml-m { position: absolute; bottom: -2px; display: inline-flex; }

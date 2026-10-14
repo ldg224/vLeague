@@ -406,6 +406,16 @@
 .tt-row { display: grid; grid-template-columns: 90px 110px minmax(0, 1fr) auto; gap: 10px; align-items: end; margin: 0 0 10px; }
 .tt-row label, .tt-look { display: grid; gap: 6px; font-size: var(--fs-s); font-weight: 600; color: var(--muted); }
 .tt-row input, .tt-row select, .tt-look select { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r-md, 8px); background: var(--surface); color: inherit; min-width: 0; }
+.tt-kitbox { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.tt-kit-h { font-size: var(--fs-s); font-weight: 600; color: var(--muted); }
+.tt-kit-note { margin: 0; font-size: var(--fs-s); }
+.tt-kits { display: flex; flex-wrap: wrap; gap: 8px; }
+.tt-kits button { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 10px; min-height: 64px; padding: 6px 14px 6px 10px; border: 1px solid var(--line); border-radius: var(--r-md, 8px); background: var(--surface); color: var(--text); cursor: pointer; text-align: left; font: 400 var(--fs-m) var(--font); }
+.tt-kits button b { color: var(--text-strong); font-weight: 600; }
+.tt-kits button small { grid-column: 2; color: var(--muted); font-size: var(--fs-s); }
+.tt-kits button[aria-checked="true"] { border-color: var(--brand); background: color-mix(in oklab, var(--brand) 10%, var(--surface)); }
+.tt-kits button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.tt-kit-auto { display: grid; place-items: center; width: 30px; height: 52px; border-radius: 6px; background: var(--surface-sunk, var(--line)); color: var(--muted); font-size: 11px; font-weight: 600; }
 .tt-check { display: flex; gap: 8px; align-items: center; margin: 12px 0; font-size: var(--fs-m); }
 .tt-look { max-width: 320px; margin-bottom: 8px; }
 .tt-msg { margin: 12px 0; min-height: 1.2em; }

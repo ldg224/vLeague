@@ -177,6 +177,7 @@ export class MatchPlayer {
     this.$('#mp-marks').innerHTML = list.map(m => `<i class="mk mk-${m.type}${m.card ? ' mk-' + m.card : ''}" style="left:${((m.t - a) / (b - a || 1)) * 100}%" title="${esc(m.label)}"></i>`).join('');
   }
   fullRange() {
+    if (!this.view || !this.hl && this.view !== 'tactical') return [0, 1];   // pressed before the pictures have loaded
     if (this.view === 'highlights') return this.range();
     const r = this.view === 'broadcast' ? this.renderer('broadcast') : this.tactical;
     return [r.t0, r.t1];
@@ -333,26 +334,27 @@ export class MatchPlayer {
     const r = this.renderer(this.view), t0 = performance.now();
     const src = r.frame(this.t);
     this.g.drawImage(src, 0, 0, this.cv.width, this.cv.height);
-    this.adapt(performance.now() - t0);
+    const cost = performance.now() - t0;
+    this.adapt(cost);
     this.syncUi();
   }
   // Quality follows how the frames are really coping. One hiccup (a garbage collection, a seek, a switch of view, a hidden tab) never
-  // counts: it takes two slow stretches of about a second each to step down, three fast ones to step back up, and never above
-  // what the screen needs.
+  // counts: it takes a stretch of about half a second of slow frames to step down (two steps at once if they are very slow, so a weak
+  // computer reaches a picture it can play within a second or two), and three fast stretches to step back up, never above what the screen needs.
   adapt(ms) {
     if (!this.playing || document.hidden) { this.cost = []; return; }
     if (performance.now() < this.holdUntil) return;
     this.cost.push(ms);
-    if (this.cost.length < 60) return;
+    if (this.cost.length < 30) return;
     const s = [...this.cost].sort((a, b) => a - b), p75 = s[Math.floor(s.length * 0.75)];
     this.cost = [];
     const i = Math.max(0, LADDER.findIndex(q => Math.abs(q - this.scale) < 1e-6));
-    if (p75 > 24 && i < LADDER.length - 1) { this.slow++; this.fast = 0; if (this.slow >= 2) this.setQuality(LADDER[i + 1]); }
-    else if (p75 < 11 && i > 0 && LADDER[i - 1] <= this.bestScale + 1e-6) { this.fast++; this.slow = 0; if (this.fast >= 3) this.setQuality(LADDER[i - 1]); }
+    if (p75 > 20 && i < LADDER.length - 1) { this.slow++; this.fast = 0; this.setQuality(LADDER[Math.min(LADDER.length - 1, i + (p75 > 40 ? 2 : 1))]); }
+    else if (p75 < 9 && i > 0 && LADDER[i - 1] <= this.bestScale + 1e-6) { this.fast++; this.slow = 0; if (this.fast >= 3) this.setQuality(LADDER[i - 1]); }
     else this.slow = this.fast = 0;
   }
   setQuality(s) {
-    this.scale = s; this.slow = this.fast = 0; this.holdUntil = performance.now() + 4000;
+    this.scale = s; this.slow = this.fast = 0; this.holdUntil = performance.now() + 2000;
     for (const r of Object.values(this.r)) r.setScale?.(s);
     this.resize(); this.dirty = true;
   }

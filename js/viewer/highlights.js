@@ -964,6 +964,25 @@ export class HighlightsRenderer {
     const n = this._no.get(String(id));
     return n == null || n === '' ? shirt(id) : String(n);
   }
+  // A shirt number, drawn once into a small picture and stamped from then on: setting the font and drawing text for 22 players every frame
+  // was most of the cost of the whole picture (about nine tenths of drawPlayer). Sizes are rounded so the same few pictures are reused.
+  number(str, x, y, size, colour) {
+    // Sizes snap to a few steps (the picture is scaled to the exact size when stamped), so there are only a handful of pictures per number.
+    const fs = Math.max(10, 2 * Math.round(size / 2)), key = `${str}|${fs}|${colour}`, cache = (this._numCache ||= new Map());
+    let spr = cache.get(key);
+    if (!spr) {
+      const k = 2, w = Math.ceil(fs * 0.8 * String(str).length) + 4, h = Math.ceil(fs * 1.4);   // roomy: no measuring the text
+      const cv = document.createElement('canvas');
+      cv.width = w * k; cv.height = h * k;
+      const g = cv.getContext('2d'); g.scale(k, k); g.font = `900 ${fs}px ${FONT}`; g.fillStyle = colour; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText(str, w / 2, h / 2);
+      spr = { cv, w, h };
+      if (cache.size > 3000) cache.clear();
+      cache.set(key, spr);
+    }
+    const r = size / fs;
+    this.c.drawImage(spr.cv, x - spr.w * r / 2, y - spr.h * r / 2, spr.w * r, spr.h * r);
+  }
   drawPlayer(cam, it, holder) {
     const c = this.c, p = cam.p(it.x, it.y); if (!p) return;
     const side = it.i < this.nHome ? 0 : 1;
@@ -986,7 +1005,7 @@ export class HighlightsRenderer {
     if (holder) { c.lineWidth = 3; c.strokeStyle = '#fff'; c.beginPath(); c.ellipse(p[0], p[1], r * 1.5, r * 0.6, 0, 0, Math.PI * 2); c.stroke(); }
     // shirt number
     const pl = this.d.players[it.i];
-    this.text(this.shirtNo(pl.id), bx, top + bh * 0.62, { size: Math.max(9, bw * 0.55), weight: 900, align: 'center', colour: onColour(col), base: 'middle' });
+    this.number(this.shirtNo(pl.id), bx, top + bh * 0.62, Math.max(9, bw * 0.55), onColour(col));
     if (holder) {
       const name = lastName(pl.name).toUpperCase(), fs = 24;
       c.font = `900 ${fs}px ${FONT}`; const w = c.measureText(name).width + 28;

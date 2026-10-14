@@ -163,7 +163,7 @@ const throwOn = (r, what) => { if (r.error) throw new Error(`${what} (${r.error.
 // Options from the Editor's Test tab: `homeCode` / `awayCode` pick the clubs (blank = random), `script` is a list of events at set minutes
 // ([{ minute, team: 'home' | 'away', kind: 'penalty_scored' | 'penalty_saved' | 'penalty_missed' | 'yellow' | 'red' | 'second_yellow' }]),
 // and `onlyScriptGoals` makes the scripted goals the only ones, so the final score is exactly what was asked for, and `skipToHighlights` makes the match already finished.
-export async function startTestMatch(c, clubs, { look = 'random', looks = [], homeCode = '', awayCode = '', script = [], onlyScriptGoals = false, skipToHighlights = false, onProgress, onStatus = () => {} } = {}) {
+export async function startTestMatch(c, clubs, { look = 'random', looks = [], homeCode = '', awayCode = '', kits = {}, script = [], onlyScriptGoals = false, skipToHighlights = false, onProgress, onStatus = () => {} } = {}) {
   const active = clubs.filter(x => x.status === 'active');
   if (active.length < 2) throw new Error('A test match needs at least two active clubs.');
   const byCode = code => active.find(x => x.code === code);
@@ -194,6 +194,9 @@ export async function startTestMatch(c, clubs, { look = 'random', looks = [], ho
     const now = melb(new Date());
     const data = await runEngine(league, home.code, away.code, Math.floor(Math.random() * 2 ** 31), { fixture_id: id, week: TEST_WEEK, date: now.date, time: now.time, stage: null, suspended: [], test: true, script, only_script_goals: !!onlyScriptGoals }, onProgress);
     onStatus('Saving…');
+    // The kit each side was asked to wear ({ CODE: 'home' | 'away' | 'special' }), read back by the match views in place of a locked line-up's pick.
+    const worn = {}; if (kits.home) worn[home.code] = kits.home; if (kits.away) worn[away.code] = kits.away;
+    if (Object.keys(worn).length) data.test_kits = worn;
     const summary = await saveResult(c, { id }, data);
     // Kick off now (a few seconds ago, so the clocks of a computer and the server can't make it start "later"), or with `skipToHighlights`
     // some hours ago, so the match is already finished and the highlights can be watched at once.

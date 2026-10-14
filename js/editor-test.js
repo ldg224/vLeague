@@ -2,6 +2,9 @@
 // touching the season (see startTestMatch in js/simulate.js): pick the two clubs, set the final score, and script events at set minutes
 // (a goal from open play; a penalty scored, saved or missed; a yellow, red or second yellow). It plays out live as soon as it is made.
 
+import { loadKits } from './kits-data.js';
+import { kitSprite, kitName, FIELD_SLOTS } from './kit.js';
+
 const EVENTS = [['goal', 'Goal, from open play'], ['penalty_scored', 'Penalty, scored'], ['penalty_saved', 'Penalty, saved'], ['penalty_missed', 'Penalty, missed'],
   ['yellow', 'Yellow card'], ['red', 'Red card'], ['second_yellow', 'Second yellow (sent off)']];
 
@@ -16,13 +19,39 @@ export async function mountTest(ctx) {
   const active = ctx.clubs.filter(c => c.status === 'active').sort((a, b) => a.name.localeCompare(b.name));
   let looks = [{ key: 'classic', name: 'Classic' }], tests = 0, busy = false, rows = [];
   let msg = '', msgHtml = '';
+  let kitsAll = {}, pick = { home: '', away: '' };   // every club's kits, and the kit chosen for each side ('' = automatic)
+  const pics = {};                                    // little shirt pictures, made once per club kit
+  const image = url => new Promise(res => { if (!url) return res(null); const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
 
   async function load() {
     const c = await ctx.db();
     const [lk, fx] = await Promise.all([c.from('looks').select('key, name').order('name'), c.from('fixtures').select('id').eq('week', 99)]);
     if (lk.data?.length) looks = lk.data;
     tests = (fx.data || []).length;
+    kitsAll = await loadKits();
   }
+
+  // A club's own kits (home, away, special), each with a small picture. Pictures are drawn once, then kept.
+  const kitsOf = code => FIELD_SLOTS.filter(sl => kitsAll[code]?.[sl]);
+  async function dress(code) {
+    for (const sl of kitsOf(code)) {
+      const key = `${code}/${sl}`;
+      if (pics[key]) continue;
+      const k = kitsAll[code][sl];
+      try {
+        const [art, logo] = await Promise.all([image(k.artUrl), image(k.logoUrl)]);
+        pics[key] = kitSprite({ ...k.design, text: { name: '', number: '', colour: '' } }, { art, logo }, 64).toDataURL();
+      } catch { pics[key] = ''; }
+    }
+  }
+  const kitBox = side => {
+    const code = root.querySelector(`#tt-${side}`)?.value ?? '', made = code ? kitsOf(code) : [];
+    if (!code) return '<p class="quiet tt-kit-note">Pick a club to choose its kit. A random club wears what the match picks.</p>';
+    if (!made.length) return '<p class="quiet tt-kit-note">This club has no kits designed yet. It plays in its club colours.</p>';
+    return `<div class="tt-kits" role="radiogroup" aria-label="Kit for the ${side} club">
+      <button type="button" role="radio" data-kit="${side}:" aria-checked="${!pick[side]}"><span class="tt-kit-auto">Auto</span><b>Automatic</b><small>Home kit; away kit if the colours clash</small></button>
+      ${made.map(sl => `<button type="button" role="radio" data-kit="${side}:${sl}" aria-checked="${pick[side] === sl}">${pics[`${code}/${sl}`] ? `<img alt="" src="${esc(pics[`${code}/${sl}`])}" width="30" height="52">` : '<span class="tt-kit-auto"></span>'}<b>${esc(kitName(sl, kitsAll[code][sl].design))}</b></button>`).join('')}</div>`;
+  };
 
   const clubOpts = (sel, other) => `<option value="">Random club</option>${active.map(c => `<option value="${esc(c.code)}"${c.code === sel ? ' selected' : ''}${c.code === other ? ' disabled' : ''}>${esc(c.name)}</option>`).join('')}`;
   const rowHtml = (r, i) => `<div class="tt-row" data-i="${i}">
@@ -39,6 +68,7 @@ export async function mountTest(ctx) {
       <section class="ed-sec"><h2>The match</h2>
         <div class="ed-fields tt-two"><label>Home club<select id="tt-home">${clubOpts(keep.home, keep.away)}</select></label>
           <label>Away club<select id="tt-away">${clubOpts(keep.away, keep.home)}</select></label></div>
+        <div class="ed-fields tt-two"><div class="tt-kitbox"><span class="tt-kit-h">Home kit</span>${kitBox('home')}</div><div class="tt-kitbox"><span class="tt-kit-h">Away kit</span>${kitBox('away')}</div></div>
         <div class="ed-fields tt-two"><label>Final score, home <i>blank = let the match decide</i><input id="tt-gh" type="number" min="0" step="1" value="${esc(keep.gh)}"></label>
           <label>Final score, away <i>blank = let the match decide</i><input id="tt-ga" type="number" min="0" step="1" value="${esc(keep.ga)}"></label></div>
         <label class="tt-check"><input id="tt-exact" type="checkbox"${keep.exact ? ' checked' : ''}> Only the scripted goals count (the score is exactly the goals and scored penalties listed)</label>
@@ -92,7 +122,7 @@ export async function mountTest(ctx) {
     const bar = panel.querySelector('.vid-bar span'), status = panel.querySelector('.fx-sim-status');
     try {
       const [sim, c] = await Promise.all([import('./simulate.js'), ctx.db()]);
-      const r = await sim.startTestMatch(c, ctx.clubs, { look, looks, homeCode, awayCode, script: built.script, onlyScriptGoals: built.exact, skipToHighlights: root.querySelector('#tt-skip').checked,
+      const r = await sim.startTestMatch(c, ctx.clubs, { look, looks, homeCode, awayCode, kits: { home: pick.home || null, away: pick.away || null }, script: built.script, onlyScriptGoals: built.exact, skipToHighlights: root.querySelector('#tt-skip').checked,
         onStatus: t => { status.textContent = t; },
         onProgress: frac => { bar.style.width = `${Math.round(Math.min(1, frac) * 100)}%`; status.textContent = frac < 0.02 ? 'Loading the simulator (the first time takes a moment)…' : `Playing the match… ${Math.round(frac * 100)}%`; } });
       bar.style.width = '100%';
@@ -119,12 +149,13 @@ export async function mountTest(ctx) {
   root.addEventListener('click', e => {
     if (e.target.closest('[data-add]')) { rows.push({ minute: rows.length ? Math.min(90, +rows[rows.length - 1].minute + 10) : 30, team: 'home', kind: 'goal' }); draw(); return; }
     const del = e.target.closest('[data-del]'); if (del) { rows.splice(+del.dataset.del, 1); draw(); return; }
+    const kb = e.target.closest('[data-kit]'); if (kb) { const [side, sl] = kb.dataset.kit.split(':'); pick[side] = sl; draw(); root.querySelector(`[data-kit="${side}:${sl}"]`)?.focus(); return; }
     if (e.target.closest('[data-play]')) play();
     else if (e.target.closest('[data-clean]')) clean();
   });
   root.addEventListener('change', e => {
     const row = e.target.closest('.tt-row'); if (row && e.target.dataset.f) { rows[+row.dataset.i][e.target.dataset.f] = e.target.value; return; }
-    if (e.target.id === 'tt-home' || e.target.id === 'tt-away') draw();
+    if (e.target.id === 'tt-home' || e.target.id === 'tt-away') { pick[e.target.id.slice(3)] = ''; draw(); Promise.all([dress(root.querySelector('#tt-home').value), dress(root.querySelector('#tt-away').value)]).then(draw); }
   });
 
   try { await load(); } catch { /* the page still works */ }

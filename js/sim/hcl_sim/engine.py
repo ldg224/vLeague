@@ -895,9 +895,9 @@ class Match:
         covering = [d for d in self.team_of(o).active() if d is not o and not d.is_gk and victim_team.to_att(d.x, d.y)[0] > vax]
         dogso = vax > 80 and abs(vay - 34) < 16 and not covering
         card = None
-        if o.yellow == 0 and dogso and rng.random() < 0.7:
+        if o.yellow == 0 and dogso and rng.random() < 0.45:
             card = 'red'
-        elif rng.random() < 0.012:
+        elif rng.random() < 0.006:
             card = 'red'
         elif rng.random() < TUNING['yellow_on_foul'] * (0.6 + 0.8 * o.a('aggression')) + (0.12 if behind else 0) + (0.2 if dogso else 0):
             card = 'yellow' if o.yellow == 0 else 'second_yellow'

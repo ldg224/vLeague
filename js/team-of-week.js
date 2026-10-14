@@ -51,7 +51,7 @@ const svg = d => `<svg class="tw-ic" viewBox="0 0 24 24" aria-hidden="true" focu
 const PREV = svg('m15 6-6 6 6 6'), NEXT = svg('m9 6 6 6-6 6'), CARET = svg('m6 9 6 6 6-6'), TICK = svg('m5 12.5 4.5 4.5L19 7.5');
 const STAR = '<svg class="tw-star" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m12 2.8 2.7 5.8 6.3.7-4.7 4.3 1.3 6.2L12 16.6l-5.6 3.2 1.3-6.2L3 9.3l6.3-.7z"/></svg>';
 
-const tone = r => (r >= 7 ? 'hi' : 'lo');   // green from 7.0, orange below (as FotMob)
+const tone = r => (r >= 7 ? 'hi' : r >= 5 ? 'lo' : 'bad');   // green from 7.0, orange from 5.0, red below 5.0 (as FotMob)
 
 function player(p, isStar, ctx) {
   const num = ctx.number?.(p.id);

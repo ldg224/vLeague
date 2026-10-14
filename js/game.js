@@ -130,7 +130,7 @@ async function run() {
   // What each side wears (S-23): their kit's main colour if they have designed one, else the club colour (as before).
   const kitsAll = await loadKits();
   const clubColour = code => clubsRows.find(c => c.code === code)?.colour || teamOf(season, code)?.colour;
-  const kitPicks = () => Object.fromEntries(sheets.filter(s => s.kit).map(s => [s.club, s.kit]));
+  const kitPicks = () => ({ ...data?.test_kits, ...Object.fromEntries(sheets.filter(s => s.kit).map(s => [s.club, s.kit])) });
   let wear = matchKits(kitsAll, fx.home, fx.away, { [fx.home]: clubColour(fx.home), [fx.away]: clubColour(fx.away) }, kitPicks());
   const kitColour = code => (code === fx.home ? wear.home.field?.main : code === fx.away ? wear.away.field?.main : null) || clubColour(code);
   const sameColour = (x, y) => !!x && !!y && String(x).toLowerCase() === String(y).toLowerCase();
@@ -323,7 +323,7 @@ async function run() {
 
   await loadSheets();
   wear = matchKits(kitsAll, fx.home, fx.away, { [fx.home]: clubColour(fx.home), [fx.away]: clubColour(fx.away) }, kitPicks());   // now that the locked sheets (and the kits they picked) are in
-  if (['live', 'ft'].includes(st())) await loadFile();
+  if (['live', 'ft'].includes(st())) { await loadFile(); wear = matchKits(kitsAll, fx.home, fx.away, { [fx.home]: clubColour(fx.home), [fx.away]: clubColour(fx.away) }, kitPicks()); }   // a test match carries the kits it was asked to wear
   draw();
   main.setAttribute('aria-busy', 'false');
   document.title = `${nameOf(home())} v ${nameOf(away())} | vLeague`;
