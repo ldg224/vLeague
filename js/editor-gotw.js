@@ -23,7 +23,8 @@ export async function mountGotw({ db, esc, explain, clubs, season, deadlines }) 
   if (!season) { root.innerHTML = '<p class="quiet">The season hasn’t loaded. Refresh the page.</p>'; return; }
   const client = await db();
   const nameOf = code => clubs.find(c => c.code === code)?.name || code;
-  const list = rounds(season).filter(r => season.fixtures.some(f => f.week === r.week && !f.test && f.result?.file));
+  // The Test matches (week 99, made in Editor > Test) count as a round here, so the whole thing can be tried before a real round has been played.
+  const list = [...rounds(season), { week: 99, label: 'Test matches' }].filter(r => season.fixtures.some(f => f.week === r.week && (r.week === 99 || !f.test) && f.result?.file));
   if (!list.length) { root.innerHTML = '<p class="quiet">No round has been played yet.</p>'; return; }
   let week = Number(sessionStorage.getItem('gw-week')) || list[list.length - 1].week;
   if (!list.some(r => r.week === week)) week = list[list.length - 1].week;
@@ -68,7 +69,7 @@ export async function mountGotw({ db, esc, explain, clubs, season, deadlines }) 
   }
 
   async function find() {
-    const fixtures = season.fixtures.filter(f => f.week === week && !f.test && f.result?.file);
+    const fixtures = season.fixtures.filter(f => f.week === week && (week === 99 || !f.test) && f.result?.file);
     const all = [];
     for (let i = 0; i < fixtures.length; i++) {
       busy = `Reading match ${i + 1} of ${fixtures.length}…`; draw();
