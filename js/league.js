@@ -33,7 +33,7 @@ import { mountDraft } from './draft.js';
 import { accentFor, isHex } from './club-colour.js';
 import { openDraft, phase as draftPhase } from './draft-data.js';
 import { db } from './auth.js';
-import { winChance, percents } from './match-model.js';
+import { loadChanceSheets, chanceOf } from './win-chance.js';
 import { VERSION } from './version.js';
 import { sheen, pinClock } from './silk.js';
 
@@ -146,6 +146,7 @@ if (ctx) {
   };
   // ---- The Fixtures tab (WR-15 to WR-17) ----
   let current = null;   // the tab on screen: [id, picked, sub]
+  let chanceSheets = [];   // line-ups the win chance is worked out from (js/win-chance.js), the same on every page
   let stadiums = null;   // club code -> ground, read once from the clubs table
   let widgetWeek = null;   // the round the Overview widget shows (null = the current one)
   const fixturesCtx = () => {
@@ -154,7 +155,7 @@ if (ctx) {
     // The win chance never sees a result the viewer has hidden, so it can't give one away.
     const seen = hidden.size ? { ...season, fixtures: season.fixtures.map(f => (hidden.has(f.id) ? { ...f, result: null } : f)) } : season, memo = new Map();
     const chance = fx => {
-      if (!memo.has(fx.id)) { try { const [h, d, a] = percents(winChance(seen, fx, { now })); memo.set(fx.id, { h, d, a }); } catch { memo.set(fx.id, null); } }
+      if (!memo.has(fx.id)) { try { const [h, d, a] = chanceOf(seen, fx, { sheets: chanceSheets, now }).pct; memo.set(fx.id, { h, d, a }); } catch { memo.set(fx.id, null); } }
       return memo.get(fx.id);
     };
     return { ...sctx, now, hidden, mine: ctx.club?.code, time: fmtTime, chance, venue: code => stadiums?.[code] || '' };
@@ -253,6 +254,9 @@ if (ctx) {
   // The league's Instagram: read a moment after the page and drawn in without interrupting a tap.
   (async () => { try { const { data } = await (await db()).from('league_social').select('*').eq('id', 1).maybeSingle(); social = data || null; if (preview && params.get('ig')) social = { ...social, instagram_posts: params.get('ig').split(',').map(c => `https://www.instagram.com/p/${c}/`), followers: 1250, posts: 48 }; } catch { /* the card still shows the follow button */ } socialLoaded = true; drawInSoon(); })();
 
+  // The win chance reads the submitted and locked line-ups; they load once, then every minute, and the open tab redraws only if they changed.
+  const refreshChance = async () => { const x = await loadChanceSheets(), same = JSON.stringify(x) === JSON.stringify(chanceSheets); if (!same) { chanceSheets = x; rerender(true); } };
+  refreshChance(); setInterval(() => { if (!document.hidden) refreshChance(); }, 60000);
   clubs().then(rows => { clubRows = new Map(rows.map(c => [c.code, c])); stadiums = Object.fromEntries(rows.filter(c => c.stadium).map(c => [c.code, c.stadium])); drawInSoon(); }).catch(() => {});
   if (demo == null) loadPlayers().then(list => { numbers = new Map(list.filter(p => p.number != null).map(p => [String(p.id), p.number])); drawInSoon(); }).catch(() => {});
 

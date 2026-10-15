@@ -12,7 +12,8 @@ import { paintClub } from './shell.js';
 import { loadSeason, kickoff, status, shownScore, liveSimTime, liveMinute, liveState } from './dashboard-data.js';
 import { crest, teamOf, nameOf, fullNameOf, useClubs, day } from './places.js';
 import { prefs, fmtTime, spoilerHidden, revealScore } from './prefs.js';
-import { winChance, percents, clubSummary } from './match-model.js';
+import { clubSummary, percents } from './match-model.js';
+import { loadChanceSheets, chanceOf } from './win-chance.js';
 import { lookInfo, scoreboard } from './scoreboard.js';
 import { playerCard, MatchPlayer } from './viewer/player.js';
 import { byPlace, pitchHtml } from './lineup-pitch.js';
@@ -50,7 +51,7 @@ try {
 }
 
 async function run() {
-  let data = null, fileError = '', sheets = [], loadingFile = false;
+  let data = null, fileError = '', sheets = [], chanceSheets = [], loadingFile = false;
   let player = null;   // the match viewer
   const home = () => teamOf(season, fx.home), away = () => teamOf(season, fx.away);
   const stadium = () => clubsRows.find(c => c.code === fx.home)?.stadium || '';
@@ -157,7 +158,7 @@ async function run() {
   };
 
   function previewSection() {
-    const w = winChance(season, fx, { sheets, live: spoilerHidden(fx, season) ? null : liveState(fx, season) }), [ph, pd, pa] = percents(w), now = new Date();
+    const { w, pct: [ph, pd, pa] } = chanceOf(season, fx, { sheets: chanceSheets, hidden: spoilerHidden(fx, season) }), now = new Date();
     const sum = c => clubSummary(season, c, now), hs = sum(fx.home), as = sum(fx.away), R = w.factors.ratings;
     const meets = season.fixtures.filter(f => f.result && f.id !== fx.id && ((f.home === fx.home && f.away === fx.away) || (f.home === fx.away && f.away === fx.home)));
     const rec = r => `${r.w}-${r.d}-${r.l}`, rate = v => (v == null ? '–' : v.toFixed(1));
@@ -273,7 +274,7 @@ async function run() {
 
   // ---------------------------------------------------------------- page
   // One scrolling page: the scoreboard, then the viewer, then what happened (stats, line-ups, timeline). Before kick-off, the preview.
-  const liveChance = () => (live() ? chanceSection(winChance(season, fx, { sheets, live: spoilerHidden(fx, season) ? null : liveState(fx, season) })) : '');
+  const liveChance = () => (live() ? chanceSection(chanceOf(season, fx, { sheets: chanceSheets, hidden: spoilerHidden(fx, season) }).w) : '');
   const below = () => `${liveChance()}${statsSection()}${lineupsSection()}${timelineSection()}`;
   let lastHead = '', lastBelow = '', lastPage = '';
   function pageHtml() {
@@ -322,6 +323,7 @@ async function run() {
   }
 
   await loadSheets();
+  chanceSheets = await loadChanceSheets();
   wear = matchKits(kitsAll, fx.home, fx.away, { [fx.home]: clubColour(fx.home), [fx.away]: clubColour(fx.away) }, kitPicks());   // now that the locked sheets (and the kits they picked) are in
   if (['live', 'ft'].includes(st())) { await loadFile(); wear = matchKits(kitsAll, fx.home, fx.away, { [fx.home]: clubColour(fx.home), [fx.away]: clubColour(fx.away) }, kitPicks()); }   // a test match carries the kits it was asked to wear
   draw();

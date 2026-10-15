@@ -21,6 +21,7 @@ import { loadLineups, lineupCard } from './match-lineup.js';
 import { formCard } from './match-form.js';
 import { insights, insightsCard } from './match-insights.js';
 import { chanceCard, venueCard } from './match-side.js';
+import { loadChanceSheets } from './win-chance.js';
 import { h2hCard } from './match-h2h.js';
 import { loadMatchFile, prepareMatchFile } from './match-file.js';
 import { factsView } from './match-facts.js';
@@ -143,7 +144,7 @@ function start() {
     </section>`;
   };
   // The Predicted Lineup (WR-32) loads once, then the Preview tab draws it.
-  let lineups = null, formHidden = [], history = null, h2hHidden = [];
+  let lineups = null, chanceSheets = [], formHidden = [], history = null, h2hHidden = [];
   let file = null, fileState = 'idle';   // the saved match file (Facts, Lineup, Stats), read once the first time a tab needs it
   let h2hFilter = null;   // the Head-to-Head filter pills (Home or This season, one at a time, kept while the page is open)
   // Season numbers for the lineup pills (WR-33), from the results this account may see (spoiler-free keeps hidden ones out). The choice lasts while the page is open.
@@ -166,7 +167,8 @@ function start() {
   };
   const body = s => {
     const tab = tabNow(s.st), team = code => teamOf(season, code);
-    const sheets = lineups ? [lineups.home.sheet, lineups.away.sheet].filter(Boolean).map(r => ({ ...r, week: fx.week })) : [];
+    const own = lineups ? [lineups.home.sheet, lineups.away.sheet].filter(Boolean).map(r => ({ ...r, week: fx.week })) : [];
+    const sheets = chanceSheets.length ? chanceSheets.filter(r => r.week === fx.week) : own;   // the same sheets the fixtures and matches pages use, so the win chance agrees everywhere
     const sctx = { st: s.st, club, team, crest, accent: acc, hide: f => spoilerHidden(f, season, s.now), now: s.now, sheets };
     let main, extra = '';
     if (tab === 'preview') {
@@ -249,6 +251,7 @@ function start() {
   main.innerHTML = '<div class="mh" id="mh"><div id="mh-head"></div><div id="mh-player"></div><div class="mh-cols"><div class="mh-main" id="mh-main"></div><aside class="mh-side" aria-label="About this match"><div id="mh-chance"></div><div id="mh-venue"></div><div id="mh-extra"></div></aside></div></div>';
   draw();
   loadLineups(fx, season, rows, { fake: preview && q.has('fake') }).then(l => { lineups = l; draw(); }).catch(() => { lineups = { home: { sheet: null, locked: false }, away: { sheet: null, locked: false }, kits: {} }; draw(); });
+  loadChanceSheets().then(x => { chanceSheets = x; draw(); });
   loadHistory().then(h => { history = h; draw(); }).catch(() => {});   // the league's past seasons, for the Insights
   addEventListener('hashchange', draw);
   main.addEventListener('click', async e => {

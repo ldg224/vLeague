@@ -10,7 +10,8 @@ import { loadSeason, matchUrl, kickoff, status, shownScore, liveMinute, liveStat
 import { crest, teamOf, nameOf, fullNameOf, useClubs, day } from './places.js';
 import { prefs, fmtTime, spoilerHidden, revealScore } from './prefs.js';
 import { db } from './auth.js';
-import { winChance, percents, clubSummary } from './match-model.js';
+import { clubSummary } from './match-model.js';
+import { loadChanceSheets, chanceOf } from './win-chance.js';
 import { weekBar, wireWeekBar, weekBarArrow } from './week-tabs.js';
 
 const ctx = await enterPlace('matches');
@@ -23,7 +24,7 @@ if (ctx) {
   let onlyLive = false;   // S-19: the "Live now" toggle (only offered while a game is live)
   let season = ctx.season, week = null, sheets = [], hidden = new Set(), seen = season;
   const stadium = code => rows.find(c => c.code === code)?.stadium || '';
-  const loadSheets = async () => { try { const r = await (await db()).from('week_sheets').select('week, club, lineup').range(0, 999); sheets = r.data || []; } catch { /* the model falls back to squads */ } };
+  const loadSheets = async () => { sheets = await loadChanceSheets(); };
 
   const weeksList = () => [...new Set(season.fixtures.map(f => f.week))].filter(w => w != null).sort((a, b) => a - b);
   const chips = form => `<span class="chips">${form.map(o => `<abbr class="res-${o}" title="${{ W: 'Won', D: 'Drew', L: 'Lost' }[o]}">${o}</abbr>`).join('')}</span>`;   // no games: the line above already says so
@@ -44,7 +45,7 @@ if (ctx) {
     // Win chance (before the match, or while it is being played). A finished match shows its result instead.
     let chance = '';
     if (st === 'upcoming' || st === 'awaiting' || st === 'tba' || st === 'live') {
-      const w = winChance(season, fx, { sheets, now, live: hid ? null : liveState(fx, season, now) }), [h, d, a] = percents(w), ht = nameOf(teamOf(season, fx.home)), at = nameOf(teamOf(season, fx.away));
+      const { w, pct: [h, d, a] } = chanceOf(season, fx, { sheets, now, hidden: hid }), ht = nameOf(teamOf(season, fx.home)), at = nameOf(teamOf(season, fx.away));
       chance = `<div class="mc-chance" role="group" aria-label="Win chance: ${esc(ht)} ${h} percent, draw ${d} percent, ${esc(at)} ${a} percent">
         <div class="mc-bar"><i class="bh" style="flex:${h}"></i><i class="bd" style="flex:${d}"></i><i class="ba" style="flex:${a}"></i></div>
         <div class="mc-pcts"><span><b>${h}%</b> ${esc(ht)}</span><span><b>${d}%</b> Draw</span><span><b>${a}%</b> ${esc(at)}</span></div>

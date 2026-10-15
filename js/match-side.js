@@ -6,7 +6,8 @@
 //   venueCard(fx, ctx)          -> "Venue": the ground's name and whose it is. Only facts we really hold: nothing else is shown, and no card without a ground.
 // ctx = { club(code) -> clubs row | undefined, team(code) -> team, crest(team, px) -> html, accent(code) -> '#rrggbb' | '', hide(f) -> true when the viewer
 //         hasn't opened this result, now: Date, sheets: locked team sheets [{ week, club, formation, lineup }] for the line-up basis }
-import { winChance, percents } from './match-model.js';
+import { percents } from './match-model.js';
+import { chanceOf } from './win-chance.js';
 import { status, liveState, liveMinute } from './dashboard-data.js';
 import { esc } from './member.js';
 import { icon } from './icons.js';
@@ -21,7 +22,7 @@ export function chanceCard(season, fx, ctx) {
   // A played match: what the model said before kick-off, and how the real result compared (the score itself is in the header already).
   if (st === 'ft' && !(ctx.live ?? false)) {
     let p;
-    try { p = winChance(season, fx, { sheets: ctx.sheets || [], now: ctx.now }); } catch { return ''; }
+    try { p = chanceOf(season, fx, { sheets: ctx.sheets || [], now: ctx.now }).w; } catch { return ''; }
     const [h, d, a] = percents(p), hid = ctx.hide(fx), r = fx.result;
     const outcome = r.home > r.away ? 'home' : r.home < r.away ? 'away' : 'draw', pct = { home: h, draw: d, away: a }, rank = 1 + Object.values(pct).filter(v => v > pct[outcome]).length;
     const winner = outcome === 'home' ? fx.home : outcome === 'away' ? fx.away : null, wn = winner ? name(winner) : '';
@@ -41,7 +42,7 @@ export function chanceCard(season, fx, ctx) {
 
   const live = st === 'live' ? liveState(fx, season, ctx.now) : null;
   let p;
-  try { p = winChance(season, fx, { sheets: ctx.sheets || [], now: ctx.now, live }); } catch { return ''; }
+  try { p = chanceOf(season, fx, { sheets: ctx.sheets || [], now: ctx.now }).w; } catch { return ''; }
   const [h, d, a] = percents(p), fav = Math.max(h, d, a) === h && h > a ? 'home' : Math.max(h, d, a) === a && a > h ? 'away' : '';
   const tag = live ? `<span class="mw-live">LIVE ${liveMinute(fx, season, ctx.now) ?? ''}′</span>` : '';
   return `<section class="lg-card mw" aria-labelledby="mw-h"><div class="mw-head"><h2 id="mw-h">Who will win?</h2>${tag}</div>
