@@ -6,6 +6,7 @@
 
 import { safeColour, onColour, logoPath } from './ui.js';
 import { kickoff } from './data.js';
+import { buildEffects } from './effects.js';
 
 export const W = 1920, H = 1080, FPS = 30;
 const GOAL_Y1 = 30.34, GOAL_Y2 = 37.66, GOAL_H = 2.44;
@@ -282,7 +283,7 @@ function buildTimeline(d, clips) {
 export class HighlightsRenderer {
   constructor(data, { season, fixture, assets, scale = 1, kitArt = null }) {
     this.kitArt = kitArt;
-    this.d = data; this.fr = new Frames(data); this.season = season; this.fx = fixture; this.A = assets;
+    this.d = data; this.fr = new Frames(data); this.efx = buildEffects(data, this.fr); this.season = season; this.fx = fixture; this.A = assets;
     this.home = data.teams.home; this.away = data.teams.away;
     this.hc = safeColour(this.home.colour); this.ac = safeColour(this.away.colour);
     this.nHome = this.home.lineup.length;
@@ -751,8 +752,9 @@ export class HighlightsRenderer {
         const k = seg01(tSim, fall.until, fall.until + 0.5);
         x = lerp(fall.x, p[0], k); y = lerp(fall.y, p[1], k); lying = tSim < fall.until ? fall : false;
       }
-      return { i, x, y, vx: st.vel[i][0], vy: st.vel[i][1], lying, d: cam.p(x, y)?.[2] ?? 0 };
+      return { i, x, y, vx: st.vel[i][0], vy: st.vel[i][1], lying, dive: this.efx.diveAt(i, tSim), noHead: this.efx.headGone(i, tSim), d: cam.p(x, y)?.[2] ?? 0 };
     });
+    for (const h of this.efx.heads(tSim)) items.push({ head: h, d: cam.p(h.x, h.y)?.[2] ?? 0 });
     const [rx, ry] = this.refAt(plan, tSim);
     const card = plan.cards.find(k => tSim >= k.t && tSim < k.until);
     items.push({ ref: true, x: rx, y: ry, card, d: cam.p(rx, ry)?.[2] ?? 0 });
@@ -765,7 +767,8 @@ export class HighlightsRenderer {
     let ballDrawn = false;
     for (const it of items) {
       if (!ballDrawn && it.d > bd) { this.drawBall(cam, st); ballDrawn = true; }
-      if (it.ref) this.drawReferee(cam, it, tSim);
+      if (it.head) this.drawHead(cam, it.head);
+      else if (it.ref) this.drawReferee(cam, it, tSim);
       else if (it.lying) this.drawLying(cam, it);
       else this.drawPlayer(cam, it, st.holder === it.i);
     }
@@ -845,7 +848,7 @@ export class HighlightsRenderer {
     c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(M[0], M[1] + w * 0.3, Math.abs(H0[0] - F0[0]) / 2 + w, w * 0.6, 0, 0, Math.PI * 2); c.fill();
     c.strokeStyle = col; c.lineWidth = w; c.lineCap = 'round';
     c.beginPath(); c.moveTo(F0[0], F0[1]); c.lineTo(H0[0], H0[1]); c.stroke();
-    c.fillStyle = '#f1c9a5'; c.beginPath(); c.arc(H0[0], H0[1], w * 0.55, 0, Math.PI * 2); c.fill();
+    c.fillStyle = it.noHead ? '#d9a784' : '#f1c9a5'; c.beginPath(); c.arc(H0[0], H0[1], w * (it.noHead ? 0.3 : 0.55), 0, Math.PI * 2); c.fill();
   }
 
   quad(cam, pts, fill) {
@@ -994,18 +997,34 @@ export class HighlightsRenderer {
     const top = head ? head[1] : p[1] - r * 2;
     // shadow
     c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(p[0] + r * 0.4, p[1], r * 1.05, r * 0.42, 0, 0, Math.PI * 2); c.fill();
+    // A diving keeper (S-10): the whole figure tips over from his feet towards the way he goes (as it looks from this camera), off the ground, arms out.
+    const dv = it.dive;
+    let tilt = 0;
+    if (dv && dv.k > 0.01) {
+      const q = cam.p(it.x + dv.dx, it.y + dv.dy), sdx = q ? q[0] - p[0] : dv.dy, dir = Math.abs(sdx) < 0.5 ? (dv.dy >= 0 ? 1 : -1) : Math.sign(sdx);
+      tilt = dir * Math.min(1.45, 0.45 + 0.35 * dv.dist) * dv.k;
+      const lift = cam.p(it.x, it.y, dv.lift);
+      c.save(); c.translate(p[0], lift ? lift[1] : p[1]); c.rotate(tilt); c.translate(-p[0], -p[1]);
+    }
     // body: a short upright capsule, like a player figure seen from the stand
     const bx = p[0], bh = p[1] - top, bw = Math.max(12, bh * 0.42);
+    if (tilt) {   // arms reaching out ahead of the dive, in gloves
+      c.lineCap = 'round'; c.lineWidth = bw * 0.22; c.strokeStyle = col;
+      for (const o of [-0.22, 0.22]) { c.beginPath(); c.moveTo(bx + bw * o, top + bh * 0.38); c.lineTo(bx + bw * o * 0.7, top - bh * 0.3); c.stroke(); }
+      c.fillStyle = '#e8f5e9'; for (const o of [-0.22, 0.22]) { c.beginPath(); c.arc(bx + bw * o * 0.7, top - bh * 0.34, bw * 0.2, 0, Math.PI * 2); c.fill(); }
+    }
     const g = c.createLinearGradient(bx - bw, 0, bx + bw, 0); g.addColorStop(0, col); g.addColorStop(1, shade(col, 0.55));
     if (kit?.sprite) {   // the club's own kit (S-23), clipped to the same body shape
       c.save(); c.beginPath(); c.roundRect(bx - bw / 2, top + bh * 0.28, bw, bh * 0.72, bw / 2); c.clip();
       c.drawImage(kit.sprite, bx - bw / 2, top + bh * 0.28, bw, bh * 0.72); c.restore();
     } else { c.fillStyle = g; c.beginPath(); c.roundRect(bx - bw / 2, top + bh * 0.28, bw, bh * 0.72, bw / 2); c.fill(); }
-    c.fillStyle = '#f1c9a5'; c.beginPath(); c.arc(bx, top + bh * 0.16, bw * 0.34, 0, Math.PI * 2); c.fill();
+    if (it.noHead) { c.fillStyle = '#d9a784'; c.beginPath(); c.ellipse(bx, top + bh * 0.29, bw * 0.2, bw * 0.09, 0, 0, Math.PI * 2); c.fill(); }   // a straight red: the head has come off (S-10)
+    else { c.fillStyle = '#f1c9a5'; c.beginPath(); c.arc(bx, top + bh * 0.16, bw * 0.34, 0, Math.PI * 2); c.fill(); }
     if (holder) { c.lineWidth = 3; c.strokeStyle = '#fff'; c.beginPath(); c.ellipse(p[0], p[1], r * 1.5, r * 0.6, 0, 0, Math.PI * 2); c.stroke(); }
     // shirt number
     const pl = this.d.players[it.i];
     this.number(this.shirtNo(pl.id), bx, top + bh * 0.62, Math.max(9, bw * 0.55), onColour(col));
+    if (tilt) c.restore();
     if (holder) {
       const name = lastName(pl.name).toUpperCase(), fs = 24;
       c.font = `900 ${fs}px ${FONT}`; const w = c.measureText(name).width + 28;
@@ -1013,6 +1032,21 @@ export class HighlightsRenderer {
       c.fillStyle = (side ? this.kitArt?.away?.field?.main : this.kitArt?.home?.field?.main) || (side ? this.ac : this.hc); c.fillRect(bx - w / 2, top - 46, 6, 36);   // the team's colour, not the goalkeeper's own shirt (B-22)
       this.text(name, bx + 3, top - 20, { size: fs, weight: 900, align: 'center' });
     }
+  }
+
+  // A head that has come off (S-10): bouncing and rolling on the grass, a cartoon face with crossed-out eyes turning as it rolls, fading after a few seconds.
+  drawHead(cam, h) {
+    const c = this.c, g = cam.p(h.x, h.y, 0), q = cam.p(h.x, h.y, h.z); if (!g || !q) return;
+    const rad = Math.max(9, g[2] * 0.4);   // a little bigger than the head it came off, so it can be seen from the broadcast camera
+    c.save(); c.globalAlpha = h.alpha;
+    c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(g[0], g[1], rad * (1.1 - Math.min(0.5, (h.z - 0.27) * 0.25)), rad * 0.4, 0, 0, Math.PI * 2); c.fill();
+    c.translate(q[0], q[1]); c.rotate(h.rot);
+    c.fillStyle = '#f1c9a5'; c.beginPath(); c.arc(0, 0, rad, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = 'rgba(0,0,0,0.4)'; c.lineWidth = Math.max(1, rad * 0.08); c.stroke();
+    c.strokeStyle = '#2a1a12'; c.lineWidth = Math.max(1.5, rad * 0.14); c.lineCap = 'round';
+    for (const ex of [-0.38, 0.38]) { const x = ex * rad, y = -0.12 * rad, s = rad * 0.17; c.beginPath(); c.moveTo(x - s, y - s); c.lineTo(x + s, y + s); c.moveTo(x + s, y - s); c.lineTo(x - s, y + s); c.stroke(); }
+    c.beginPath(); c.arc(0, rad * 0.42, rad * 0.22, Math.PI * 1.1, Math.PI * 1.9); c.stroke();   // a wobbly mouth
+    c.restore();
   }
 
   drawBall(cam, st) {
