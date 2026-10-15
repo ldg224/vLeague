@@ -79,11 +79,11 @@ test('Next is each club\'s first match still to play (a live one counts, a postp
 });
 
 test('zones follow the number of clubs: Finals is the top four, Wooden spoon is last', () => {
-  assert.deepEqual(zonesFor(12), { finals: 4, spoon: true });
-  assert.deepEqual(zonesFor(6), { finals: 4, spoon: true });
-  assert.deepEqual(zonesFor(4), { finals: 2, spoon: true });
-  assert.deepEqual(zonesFor(2), { finals: 0, spoon: true });
-  assert.deepEqual(zonesFor(1), { finals: 0, spoon: false });
+  assert.deepEqual(zonesFor(12), { finals: 4, spoon: true, shield: true });
+  assert.deepEqual(zonesFor(6), { finals: 4, spoon: true, shield: true });
+  assert.deepEqual(zonesFor(4), { finals: 2, spoon: true, shield: true });
+  assert.deepEqual(zonesFor(2), { finals: 0, spoon: true, shield: true });
+  assert.deepEqual(zonesFor(1), { finals: 0, spoon: false, shield: false });
 });
 
 test('the card: a row per club, your club marked, stripes and key, filter pills, crest for Next', () => {
@@ -100,9 +100,10 @@ test('the card: a row per club, your club marked, stripes and key, filter pills,
   assert.equal((tableCard(tableRows(games, { now: NOW }), ctx, { filters: false }).match(/data-tfilter/g) || []).length, 0);
 });
 
-test('before any match: every club on zero, no stripes or key, form shows a dash', () => {
+test('before any match: every club on zero, the zones and key already show (Shield first, Finals, Wooden spoon last), form shows a dash', () => {
   const html = tableCard(tableRows(season([fx('AAA', 'BBB', null, null, '2026-10-30')]), { now: NOW }), ctx);
-  assert.equal((html.match(/data-zone/g) || []).length, 0);
+  assert.deepEqual([...html.matchAll(/<tr data-code="\w+"[^>]*data-zone="(\w+)"/g)].map(m => m[1]), ['shield', 'finals', 'spoon']);
+  assert.match(html, /<li data-zone="shield">vLeague Shield<\/li><li data-zone="finals">Finals<\/li><li data-zone="spoon">Wooden spoon<\/li>/);
   assert.match(html, /tb-none/);
   assert.equal((html.match(/<tr[ >]/g) || []).length, 5);
 });

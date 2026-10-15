@@ -22,10 +22,10 @@ const counts = f => !f.test && !f.exhibition && !f.stage;
 const FORM = 5;
 
 // The zones follow the number of clubs: Finals is the top four (fewer in a small league, always leaving room for last place),
-// Wooden spoon is last place. Nothing else.
+// Wooden spoon is last place, and first place is marked as the vLeague Shield. Nothing else.
 export function zonesFor(n) {
   const finals = Math.min(4, Math.max(0, n - 2));
-  return { finals, spoon: n >= 2 };
+  return { finals, spoon: n >= 2, shield: n >= 2 };   // the vLeague Shield is first place (S-26), which is also in the finals
 }
 
 export function tableRows(season, { filter = 'all', now = new Date(), hidden = new Set() } = {}) {
@@ -90,12 +90,12 @@ function chips(form) {
 
 // opts: filter ('all' | 'home' | 'away' | 'last5'), filters (show the pills), hiddenCount (results the viewer hasn't opened yet).
 export function tableCard(rows, ctx, { filter = 'all', filters = true, hiddenCount = 0, title = 'Table' } = {}) {
-  const zones = zonesFor(rows.length), anyPlayed = rows.some(r => r.p > 0);
+  const zones = zonesFor(rows.length);
   const pills = filters
     ? `<nav class="tb-pills sc-toggle" aria-label="Table filter">${FILTERS.map(([key, label]) => `<button type="button" data-tfilter="${key}"${key === filter ? ' aria-pressed="true"' : ' aria-pressed="false"'}>${esc(label)}</button>`).join('')}</nav>`
     : '';
   const body = rows.map(r => {
-    const club = ctx.club(r.team.code), zone = !anyPlayed ? '' : r.rank <= zones.finals ? 'finals' : zones.spoon && r.rank === rows.length ? 'spoon' : '';
+    const club = ctx.club(r.team.code), zone = zones.shield && r.rank === 1 ? 'shield' : r.rank <= zones.finals ? 'finals' : zones.spoon && r.rank === rows.length ? 'spoon' : '';
     const opp = r.next ? ctx.club(r.next.code) : null;
     const next = r.next ? `<span class="tb-next" title="Next: ${r.next.home ? 'vs' : 'at'} ${esc(opp?.name || r.next.code)}">${ctx.crest(r.next.code, 22)}</span>` : '<span class="tb-none">–</span>';
     return `<tr data-code="${esc(r.team.code)}"${ctx.mine === r.team.code ? ' class="is-mine"' : ''}${zone ?` data-zone="${zone}"` : ''}>`
@@ -105,8 +105,8 @@ export function tableCard(rows, ctx, { filter = 'all', filters = true, hiddenCou
       + `<td class="t-pm">${r.gf}-${r.ga}</td><td>${signed(r.gd)}</td><td class="tb-pts">${r.pts}</td>`
       + `<td class="tb-formcell">${chips(r.form)}</td><td class="t-next">${next}</td></tr>`;
   }).join('');
-  const key = anyPlayed
-    ? `<ul class="tb-key">${zones.finals ? '<li data-zone="finals">Finals</li>' : ''}${zones.spoon ? '<li data-zone="spoon">Wooden spoon</li>' : ''}</ul>`
+  const key = rows.length
+    ? `<ul class="tb-key">${zones.shield ? '<li data-zone="shield">vLeague Shield</li>' : ''}${zones.finals ? '<li data-zone="finals">Finals</li>' : ''}${zones.spoon ? '<li data-zone="spoon">Wooden spoon</li>' : ''}</ul>`
     : '';
   const hid = hiddenCount
     ? `<p class="tb-hidden">${hiddenCount} result${hiddenCount === 1 ? '' : 's'} hidden, so the table leaves ${hiddenCount === 1 ? 'it' : 'them'} out. <button type="button" data-reveal-all>Show all</button></p>`
