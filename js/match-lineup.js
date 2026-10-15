@@ -6,9 +6,9 @@
 //                                  stats: Map of player id -> season totals (js/season-stats.js), view: 'rating' | 'contrib' | 'value' }
 // Three views of the same pitch (WR-33), picked with the pills: Average rating (season average match rating as a badge, red under 5.0, orange under 7.0, green from 7.0,
 // blue with a star for the standout), Contributions (goals and assists, nothing for zero) and Value (the editor's value under the shirt).
-// LINEUP LOCK RULE (the user, 11 Oct 2026): a club's XI only appears once its line-up has locked (the week's deadline has passed and the
-// locked sheet, week_sheets, exists). An unlocked club's half stays an empty half-pitch saying so; nothing it has picked is ever shown, and
-// its formation and team value stay out too.
+// LINEUP RULE (changed by the user, 15 Oct 2026): a club's XI appears as soon as it SUBMITS a team sheet (submitted_lineups(), formation, XI,
+// captain and kit only), and from the lock on the locked sheet (week_sheets) is used. A club that has not submitted (or locked) keeps an empty
+// half-pitch saying so; unsubmitted drafts are never shown.
 import { db } from './auth.js';
 import { FORMATIONS, DEFAULT_FORMATION, autoLineup } from './pitch.js';
 import { loadKits, matchKits } from './kits-data.js';
@@ -24,14 +24,15 @@ const filled = row => Boolean(row && row.lineup && Object.keys(row.lineup).lengt
 // fake (localhost preview only): a club with no locked sheet gets the best XI the squad can make, to look at the pitch with both halves full.
 export async function loadLineups(fx, season, rows, { fake = false } = {}) {
   const c = await db(), now = new Date();
-  const [dl, ws, kits] = await Promise.all([
+  const [dl, ws, sub, kits] = await Promise.all([
     c.from('deadlines').select('week, locks_at, locked_at').eq('week', fx.week).maybeSingle().then(r => r.data || null).catch(() => null),
     c.from('week_sheets').select('club, formation, captain, lineup, kit').eq('week', fx.week).in('club', [fx.home, fx.away]).then(r => r.data || []).catch(() => []),
+    c.rpc('submitted_lineups', { p_week: fx.week, p_clubs: [fx.home, fx.away] }).then(r => r.data || []).catch(() => []),   // submitted, not yet locked
     loadKits(),
   ]);
   const open = Boolean(dl && (dl.locked_at || new Date(dl.locks_at) <= now));   // the week's line-ups have locked
   const known = new Set((season.players || []).map(p => String(p.id)));
-  const sheetOf = code => { const r = open ? ws.find(x => x.club === code) : null; return filled(r) && Object.values(r.lineup).some(id => known.has(String(id))) ? r : null; };
+  const sheetOf = code => { const r = open ? ws.find(x => x.club === code) : sub.find(x => x.club === code); return filled(r) && Object.values(r.lineup).some(id => known.has(String(id))) ? r : null; };
   const made = (code, f) => ({ club: code, formation: f, lineup: autoLineup(f, (season.players || []).filter(p => p.team === code)) });
   const sides = season.demoSheets   // the demo (js/demo-match.js): every club has locked its team
     ? { home: season.demoSheets[fx.home] || null, away: season.demoSheets[fx.away] || null }
@@ -120,7 +121,7 @@ export function lineupCard(L, ctx) {
   const best = shown.map(id => [id, avgOf(ctx.stats, id)]).filter(x => x[1] != null).sort((a, b) => b[1] - a[1])[0];
   const star = best ? best[0] : null;
   const pills = `<nav class="ml-pills sc-toggle" aria-label="Lineup view">${VIEWS.map(([k, l]) => `<button type="button" data-lview="${k}" aria-pressed="${k === ctx.view}">${esc(l)}</button>`).join('')}</nav>`;
-  const half = side => (L[side].sheet ? '' : `<div class="ml-empty is-${side}">${icon('lock')}<b>Lineup not submitted yet</b><span>It shows once the club locks its team.</span></div>`);
+  const half = side => (L[side].sheet ? '' : `<div class="ml-empty is-${side}">${icon('lock')}<b>Lineup not submitted yet</b><span>It shows as soon as the club submits its team.</span></div>`);
   return `<section class="lg-card ml" aria-labelledby="ml-h">
     <div class="ml-bar">${bar('home', L, ctx)}<h2 id="ml-h">Predicted lineup</h2>${bar('away', L, ctx)}</div>
     ${pills}
