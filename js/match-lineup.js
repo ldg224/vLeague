@@ -45,6 +45,7 @@ export async function loadLineups(fx, season, rows, { fake = false } = {}) {
     const code = fx[side];
     await Promise.all(['field', 'gk'].map(async role => {
       if (!sides[side]) return;   // nothing to dress for a club whose XI is not shown
+      if (sub.includes(sides[side])) return;   // submitted but not locked yet: the little club-colour circles, shirts come with the lock
       const k = wear[side][role] || (role === 'field' ? { design: startDesign({ code, colour: colours[code], name: code }) } : null);
       if (!k) return;
       try {
