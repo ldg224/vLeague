@@ -349,6 +349,32 @@ PRESS_CHECKS = [
 ]
 
 
+# S-05: Goal of the week (0057). Week 901 voting, closing in an hour; goal "a" is TUR's (the test manager's club), goal "b" is LAU's.
+GOTW = ("insert into public.gotw_rounds (week, status, candidates, finalists, opens_at, closes_at) values "
+        "(901, 'voting', '[{\"key\":\"a\",\"team\":\"TUR\"},{\"key\":\"b\",\"team\":\"LAU\"}]', array['a','b'], now(), now() + interval '1 hour'); ")
+GOTW_ENDED = GOTW.replace("now() + interval '1 hour'", "now() - interval '1 minute'")
+GOTW_CHECKS = [
+    ('manager', 'manager cannot vote for their own clubs goal', GOTW, {'error': 'own club'}, "select public.gotw_vote(901, 'a');"),
+    ('manager', 'manager votes for another clubs goal and can change it', GOTW,
+     """select public.gotw_vote(901, 'b'); select public.gotw_vote(901, 'b');
+        select count(*) = 1 and min(pick) = 'b' as ok from public.gotw_votes where week = 901;"""),
+    ('manager', 'manager cannot vote for a goal that is not on the ballot', GOTW, {'error': 'on the ballot'}, "select public.gotw_vote(901, 'zzz');"),
+    ('noclub', 'a sign-in with no club cannot vote', GOTW, {'error': 'club manager'}, "select public.gotw_vote(901, 'b');"),
+    ('manager', 'the tally is hidden while voting is open', GOTW,
+     "select public.gotw_vote(901, 'b'); select count(*) = 0 as ok from public.gotw_tally(901);"),
+    ('manager', 'a manager reads only their own vote', GOTW + f"insert into public.gotw_votes (week, user_id, club, pick) values (901, '{FAKE_NOCLUB}', 'LAU', 'a');",
+     "select public.gotw_vote(901, 'b'); select count(*) = 1 as ok from public.gotw_votes;"),
+    ('manager', 'a vote after the closing time is refused', GOTW_ENDED, {'error': 'isn’t open'}, "select public.gotw_vote(901, 'b');"),
+    ('manager', 'the tally shows once voting has ended', GOTW_ENDED + f"insert into public.gotw_votes (week, user_id, club, pick) values (901, '{FAKE_NOCLUB}', 'LAU', 'a');",
+     "select count(*) = 1 and min(pick) = 'a' and min(votes) = 1 as ok from public.gotw_tally(901);"),
+    ('manager', 'manager cannot change a round', GOTW, {'error': 'row-level security'}, "insert into public.gotw_rounds (week) values (902);"),
+    ('manager', 'a round still being picked is not visible to managers', GOTW.replace("'voting'", "'picking'"), "select count(*) = 0 as ok from public.gotw_rounds;"),
+    ('anon', 'guest cannot read rounds', GOTW, {'error': 'permission denied'}, "select count(*) from public.gotw_rounds;"),
+    ('office', 'office can open a round and read the tally at any time', GOTW,
+     "select count(*) >= 0 as ok from public.gotw_tally(901);"),
+]
+
+
 def main():
     failed = 0
     for who, desc, body in CHECKS:
@@ -377,7 +403,7 @@ def main():
             ok = bool(rows_of(r) and r[-1].get('ok'))
         failed += not ok
         print(f"{'PASS' if ok else 'FAIL'}  [{who:7}] {desc}" + ('' if ok else f'  -> {r}'))
-    for who, desc, pre, *rest in UNLOCK_CHECKS + ROSTER_CHECKS + PRESS_CHECKS:
+    for who, desc, pre, *rest in UNLOCK_CHECKS + ROSTER_CHECKS + PRESS_CHECKS + GOTW_CHECKS:
         expect, body = (rest[0], rest[1]) if len(rest) == 2 else (None, rest[0])
         r = as_user(who, body, pre)
         if expect:
@@ -400,7 +426,7 @@ def main():
     clean = rows_of(left) and left[0]['n'] == 0
     print('PASS  test accounts cleaned up' if clean else f'FAIL  test accounts left behind: {left}')
     failed += not clean
-    total = len(CHECKS) + len(SETUP_CHECKS) + len(DEADLINE_CHECKS) + len(UNLOCK_CHECKS) + len(ROSTER_CHECKS) + len(SETTINGS_CHECKS) + len(PRESS_CHECKS) + 1
+    total = len(CHECKS) + len(SETUP_CHECKS) + len(DEADLINE_CHECKS) + len(UNLOCK_CHECKS) + len(ROSTER_CHECKS) + len(SETTINGS_CHECKS) + len(PRESS_CHECKS) + len(GOTW_CHECKS) + 1
     print(f'\n{total - failed}/{total} passed')
     sys.exit(1 if failed else 0)
 

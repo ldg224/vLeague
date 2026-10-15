@@ -16,13 +16,14 @@ import { instagramView, mountInstagram } from './editor-instagram.js';
 import { historyView, mountHistory } from './editor-history.js';
 import { testView, mountTest } from './editor-test.js';
 import { draftView, mountDraft } from './editor-draft.js';
+import { gotwView, mountGotw } from './editor-gotw.js';
 import { icon } from './icons.js';
 
 const ctx = await enterPlace('editor', { neutral: true });
 if (!ctx) throw new Error('redirected');   // sent to sign in or to the visitor's own page
 const me = ctx.me, main = ctx.main;
 enableSelectMenus(main);   // every select in the Editor opens the Seasons-toggle style menu
-const TABS = { clubs: 'Clubs', players: 'Players', fixtures: 'Fixtures', news: 'News', draft: 'Draft', history: 'History', test: 'Test' };
+const TABS = { clubs: 'Clubs', players: 'Players', fixtures: 'Fixtures', news: 'News', goal: 'Goal of the week', draft: 'Draft', history: 'History', test: 'Test' };
 // `open` is which club panels and submissions are expanded, kept across redraws so nothing snaps shut after an action.
 let state = { clubs: [], requests: [], accounts: [], phones: null, deadlines: null, locked: [], season: null, digest: true, open: new Set() };
 let firstLoad = true;
@@ -74,7 +75,7 @@ function tab() {
 }
 
 // Panels take the league page's card look (sheen and silk). Whatever a tab draws later (lists load after the tab opens) is picked up here.
-const PANELS = '.ed-invite, .nw-card, .fx-card, .fx-round, .hi-season, .dr-team, .dr-vis, .dr-bigbar, .pl-preview, .ed-club-list, .ed-request';
+const PANELS = '.gw .nw-card, .ed-invite, .nw-card, .fx-card, .fx-round, .hi-season, .dr-team, .dr-vis, .dr-bigbar, .pl-preview, .ed-club-list, .ed-request';
 let paintQueued = false;
 new MutationObserver(() => {
   if (paintQueued) return;
@@ -95,11 +96,12 @@ function render() {
   const y = scrollY;
   main.innerHTML = `<header class="sc-head ed-head"><nav class="sc-toggle ed-tabs" aria-label="Editor">${Object.entries(TABS).map(([k, label]) =>
     `<a href="#${k}" ${k === t ? 'aria-current="true"' : ''}>${label}${k === 'clubs' && pending ? ` <span class="ed-count">${pending}</span>` : ''}</a>`).join('')}</nav></header>
-    <section id="view">${{ clubs: clubsView, players: playersView, fixtures: fixturesView, news: () => newsView() + instagramView(), draft: draftView, history: historyView, test: testView }[t]()}</section>`;
+    <section id="view">${{ clubs: clubsView, players: playersView, fixtures: fixturesView, news: () => newsView() + instagramView(), goal: gotwView, draft: draftView, history: historyView, test: testView }[t]()}</section>`;
   if (y) scrollTo(0, y);   // a redraw after an action keeps your place
   if (t === 'players') mountPlayers({ db, esc, explain, clubs: state.clubs });
   if (t === 'fixtures') mountFixtures({ db, esc, explain, clubs: state.clubs });
   if (t === 'test') mountTest({ db, esc, explain, clubs: state.clubs });
+  if (t === 'goal') mountGotw({ db, esc, explain, clubs: state.clubs, season: state.season, deadlines: state.deadlines });
   if (t === 'draft') mountDraft({ db, esc, explain, clubs: state.clubs });
   if (t === 'history') mountHistory({ db, esc, explain, clubs: state.clubs });
   if (t === 'news') mountInstagram({ db, esc, explain });

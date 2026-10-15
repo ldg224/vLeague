@@ -21,6 +21,7 @@ import { paint, quietly, busy, snapshotInputs, restoreInputs } from './paint.js'
 import { spoilerHidden, revealScore, fmtTime } from './prefs.js';
 import { fixturesView, parseSub, roundWidget, rounds } from './league-fixtures.js';
 import { teamOfWeekCard } from './team-of-week.js';
+import { createGotw } from './gotw-card.js';
 import { loadPlayers } from './players-data.js';
 import { instagramCard } from './instagram.js';
 import { seasonsView, grandFinal } from './seasons-tab.js';
@@ -187,7 +188,7 @@ if (ctx) {
   // Overview is built in pieces (slots), each painted on its own, so a click on one card (a round arrow, a filter, a Team of the week pick) or a live minute
   // redraws only that card, and the Instagram embed is never reloaded by them. A card swapped in keeps its silk look (the same style values).
   const SKELETON = `<div class="lg-cols" data-view="overview"><div class="lg-main"><div class="lg-slot" data-slot="table"></div><div class="lg-slot" data-slot="trio"></div><div class="lg-slot" data-slot="ig"></div></div>`
-    + '<aside class="lg-side"><div class="lg-slot" data-slot="round"></div><div class="lg-slot" data-slot="tw"></div></aside></div>';
+    + '<aside class="lg-side"><div class="lg-slot" data-slot="round"></div><div class="lg-slot" data-slot="gw"></div><div class="lg-slot" data-slot="tw"></div></aside></div>';
   const overviewParts = () => ({ table: tableHtml(), trio: `<div class="lg-trio">${leaders()}</div>`, round: roundWidget(season, fixturesCtx(), widgetWeek), tw: teamHtml() });
   let social = null, socialLoaded = false;   // the league's Instagram row (WR-30), read once
   const igHtml = () => (socialLoaded ? instagramCard(social) : '');
@@ -206,7 +207,10 @@ if (ctx) {
     if (did) { sheen(main); scrollTo(0, y); }
     return did;
   };
-  const showOverview = () => { paint(main, SKELETON); patchOverview(false); };
+  // Goal of the week (S-05): the card owns its slot (js/gotw-card.js), so the playing clip survives the Overview's redraws; it is put back after each fresh Overview.
+  const gotw = season && !demo ? createGotw({ db, season, crest: (c, px) => sctx.crest(c, px), mine: ctx.club?.code, now: tableNow, hiddenFx: () => fixturesCtx().hidden, esc, rounds: rounds(season) }) : null;
+  const attachGotw = async () => { const el = main.querySelector('[data-slot="gw"]'); if (el && gotw) { await gotw.attach(el); if (current?.[0] === 'overview') sheen(main); } };
+  const showOverview = () => { paint(main, SKELETON); patchOverview(false); attachGotw(); };
   const rerender = (timed = false) => (!current ? false : current[0] === 'overview' ? patchOverview(timed) : draw(VIEWS[current[0]](current[2], current[1]), timed));
   // The Seasons tab (WR-24): this season's card from the league page, the others from History (read once, a moment after the page).
   let honours = null, clubRows = null;   // (not `history`: that is the browser's)
@@ -347,6 +351,7 @@ if (ctx) {
     if (!pill && !all) return;
     if (pill) tableFilter = pill.dataset.tfilter;
     if (all) await revealScore(season.fixtures.filter(f => f.result && spoilerHidden(f, season, tableNow())).map(f => f.id)).catch(() => {});
+    if (all) gotw?.draw();
     const el = current?.[0] === 'overview' ? main.querySelector('.lg-table') : null, before = el && pill ? rowTops(el) : null;
     rerender();
     if (pill) {

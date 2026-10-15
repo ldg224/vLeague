@@ -47,7 +47,7 @@ export function playerCard(st) {
 
 // Each side's kits as small front-view sprites for the flat match views (shirt numbers come from the players, so the design's own text is dropped).
 const loadImg = url => new Promise(res => { if (!url) return res(null); const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
-async function buildKitArt(wear) {
+export async function buildKitArt(wear) {
   if (!wear) return null;
   const art = {};
   for (const side of ['home', 'away']) {
