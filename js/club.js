@@ -10,7 +10,7 @@ import { tableRows } from './league-table.js';
 import { rating } from './places.js';
 import { prefsNow, spoilerHidden } from './prefs.js';
 import { kitSprite, cleanDesign, kitName, FIELD_SLOTS } from './kit.js';
-import { renderPitch, FORMATIONS, DEFAULT_FORMATION, TACTICS, STEPS, PRESETS, POS_ORDER, normaliseSheet, reshape, benchOf, autoLineup, fillLineup } from './pitch.js';
+import { renderPitch, FORMATIONS, isFormation, DEFAULT_FORMATION, TACTICS, STEPS, PRESETS, POS_ORDER, normaliseSheet, reshape, benchOf, autoLineup, fillLineup } from './pitch.js';
 
 const PIECES = [['captain', 'Captain'], ['penalties', 'Penalties'], ['freekicks', 'Free kicks'], ['corners', 'Corners']];
 const TZ = 'Australia/Melbourne';
@@ -144,9 +144,11 @@ async function teamSheet(box, { club, squad, userId, season }) {
       <div class="dlg-head"><h2 id="dlg-lineup-t">Starting XI</h2><button type="button" class="dlg-done" data-close>Done</button></div>
       <div class="dlg-body dlg-edit">
         <div class="dlg-pitch">
-          <div class="formations sc-toggle" role="radiogroup" aria-label="Formation">${Object.keys(FORMATIONS).map(f => `<button type="button" role="radio" data-f="${f}">${f}</button>`).join('')}</div>
+          <div class="formations sc-toggle" role="radiogroup" aria-label="Formation" id="fm-pills"></div>
+          <div class="fb" id="fb" hidden></div>
           <div id="pitch" class="ts-pitch"></div>
           <p class="ts-pick" id="pick" hidden></p>
+          <p class="ts-oop" id="oop" hidden></p>
           <div class="ts-clear" id="clear"></div>
         </div>
         <div class="pls-sect" id="pp-players"><div class="sect-head"><h2 id="pls-title">Players</h2><button type="button" class="link-btn pls-close" data-cancel>Cancel</button></div><ul class="pls" id="players"></ul></div>
@@ -230,9 +232,38 @@ async function teamSheet(box, { club, squad, userId, season }) {
   const slotOf = id => Object.keys(sheet.lineup).find(s => sheet.lineup[s] === id) || null;
   const wantOf = slot => FORMATIONS[sheet.formation][slot]?.want;
 
+  // Formations (S-30): the four presets, the club's own shape when it isn't one of them, and a Custom button that opens the builder.
+  // The builder sets how many players stand in each line (they must add up to 10 outfield players) and names the shape, e.g. 4-1-4-1.
+  const LINES = [['d', 'Defenders', 3, 5], ['m', 'Midfielders', 1, 5], ['a', 'Attacking midfielders', 0, 5], ['f', 'Forwards', 1, 3]];
+  let fbOpen = false, fb = { d: 4, m: 3, a: 0, f: 3 };
+  const fbName = () => [fb.d, fb.m, fb.a || null, fb.f].filter(n => n != null).join('-');
+  const fbFrom = name => { const n = name.split('-').map(Number); return n.length === 3 ? { d: n[0], m: n[1], a: 0, f: n[2] } : { d: n[0], m: n[1], a: n[2], f: n[3] }; };
+  function drawFormations() {
+    const presets = Object.keys(FORMATIONS), own = presets.includes(sheet.formation) ? [] : [sheet.formation];
+    $('#fm-pills', box).innerHTML = [...presets, ...own].map(f => `<button type="button" role="radio" data-f="${esc(f)}" aria-checked="${f === sheet.formation}">${esc(f)}</button>`).join('')
+      + `<button type="button" role="radio" aria-checked="false" class="fb-open" data-fb-toggle aria-expanded="${fbOpen}" aria-controls="fb">Custom</button>`;
+    const el = $('#fb', box); el.hidden = !fbOpen;
+    if (!fbOpen) return;
+    const total = fb.d + fb.m + fb.a + fb.f, name = fbName(), ok = total === 10 && isFormation(name);
+    const left = 10 - total;
+    el.innerHTML = `<p class="fb-t">Build your own shape</p>
+      <ul class="fb-rows">${LINES.map(([k, label, lo, hi]) => `<li><span>${label}</span><span class="fb-step"><button type="button" data-fb="${k}-" aria-label="Fewer ${label.toLowerCase()}"${fb[k] <= lo ? ' disabled' : ''}>&minus;</button><b aria-live="polite">${fb[k]}</b><button type="button" data-fb="${k}+" aria-label="More ${label.toLowerCase()}"${fb[k] >= hi || left <= 0 ? ' disabled' : ''}>+</button></span></li>`).join('')}</ul>
+      <p class="fb-sum${ok ? '' : ' bad'}">${ok ? `${esc(name)}: 10 outfield players` : left > 0 ? `${left} more outfield player${left === 1 ? '' : 's'} to place` : `Take off ${-left} outfield player${left === -1 ? '' : 's'}`}</p>
+      <div class="fb-go"><button type="button" class="link-btn" data-fb-cancel>Cancel</button><button type="button" class="btn-primary" data-fb-apply${ok && name !== sheet.formation ? '' : ' disabled'}>${ok ? `Use ${esc(name)}` : 'Use this shape'}</button></div>`;
+  }
+  function setFormation(f) {
+    if (f === sheet.formation) return;
+    sheet.lineup = reshape(sheet.lineup, sheet.formation, f, squad);
+    sheet.formation = f; sel = null;
+    changed(); redraw(`[data-f="${f}"]`);
+  }
+
   function drawPitch() {
     renderPitch($('#pitch', box), { ...sheet, players: squad, editable: true, selected: sel?.slot || null, onSlot });
-    for (const b of box.querySelectorAll('.formations button')) b.setAttribute('aria-checked', b.dataset.f === sheet.formation);
+    drawFormations();
+    const oopN = Object.keys(FORMATIONS[sheet.formation]).filter(sl => sheet.lineup[sl] && byId.get(String(sheet.lineup[sl])) && byId.get(String(sheet.lineup[sl])).position !== wantOf(sl)).length;   // S-25
+    const oop = $('#oop', box); oop.hidden = !oopN;
+    oop.textContent = oopN ? `${oopN} ${oopN === 1 ? 'player is' : 'players are'} out of position. Each loses 0.5 from their match rating.` : '';
     const pick = $('#pick', box), p = sel?.player && byId.get(sel.player);
     pick.hidden = !sel;
     box.querySelector('.ts').classList.toggle('picking', Boolean(sel?.slot));
@@ -533,12 +564,18 @@ async function teamSheet(box, { club, squad, userId, season }) {
     if (t.closest('[data-close]')) { t.closest('dialog').close(); return; }
     const st0 = t.closest('[data-set]');
     if (st0) { sheet[pieceKey] = st0.dataset.set || null; changed(); t.closest('dialog').close(); return; }
-    const f = t.closest('[data-f]'), pl = t.closest('.pl'), pr = t.closest('[data-preset]'), st = t.closest('[data-tac]');
-    if (f) {
-      if (f.dataset.f === sheet.formation) return;
-      sheet.lineup = reshape(sheet.lineup, sheet.formation, f.dataset.f, squad);
-      sheet.formation = f.dataset.f; sel = null;
-      changed(); redraw(`[data-f="${f.dataset.f}"]`);
+    const f = t.closest('[data-f]'), pl = t.closest('.pl'), pr = t.closest('[data-preset]'), st = t.closest('[data-tac]'), fbs = t.closest('[data-fb]');
+    if (t.closest('[data-fb-toggle]')) {
+      fbOpen = !fbOpen; if (fbOpen) fb = fbFrom(sheet.formation);
+      drawFormations(); box.querySelector(fbOpen ? '[data-fb="d+"]:not([disabled]), [data-fb="d-"]' : '[data-fb-toggle]')?.focus();
+    } else if (t.closest('[data-fb-cancel]')) { fbOpen = false; drawFormations(); box.querySelector('[data-fb-toggle]')?.focus(); }
+    else if (t.closest('[data-fb-apply]')) { const name = fbName(); if (isFormation(name)) { fbOpen = false; setFormation(name); } }
+    else if (fbs) {
+      const [k, dir] = [fbs.dataset.fb[0], fbs.dataset.fb[1] === '+' ? 1 : -1], [, , lo, hi] = LINES.find(l => l[0] === k);
+      fb[k] = Math.min(hi, Math.max(lo, fb[k] + dir)); drawFormations();
+      box.querySelector(`[data-fb="${k}${dir > 0 ? '+' : '-'}"]:not([disabled])`)?.focus();
+    } else if (f) {
+      fbOpen = false; setFormation(f.dataset.f);
     } else if (pl) {
       const id = pl.dataset.id, hadSlot = Boolean(sel?.slot);
       if (hadSlot) { place(sel.slot, id); sel = null; changed(); }

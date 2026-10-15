@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 globalThis.location ??= { hostname: '', search: '', href: 'http://localhost/' };   // dashboard-data.js reads location when it loads
-const { tableRows, tableCard, zonesFor } = await import('../js/league-table.js');
+const { tableRows, tableCard, zonesFor, shield } = await import('../js/league-table.js');
 
 const NOW = new Date('2026-10-20T12:00:00');
 const team = (code, name) => ({ code, name, short_name: name.split(' ')[0], colour: '#336699' });
@@ -110,4 +110,19 @@ test('before any match: every club on zero, no stripes or key, form shows a dash
 test('hidden results are announced with a Show all button; no clubs gives an empty state', () => {
   assert.match(tableCard(tableRows(games, { now: NOW }), ctx, { hiddenCount: 2 }), /2 results hidden[\s\S]*data-reveal-all/);
   assert.match(tableCard([], ctx), /No clubs yet/);
+});
+
+test('the vLeague Shield goes to the club top of the table once every league match is played (S-26)', () => {
+  assert.equal(shield(games, { now: NOW }), null);   // two league matches still to come
+  const done = season([
+    fx('AAA', 'BBB', 2, 0, '2026-10-10'), fx('CCC', 'DDD', 1, 1, '2026-10-10'),
+    fx('BBB', 'CCC', 3, 1, '2026-10-12'), fx('DDD', 'AAA', 0, 0, '2026-10-12'),
+    fx('AAA', 'CCC', 1, 0, '2026-10-14'), fx('BBB', 'DDD', 0, 2, '2026-10-14'),
+    fx('AAA', 'BBB', null, null, '2026-10-30', { stage: 'GF' }),   // the final doesn't count, and a finals match still to come doesn't hold it back
+  ]);
+  assert.deepEqual(shield(done, { now: NOW }), { winner: 'AAA' });
+  assert.equal(shield(done, { now: NOW, hidden: new Set(['f' + (n - 2)]) }), null);   // a result the viewer has hidden is never given away
+  assert.equal(shield(season([]), { now: NOW }), null);
+  const postponed = season([fx('AAA', 'BBB', 2, 0, '2026-10-10'), fx('CCC', 'DDD', null, null, '2026-10-12', { postponed: true })]);
+  assert.equal(shield(postponed, { now: NOW }), null);
 });

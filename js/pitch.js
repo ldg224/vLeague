@@ -5,13 +5,15 @@
 //   normaliseSheet(row, squad)    -> a complete team sheet from a team_sheets / week_sheets row (or null)
 //   autoLineup(formation, squad)  -> the best XI for a formation { slot: id }
 //   reshape(lineup, from, to, squad) -> the XI in a new formation: same-named slots keep their player, the rest refilled
+//   customFormation(name)  -> the slots of a custom formation like '4-1-4-1' (S-30), or null; FORMATIONS[name] gives these too, for any valid name
+//   isFormation(name), customNames(), formationFromSlots(slotNames)
 import { esc } from './member.js';
 
 // Rows across a vertical pitch, attacking upwards: % up from the own goal line.
 const ROW = { GK: 9, DEF: 26, MID: 48, AM: 65, FWD: 80 };
 // slot: (engine line, across 0..68, forward nudge, wanted position)
-const s = (line, across, adj, want) => ({ x: across / 68 * 100, y: ROW[line] + adj * 1.4, want });
-export const FORMATIONS = {
+const s = (line, across, adj, want) => ({ x: across / 68 * 100, y: ROW[line] + adj * 1.4, want, line, across });
+const BASE = {
   '4-3-3': {
     GK: s('GK', 34, 0, 'GK'), LB: s('DEF', 7, 0, 'DEF'), LCB: s('DEF', 25, -1, 'DEF'), RCB: s('DEF', 43, -1, 'DEF'), RB: s('DEF', 61, 0, 'DEF'),
     LCM: s('MID', 21, 3, 'MID'), CDM: s('MID', 34, -5, 'MID'), RCM: s('MID', 47, 3, 'MID'),
@@ -33,6 +35,68 @@ export const FORMATIONS = {
     LST: s('FWD', 28, 0, 'FWD'), RST: s('FWD', 40, 0, 'FWD'),
   },
 };
+
+// S-30: custom formations. Any "D-M-F" or "D-M-A-F" that adds up to 10 outfield players is a formation: defenders first, forwards last, one or two
+// midfield rows between (the second is the attacking midfield). Built row by row with the preset slot names, as the engine does
+// (hcl-s3/js/sim/hcl_sim/tactics.py, custom_formation); tests/formations.test.mjs checks the two agree.
+const ACROSS = {
+  DEF: { 1: [34], 2: [25, 43], 3: [20, 34, 48], 4: [7, 25, 43, 61], 5: [7, 20, 34, 48, 61] },
+  MID: { 1: [34], 2: [27, 41], 3: [21, 34, 47], 4: [8, 26, 42, 60], 5: [7, 20, 34, 48, 61] },
+  AM: { 1: [34], 2: [24, 44], 3: [9, 34, 59], 4: [9, 26, 42, 59], 5: [9, 22, 34, 46, 59] },
+  FWD: { 1: [34], 2: [28, 40], 3: [8, 34, 60] },
+};
+const NAMES = {
+  DEF: { 1: ['CB'], 2: ['LCB', 'RCB'], 3: ['LCB', 'CB', 'RCB'], 4: ['LB', 'LCB', 'RCB', 'RB'], 5: ['LB', 'LCB', 'CB', 'RCB', 'RB'] },
+  MID: { 1: ['CDM'], 2: ['LCM', 'RCM'], 3: ['LCM', 'CM', 'RCM'], 4: ['LM', 'LCM', 'RCM', 'RM'], 5: ['LM', 'LCM', 'CM', 'RCM', 'RM'] },
+  MID2: { 1: ['CDM'], 2: ['LDM', 'RDM'], 3: ['LCM', 'CDM', 'RCM'], 4: ['LM', 'LCM', 'RCM', 'RM'], 5: ['LM', 'LCM', 'CM', 'RCM', 'RM'] },
+  AM: { 1: ['CAM'], 2: ['LAM', 'RAM'], 3: ['LAM', 'CAM', 'RAM'], 4: ['LM', 'LAM', 'RAM', 'RM'], 5: ['LM', 'LAM', 'CAM', 'RAM', 'RM'] },
+  AMW: { 3: ['LW', 'CAM', 'RW'] },
+  FWD: { 1: ['ST'], 2: ['LST', 'RST'], 3: ['LW', 'ST', 'RW'] },
+};
+const made = new Map();
+export function customFormation(name) {
+  if (typeof name !== 'string' || !/^\d(-\d){2,3}$/.test(name)) return null;
+  if (made.has(name)) return made.get(name);
+  const rows = name.split('-').map(Number), mids = rows.slice(1, -1);
+  const ok = rows.reduce((a, b) => a + b, 0) === 10 && rows[0] >= 3 && rows[0] <= 5 && rows.at(-1) >= 1 && rows.at(-1) <= 3 && mids.every(n => n >= 1 && n <= 5);
+  let out = null;
+  if (ok) {
+    out = { GK: s('GK', 34, 0, 'GK') };
+    const plan = [['DEF', 'DEF', 'DEF', 'DEF']];
+    if (mids.length === 1) plan.push(['MID', 'MID', 'MID', 'MID']);
+    else plan.push(['MID', 'MID2', 'MID', 'MID'], ['AM', rows.at(-1) !== 3 && mids[1] === 3 ? 'AMW' : 'AM', 'AM', 'MID']);   // three forwards take the winger names
+    plan.push(['FWD', 'FWD', 'FWD', 'FWD']);
+    plan.forEach(([line, names, across, want], i) => NAMES[names][rows[i]].forEach((slot, j) => {
+      out[slot] = s(line, ACROSS[across][rows[i]][j], 0, (slot === 'LW' || slot === 'RW') && line === 'AM' ? 'FWD' : want);
+    }));
+  }
+  made.set(name, out);
+  return out;
+}
+// Every formation name the site accepts: the presets, then the custom ones (a shape of 3 to 5 defenders, 1 to 3 forwards).
+export const FORMATIONS = new Proxy(BASE, {
+  get: (t, k) => (typeof k !== 'string' || k in t ? t[k] : customFormation(k) || undefined),
+  has: (t, k) => k in t || (typeof k === 'string' && customFormation(k) !== null),
+});
+export const isFormation = name => typeof name === 'string' && FORMATIONS[name] != null;
+export function customNames() {
+  const out = [];
+  for (let d = 3; d <= 5; d++) for (let f = 1; f <= 3; f++) {
+    const rest = 10 - d - f;
+    for (let m = 1; m <= Math.min(5, rest); m++) {
+      const one = `${d}-${m}-${f}`;
+      if (m === rest) out.push(one);
+      else if (rest - m <= 5) out.push(`${d}-${m}-${rest - m}-${f}`);
+    }
+  }
+  return out.filter(n => customFormation(n) && !(n in BASE));
+}
+// The formation whose slots are exactly these (a played match only records who stood where).
+export function formationFromSlots(slotNames) {
+  const have = new Set(slotNames);
+  const same = f => { const k = Object.keys(FORMATIONS[f]); return k.length === have.size && k.every(x => have.has(x)); };
+  return Object.keys(BASE).find(same) || customNames().find(same) || null;
+}
 export const DEFAULT_FORMATION = '4-3-3';
 export const POS_ORDER = ['GK', 'DEF', 'MID', 'FWD'];
 

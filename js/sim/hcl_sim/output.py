@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from . import __version__
 from .config import PITCH_LENGTH, PITCH_WIDTH, GOAL_WIDTH, GOAL_HEIGHT, TICK, HALF_SECONDS
+from .tactics import slot_want
 
 
 def _player_stats(m):
@@ -89,6 +90,7 @@ def _player_stats(m):
 # the sum is measured against what a typical player in that position does over a full match. A quiet game is then no better
 # than a busy one, and the league average no longer climbs as the match goes on. Keep js/live-rating.js in step.
 RATING_BASE = 6.6
+OUT_OF_POSITION = 0.5   # S-25: taken off the match rating of a player picked in a slot that wants another position (a defender in midfield...)
 VOLUME_NORM = {'GK': 0.85, 'DEF': 0.50, 'MID': 1.33, 'FWD': 0.78}   # mean volume score at full time, measured on simulated matches
 
 
@@ -119,7 +121,13 @@ def _rating(p, s, m):
     r += v - VOLUME_NORM.get(p.position, VOLUME_NORM['MID'])
     r -= 0.3 * s['yellow'] + 1.5 * s['red'] + 0.8 * s['own_goals']
     r += 0.2 if won else -0.2 if lost else 0.0
-    return round(max(0.0, shape_rating(r)), 1)
+    return round(max(0.0, shape_rating(r) - (OUT_OF_POSITION if out_of_position(p, m) else 0.0)), 1)
+
+
+def out_of_position(p, m):
+    """True when the player was picked in a formation slot that wants a different position (S-25)."""
+    want = slot_want((m.home if p.side == 0 else m.away).formation, getattr(p, 'slot', None))
+    return want is not None and want != p.position
 
 
 def _team_stats(m, pstats):

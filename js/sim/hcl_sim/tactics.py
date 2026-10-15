@@ -5,6 +5,7 @@ toward x=105, y=0 is the team's left touchline. The engine converts to pitch coo
 """
 
 import math
+import re
 
 from .config import PITCH_LENGTH, PITCH_WIDTH, BOX_DEPTH, CENTRE_CIRCLE
 from .geometry import clamp, dist, unit
@@ -38,7 +39,78 @@ FORMATIONS = {
     },
 }
 
+# S-30: custom formations. Any "D-M-F" or "D-M-A-F" that adds up to 10 outfield players is a formation: defenders first, forwards last, one or two
+# midfield rows between (the second is the attacking midfield). Slots are built row by row, with the names the presets use (LB, LCB, CDM, LM, CAM, LW, ST...)
+# so the slot scores, wide-slot runs and the site's line-of-slot checks all work. Keep js/pitch.js (customFormation) in step: tests/formations.test.mjs
+# and js/sim/tests/test_engine.py check both against the same list.
+_ACROSS = {
+    'DEF': {1: [34], 2: [25, 43], 3: [20, 34, 48], 4: [7, 25, 43, 61], 5: [7, 20, 34, 48, 61]},
+    'MID': {1: [34], 2: [27, 41], 3: [21, 34, 47], 4: [8, 26, 42, 60], 5: [7, 20, 34, 48, 61]},
+    'AM': {1: [34], 2: [24, 44], 3: [9, 34, 59], 4: [9, 26, 42, 59], 5: [9, 22, 34, 46, 59]},
+    'FWD': {1: [34], 2: [28, 40], 3: [8, 34, 60]},
+}
+_NAMES = {
+    'DEF': {1: ['CB'], 2: ['LCB', 'RCB'], 3: ['LCB', 'CB', 'RCB'], 4: ['LB', 'LCB', 'RCB', 'RB'], 5: ['LB', 'LCB', 'CB', 'RCB', 'RB']},
+    'MID': {1: ['CDM'], 2: ['LCM', 'RCM'], 3: ['LCM', 'CM', 'RCM'], 4: ['LM', 'LCM', 'RCM', 'RM'], 5: ['LM', 'LCM', 'CM', 'RCM', 'RM']},
+    'MID2': {1: ['CDM'], 2: ['LDM', 'RDM'], 3: ['LCM', 'CDM', 'RCM'], 4: ['LM', 'LCM', 'RCM', 'RM'], 5: ['LM', 'LCM', 'CM', 'RCM', 'RM']},
+    'AM': {1: ['CAM'], 2: ['LAM', 'RAM'], 3: ['LAM', 'CAM', 'RAM'], 4: ['LM', 'LAM', 'RAM', 'RM'], 5: ['LM', 'LAM', 'CAM', 'RAM', 'RM']},
+    'AMW': {3: ['LW', 'CAM', 'RW']},
+    'FWD': {1: ['ST'], 2: ['LST', 'RST'], 3: ['LW', 'ST', 'RW']},
+}
+_CUSTOM = re.compile(r'^\d(-\d){2,3}$')
+
+
+def custom_formation(name):
+    """The slots of a custom formation like '4-1-4-1' ({slot: (line, across, forward nudge, wanted position)}), or None when it isn't a valid one."""
+    if not isinstance(name, str) or not _CUSTOM.match(name):
+        return None
+    rows = [int(x) for x in name.split('-')]
+    if sum(rows) != 10 or not 3 <= rows[0] <= 5 or not 1 <= rows[-1] <= 3 or any(not 1 <= n <= 5 for n in rows[1:-1]):
+        return None
+    mids = rows[1:-1]
+    slots = {'GK': ('GK', 34, 0, 'GK')}
+    plan = [('DEF', 'DEF', 'DEF', 'DEF')]
+    if len(mids) == 1:
+        plan.append(('MID', 'MID', 'MID', 'MID'))
+    else:
+        plan.append(('MID', 'MID2', 'MID', 'MID'))
+        # With three forwards the wingers' names are taken, so the attacking midfield row keeps to the middle names.
+        plan.append(('AM', 'AMW' if rows[-1] != 3 and mids[1] == 3 else 'AM', 'AM', 'MID'))
+    plan.append(('FWD', 'FWD', 'FWD', 'FWD'))
+    for (line, names, across, want), n in zip(plan, rows):
+        for slot, y in zip(_NAMES[names][n], _ACROSS[across][n]):
+            slots[slot] = (line, y, 0, 'FWD' if slot in ('LW', 'RW') and line == 'AM' else want)
+    return slots
+
+
+class _Formations(dict):
+    """The preset formations, plus any valid custom one (looked up by its name, e.g. '4-1-4-1')."""
+
+    def __missing__(self, key):
+        slots = custom_formation(key)
+        if slots is None:
+            raise KeyError(key)
+        return slots
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+    def __contains__(self, key):
+        return dict.__contains__(self, key) or custom_formation(key) is not None
+
+
+FORMATIONS = _Formations(FORMATIONS)
+
 WIDE_SLOTS = {'LB', 'RB', 'LWB', 'RWB'}
+
+
+def slot_want(formation, slot):
+    """The position a formation slot wants ('GK', 'DEF', 'MID' or 'FWD'), or None for an unknown slot."""
+    s = FORMATIONS.get(formation, {}).get(slot)
+    return s[3] if s else None
 
 
 def _slot_score(p, slot):

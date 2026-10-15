@@ -11,7 +11,9 @@
 // The current season comes from the league page (its name and whether it is live); its winner and runner-up show "To be decided" until the grand
 // final has a result. Past seasons come from History (Editor, History: js/history-data.js): for each competition that has an award in that season,
 // the winner (with the competition's trophy picture) and the runner-up, a current club by its crest and name or a past team by its logo (its code on a badge until it has one).
-// opts = { current: { label, live }, final: grandFinal(...) | null, history: loadHistory() | null, club(code) -> { name, short_name }, crest(code, px) -> html,
+// The current season's card also has the vLeague Shield (S-26): the club top of the table once every league match is played (opts.shield, from shield() in
+// js/league-table.js), "To be decided" until then. Past seasons show the Shield only where the office recorded it as a competition in History.
+// opts = { current: { label, live }, final: grandFinal(...) | null, shield: { winner } | null, history: loadHistory() | null, club(code) -> { name, short_name }, crest(code, px) -> html,
 //          trophy(path) -> url, hiddenCount }
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ESC[c]);
@@ -40,7 +42,8 @@ function currentCard(o) {
   return `<section class="lg-card ss is-current" aria-label="${esc(o.current.label)}"><header class="ss-head"><h3>${esc(o.current.label)}</h3>`
     + `${o.current.live && !decided ? '<span class="ss-pill is-live">In progress</span>' : '<span class="ss-pill">Finished</span>'}</header>`
     + `<p class="ss-comp">League</p><dl class="ss-rows">`
-    + row('Winner', decided ? who(f.winner, o) : pending) + row('Runner-up', decided ? who(f.runnerUp, o) : pending) + '</dl></section>';
+    + row('Winner', decided ? who(f.winner, o) : pending) + row('Runner-up', decided ? who(f.runnerUp, o) : pending) + '</dl>'
+    + `<p class="ss-comp">vLeague Shield</p><dl class="ss-rows">${row('Winner', o.shield?.winner ? who(o.shield.winner, o) : pending)}</dl></section>`;
 }
 
 function pastCard(season, h, o) {

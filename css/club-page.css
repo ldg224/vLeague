@@ -227,3 +227,25 @@
 .club-facts dd { margin: 0; color: var(--text-strong); font: 600 var(--fs-m) var(--font); min-width: 0; overflow-wrap: anywhere; }
 .club-facts dd small { color: var(--muted); font: 400 var(--fs-s) var(--font); }
 .lg-sub .club .dots button:focus-visible { outline: none; }
+
+/* Custom formations (S-30): the builder under the formation pills */
+.fb { max-width: 440px; margin: 0 auto 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
+.fb[hidden] { display: none; }
+.fb-t { margin: 0 0 4px; color: var(--text-strong); font: 700 var(--fs-m) var(--font); }
+.fb-rows { margin: 0; padding: 0; list-style: none; }
+.fb-rows li { display: flex; align-items: center; justify-content: space-between; min-height: 48px; border-top: 1px solid var(--line); color: var(--text); font: 400 var(--fs-m) var(--font); }
+.fb-rows li:first-child { border-top: 0; }
+.fb-step { display: inline-flex; align-items: center; gap: 4px; }
+.fb-step b { min-width: 32px; text-align: center; font: 700 var(--fs-m) var(--font); font-variant-numeric: tabular-nums; }
+.fb-step button { width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--text); font: 600 var(--fs-l) var(--font); cursor: pointer; }
+.fb-step button[disabled] { opacity: .35; cursor: default; }
+.fb-sum { margin: 4px 0 0; color: var(--muted); font: 600 var(--fs-s) var(--font); }
+.fb-sum.bad { color: var(--amber-text, var(--amber)); }
+.fb-go { display: flex; align-items: center; justify-content: flex-end; gap: 16px; margin-top: 12px; }
+.fb-go .btn-primary { min-height: 44px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--brand); color: #fff; font: 600 var(--fs-m) var(--font); cursor: pointer; }
+:root:not([data-theme="light"]) .fb-go .btn-primary { color: var(--blue-900, #0d47a1); }
+.fb-go .btn-primary[disabled] { opacity: .4; cursor: default; }
+@media (hover: hover) { .fb-step button:not([disabled]):hover { background: var(--surface-hover); } }
+.fb-step button:focus-visible, .fb-go button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.ts-oop { max-width: 440px; margin: 8px auto 0; color: var(--amber-text, var(--amber)); font: 600 var(--fs-s) var(--font); text-align: center; }
+.ts-oop[hidden] { display: none; }

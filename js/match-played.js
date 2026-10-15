@@ -6,7 +6,7 @@
 // and a red card is the only way off the pitch.
 //   playedCard(fx, L, ctx) -> the card's html. L = loadLineups() result (kits, locked sheets), ctx = match-lineup's ctx plus
 //                             { file?: match file (live only), horizon: match seconds seen so far (Infinity once it is over), live: bool }
-import { FORMATIONS, DEFAULT_FORMATION } from './pitch.js';
+import { FORMATIONS, DEFAULT_FORMATION, formationFromSlots } from './pitch.js';
 import { onColour } from './club-colour.js';
 import { esc } from './member.js';
 import { goalMark, assistMark, cardMark, captainMark } from './match-marks.js';
@@ -39,7 +39,7 @@ function xiOf(fx, ctx, code) {
     ? ctx.file.players.filter(p => p.team === code).map(p => ({ id: p.id, slot: p.slot, name: p.name }))
     : Object.entries(fx.result?.players || {}).filter(([, p]) => p.team === code).map(([id, p]) => ({ id, slot: p.slot, name: p.name }));
   const slots = new Set(src.map(p => p.slot));
-  const formation = Object.keys(FORMATIONS).find(f => { const k = Object.keys(FORMATIONS[f]); return k.length === slots.size && k.every(s => slots.has(s)); }) || DEFAULT_FORMATION;
+  const formation = formationFromSlots(slots) || DEFAULT_FORMATION;
   return { formation, list: src.filter(p => FORMATIONS[formation][p.slot]) };
 }
 

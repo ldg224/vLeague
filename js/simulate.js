@@ -9,10 +9,10 @@
 // Each club plays its week's locked team sheet (formation, tactics, XI, set-piece takers); a club with no locked sheet
 // gets the engine's own picks. Players suspended by a red card are left out. Finals (no week) use the engine's picks.
 
+import { isFormation } from './pitch.js';
 
 const POSITIONS = ['GK', 'DEF', 'MID', 'FWD'];
 const BAN_MATCHES = 1;                       // games a red card or two yellows costs
-const FORMATIONS = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2'];
 const TACTICS = ['tempo', 'pressing', 'width', 'line_height', 'directness'];
 let worker = null, readyPromise = null, jobSeq = 0;
 const pending = new Map();
@@ -95,7 +95,7 @@ async function weekSheets(c, week) {
 function sheetTactics(sheet, available) {
   const ok = id => id != null && available.has(String(id));
   const t = {};
-  if (FORMATIONS.includes(sheet.formation)) t.formation = sheet.formation;
+  if (isFormation(sheet.formation)) t.formation = sheet.formation;
   for (const k of TACTICS) {
     const v = Number(sheet.tactics?.[k]);
     if (sheet.tactics?.[k] != null && Number.isFinite(v)) t[k] = Math.min(1, Math.max(0, v));

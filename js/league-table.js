@@ -3,6 +3,8 @@
 //
 //   tableRows(season, { filter, now, hidden })   rows in table order: { team, rank, p, w, d, l, gf, ga, gd, pts, form, next }
 //   tableCard(rows, ctx, opts)                    the card: title, filter pills, the table, the zone key
+//   shield(season, { now, hidden })               { winner } (club code) once every league match is played: the club top of the table wins the vLeague Shield (S-26); null while any is still to come
+//                                                  or hidden by the viewer (so the winner is never given away)
 //   FILTERS                                       [['all', 'All'], ['home', 'Home'], ['away', 'Away'], ['last5', 'Last 5']]
 //
 // Which results count: league matches that have finished, with no Test, exhibition or finals matches (as ladder() in
@@ -64,6 +66,16 @@ export function tableRows(season, { filter = 'all', now = new Date(), hidden = n
   list.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf || a.team.name.localeCompare(b.team.name));
   list.forEach((r, i) => { r.rank = i + 1; });
   return list;
+}
+
+// The vLeague Shield (S-26): the club top of the table when the league matches (not the finals) are all played.
+export function shield(season, { now = new Date(), hidden = new Set() } = {}) {
+  const league = season.fixtures.filter(counts);
+  if (!league.length || season.teams.filter(t => !t.withdrawn).length < 2) return null;
+  const done = f => f.result && status(f, season, now) === 'ft' && !hidden.has(f.id);
+  if (!league.every(done)) return null;
+  const top = tableRows(season, { now, hidden })[0];
+  return top ? { winner: top.team.code } : null;
 }
 
 // ---------- the card ----------

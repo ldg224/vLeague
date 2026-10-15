@@ -27,15 +27,15 @@ test('the grand final decides the season only once it is played, and a draw leav
   assert.deepEqual(grandFinal([fx('g', 'GF', 'AAA', 'BBB', { home: 2, away: 1 })], { hidden: new Set(['g']) }), { hiddenFinal: true });   // a hidden result is never given away
 });
 
-test('the current season is In progress with both places still to be decided', () => {
+test('the current season is In progress with both places (and the Shield) still to be decided', () => {
   const html = seasonsView(o());
   assert.match(html, /<h3>Season 1<\/h3><span class="ss-pill is-live">In progress<\/span>/);
-  assert.equal((html.match(/To be decided/g) || []).length, 2);
+  assert.equal((html.match(/To be decided/g) || []).length, 3);
   assert.match(html, /<p class="ss-comp">League<\/p>/);   // a neutral label: the old competition's name and trophy stay with the old seasons
 });
 
 test('once the final is decided the current season shows its winner and runner-up with crests', () => {
-  const html = seasonsView(o({ final: { winner: 'AAA', runnerUp: 'BBB' } }));
+  const html = seasonsView(o({ final: { winner: 'AAA', runnerUp: 'BBB' }, shield: { winner: 'BBB' } }));
   assert.match(html, /Finished/); assert.doesNotMatch(html, /To be decided/);
   assert.match(html, /<crest AAA 28><b>AAA FC<\/b>/); assert.match(html, /<crest BBB 28><b>BBB FC<\/b>/);
 });
@@ -91,4 +91,13 @@ test('a past team shows its logo once it has one, and its code on a badge until 
   assert.match(html, /<img class="ss-logo" src="\/t\/pcf\.png"[^>]*><b>Pectorial Flys<\/b>/);
   assert.doesNotMatch(html, /ss-badge/);
   assert.match(seasonsView(o()), /<span class="ss-badge" aria-hidden="true">PCF<\/span>/);
+});
+
+test('the current season has a vLeague Shield row: to be decided, then the club top of the table (S-26)', () => {
+  const before = seasonsView(o());
+  assert.match(before, /<p class="ss-comp">vLeague Shield<\/p>/);
+  assert.equal((before.match(/To be decided/g) || []).length, 3);
+  const after = seasonsView(o({ shield: { winner: 'AAA' } }));
+  assert.equal((after.match(/To be decided/g) || []).length, 2);
+  assert.match(after, /vLeague Shield[\s\S]*<crest AAA 28><b>AAA FC<\/b>/);
 });

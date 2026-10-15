@@ -181,5 +181,60 @@ class Validator(unittest.TestCase):
         self.assertEqual(again['frames']['data'][-1], self.match['frames']['data'][-1])
 
 
+class CustomFormations(unittest.TestCase):
+    """S-30: any valid 'D-M-F' or 'D-M-A-F' shape is a formation; js/pitch.js builds the same slots (tests/formations.test.mjs)."""
+
+    def test_same_slots_as_the_site(self):
+        from hcl_sim.tactics import FORMATIONS, custom_formation
+        with open(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'tests', 'custom-formations.json'), encoding='utf-8') as f:
+            site = json.load(f)
+        mine = {n: {k: [v[0], v[1], v[3]] for k, v in custom_formation(n).items()} for n in site}
+        self.assertEqual(mine, site)
+        for bad in ('9-1', '4-4-3', '2-5-3', '6-3-1', '4-0-6', 'abc', '', None, 442):
+            self.assertNotIn(bad, FORMATIONS)
+            self.assertIsNone(FORMATIONS.get(bad))
+
+    def test_a_custom_formation_plays_a_full_match(self):
+        league = synthetic_league()
+        league['tactics']['AAA'] = {'formation': '4-1-4-1'}
+        league['tactics']['BBB'] = {'formation': '3-4-3'}
+        data = simulate(league, 'AAA', 'BBB', seed=5)
+        self.assertEqual(data['teams']['home']['formation'], '4-1-4-1')
+        self.assertEqual(validate(data)['ok'], True)
+        self.assertEqual(sum(1 for p in data['players'] if p['team'] == 'AAA' and p['slot']), 11)
+
+
+class OutOfPosition(unittest.TestCase):
+    """S-25: a player picked in a slot that wants another position loses OUT_OF_POSITION from the match rating."""
+
+    def test_rating_penalty(self):
+        from hcl_sim import output
+        league = synthetic_league()
+        # AAA in a 4-4-2 with a midfielder at left back and a defender up front; everyone else is where the formation wants them.
+        mid = next(i for i, p in league['players'].items() if p['team'] == 'AAA' and p['position'] == 'MID')
+        dfn = next(i for i, p in league['players'].items() if p['team'] == 'AAA' and p['position'] == 'DEF')
+        league['tactics']['AAA'] = {'formation': '4-4-2', 'lineup': {'LB': mid, 'LST': dfn}}
+        with_penalty = simulate(league, 'AAA', 'BBB', seed=3)
+        self.assertEqual(output.OUT_OF_POSITION, 0.5)
+        output.OUT_OF_POSITION = 0.0   # the same match (same seed) without the rule
+        try:
+            without = simulate(league, 'AAA', 'BBB', seed=3)
+        finally:
+            output.OUT_OF_POSITION = 0.5
+        slots = {p['id']: p for p in with_penalty['players']}
+        self.assertEqual((slots[mid]['slot'], slots[dfn]['slot']), ('LB', 'LST'))
+        rate = lambda d, pid: d['stats']['players'][pid]['rating']
+        from hcl_sim.tactics import slot_want
+        forms = {with_penalty['teams'][side]['code']: with_penalty['teams'][side]['formation'] for side in ('home', 'away')}
+        off = {pid for pid, p in slots.items() if slot_want(forms[p['team']], p['slot']) != p['position']}
+        self.assertTrue({mid, dfn} <= off)   # (the squad has three midfielders for four midfield slots, so a forward is out of position too)
+        for pid in slots:
+            a, b = rate(with_penalty, pid), rate(without, pid)
+            if pid in off:
+                self.assertTrue(a == 0 or 0.35 <= b - a <= 0.65, (pid, a, b))
+            else:
+                self.assertEqual(a, b, pid)
+
+
 if __name__ == '__main__':
     unittest.main()
