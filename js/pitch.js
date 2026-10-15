@@ -98,6 +98,11 @@ export function formationFromSlots(slotNames) {
   return Object.keys(BASE).find(same) || customNames().find(same) || null;
 }
 export const DEFAULT_FORMATION = '4-3-3';
+// S-25: what a player's match rating loses for standing in a slot that wants another position. A step along defence-midfield-attack costs 0.5,
+// a forward in defence (or the other way round) 3, an outfield player in goal 4, a keeper in the outfield 3.5. Keep in step with OUT_OF_POSITION
+// in js/sim/hcl_sim/output.py and with js/live-rating.js.
+const OUT_OF_POSITION = { GK: { DEF: 4, MID: 4, FWD: 4 }, DEF: { GK: 3.5, MID: 0.5, FWD: 3 }, MID: { GK: 3.5, DEF: 0.5, FWD: 0.5 }, FWD: { GK: 4, DEF: 3, MID: 0.5 } };
+export const positionPenalty = (want, have) => (want && have && want !== have ? OUT_OF_POSITION[want]?.[have] ?? 0 : 0);
 export const POS_ORDER = ['GK', 'DEF', 'MID', 'FWD'];
 
 // The engine reads these as team.tactic(name), 0..1 (0.5 = balanced).

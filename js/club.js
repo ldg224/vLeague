@@ -10,7 +10,7 @@ import { tableRows } from './league-table.js';
 import { rating } from './places.js';
 import { prefsNow, spoilerHidden } from './prefs.js';
 import { kitSprite, cleanDesign, kitName, FIELD_SLOTS } from './kit.js';
-import { renderPitch, FORMATIONS, isFormation, DEFAULT_FORMATION, TACTICS, STEPS, PRESETS, POS_ORDER, normaliseSheet, reshape, benchOf, autoLineup, fillLineup } from './pitch.js';
+import { renderPitch, FORMATIONS, isFormation, positionPenalty, DEFAULT_FORMATION, TACTICS, STEPS, PRESETS, POS_ORDER, normaliseSheet, reshape, benchOf, autoLineup, fillLineup } from './pitch.js';
 
 const PIECES = [['captain', 'Captain'], ['penalties', 'Penalties'], ['freekicks', 'Free kicks'], ['corners', 'Corners']];
 const TZ = 'Australia/Melbourne';
@@ -148,7 +148,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
           <div class="fb" id="fb" hidden></div>
           <div id="pitch" class="ts-pitch"></div>
           <p class="ts-pick" id="pick" hidden></p>
-          <p class="ts-oop" id="oop" hidden></p>
+          <div class="ts-oop" id="oop" hidden></div>
           <div class="ts-clear" id="clear"></div>
         </div>
         <div class="pls-sect" id="pp-players"><div class="sect-head"><h2 id="pls-title">Players</h2><button type="button" class="link-btn pls-close" data-cancel>Cancel</button></div><ul class="pls" id="players"></ul></div>
@@ -261,9 +261,11 @@ async function teamSheet(box, { club, squad, userId, season }) {
   function drawPitch() {
     renderPitch($('#pitch', box), { ...sheet, players: squad, editable: true, selected: sel?.slot || null, onSlot });
     drawFormations();
-    const oopN = Object.keys(FORMATIONS[sheet.formation]).filter(sl => sheet.lineup[sl] && byId.get(String(sheet.lineup[sl])) && byId.get(String(sheet.lineup[sl])).position !== wantOf(sl)).length;   // S-25
-    const oop = $('#oop', box); oop.hidden = !oopN;
-    oop.textContent = oopN ? `${oopN} ${oopN === 1 ? 'player is' : 'players are'} out of position. Each loses 0.5 from their match rating.` : '';
+    // S-25: a player out of position loses rating in the match, more the further the slot is from his own (positionPenalty).
+    const off = Object.keys(FORMATIONS[sheet.formation]).map(sl => ({ sl, p: byId.get(String(sheet.lineup[sl])) })).filter(x => x.p && x.p.position !== wantOf(x.sl))
+      .map(x => ({ ...x, pen: positionPenalty(wantOf(x.sl), x.p.position) }));
+    const oop = $('#oop', box); oop.hidden = !off.length;
+    oop.innerHTML = off.length ? `<b>Out of position: lower match rating</b><ul>${off.map(x => `<li><span>${esc(x.p.name)} (${esc(x.p.position)} at ${esc(x.sl)})</span><b>&minus;${x.pen}</b></li>`).join('')}</ul>` : ''
     const pick = $('#pick', box), p = sel?.player && byId.get(sel.player);
     pick.hidden = !sel;
     box.querySelector('.ts').classList.toggle('picking', Boolean(sel?.slot));
@@ -288,7 +290,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
         <span class="pl-pos pos-${esc(p.position)}">${esc(p.position)}</span>
         <span class="pl-name">${esc(p.name)}<small>${p.number != null && p.number !== '' ? `#${esc(p.number)}` : ''}</small></span>
         <span class="pl-rts"><span class="rt rt-${Number(p.offense) || 5}" title="Attack">${esc(p.offense)}</span><span class="rt rt-${Number(p.defense) || 5}" title="Defence">${esc(p.defense)}</span></span>
-        <span class="pl-slot${off ? ' off' : ''}"${off ? ` title="Out of position"` : ''}>${slot ? esc(slot) : 'Bench'}</span></button></li>`;
+        <span class="pl-slot${off ? ' off' : ''}"${off ? ` title="Out of position: match rating drops by ${positionPenalty(wantOf(slot), p.position)}"` : ''}>${slot ? esc(slot) : 'Bench'}</span></button></li>`;
     }).join('');
   }
 

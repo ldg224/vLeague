@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-const { FORMATIONS, customFormation, customNames, isFormation, formationFromSlots, normaliseSheet, reshape } = await import('../js/pitch.js');
+const { FORMATIONS, customFormation, customNames, isFormation, formationFromSlots, normaliseSheet, reshape, positionPenalty } = await import('../js/pitch.js');
 const engine = JSON.parse(readFileSync(new URL('./custom-formations.json', import.meta.url), 'utf8'));
 
 test('every custom formation is built as the engine builds it', () => {
@@ -45,4 +45,12 @@ test('a sheet with a custom formation is kept, and switching to it keeps same-na
   assert.equal(normaliseSheet({ formation: '9-1' }, squad).formation, '4-3-3');
   const back = reshape(sheet.lineup, '4-1-4-1', '4-4-2', squad);
   for (const slot of ['GK', 'LB', 'LCB', 'RCB', 'RB']) assert.equal(back[slot], sheet.lineup[slot], slot);
+});
+
+test('the out-of-position rating cost grows with the distance from the slot (S-25), as in the engine', () => {
+  assert.equal(positionPenalty('DEF', 'DEF'), 0);
+  assert.equal(positionPenalty('MID', 'DEF'), 0.5); assert.equal(positionPenalty('DEF', 'MID'), 0.5); assert.equal(positionPenalty('FWD', 'MID'), 0.5);
+  assert.equal(positionPenalty('DEF', 'FWD'), 3); assert.equal(positionPenalty('FWD', 'DEF'), 3);
+  assert.equal(positionPenalty('GK', 'FWD'), 4); assert.equal(positionPenalty('FWD', 'GK'), 4); assert.equal(positionPenalty('DEF', 'GK'), 3.5);
+  assert.equal(positionPenalty(undefined, 'GK'), 0);
 });

@@ -247,5 +247,10 @@
 .fb-go .btn-primary[disabled] { opacity: .4; cursor: default; }
 @media (hover: hover) { .fb-step button:not([disabled]):hover { background: var(--surface-hover); } }
 .fb-step button:focus-visible, .fb-go button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.ts-oop { max-width: 440px; margin: 8px auto 0; color: var(--amber-text, var(--amber)); font: 600 var(--fs-s) var(--font); text-align: center; }
+.ts-oop { max-width: 440px; margin: 8px auto 0; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-sunk); color: var(--text); font: 400 var(--fs-s) var(--font); }
+.ts-oop > b { color: var(--amber-text, var(--amber)); font-weight: 700; }
+.ts-oop ul { margin: 6px 0 0; padding: 0; list-style: none; }
+.ts-oop li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.ts-oop li:first-child { border-top: 0; }
+.ts-oop li b { color: var(--amber-text, var(--amber)); font-weight: 700; }
 .ts-oop[hidden] { display: none; }

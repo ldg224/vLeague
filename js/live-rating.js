@@ -4,14 +4,13 @@
 //   ratingsAt(data, t) -> { [player id]: rating 0.0..10.0 }
 // The match result in the formula (+0.2 for a win, -0.2 for a loss) is the score at `t`, so it moves as goals go in.
 import { lineOfSlot } from './lineup-pitch.js';
-import { FORMATIONS } from './pitch.js';
+import { FORMATIONS, positionPenalty } from './pitch.js';
 
 const DEF = 1;   // the defensive line (see lineOfSlot)
 
 // Calibration (PLAN T-05), as in output.py: RATING_BASE, VOLUME_NORM and shape_rating. Volume actions are measured against what a typical
 // player in that position has done by this point of the match (norm x fraction of the match played), so the average does not drift up.
 const BASE = 6.6;
-const OUT_OF_POSITION = 0.5;   // S-25, as in output.py: taken off a player picked in a slot that wants another position
 const VOLUME_NORM = { GK: 0.85, DEF: 0.50, MID: 1.33, FWD: 0.78 };
 const shape = r => { if (r <= 6.8) return r; const v = 6.8 + 2.2 * (1 - Math.exp(-(r - 6.8) / 1.5)); return v <= 8.6 ? v : Math.min(10.0, 8.6 + (v - 8.6) * 3.5); };   // B-20: ends at 10.0 (see output.py)
 
@@ -21,7 +20,7 @@ export function ratingsAt(data, t) {
     S[p.id] = { goals: 0, own: 0, assists: 0, key: 0, sot: 0, passes: 0, done: 0, tackles: 0, inter: 0, clear: 0, blocks: 0, takeOns: 0, aerials: 0, miscontrols: 0, fouls: 0, yellow: 0, red: 0, saves: 0, conceded: 0 };
     const formation = (p.team === home.code ? home : data.teams.away).formation;
     info[p.id] = { pos: p.position, side: p.team === home.code ? 0 : 1, team: p.team, gk: p.slot === 'GK', def: lineOfSlot(formation, p.slot) === DEF,
-      off: Boolean(FORMATIONS[formation]?.[p.slot]) && FORMATIONS[formation][p.slot].want !== p.position };
+      off: positionPenalty(FORMATIONS[formation]?.[p.slot]?.want, p.position) };
   }
   const score = [0, 0];
   for (const e of data.events) {
@@ -65,7 +64,7 @@ export function ratingsAt(data, t) {
     r += v - (VOLUME_NORM[i.pos] ?? VOLUME_NORM.MID) * frac;
     r -= 0.3 * s.yellow + 1.5 * s.red + 0.8 * s.own;
     r += mine > theirs ? 0.2 : mine < theirs ? -0.2 : 0;
-    out[id] = Math.round(Math.max(0.0, shape(r) - (i.off ? OUT_OF_POSITION : 0)) * 10) / 10;
+    out[id] = Math.round(Math.max(0.0, shape(r) - i.off) * 10) / 10;
   }
   return out;
 }
