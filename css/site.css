@@ -144,7 +144,7 @@ a { color: var(--brand); }
 @keyframes draw { to { stroke-dashoffset: 0; } }
 @keyframes line { to { stroke-dashoffset: 0; } }
 
-.login-main { position: relative; width: min(360px, 100%); margin: auto; padding: 48px 16px 24px; display: grid; gap: 14px; box-sizing: content-box; }
+.login-main { position: relative; width: min(392px, 100%); margin: auto; padding: 48px 16px 24px; display: grid; gap: 14px; box-sizing: border-box; }
 .mark { margin: 0 0 26px; display: grid; justify-items: center; gap: 14px; font-family: var(--font-display); font-weight: 500; font-size: 2.1rem; line-height: 1; letter-spacing: .03em; }
 .mark img { width: 64px; height: 82px; filter: drop-shadow(0 10px 30px rgba(30,136,229,.45)); }
 .mark b { font-weight: 700; }

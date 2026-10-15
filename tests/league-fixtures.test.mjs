@@ -58,7 +58,7 @@ test('By date: this week in day groups with the right status, and Test matches l
   assert.match(html, /fx-score"><b class="is-lead">2<\/b><i>–<\/i><b>1<\/b>/);
   assert.match(html, /fx-ko">19:30/);
   assert.equal(count(html, /<i><\/i>/g), 1);                          // one red card mark
-  assert.equal(count(html, /href="game\.html\?id=f\d+"/g), 2);        // each row opens its match
+  assert.equal(count(html, /href="match\.html\?id=f\d+"/g), 2);        // each row opens its match
   assert.ok(!html.includes('9<i>'));                                   // the Test match 9-0
 });
 
