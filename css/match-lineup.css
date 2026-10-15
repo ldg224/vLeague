@@ -115,4 +115,4 @@
 .ev-ic .mk { width: 26px; height: 26px; } .ev-ic .mk svg { width: 18px; height: 18px; } .ev-ic .mk-c { width: 9px; height: 13px; }
 .mk.is-red { background: #e5322d; }
 
-.ml-kit { width: 22px; height: 22px; object-fit: contain; flex: none; }
+.ml-kit { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; flex: none; box-shadow: 0 0 0 1px var(--line, rgba(0,0,0,.15)); }

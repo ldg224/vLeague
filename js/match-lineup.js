@@ -50,11 +50,16 @@ export async function loadLineups(fx, season, rows, { fake = false } = {}) {
       try {
         const [art, logo] = await Promise.all([image(k.artUrl), image(k.logoUrl)]);
         pics[side][role] = kitSprite({ ...k.design, text: { name: '', number: '', colour: '' } }, { art, logo }, 96).toDataURL();
+        if (role === 'field') {   // the chest of the shirt, square, for the round badge in the bar
+          const sprite = kitSprite({ ...k.design, text: { name: '', number: '', colour: '' } }, { art, logo }, 96), q = document.createElement('canvas');
+          q.width = q.height = sprite.width; q.getContext('2d').drawImage(sprite, 0, 12, sprite.width, sprite.width, 0, 0, q.width, q.height);
+          pics[side].badgeArt = q.toDataURL();
+        }
       } catch { /* a kit that won't draw falls back to the club-colour disc */ }
     }));
     // the little shirt in the bar shows which kit the club picked; on the pitch, a submitted-but-not-locked XI stays the club-colour circles until the lock
-    const badge = pics[side].field || null, early = sub.includes(sides[side]);
-    pics[side] = early ? { badge } : { ...pics[side], badge };
+    const badge = pics[side].badgeArt || null, early = sub.includes(sides[side]);
+    pics[side] = early ? { badge } : (({ badgeArt, ...rest }) => ({ ...rest, badge }))(pics[side]);
   }));
   return { home: { sheet: sides.home, locked: open }, away: { sheet: sides.away, locked: open }, kits: pics };
 }
