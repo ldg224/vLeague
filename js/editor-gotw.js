@@ -55,11 +55,29 @@ export async function mountGotw({ db, esc, explain, clubs, season, deadlines }) 
     const st = row?.status;
     if (busy) root.innerHTML = head(`<section class="nw-card"><h2>${esc(label(week))}</h2><p class="gw-busy">${esc(busy)}</p></section>`);
     else if (!row || !row.candidates.length) drawStart();
-    else if (st === 'picking') (done().length >= WANT || !nextUp()) ? drawConfirm() : drawSwipe();
+    else if (st === 'picking') {
+      if (nextUp()) drawSwipe();
+      else if (done().length > WANT) narrow();   // pool watched, still too many Yes: show just those again
+      else drawConfirm();
+    }
     else if (st === 'voting') drawVoting();
     else drawResults();
     root.querySelector('#gw-week')?.addEventListener('change', async e => { week = Number(e.target.value); sessionStorage.setItem('gw-week', week); msg = ''; await load(); draw(); });
   }
+
+  // A pass is over with more than WANT Yes: the Yes goals go round again, the No goals drop out of this pass.
+  async function narrow() {
+    row.candidates.forEach(x => { x.d = x.d === 'y' ? null : 'x'; });
+    await save({ candidates: row.candidates, finalists: [] });
+    msg = `You said Yes to more than ${WANT}. Here they are again; keep going until ${WANT} are left.`;
+    draw();
+  }
+  const resetWeek = async () => {
+    if (!confirm(`Throw away ${label(week)}’s goals, choices and any votes, and start again?`)) return;
+    const { error } = await client.from('gotw_rounds').delete().eq('week', week);
+    if (error) { msg = explain(error); draw(); return; }
+    row = null; msg = 'Cleared. Find the best 15 to start again.'; draw();
+  };
 
   function drawStart() {
     root.innerHTML = head(`<section class="nw-card"><h2>${esc(label(week))}</h2>
@@ -86,9 +104,9 @@ export async function mountGotw({ db, esc, explain, clubs, season, deadlines }) 
   const fixLine = m => `${esc(nameOf(m.home))} v ${esc(nameOf(m.away))}, ${m.minute}′`;
 
   function drawSwipe() {
-    const c = row.candidates, seen = c.filter(x => x.d).length, yes = done().length, cur = nextUp();
+    const all = row.candidates, c = all.filter(x => x.d !== 'x'), seen = c.filter(x => x.d).length, yes = done().length, cur = nextUp();
     root.innerHTML = head(`<section class="nw-card gw-swipe">
-      <div class="gw-count"><span><b>${yes} of ${WANT}</b> chosen</span><span>${seen} of ${c.length} watched</span></div>
+      <div class="gw-count"><span><b>${yes} of ${WANT}</b> chosen</span><span>${seen} of ${c.length} watched${c.length < all.length ? ` (of the ${all.length}, ${all.length - c.length} dropped)` : ''}</span></div>
       <div class="gw-stage"><canvas id="gw-cv" width="1280" height="720" aria-label="Goal clip"></canvas><button class="gw-play" id="gw-toggle" type="button" aria-label="Pause">${icon('play')}</button><div class="gw-load" id="gw-load">Loading the clip…</div></div>
       <div class="gw-who"><b>${who(cur)}</b><span>${fixLine(cur)}</span><small>${esc(describe(cur))}, wow score ${cur.wow.toFixed(0)}</small></div>
       <div class="gw-thumbs">
@@ -96,18 +114,22 @@ export async function mountGotw({ db, esc, explain, clubs, season, deadlines }) 
         <button class="gw-undo" id="gw-undo" type="button" ${seen ? '' : 'disabled'}>Back</button>
         <button class="gw-yes" id="gw-yes" type="button">${icon('thumbs-up')}<span>Yes</span></button>
       </div>
+      <div class="nw-actions">${yes === WANT ? `<button class="btn" id="gw-enough" type="button">Go with these ${WANT}</button>` : ''}<button class="btn ghost" id="gw-all" type="button">Show all ${all.length} again</button><button class="btn ghost" id="gw-reset" type="button">Reset this week</button></div>
       <p class="nw-note">Keys: left arrow No, right arrow Yes, space plays or pauses. The clip is the 5 seconds around the goal and loops.</p></section>`);
     stage = new ClipStage(root.querySelector('#gw-cv'), season);
     const tg = root.querySelector('#gw-toggle'), ld = root.querySelector('#gw-load');
     stage.onState = on => { tg.classList.toggle('on', on); tg.setAttribute('aria-label', on ? 'Pause' : 'Play'); tg.innerHTML = icon(on ? 'pause' : 'play'); };
     stage.show(cur).then(() => { ld.hidden = true; }).catch(e => { ld.textContent = `${e.message || 'The clip wouldn’t load.'} You can still say Yes or No from the facts.`; });
     const nxt = c.filter(x => !x.d)[1]; if (nxt) stage.renderer(nxt).catch(() => {});   // warm the next one while this plays
-    const decide = async d => { cur.d = d; await save({ candidates: c }); if (d === 'y' && done().length >= WANT) await save({ finalists: done().map(x => x.key) }); draw(); };
+    const decide = async d => { cur.d = d; await save({ candidates: all }); draw(); };
+    root.querySelector('#gw-enough')?.addEventListener('click', async () => { all.forEach(x => { if (x.d !== 'y') x.d = 'x'; }); await save({ candidates: all, finalists: [] }); draw(); });
+    root.querySelector('#gw-all').addEventListener('click', async () => { all.forEach(x => { x.d = null; }); await save({ candidates: all, finalists: [] }); draw(); });
+    root.querySelector('#gw-reset').addEventListener('click', resetWeek);
     root.querySelector('#gw-yes').addEventListener('click', () => decide('y'));
     root.querySelector('#gw-no').addEventListener('click', () => decide('n'));
     root.querySelector('#gw-undo').addEventListener('click', async () => {
       const last = [...c].reverse().find(x => x.d); if (!last) return;
-      last.d = null; await save({ candidates: c, finalists: [] }); draw();
+      last.d = null; await save({ candidates: all, finalists: [] }); draw();
     });
     tg.addEventListener('click', () => stage.toggle());
     const keys = e => {
@@ -119,19 +141,21 @@ export async function mountGotw({ db, esc, explain, clubs, season, deadlines }) 
 
   // Five Yes (or out of goals): check the five, set the closing time, open the ballot.
   function drawConfirm() {
-    const yes = done(), c = row.candidates, left = c.filter(x => x.d === 'n');
+    const yes = done(), c = row.candidates, left = c.filter(x => x.d === 'n' || x.d === 'x');
     const nextLock = (deadlines || []).map(d => new Date(d.locks_at || d.locked_at)).filter(d => d > new Date()).sort((a, b) => a - b)[0];
     const opts = [...(nextLock ? [['lock', `When the next round locks (${when(nextLock)})`]] : []), ['24', 'In 1 day'], ['48', 'In 2 days'], ['72', 'In 3 days'], ['168', 'In a week']];
     const rows = yes.map((m, i) => `<li><span class="gw-n">${i + 1}</span><span class="gw-t"><b>${who(m)}</b><small>${fixLine(m)}, ${esc(describe(m))}</small></span><button class="gw-x" data-key="${esc(m.key)}" type="button">Take out</button></li>`).join('');
     root.innerHTML = head(`<section class="nw-card"><h2>${esc(label(week))}: your ${yes.length}</h2>
       ${yes.length < WANT ? `<p class="nw-note">You said Yes to ${yes.length} of ${c.length}; you wanted ${WANT}. ${left.length ? 'Look at the No pile again, or go ahead with fewer.' : ''}</p>` : ''}
       <ol class="gw-list">${rows || '<li class="quiet">No goals chosen yet.</li>'}</ol>
-      <div class="nw-actions">${left.length ? '<button class="btn ghost" id="gw-again" type="button">Look at the No pile again</button>' : ''}</div>
+      <div class="nw-actions">${left.length ? '<button class="btn ghost" id="gw-again" type="button">Look at the No pile again</button>' : ''}<button class="btn ghost" id="gw-all" type="button">Show all ${c.length} again</button><button class="btn ghost" id="gw-reset" type="button">Reset this week</button></div>
       ${yes.length >= 2 ? `<label class="nw-field">Voting closes<select id="gw-close">${opts.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select></label>
       <p class="nw-note">Opening voting adds a Vote tab for every signed-in person (managers vote, the tab’s dot flashes until they do). It goes again when voting closes.</p>
       <div class="nw-actions"><button class="btn" id="gw-open" type="button">Open voting for ${yes.length}</button></div>` : ''}</section>`);
     root.querySelectorAll('.gw-x').forEach(b => b.addEventListener('click', async () => { c.find(x => x.key === b.dataset.key).d = 'n'; await save({ candidates: c, finalists: [] }); draw(); }));
     root.querySelector('#gw-again')?.addEventListener('click', async () => { left.forEach(x => { x.d = null; }); await save({ candidates: c, finalists: [] }); draw(); });
+    root.querySelector('#gw-all').addEventListener('click', async () => { c.forEach(x => { x.d = null; }); await save({ candidates: c, finalists: [] }); draw(); });
+    root.querySelector('#gw-reset').addEventListener('click', resetWeek);
     root.querySelector('#gw-open')?.addEventListener('click', async () => {
       const v = root.querySelector('#gw-close').value, now = Date.now();
       const closes = v === 'lock' ? nextLock : new Date(now + Number(v) * 3600e3);
@@ -152,7 +176,8 @@ export async function mountGotw({ db, esc, explain, clubs, season, deadlines }) 
     root.innerHTML = head(`<section class="nw-card"><h2>${esc(label(week))}: voting ${over ? 'has ended' : 'is open'}</h2>
       <p class="nw-note">${over ? 'The time is up.' : `Managers have until ${when(row.closes_at)}.`} ${total} vote${total === 1 ? '' : 's'} so far (only you can see this; managers see the tally when it ends).</p>
       <ol class="gw-list">${finals().map((m, i) => `<li><span class="gw-n">${i + 1}</span><span class="gw-t"><b>${who(m)}</b><small>${fixLine(m)}</small></span><span class="gw-votes">${t.find(r => r.pick === m.key)?.votes || 0}</span></li>`).join('')}</ol>
-      <div class="nw-actions"><button class="btn" id="gw-end" type="button">${over ? 'Show the results' : 'Close voting now'}</button></div></section>`);
+      <div class="nw-actions"><button class="btn" id="gw-end" type="button">${over ? 'Show the results' : 'Close voting now'}</button><button class="btn ghost" id="gw-reset" type="button">Reset this week</button></div></section>`);
+    root.querySelector('#gw-reset').addEventListener('click', resetWeek);
     root.querySelector('#gw-end').addEventListener('click', async () => { await save({ status: 'closed', closes_at: over ? row.closes_at : new Date().toISOString() }); draw(); });
   }
 
@@ -166,7 +191,8 @@ export async function mountGotw({ db, esc, explain, clubs, season, deadlines }) 
       ${total ? '' : '<p class="nw-note">Nobody voted.</p>'}
       <ol class="gw-list">${ranked.map((r, i) => `<li${i === 0 && r.v ? ' class="win"' : ''}><span class="gw-n">${i + 1}</span><span class="gw-t"><b>${who(r.m)}</b><small>${fixLine(r.m)}</small><i class="gw-bar" style="--w:${pct(r.v)}%"></i></span><span class="gw-votes">${r.v}<small>${pct(r.v)}%</small></span></li>`).join('')}</ol>
       <label class="nw-field">Instagram caption <small>copy it for the post</small><textarea id="gw-cap" readonly>${esc(caption)}</textarea></label>
-      <div class="nw-actions"><button class="btn" id="gw-copy" type="button">Copy caption</button><button class="btn" id="gw-clip" type="button" ${ranked[0]?.v ? '' : 'disabled'}>Download the winner’s clip</button><button class="btn ghost" id="gw-reopen" type="button">Open voting again</button></div></section>`);
+      <div class="nw-actions"><button class="btn" id="gw-copy" type="button">Copy caption</button><button class="btn" id="gw-clip" type="button" ${ranked[0]?.v ? '' : 'disabled'}>Download the winner’s clip</button><button class="btn ghost" id="gw-reopen" type="button">Open voting again</button><button class="btn ghost" id="gw-reset" type="button">Reset this week</button></div></section>`);
+    root.querySelector('#gw-reset').addEventListener('click', resetWeek);
     root.querySelector('#gw-copy').addEventListener('click', async e => { try { await navigator.clipboard.writeText(caption); e.target.textContent = 'Copied'; } catch { root.querySelector('#gw-cap').select(); msg = 'Select the text and copy it.'; } });
     root.querySelector('#gw-clip').addEventListener('click', async e => {
       const w = ranked[0]?.m, b = e.currentTarget; if (!w) return;
