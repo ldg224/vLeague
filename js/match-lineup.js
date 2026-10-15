@@ -45,7 +45,6 @@ export async function loadLineups(fx, season, rows, { fake = false } = {}) {
     const code = fx[side];
     await Promise.all(['field', 'gk'].map(async role => {
       if (!sides[side]) return;   // nothing to dress for a club whose XI is not shown
-      if (sub.includes(sides[side])) return;   // submitted but not locked yet: the little club-colour circles, shirts come with the lock
       const k = wear[side][role] || (role === 'field' ? { design: startDesign({ code, colour: colours[code], name: code }) } : null);
       if (!k) return;
       try {
@@ -53,6 +52,9 @@ export async function loadLineups(fx, season, rows, { fake = false } = {}) {
         pics[side][role] = kitSprite({ ...k.design, text: { name: '', number: '', colour: '' } }, { art, logo }, 96).toDataURL();
       } catch { /* a kit that won't draw falls back to the club-colour disc */ }
     }));
+    // the little shirt in the bar shows which kit the club picked; on the pitch, a submitted-but-not-locked XI stays the club-colour circles until the lock
+    const badge = pics[side].field || null, early = sub.includes(sides[side]);
+    pics[side] = early ? { badge } : { ...pics[side], badge };
   }));
   return { home: { sheet: sides.home, locked: open }, away: { sheet: sides.away, locked: open }, kits: pics };
 }
@@ -104,8 +106,9 @@ function bar(side, L, ctx) {
   const value = sheet ? (ctx.season.players || []).filter(p => Object.values(sheet.lineup).map(String).includes(String(p.id))).reduce((s, p) => s + (Number(p.value) || 0), 0) : null;
   const name = ctx.club(code)?.short_name || ctx.club(code)?.name || team.name;
   const chip = value != null ? `<span class="ml-chip" title="Team value">${esc(money(value))}</span>` : '';
+  const shirt = L.kits[side]?.badge ? `<img class="ml-kit" src="${L.kits[side].badge}" alt="" title="${esc(name)} kit: ${esc({ home: 'home', away: 'away', special: 'special' }[sheet.kit] || 'default')}">` : '';
   const form = sheet ? `<span class="ml-form">${esc(FORMATIONS[sheet.formation] ? sheet.formation : DEFAULT_FORMATION)}</span>` : '';
-  return `<div class="ml-side is-${side}">${side === 'home' ? `${chip}${ctx.crest(team, 32)}<b>${esc(name)}</b>${form}` : `${form}<b>${esc(name)}</b>${ctx.crest(team, 32)}${chip}`}</div>`;
+  return `<div class="ml-side is-${side}">${side === 'home' ? `${chip}${ctx.crest(team, 32)}<b>${esc(name)}</b>${shirt}${form}` : `${form}${shirt}<b>${esc(name)}</b>${ctx.crest(team, 32)}${chip}`}</div>`;
 }
 
 export function coach(side, ctx) {
