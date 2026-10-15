@@ -214,7 +214,7 @@
 /* One column (under 992 px): the page's order of importance, not the columns': this round, the table, the leaders, Team of the week, Instagram. */
 @media (max-width: 991px) {
   .lg-cols > .lg-main, .lg-cols > .lg-side { display: contents; }
-  [data-slot="round"] > * { order: 1; } [data-slot="table"] > * { order: 2; } [data-slot="trio"] > * { order: 3; } [data-slot="tw"] > * { order: 4; } [data-slot="ig"] > * { order: 5; }
+  [data-slot="gw"] > * { order: 0; } [data-slot="round"] > * { order: 1; } [data-slot="table"] > * { order: 2; } [data-slot="trio"] > * { order: 3; } [data-slot="tw"] > * { order: 4; } [data-slot="ig"] > * { order: 5; }
 }
 /* Two columns: both end level at the bottom: the last card of each column (Instagram on the left, Team of the week on the right) takes the spare height. */
 @media (min-width: 992px) {
@@ -369,6 +369,13 @@
 }
 @keyframes lg-due-ping { from { transform: scale(1); opacity: .7; } to { transform: scale(2.4); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .lg-due::after { animation: none; } }
+
+/* S-05: the flashing dot on the Vote tab while this manager has not voted (js/frame.js, js/gotw-html.js): the Club button's pulse, inline in the tab row and on the icon in the phone bar */
+.lg-need { position: relative; display: inline-block; flex: none; width: 9px; height: 9px; margin-left: 6px; border-radius: 50%; background: var(--amber); vertical-align: 2px; }
+.lg-need::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--amber); animation: lg-due-ping 1.6s ease-out infinite; }
+.lg-bi .lg-need { position: absolute; top: 2px; right: 10px; margin: 0; box-shadow: 0 0 0 2px var(--surface); }
+@media (prefers-reduced-motion: reduce) { .lg-need::after { animation: none; } }
+.reduce-motion .lg-need::after { animation: none; }
 
 /* The "Line-ups due shortly" pop-up (js/lineup-due.js): a darkened page, and a card of moving red and orange silk in the display type. */
 .lu-pop {

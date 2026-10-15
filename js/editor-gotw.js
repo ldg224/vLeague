@@ -127,6 +127,7 @@ export async function mountGotw({ db, esc, explain, clubs, season, deadlines }) 
       <ol class="gw-list">${rows || '<li class="quiet">No goals chosen yet.</li>'}</ol>
       <div class="nw-actions">${left.length ? '<button class="btn ghost" id="gw-again" type="button">Look at the No pile again</button>' : ''}</div>
       ${yes.length >= 2 ? `<label class="nw-field">Voting closes<select id="gw-close">${opts.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select></label>
+      <p class="nw-note">Opening voting adds a Vote tab for every signed-in person (managers vote, the tab’s dot flashes until they do). It goes again when voting closes.</p>
       <div class="nw-actions"><button class="btn" id="gw-open" type="button">Open voting for ${yes.length}</button></div>` : ''}</section>`);
     root.querySelectorAll('.gw-x').forEach(b => b.addEventListener('click', async () => { c.find(x => x.key === b.dataset.key).d = 'n'; await save({ candidates: c, finalists: [] }); draw(); }));
     root.querySelector('#gw-again')?.addEventListener('click', async () => { left.forEach(x => { x.d = null; }); await save({ candidates: c, finalists: [] }); draw(); });

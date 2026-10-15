@@ -1,16 +1,16 @@
 /* Goal of the week (S-05): the Editor panel (.gw*, js/editor-gotw.js) and the Overview card (.gwc*, js/gotw-card.js). Tokens only; no shadows on cards. */
 
 /* ---------- the screen both use: 16:9, a play / pause button in the corner, a message over it until a clip is ready ---------- */
-.gw-stage, .gwc-stagebox { position: relative; aspect-ratio: 16 / 9; width: 100%; overflow: hidden; border-radius: var(--r-sm); background: #0b0f14; }
-.gw-stage canvas, .gwc-stagebox canvas { display: block; width: 100%; height: 100%; }
-.gw-play, .gwc-play {
+.gw-stage, .gv-box { position: relative; aspect-ratio: 16 / 9; width: 100%; overflow: hidden; border-radius: var(--r-sm); background: #0b0f14; }
+.gw-stage canvas, .gv-box canvas { display: block; width: 100%; height: 100%; }
+.gw-play, .gv-play {
   position: absolute; right: 10px; bottom: 10px; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%;
   background: rgba(0, 0, 0, .62); color: #fff; cursor: pointer;
 }
-.gw-play svg, .gwc-play svg { width: 22px; height: 22px; }
-.gw-play:focus-visible, .gwc-play:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.gw-load, .gwc-msg { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; text-align: center; color: #d6dde6; font-size: var(--fs-m); background: rgba(8, 12, 18, .72); }
-.gw-load[hidden], .gwc-msg[hidden] { display: none; }
+.gw-play svg, .gv-play svg { width: 22px; height: 22px; }
+.gw-play:focus-visible, .gv-play:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.gw-load, .gv-msg { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; text-align: center; color: #d6dde6; font-size: var(--fs-m); background: rgba(8, 12, 18, .72); }
+.gw-load[hidden], .gv-msg[hidden] { display: none; }
 
 /* ---------- Editor ---------- */
 .gw { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; max-width: 760px; }
@@ -51,31 +51,73 @@
 .gw-bar::after, .gwc-bar::after { content: ''; position: absolute; inset: 0 auto 0 0; width: var(--w, 0%); border-radius: 2px; background: var(--brand); }
 #gw-cap { min-height: 11rem; }
 
-/* ---------- Overview card ---------- */
-.gwc .lg-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+/* ---------- Overview card: a teaser while voting is open, the result after ---------- */
+.gwc .lg-card-head { margin-bottom: 8px; }
 .gwc-round { color: var(--muted); font-size: var(--fs-s); }
-.gwc-screen { margin-bottom: 8px; }
-.gwc-stagebox.playing .gwc-msg { display: none; }
+.gwc-line { margin: 0 0 10px; color: var(--text-soft); font-size: var(--fs-m); }
 .gwc-list { list-style: none; margin: 0; padding: 0; }
-.gwc-row { display: flex; align-items: center; gap: 8px; min-height: 56px; border-top: 1px solid var(--line); }
+.gwc-row { display: flex; align-items: center; gap: 12px; min-height: 60px; border-top: 1px solid var(--line); }
 .gwc-row:first-child { border-top: 0; }
-.gwc-row.now { background: color-mix(in oklab, var(--brand) 8%, transparent); }
-.gwc-n { flex: none; width: 20px; text-align: center; font: 900 var(--fs-s)/1 var(--font-display); color: var(--muted); }
-.gwc-watch { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; min-height: 56px; padding: 4px 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; font: inherit; }
-.gwc-watch:disabled { cursor: default; opacity: .6; }
-.gwc-watch:focus-visible, .gwc-vote:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .gwc-t { display: grid; gap: 2px; min-width: 0; flex: 1; }
 .gwc-t b { font-size: var(--fs-m); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gwc-t small { font-size: var(--fs-s); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gwc-vote { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--text); cursor: pointer; font: 600 var(--fs-s) var(--font); }
-.gwc-vote svg { width: 18px; height: 18px; }
-.gwc-vote.on { border-color: var(--brand); background: color-mix(in oklab, var(--brand) 12%, transparent); color: var(--brand); }
-.gwc-vote:disabled { opacity: .5; }
-.gwc-tag { flex: none; padding: 0 10px; font-size: var(--fs-xs); color: var(--muted); }
 .gwc-score { flex: none; display: grid; justify-items: end; min-width: 44px; font: 900 var(--fs-l)/1 var(--font-display); font-variant-numeric: tabular-nums; }
 .gwc-score small { font: 400 var(--fs-xs) var(--font); color: var(--muted); }
-.gwc-row.win .gwc-score, .gwc-row.win .gwc-n { color: var(--brand); }
+.gwc-row.win .gwc-score b { color: var(--brand); }
 .gwc-note { margin: 8px 0 0; font-size: var(--fs-s); color: var(--muted); }
-@media (hover: hover) { .gwc-watch:not(:disabled):hover .gwc-t b { text-decoration: underline; } .gwc-vote:not(.on):hover { background: var(--surface-hover); } }
-@media (max-width: 420px) { .gwc-vote span { display: none; } .gwc-vote { padding: 0 12px; } }
-@media (prefers-reduced-motion: reduce) { .gw-yes, .gw-no { transition: none; } }
+
+/* ---------- where you stand: a flashing dot until you have voted, a tick after ---------- */
+.gv-status { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 12px; padding: 10px 12px; border-radius: var(--r-sm); background: var(--surface-sunk); color: var(--text-soft); font-size: var(--fs-m); line-height: 1.4; }
+.gv-status > svg { flex: none; width: 18px; height: 18px; margin-top: 1px; color: var(--muted); }
+.gv-status > span { min-width: 0; }
+.gv-status b { font-weight: 700; color: var(--text-strong); }
+.gv-status.due { background: color-mix(in oklab, var(--amber) 15%, var(--surface-sunk)); color: var(--text); }
+.gv-status.due .lg-need { margin: 5px 0 0; }
+.gv-status.done > svg { color: var(--brand); stroke-width: 2.6; }
+.gv-left { display: inline-block; margin-left: 2px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gv-left::before { content: '· '; }
+
+/* ---------- the Vote tab ---------- */
+.gv-stage { position: relative; isolation: isolate; overflow: hidden; }
+.gv-hollow {
+  position: absolute; z-index: -1; bottom: 10px; right: 14px; max-width: 62%; overflow: hidden; white-space: nowrap; pointer-events: none; text-align: right;
+  font: 900 5.5rem/1 var(--font-display); font-stretch: 125%; text-transform: uppercase; letter-spacing: -.01em;
+  color: transparent; -webkit-text-stroke: 1.5px var(--gd, var(--line)); opacity: .3;
+  -webkit-mask-image: linear-gradient(270deg, #000 35%, transparent 100%); mask-image: linear-gradient(270deg, #000 35%, transparent 100%);
+}
+:root[data-theme="light"] .gv-hollow { -webkit-text-stroke-color: var(--gl, var(--line)); opacity: .4; }
+.gv-box .gv-msg { text-align: center; }
+.gv-now { display: grid; gap: 2px; padding-top: 12px; min-height: 4.4em; }
+.gv-now b { font-size: var(--fs-l); font-weight: 700; color: var(--text-strong); }
+.gv-now span { color: var(--text-soft); font-size: var(--fs-m); }
+.gv-now small { color: var(--muted); font-size: var(--fs-s); }
+.gv-list { list-style: none; margin: 0; padding: 0; }
+.gv-row { display: flex; align-items: center; gap: 8px; min-height: 64px; border-top: 1px solid var(--line); }
+.gv-row:first-child { border-top: 0; }
+.gv-row.now { background: color-mix(in oklab, var(--brand) 8%, transparent); }
+.gv-watch { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; min-height: 64px; padding: 4px 0 4px 4px; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; font: inherit; }
+.gv-watch:disabled { cursor: default; opacity: .6; }
+.gv-t { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.gv-t b { font-size: var(--fs-m); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gv-t small { font-size: var(--fs-s); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gv-vote { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; min-width: 88px; margin-right: 4px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--text); cursor: pointer; font: 600 var(--fs-m) var(--font); }
+.gv-vote svg { width: 18px; height: 18px; }
+.gv-vote.on { border-color: transparent; background: var(--brand-grad); color: #fff; }
+.gv-vote.on svg { animation: gv-pop .28s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes gv-pop { from { transform: scale(.3); } }
+.gv-vote:disabled { opacity: .55; }
+.gv-tag { flex: none; padding: 0 12px; color: var(--muted); font-size: var(--fs-s); }
+.gv-note { margin-top: 12px; }
+.gv-watch:focus-visible, .gv-vote:focus-visible, .gv-play:focus-visible, .gv-go:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+@media (hover: hover) { .gv-watch:not(:disabled):hover .gv-t b { text-decoration: underline; } .gv-vote:not(.on):hover { background: var(--surface-hover); } }
+@media (max-width: 767px) { .gv-hollow { font-size: 3.25rem; bottom: 8px; right: 10px; opacity: .14; } :root[data-theme="light"] .gv-hollow { opacity: .22; } .gv-vote { min-width: 84px; } }
+
+/* the Overview teaser's button to the Vote tab */
+.gv-go {
+  display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; margin-top: 12px; border: 1px solid var(--line); border-radius: 999px;
+  color: var(--text); font: 700 var(--fs-m) var(--font); text-decoration: none;
+}
+.gv-go svg { width: 18px; height: 18px; }
+.gv-go.due { border-color: transparent; background: var(--brand-grad); color: #fff; }
+@media (hover: hover) { .gv-go:not(.due):hover { background: var(--surface-hover); } .gv-go.due:hover { filter: brightness(1.08); } }
+@media (prefers-reduced-motion: reduce) { .gw-yes, .gw-no { transition: none; } .gv-vote.on svg { animation: none; } }

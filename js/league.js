@@ -189,7 +189,7 @@ if (ctx) {
   // redraws only that card, and the Instagram embed is never reloaded by them. A card swapped in keeps its silk look (the same style values).
   const SKELETON = `<div class="lg-cols" data-view="overview"><div class="lg-main"><div class="lg-slot" data-slot="table"></div><div class="lg-slot" data-slot="trio"></div><div class="lg-slot" data-slot="ig"></div></div>`
     + '<aside class="lg-side"><div class="lg-slot" data-slot="round"></div><div class="lg-slot" data-slot="gw"></div><div class="lg-slot" data-slot="tw"></div></aside></div>';
-  const overviewParts = () => ({ table: tableHtml(), trio: `<div class="lg-trio">${leaders()}</div>`, round: roundWidget(season, fixturesCtx(), widgetWeek), tw: teamHtml() });
+  const overviewParts = () => ({ table: tableHtml(), trio: `<div class="lg-trio">${leaders()}</div>`, round: roundWidget(season, fixturesCtx(), widgetWeek), gw: gotw ? gotw.overview() : '', tw: teamHtml() });
   let social = null, socialLoaded = false;   // the league's Instagram row (WR-30), read once
   const igHtml = () => (socialLoaded ? instagramCard(social) : '');
   const fillSlot = (el, html, timed) => {
@@ -207,11 +207,26 @@ if (ctx) {
     if (did) { sheen(main); scrollTo(0, y); }
     return did;
   };
-  // Goal of the week (S-05): the card owns its slot (js/gotw-card.js), so the playing clip survives the Overview's redraws; it is put back after each fresh Overview.
-  const gotw = season && !demo ? createGotw({ db, season, crest: (c, px) => sctx.crest(c, px), mine: ctx.club?.code, now: tableNow, hiddenFx: () => fixturesCtx().hidden, esc, rounds: rounds(season) }) : null;
-  const attachGotw = async () => { const el = main.querySelector('[data-slot="gw"]'); if (el && gotw) { await gotw.attach(el); if (current?.[0] === 'overview') sheen(main); } };
-  const showOverview = () => { paint(main, SKELETON); patchOverview(false); attachGotw(); };
-  const rerender = (timed = false) => (!current ? false : current[0] === 'overview' ? patchOverview(timed) : draw(VIEWS[current[0]](current[2], current[1]), timed));
+  // Goal of the week (S-05): the Overview card (a teaser while voting is open, the result after) and the Vote tab, which only exists while the office has voting open
+  // (js/gotw-card.js). The tab's dot flashes while this manager has not voted. Read once before the frame is built, then every minute.
+  const accent = (code, theme) => { const col = (clubRows?.get(code) || sctx.club(code))?.colour; return isHex(col) ? accentFor(col, theme) : ''; };
+  const gotw = season && !demo ? createGotw({
+    db, season, crest: (c, px) => sctx.crest(c, px), accent, mine: ctx.club?.code, now: tableNow, hiddenFx: () => fixturesCtx().hidden, esc, rounds: rounds(season),
+    afterDraw: () => sheen(main),
+    onChange: info => {
+      frameApi?.setVote({ visible: info.open, due: info.due });
+      if (!info.open && current?.[0] === 'vote') location.replace('#overview');
+      else if (current?.[0] === 'overview') patchOverview(true);
+    },
+  }) : null;
+  let voteApi = null;
+  const showVote = () => {
+    if (voteApi) return;
+    paint(main, '<div class="lg-vote"></div>');
+    voteApi = gotw.mountVote(main.querySelector('.lg-vote'));
+  };
+  const showOverview = () => { paint(main, SKELETON); patchOverview(false); };
+  const rerender = (timed = false) => (!current ? false : current[0] === 'vote' ? (gotw?.redraw(), true) : current[0] === 'overview' ? patchOverview(timed) : draw(VIEWS[current[0]](current[2], current[1]), timed));
   // The Seasons tab (WR-24): this season's card from the league page, the others from History (read once, a moment after the page).
   let honours = null, clubRows = null;   // (not `history`: that is the browser's)
   const seasonsHtml = (sub, picked) => {
@@ -351,7 +366,7 @@ if (ctx) {
     if (!pill && !all) return;
     if (pill) tableFilter = pill.dataset.tfilter;
     if (all) await revealScore(season.fixtures.filter(f => f.result && spoilerHidden(f, season, tableNow())).map(f => f.id)).catch(() => {});
-    if (all) gotw?.draw();
+    if (all) gotw?.redraw();
     const el = current?.[0] === 'overview' ? main.querySelector('.lg-table') : null, before = el && pill ? rowTops(el) : null;
     rerender();
     if (pill) {
@@ -383,12 +398,16 @@ if (ctx) {
     seasons: seasonsHtml,
     news: newsHtmlNow,
     draft: () => '',   // mounted by showDraft
+    vote: () => '',   // mounted by showVote
   };
 
   wireStatPage(main, { go });
   const draftNow = await openDraft().catch(() => null);
+  await gotw?.refresh();
+  setInterval(() => { if (!document.hidden) gotw?.refresh(); }, 60000);
   frameApi = mountFrame(document.getElementById('frame'), {
     office,
+    vote: Boolean(gotw?.info().open), voteDue: Boolean(gotw?.info().due),
     draft: Boolean(draftNow), draftLive: Boolean(draftNow) && draftPhase(draftNow) === 'live',
     crest: preview ? params.get('crest') || '' : ctx.club?.crest_path ? crestUrl(ctx.club.crest_path) : '',
     // Each view gets the season picked in the header (WR-05); they all show the current one until a past season exists.
@@ -396,7 +415,9 @@ if (ctx) {
       const left = current?.[0];
       current = [id, picked, sub];
       if (left === 'draft' && id !== 'draft') { draftApi?.unmount(); draftApi = null; }
-      if (id === 'overview') showOverview(); else if (id === 'draft') showDraft(sub); else draw(VIEWS[id](sub, picked));
+      if (left === 'vote' && id !== 'vote') { voteApi?.unmount(); voteApi = null; }
+      if (id === 'vote' && !gotw?.info().open) { location.replace('#overview'); return; }   // the tab is gone (voting closed): back to Overview
+      if (id === 'overview') showOverview(); else if (id === 'draft') showDraft(sub); else if (id === 'vote') showVote(); else draw(VIEWS[id](sub, picked));
       // "Back" on a full list returns to the tab it was opened from (Overview or Stats), else to the Stats tab.
       main.querySelector('.sp-back')?.addEventListener('click', e => { if (moved) { e.preventDefault(); history.back(); } });
     },
