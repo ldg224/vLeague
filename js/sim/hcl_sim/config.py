@@ -59,6 +59,11 @@ TUNING = {
     'decision_temperature_poor': 0.020,
     'risk_aversion': 1.0,
     'shot_appetite': 0.68,
+    # B-21: free kicks. Within the range the taker's shot utility is multiplied and given a bonus, so a free kick in range is usually a shot; below the xG floor it is not offered.
+    'free_kick_shoot_range': 30.0,
+    'free_kick_appetite': 3.0,
+    'free_kick_bonus': 0.02,
+    'free_kick_min_xg': 0.02,
 
     # Duels
     'tackle_rate': 0.075,          # tackle attempts per second when in range

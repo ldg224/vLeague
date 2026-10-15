@@ -236,15 +236,17 @@ def _frange(a, b, step):
         x += step
 
 
-def _shot_option(c, penalty=False, header=False, force=False):
+def _shot_option(c, penalty=False, header=False, force=False, free_kick=False):
     ax, ay = c.ax, c.ay
     d = math.hypot(PITCH_LENGTH - ax, ay - 34)
     if d > (42 if force else 36) and not penalty:
         return None
-    blockers = blockers_in_cone(ax, ay, c.opps)
+    # B-21: at a free kick the wall is a physical block in the flight of the ball (it is blocked or saved often), not a reason to leave the shot out,
+    # so the taker weighs it by distance and angle alone and the speculative-effort cut below does not apply.
+    blockers = 0 if free_kick else blockers_in_cone(ax, ay, c.opps)
     xg = expected_goals(ax, ay, header=header, pressure=min(c.pressure, 1.5), blockers=blockers, penalty=penalty)
     long_shots = c.p.a('long_shots')
-    if d > 20 and xg < 0.03 and not penalty and not force:
+    if d > 20 and xg < 0.03 and not penalty and not force and not free_kick:
         return None     # speculative efforts from distance are rare
     # Players with a good long shot back themselves from distance when they have a sight of goal.
     appetite = TUNING['shot_appetite'] * (0.7 + 0.7 * long_shots if d > 18 else 1.0)
@@ -382,10 +384,13 @@ def options_for(m, p):
     if kind in (None, 'free_kick', 'corner'):
         opts += _cross_options(c)
     if kind in (None, 'free_kick'):
-        s = _shot_option(c)
-        if s and (kind is None or s['xg'] > 0.035):
+        s = _shot_option(c, free_kick=kind == 'free_kick')
+        if s and (kind is None or s['xg'] > TUNING['free_kick_min_xg']):
             if kind == 'free_kick':
                 s['subtype'] = 'free_kick'
+                # B-21: a free kick within range is a shot more often than not (the taker backs himself, and a wall and a keeper make blocks and saves likely).
+                if math.hypot(PITCH_LENGTH - c.ax, c.ay - 34) <= TUNING['free_kick_shoot_range']:
+                    s['utility'] = s['utility'] * TUNING['free_kick_appetite'] + TUNING['free_kick_bonus']
             opts.append(s)
     if kind is None:
         opts += _dribble_options(c)
