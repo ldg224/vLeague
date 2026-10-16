@@ -3,9 +3,11 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
-## 0.70.0 (2026-10-16)
+## 1.0.0 (2026-10-16)
 
 Headlines: the new league page | Match pages, redone
+
+This is vLeague 1.0: the website revamp replaces the old site.
 
 **Database change:** migrations 0053 to 0057 (all already run on the live project, and all additive). If anything goes wrong, `v0.69.1` is the version to go back to (`docs/RELEASING.md`).
 
