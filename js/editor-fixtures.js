@@ -6,6 +6,8 @@
 import { loadSeason } from './dashboard-data.js';
 import * as R from './roster.js';
 import { icon } from './icons.js';
+import { loadKits } from './kits-data.js';
+import { FIELD_SLOTS, kitName } from './kit.js';
 const { melbourneToIso, toLocalInput, addDays, addMinutes, dateOf, timeOf, shiftIso, mondayOf, daysBetween, WEEK_MAX } = R;
 
 const ZONE = R.ZONE;
@@ -48,6 +50,9 @@ export async function mountFixtures(ctx) {
   const name = code => ctx.clubs.find(c => c.code === code)?.name || code;
   const opts = (list, sel) => list.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(sel) ? 'selected' : ''}>${esc(l)}</option>`).join('');
   const lookOpts = sel => opts(looks.map(l => [l.key, l.name]), sel);
+  let hasKitPick = false, kits = {};
+  // The kits a club has made (home, away, special), for the Editor to choose between. Automatic = the team's own pick, else by colour clash.
+  const kitOpts = (code, sel) => `<option value="">Automatic</option>${FIELD_SLOTS.filter(sl => kits[code]?.[sl]).map(sl => `<option value="${sl}" ${sl === sel ? 'selected' : ''}>${esc(kitName(sl, kits[code][sl].design))}</option>`).join('')}`;
   const clubOpts = sel => ctx.clubs.filter(c => c.status === 'active' || c.code === sel).map(c => `<option value="${esc(c.code)}" ${c.code === sel ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
   const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
   const nextMon = () => { const d = new Date(); d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7)); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -66,6 +71,10 @@ export async function mountFixtures(ctx) {
     deadlines = new Map((dl.data || []).map(d => [d.week, d])); sheets = ws.data || [];
     hasLadder = !(await c.from('rounds').select('counts_for_ladder').limit(1)).error;   // false until 0025_week_ladder.sql is run
     hasRoster = !(await c.from('rounds').select('numbered').limit(1)).error;   // false until 0021_roster_tools.sql is run
+    hasKitPick = false;   // false until 0052_fixture_kits.sql is run
+    const kp = await c.from('fixtures').select('id, home_kit, away_kit').range(0, 1999);
+    if (!kp.error) { hasKitPick = true; const m = new Map(kp.data.map(r => [r.id, r])); for (const f of fixtures) Object.assign(f, { home_kit: m.get(f.id)?.home_kit ?? null, away_kit: m.get(f.id)?.away_kit ?? null }); }
+    kits = hasKitPick ? await loadKits() : {};
     hasByes = !(await c.from('rounds').select('byes').limit(1)).error;   // false until 0028_byes.sql is run
   }
 
@@ -211,6 +220,7 @@ export async function mountFixtures(ctx) {
     return `<div class="fx-row${f.postponed ? ' is-postponed' : ''}" data-id="${esc(f.id)}">
       <span class="fx-teams"><select data-k="home" aria-label="Home club">${clubOpts(f.home)}</select><span>v</span><select data-k="away" aria-label="Away club">${clubOpts(f.away)}</select></span>
       <input type="datetime-local" value="${toLocalInput(f.starts_at)}" aria-label="Kick-off (Melbourne time)">
+      ${hasKitPick && (kits[f.home] || kits[f.away]) ? `<span class="fx-kits"><label>${esc(name(f.home))} kit <select data-k="home_kit">${kitOpts(f.home, f.home_kit)}</select></label><label>${esc(name(f.away))} kit <select data-k="away_kit">${kitOpts(f.away, f.away_kit)}</select></label></span>` : ''}
       ${r.kind === 'finals' ? `<select data-k="stage" aria-label="Stage">${opts(STAGES, f.stage || '')}</select>` : ''}
       <span class="fx-state">${done ? `<b class="fx-score">${res.home}–${res.away}</b>` : f.postponed ? 'Postponed' : ''}</span>
       <span class="fx-btns">
@@ -608,12 +618,13 @@ export async function mountFixtures(ctx) {
       return run('Change a kick-off', async tx => setFx(tx, f, { starts_at: d ? melbourneToIso(d, tm || '19:00') : null }));
     }
     // the teams, or the stage of a final
+    if (t.dataset.k === 'home_kit' || t.dataset.k === 'away_kit') return run('Set the kit', async tx => setFx(tx, f, { [t.dataset.k]: t.value || null }));
     if (t.dataset.k === 'stage') return run('Set the stage', async tx => setFx(tx, f, { stage: t.value || null }));
     if (t.dataset.k === 'home' || t.dataset.k === 'away') {
       const h = row.querySelector('[data-k="home"]').value, a = row.querySelector('[data-k="away"]').value;
       if (h === a) { notify('Pick two different clubs.', 'bad'); return draw(); }
       if (!(await confirmPlayed([f], 'Changing the teams'))) return draw();
-      return run('Change teams', async tx => { await clearResult(f); await setFx(tx, f, { home: h, away: a }); });
+      return run('Change teams', async tx => { await clearResult(f); await setFx(tx, f, { home: h, away: a, ...(hasKitPick ? { home_kit: null, away_kit: null } : {}) }); });
     }
   });
 

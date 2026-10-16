@@ -3,6 +3,35 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 0.70.0 (2026-10-16)
+
+Headlines: the new league page | Match pages, redone
+
+**Database change:** migrations 0053 to 0057 (all already run on the live project, and all additive). If anything goes wrong, `v0.69.1` is the version to go back to (`docs/RELEASING.md`).
+
+- **Changed, whole site (the website revamp, WR-01 to WR-45):** one FotMob-style league page. A header card with Club, Settings and Editor buttons and a Seasons toggle, then tabs for Overview, Table, Fixtures, Player stats, Team stats, Seasons, News and Draft (with a LIVE indicator). Everything needs sign-in, and the guest dashboard and the old navigation and pages are gone.
+- **Added, league tabs:** the full table with Finals and Wooden spoon zones and All / Home / Away / Last 5 filters; Fixtures by date, round or team; Overview widgets and Team of the week (S-09); stat cards and full stat lists; the Seasons tab; the News tab (the old Inbox).
+- **Changed, match page:** new frame, header and tabs: Preview (team form, insights, predicted line-ups, win chance), Head-to-Head, Facts, Lineup, Stats, and Highlights / Replay / Live under the header. My club, Settings and Kits are redesigned to fit.
+- **Added:** vLeague Shield for the table leader once every league match is played (S-26); custom formations (S-30); a rating cost for players out of position (S-25); arrow keys and F in the match viewer (S-28); Goal of the week (S-05).
+- **Fixed:** match ratings (B-20); name tag stripe uses the team colour (B-22); highlights no longer capped at three minutes (B-23); free kicks now get shot at (B-21); keepers move toward the ball on goals instead of away (B-26).
+
+## 0.69.1 (2026-10-12)
+
+Headlines: the Test page can choose kits too
+
+Needs 0052 (already run). If anything goes wrong, `v0.69.0` is the version to go back to.
+
+- **Added, Editor > Test:** a Home kit and an Away kit choice for the test match, listing the kits of the clubs you picked (a random club stays automatic).
+
+## 0.69.0 (2026-10-12)
+
+Headlines: the Editor can choose which kit each team wears in a match
+
+**Database change:** run `supabase/migrations/0052_fixture_kits.sql` (adds `home_kit` and `away_kit` to fixtures). Until it is run, the new choice is hidden and nothing else changes. If anything goes wrong, `v0.68.2` is the version to go back to (`docs/RELEASING.md`).
+
+- **Added, Editor > Fixtures:** each match has a kit choice for the home side and the away side, listing the kits that club has made in the kit studio (Home, Away, Special, under the names the club gave them). "Automatic" leaves it as before.
+- **Changed, Game centre and match views:** a kit chosen in the Editor wins over the kit a team picked on its own team sheet, which still wins over the automatic choice. Changing a match's teams clears the choice.
+
 ## 0.68.2 (2026-10-11)
 
 Headlines: Home is back to how it was before 0.68

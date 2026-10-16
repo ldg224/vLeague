@@ -518,3 +518,7 @@
 @media (hover: hover) { .editor-main .link-btn:not(:disabled):hover { background: var(--surface-hover); } }
 .editor-main details.lg-card:not([open]) { padding-block: 14px; }
 .editor-main details.lg-card:not([open]) > summary { margin: 0; }
+/* Kit choice for each side of a match (0.69) */
+.fx-kits { display: flex; flex-wrap: wrap; gap: 6px 12px; flex: 1 1 100%; font-size: .85rem; color: var(--muted); }
+.fx-kits label { display: flex; align-items: center; gap: 6px; }
+.fx-kits select { min-width: 0; max-width: 100%; }
