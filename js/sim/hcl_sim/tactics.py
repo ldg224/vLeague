@@ -201,9 +201,16 @@ def shape_target(p, team, bx, by, in_possession, off_line):
 def gk_target(bx, by, in_possession):
     if in_possession:
         return clamp(4 + bx * 0.12, 4, 16), 34 + (by - 34) * 0.12
-    # Come off the line to narrow the angle: further out as the ball approaches, up to ~5.5 m.
+    # On the line from the ball to the middle of the goal, at a depth that depends on how far the ball is: close to the line against shots from
+    # range (a keeper 5 m out is chipped and has no room to dive, so real keepers sit about 1.5 to 3 m off it), stepping out to close the angle as
+    # the ball comes into the box, and sweeping further out only when the ball is far away (the back line is high then).
     ux, uy, d = unit(bx, by - 34)
-    off = clamp(0.5 + d * 0.25, 1.0, 5.5) if d < 30 else clamp(5.5 - (d - 30) * 0.03, 3.5, 5.5)
+    if d < 7:
+        off = clamp(0.30 * d, 0.8, 2.6)
+    elif d < 25:
+        off = 2.6 - (d - 7) * 0.025       # about 2.6 m at the edge of the six-yard box, 2.1 m from 25 m
+    else:
+        off = clamp(2.1 + (d - 25) * 0.09, 2.1, 6.0)
     return clamp(ux * off, 0.5, BOX_DEPTH - 1), clamp(34 + uy * off, 29, 39)
 
 

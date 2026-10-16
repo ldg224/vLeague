@@ -264,9 +264,8 @@ export class BroadcastRenderer extends HighlightsRenderer {
       const fall = this.falls.find(f => f.idx === i && t >= f.t && t < f.until + 0.5);
       let x = p[0], y = p[1], lying = false;
       if (fall) { const k = seg01(t, fall.until, fall.until + 0.5); x = lerp(fall.x, p[0], k); y = lerp(fall.y, p[1], k); lying = t < fall.until ? fall : false; }
-      return { i, x, y, vx: st.vel[i][0], vy: st.vel[i][1], lying, dive: this.efx.diveAt(i, t), noHead: this.efx.headGone(i, t), d: cam.p(x, y)?.[2] ?? 0 };
+      return { i, x, y, vx: st.vel[i][0], vy: st.vel[i][1], lying, dive: this.efx.diveAt(i, t), d: cam.p(x, y)?.[2] ?? 0 };
     });
-    for (const h of this.efx.heads(t)) items.push({ head: h, d: cam.p(h.x, h.y)?.[2] ?? 0 });
     const [rx, ry] = this.refPos(t);
     items.push({ ref: true, x: rx, y: ry, card: this.cards.find(k => t >= k.t && t < k.until), d: cam.p(rx, ry)?.[2] ?? 0 });
     items.sort((a, b) => a.d - b.d);
@@ -280,8 +279,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
     let ballDrawn = false;
     for (const it of items) {
       if (!ballDrawn && it.d > bd) { this.drawBall(cam, st); ballDrawn = true; }
-      if (it.head) this.drawHead(cam, it.head);
-      else if (it.ref) this.drawReferee(cam, it, t);
+      if (it.ref) this.drawReferee(cam, it, t);
       else if (it.lying) this.drawLying(cam, it);
       else this.drawPlayer(cam, it, st.holder === it.i);
     }

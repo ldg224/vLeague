@@ -67,7 +67,8 @@ class Match:
         self.script = [dict(x, done=False) for x in sorted(self.info.get('script') or [], key=lambda x: int(x.get('minute', 1)))]
         self.only_script_goals = bool(self.info.get('only_script_goals'))   # no goals except the scripted penalties: an exact scoreline
         self.pending_goals = []         # open-play goals the office asked for: [{'side': 0 | 1, 'since': minute}]; that team's next shot is forced in
-        self.protect_next = False       # the shot about to be struck can't be touched in flight (a scripted goal)
+        self.protect_next = False       # the shot about to be struck can't be touched in flight: True = by nobody, 'field' = by no outfield player (a scripted goal)
+        self.sure_next = False          # the shot about to be struck is a routine save the keeper always makes (an exact-score test's unscripted shot on target)
         self.scripted_goal = False      # a scripted scored penalty is in flight, so the goal counts in an exact-score test
         self.force_pen = None           # the outcome the next penalty must have ('scored' | 'saved' | 'missed'), or None
 
@@ -406,10 +407,72 @@ class Match:
         b.in_hands = False
         b.last_touch = p
         b.flight = {'kind': 'shot' if kind == 'shoot' else subtype, 'kicker': p, 'receiver': opt.get('receiver'),
-                    'event': e, 't': self.t, 'protected': kind == 'shoot' and self.protect_next}
+                    'event': e, 't': self.t, 'protected': kind == 'shoot' and self.protect_next, 'sure': kind == 'shoot' and self.sure_next}
         self.protect_next = False
+        self.sure_next = False
         p.touch_ready_at = self.t + 0.4
         self.restart_kind = None
+
+    @staticmethod
+    def _plane_point(pts, kx, gx):
+        """Where a ball on the path `pts` [(t, x, y, z)...] passes the keeper's own depth, kx: (t, y, z), or None if it never does before the line."""
+        sgn = 1 if gx == PITCH_LENGTH else -1
+        for i in range(1, len(pts)):
+            (t0, x0, y0, z0), (t1, x1, y1, z1) = pts[i - 1], pts[i]
+            if sgn * (x1 - kx) >= 0 and sgn * (x0 - kx) < 0:
+                f = (kx - x0) / (x1 - x0) if x1 != x0 else 1.0
+                return t0 + (t1 - t0) * f, y0 + (y1 - y0) * f, z0 + (z1 - z0) * f
+            if sgn * (x1 - gx) >= 0:
+                break
+        return None
+
+    def _gk_reaction(self, gk, z):
+        """Seconds from the strike to the keeper's first move: his reflexes, plus a little longer to read and jump for a ball going high."""
+        return TUNING['gk_reaction'] + 0.15 * (1 - gk.a('reflexes')) + (TUNING['gk_high_delay'] if z > 1.5 else 0.0)
+
+    def _unsaveable_aim(self, gk, gx, speed, z0):
+        """The corner to aim a scripted goal at: (y, z, margin), the margin being how far (metres) the ball stays out of this keeper's reach at the
+        nearest point, given where he stands now, his reaction and his dive speed. A keeper who reads the shot perfectly is assumed."""
+        b = self.ball
+        best = (34.0, 1.0, -9.0)
+        reach = TUNING['gk_reach_dive']
+        cands = [(y, z) for y in (GOAL_Y1 + 0.45, GOAL_Y2 - 0.45) for z in (0.2, 0.6, 1.1, 1.9)]
+        self.rng.shuffle(cands)
+        for ay_, az_ in cands:
+            dx, dy = gx - b.x, ay_ - b.y
+            d = math.hypot(dx, dy)
+            t_flight = d / (speed * 0.93)
+            vz = (az_ - z0 + 0.5 * physics.GRAVITY * t_flight * t_flight) / t_flight
+            h = math.sqrt(max(speed * speed - vz * vz, 1.0))
+            path = physics.predict(b.x, b.y, z0, dx / d * h, dy / d * h, vz, 4.0, every=0.1)
+            pts = [(0.0, b.x, b.y, z0)] + [(tt, x, y, z) for tt, x, y, z, _ in path]
+            cross = None
+            for i in range(1, len(pts)):
+                if (gx == PITCH_LENGTH and pts[i][1] >= gx) or (gx == 0 and pts[i][1] <= gx):
+                    cross = i
+                    break
+            if cross is None or not (GOAL_Y1 < pts[cross][2] < GOAL_Y2) or pts[cross][3] >= GOAL_HEIGHT:
+                continue
+            if gk is None:
+                return ay_, az_, 9.0
+            react = self._gk_reaction(gk, pts[cross][3])
+            pl = self._plane_point(pts, gk.x, gx)
+            ty = clamp(pl[1] if pl else pts[cross][2], GOAL_Y1 - 0.5, GOAL_Y2 + 0.5)
+            margin = 9.0
+            for i in range(1, cross + 1):
+                (t0, x0, y0, z0_), (t1, x1, y1, z1_) = pts[i - 1], pts[i]
+                for k in range(4):
+                    f = k / 4.0
+                    tt = t0 + (t1 - t0) * f
+                    bx_, by_, bz_ = x0 + (x1 - x0) * f, y0 + (y1 - y0) * f, z0_ + (z1_ - z0_) * f
+                    if bz_ >= 2.65:
+                        continue
+                    move = max(0.0, tt - react) * TUNING['gk_dive_speed']
+                    ky = gk.y + clamp(ty - gk.y, -move, move)
+                    margin = min(margin, math.hypot(bx_ - gk.x, by_ - ky) - reach)
+            if margin > best[2]:
+                best = (ay_, az_, margin)
+        return best
 
     def _shoot(self, p, opt, header=False, z0=0.0, pressure=0.0):
         b = self.ball
@@ -425,7 +488,8 @@ class Match:
         if pg:
             forced = 'scored'; self.pending_goals.remove(pg)   # the goal the office asked for
         self.scripted_goal = forced == 'scored'
-        self.protect_next = forced == 'scored'
+        self.protect_next = False
+        self.sure_next = False
         if penalty and forced is None and self.only_script_goals:
             forced = 'missed'   # a penalty nobody asked for does not score in an exact-score test
 
@@ -440,20 +504,43 @@ class Match:
             aim_y = 34 + rng.uniform(-0.8, 0.8)
         aim_z = rng.choice((rng.uniform(0.15, 0.6), rng.uniform(0.3, 2.1)))
         keeper_guess = None
-        if forced == 'scored':
+        power = 0.55 + 0.45 * rng.random() * (0.5 + 0.5 * finishing)
+        speed = (11 + 5 * finishing) if header else (19 + 13 * power * (0.7 + 0.3 * finishing))
+        if forced == 'scored' and penalty:
             aim_y = (GOAL_Y1 + 0.5) if side == GOAL_Y2 else (GOAL_Y2 - 0.5)
-            side_low = aim_y < 34
-            keeper_guess = (GOAL_Y2 - 1.2) if side_low else (GOAL_Y1 + 1.2)   # he dives the other way
+            keeper_guess = (GOAL_Y2 - 1.2) if aim_y < 34 else (GOAL_Y1 + 1.2)   # a penalty that goes in: he dives the other way
             aim_z = rng.uniform(0.3, 1.6)
+            self.protect_next = True
+        elif forced == 'scored':
+            # A goal the office asked for is a real beaten keeper: of the corners (and a harder strike if the pace of the shot is not enough),
+            # the one he can least get to given where he stands, his reaction and his dive speed. He goes the right way and is still beaten.
+            # Only if no corner is out of his reach does the ball become untouchable, and then he is wrong-footed rather than watching it
+            # go through his hands.
+            aim_y = aim_z = margin = None
+            for sp in (speed, max(speed, 31.0), 34.0):
+                ay_, az_, m_ = self._unsaveable_aim(gk, gx, sp, z0)
+                if margin is None or m_ > margin:
+                    aim_y, aim_z, margin, speed = ay_, az_, m_, sp
+                if m_ >= 0.4:
+                    break
+            keeper_guess = aim_y
+            if margin >= 0.25:
+                self.protect_next = 'field'
+            else:
+                self.protect_next = True
+                keeper_guess = (GOAL_Y2 - 1.2) if aim_y < 34 else (GOAL_Y1 + 1.2)
         elif forced == 'saved':
             aim_y = 34 + rng.uniform(-1.4, 1.4); aim_z = rng.uniform(0.3, 0.9)
             keeper_guess = aim_y                                                  # he picks the right corner
         elif forced == 'missed':
             aim_y = (GOAL_Y1 - 3.0) if rng.random() < 0.5 else (GOAL_Y2 + 3.0); aim_z = rng.uniform(0.4, 1.2)
         elif self.only_script_goals and not penalty:
-            aim_y = (GOAL_Y1 - 4.0) if rng.random() < 0.5 else (GOAL_Y2 + 4.0)   # open play never scores in an exact-score test
-        power = 0.55 + 0.45 * rng.random() * (0.5 + 0.5 * finishing)
-        speed = (11 + 5 * finishing) if header else (19 + 13 * power * (0.7 + 0.3 * finishing))
+            if gk and not header and rng.random() < 0.45:
+                # Open play never scores in an exact-score test, but a real shot on target is still made: straight at a keeper who always saves it.
+                aim_y = clamp(gk.y + rng.uniform(-0.9, 0.9), GOAL_Y1 + 0.6, GOAL_Y2 - 0.6); aim_z = rng.uniform(0.25, 1.1)
+                keeper_guess = aim_y; self.sure_next = True
+            else:
+                aim_y = (GOAL_Y1 - 4.0) if rng.random() < 0.5 else (GOAL_Y2 + 4.0)
 
         dx, dy = gx - b.x, aim_y - b.y
         d = math.hypot(dx, dy)
@@ -476,7 +563,8 @@ class Match:
 
         # Where will it cross the goal line (ignoring deflections)?
         cross = None
-        for tt, x, y, z, _ in physics.predict(b.x, b.y, b.z, b.vx, b.vy, b.vz, 4.0, every=0.1):
+        path = physics.predict(b.x, b.y, b.z, b.vx, b.vy, b.vz, 4.0, every=0.1)
+        for tt, x, y, z, _ in path:
             if (T.direction == 1 and x >= PITCH_LENGTH) or (T.direction == -1 and x <= 0):
                 cross = (tt, y, z)
                 break
@@ -498,7 +586,7 @@ class Match:
             self.pending_pass = None
 
         if gk and cross:
-            reaction = TUNING['gk_reaction'] + 0.15 * (1 - gk.a('reflexes'))
+            reaction = self._gk_reaction(gk, cross[2])
             if penalty:
                 guess = rng.choice((GOAL_Y1 + 1.2, 34.0, GOAL_Y2 - 1.2)) if rng.random() < 0.85 else cross[1]
                 if keeper_guess is not None:
@@ -506,11 +594,29 @@ class Match:
                 self.gk_dive[gk.idx] = {'at': self.t, 'y': guess, 'until': self.t + 1.5}
             else:
                 # Keeper reads the shot with an error that shrinks with positioning skill.
-                read_y = cross[1] + rng.gauss(0, 0.6 * (1.2 - gk.a('gk_positioning')))
+                # Nobody reads the exact spot at the strike: the error is smaller for a positioning-minded keeper and larger for a harder-hit shot.
+                pl = self._plane_point([(0.0, b.x, b.y, b.z)] + [(tt, x, y, z) for tt, x, y, z, _ in path], gk.x, gx)
+                ref_y = pl[1] if pl else cross[1]   # he has to be where the ball passes HIS depth, not where it will later cross the line
+                read_y = ref_y + rng.gauss(0, (TUNING['gk_read_error'] + 0.9 * (1.0 - gk.a('gk_positioning'))) * (0.7 + speed / 35.0))
                 if keeper_guess is not None:
                     read_y = keeper_guess
-                self.gk_dive[gk.idx] = {'at': self.t + reaction, 'y': clamp(read_y, GOAL_Y1 - 0.5, GOAL_Y2 + 0.5),
-                                        'until': self.t + reaction + 1.4}
+                plan = {'at': self.t + reaction, 'y': clamp(read_y, GOAL_Y1 - 0.5, GOAL_Y2 + 0.5),
+                        'until': self.t + max(reaction + 1.4, cross[0] + 0.8)}
+                # B-26: a keeper steps to meet a shot he can reach (a slow or central one) instead of only sliding along his line: the first point
+                # on the ball's path, in front of the line, that he can get to in time at his dive speed.
+                if keeper_guess is None:
+                    line_x = PITCH_LENGTH if T.direction == 1 else 0.0
+                    for tt, x, y, z, _ in path:
+                        if tt >= cross[0] - 0.05:
+                            break
+                        if tt < reaction or z > 2.3 or abs(x - line_x) > 11.0:
+                            continue
+                        ty = clamp(y + (plan['y'] - cross[1]), GOAL_Y1 - 0.5, GOAL_Y2 + 0.5) if abs(x - line_x) < 2.5 else y
+                        if reaction + math.hypot(x - gk.x, ty - gk.y) / (TUNING['gk_dive_speed'] * 0.9) <= tt:
+                            plan['x'], plan['y'] = x, ty
+                            plan['until'] = self.t + max(plan['until'] - self.t, tt + 0.8)
+                            break
+                self.gk_dive[gk.idx] = plan
         return e
 
     # ---------- free ball ----------
@@ -518,7 +624,7 @@ class Match:
     def _reach(self, q, z, hands):
         if hands:
             dive = self.gk_dive.get(q.idx)
-            ext = 1.9 if dive and self.t >= dive['at'] else 1.05
+            ext = TUNING['gk_reach_dive'] if dive and self.t >= dive['at'] else TUNING['gk_reach_stand']
             return ext if z < 2.65 else 0.0
         if z < 0.6:
             # Harder to get a foot to a fast ball.
@@ -542,8 +648,9 @@ class Match:
     def _free_ball_contacts(self, prev):
         b = self.ball
         f = b.flight or {}
-        if f.get('protected'):
-            return   # a scripted goal: nobody, not even the keeper, gets a touch
+        prot = f.get('protected')
+        if prot is True:
+            return   # a scripted goal no corner of which the keeper is beaten by: nobody gets a touch
         px, py, pz = prev
         cands = []
         for q in self.players:
@@ -551,6 +658,8 @@ class Match:
                 continue
             if f.get('kind') == 'shot' and q.side == f['kicker'].side:
                 continue
+            if prot == 'field' and not q.is_gk:
+                continue   # a scripted goal: no outfield player gets in the way; the keeper is simply beaten
             dh, tp = seg_point_dist(px, py, b.x, b.y, q.x, q.y)
             if dh > 2.0:
                 continue
@@ -730,8 +839,8 @@ class Match:
         # Shots near the keeper's body are routine; the save gets harder with stretch and pace.
         stretch = min(dh / max(reach, 0.1), 1.2)
         logit = (TUNING['gk_save_base'] + 2.0 * (gk.a('reflexes') - 0.5) + 1.0 * (gk.a('diving') - 0.5)
-                 - 0.07 * max(0.0, speed - 20) - 3.2 * stretch ** 1.5)
-        if rng.random() < sigmoid(logit):
+                 - 0.07 * max(0.0, speed - 20) - 3.2 * stretch ** 1.5 - (0.9 if z > 1.8 else 0.0))   # a ball going high needs a jump as well as a dive
+        if (b.flight or {}).get('sure') or rng.random() < sigmoid(logit):
             p_catch = clamp(0.25 + 0.6 * gk.a('handling') - 0.025 * max(0.0, speed - 14), 0.05, 0.85)
             if z < 2.3 and rng.random() < p_catch:
                 self._resolve_shot('saved')
@@ -1359,12 +1468,14 @@ class Match:
             dive = self.gk_dive.get(p.idx) if p.is_gk else None
             if dive and t >= dive['at'] and t <= dive['until']:
                 # Keeper moves (dives) across the goal line toward where they read the shot.
-                gx = p.x
+                dx = (dive['x'] - p.x) if dive.get('x') is not None else 0.0
                 dy = dive['y'] - p.y
-                step = clamp(dy, -TUNING['gk_dive_speed'] * TICK, TUNING['gk_dive_speed'] * TICK)
-                p.vx, p.vy = 0.0, step / TICK
-                p.y += step
-                p.distance += abs(step)
+                dd = math.hypot(dx, dy)
+                k = min(1.0, TUNING['gk_dive_speed'] * TICK / dd) if dd > 1e-9 else 0.0
+                p.vx, p.vy = dx * k / TICK, dy * k / TICK
+                p.x += dx * k
+                p.y += dy * k
+                p.distance += dd * k
                 continue
             if dive and t > dive['until']:
                 del self.gk_dive[p.idx]

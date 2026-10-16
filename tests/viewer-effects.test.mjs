@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-const { buildEffects, headPath, DIVE_MIN } = await import('../js/viewer/effects.js');
+const { buildEffects, DIVE_MIN } = await import('../js/viewer/effects.js');
 
 const d = (events, extra = {}) => ({
   teams: { home: { code: 'AAA' }, away: { code: 'BBB' } },
@@ -35,37 +35,8 @@ test('off-target shots and misses make no dive', () => {
   assert.equal(buildEffects(d([shot('saved', { on_target: false })]), frames(3)).dives.length, 0);
 });
 
-const red = card => [{ type: 'foul', t: 20, player: 'p1', team: 'AAA' }, { type: 'card', t: 22.5, player: 'p1', team: 'AAA', card }];
-
-test('a straight red takes the head off from the foul; a second yellow and a yellow do not', () => {
-  const fx = buildEffects(d(red('red')), frames(0));
-  assert.equal(fx.headGone(1, 19.9), false);
-  assert.equal(fx.headGone(1, 20), true);
-  assert.equal(fx.headGone(1, 90), true);
-  assert.equal(fx.headGone(3, 21), false);
-  assert.equal(buildEffects(d(red('second_yellow')), frames(0)).losses.length, 0);
-  assert.equal(buildEffects(d(red('yellow')), frames(0)).losses.length, 0);
-});
-
-test('the loose head bounces, rolls to a stop and fades out', () => {
-  const fx = buildEffects(d(red('red')), frames(0));
-  assert.equal(fx.heads(19).length, 0);
-  const first = fx.heads(20.01)[0], later = fx.heads(23)[0], end = fx.heads(26.9)[0];
-  assert.ok(first.z > 1.5);                 // starts at head height
-  assert.ok(later.z < 0.5 && later.z >= 0.27 - 1e-6);   // on the grass
-  assert.ok(end.alpha < 1 && end.alpha > 0);
-  assert.equal(fx.heads(27.1).length, 0);
-  const a = fx.heads(24)[0], b = fx.heads(24.5)[0];
-  assert.ok(Math.hypot(a.x - b.x, a.y - b.y) >= 0);
-});
-
-test('the path is the same every time and never goes below the grass', () => {
-  const p1 = headPath(10, 10, 1, 0, 5), p2 = headPath(10, 10, 1, 0, 5), p3 = headPath(10, 10, 1, 0, 6);
-  assert.deepEqual(p1, p2);
-  assert.notDeepEqual(p1[100], p3[100]);
-  assert.ok(p1.every(([, , z]) => z >= 0.27 - 1e-6));
-  const last = p1[p1.length - 1], before = p1[p1.length - 30];
-  assert.ok(Math.hypot(last[0] - before[0], last[1] - before[1]) < 0.3);   // it has come to rest
-  // it really moves away from where it started
-  assert.ok(Math.hypot(last[0] - 10, last[1] - 10) > 1.5);
+test('a red card no longer takes the head off', () => {
+  const fx = buildEffects(d([{ type: 'foul', t: 20, player: 'p1', team: 'AAA' }, { type: 'card', t: 22.5, player: 'p1', team: 'AAA', card: 'red' }]), frames(0));
+  assert.equal(fx.headGone, undefined);
+  assert.equal(fx.heads, undefined);
 });
