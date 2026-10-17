@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.1.0 (2026-10-18)
+
+Headlines: Kit sheet download
+
+**Added:** a "Download kit sheet" button on the Kits page. It saves one picture of all four kits (Home, Away, Goalkeeper, Special) in a grid, with their names and the club name in the team colour.
+
+No database change.
+
 ## 1.0.0 (2026-10-16)
 
 Headlines: the new league page | Match pages, redone

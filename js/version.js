@@ -1,2 +1,2 @@
 // The app's version. Bump it with every release and add the change to CHANGELOG.md (see docs/RELEASING.md).
-export const VERSION = '1.0.0';
+export const VERSION = '1.1.0';

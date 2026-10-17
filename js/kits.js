@@ -335,6 +335,7 @@ async function run(init) {
     main.innerHTML = `<div class="kits">
       <div class="sc-head kt-head"><div class="kt-title"><h1 class="sc-title" tabindex="-1">Kits</h1><p class="kt-club-name">${esc(club.name)}</p></div>
         <div class="kt-head-r">${office ? `<label class="kt-club">Club <select data-club>${rows.map(r => `<option value="${esc(r.code)}"${r.code === club.code ? ' selected' : ''}>${esc(r.name)}</option>`).join('')}</select></label>` : '<a class="kt-link" href="club.html">My club</a>'}
+        <button type="button" class="kt-help" data-sheet>Download kit sheet</button>
         <button type="button" class="kt-help" data-tour><b>?</b> How it works</button></div></div>
       ${office ? '<p class="kt-office" role="note"><b>League office.</b> You can design kits for any club. Managers can only change their own.</p>' : ''}
       <section class="lg-card kt-slots" aria-label="Your kits"><div class="kt-chips" id="kt-chips" role="tablist" aria-label="Which kit"></div></section>
@@ -410,6 +411,41 @@ async function run(init) {
     a.download = what === 'guide' ? 'vleague-kit-template.png' : `${club.code.toLowerCase()}-${slot}-kit.png`;
     document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   }
+  // One picture of all four kits in a 2 x 2 grid, with their names, in the club's colours.
+  async function downloadSheet() {
+    const W = 1600, CELL = 760, TOP = 190, H = TOP + CELL * 2 + 60;
+    const lift = hex => {   // lighten a dark club colour so it reads on the dark sheet
+      let [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+      for (let n = 0; n < 8 && 0.2126 * r + 0.7152 * g + 0.0722 * b < 120; n++) { r += (255 - r) * 0.2; g += (255 - g) * 0.2; b += (255 - b) * 0.2; }
+      return `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
+    };
+    const main1 = isHex(club.colour) ? club.colour : '#1e88e5', accent = lift(main1), accent2 = isHex(club.colour2) ? lift(club.colour2) : '#ffffff';
+    await document.fonts?.load('900 64px Archivo');
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const g = cv.getContext('2d');
+    g.fillStyle = '#161616'; g.fillRect(0, 0, W, H);
+    g.fillStyle = main1; g.fillRect(0, 0, W, 14);
+    g.textBaseline = 'alphabetic';
+    let x0 = 60;
+    if (imgs.crest) { g.drawImage(imgs.crest, 60, 52, 100, 100); x0 = 190; }
+    g.fillStyle = accent; g.font = '900 64px Archivo, sans-serif'; g.fillText(club.name.toUpperCase(), x0, 118);
+    g.fillStyle = '#a0a0a0'; g.font = '600 28px Archivo, sans-serif'; g.fillText('KIT SHEET', x0, 160);
+    g.textAlign = 'right'; g.fillStyle = '#7a7a7a'; g.font = '600 24px Archivo, sans-serif'; g.fillText('vLeague', W - 60, 118); g.textAlign = 'left';
+    for (const [i, [s]] of SLOTS.entries()) {
+      const k = kits[s] || blank(s), art = k === kits[slot] ? imgs.art : k.art;
+      const x = (i % 2) * (W / 2), y = TOP + Math.floor(i / 2) * CELL;
+      g.fillStyle = '#222222'; g.beginPath(); g.roundRect(x + 40, y + 10, W / 2 - 80, CELL - 30, 24); g.fill();
+      const spr = kitSprite(k.design, { crest: imgs.crest, art }, 560);
+      g.drawImage(spr, x + W / 4 - spr.width / 2, y + 40);
+      g.textAlign = 'center';
+      g.fillStyle = accent; g.font = '900 40px Archivo, sans-serif'; g.fillText(kitName(s, k.design).toUpperCase(), x + W / 4, y + CELL - 80);
+      g.fillStyle = accent2; g.font = '600 24px Archivo, sans-serif'; g.fillText(club.name, x + W / 4, y + CELL - 44);
+      g.textAlign = 'left';
+    }
+    const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${club.code.toLowerCase()}-kit-sheet.png`;
+    document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
   function toast(t, bad) { const el = main.querySelector('#kt-bar .kt-state'); if (el) { el.textContent = t; el.classList.toggle('bad', !!bad); } }
 
   async function save() {
@@ -461,6 +497,7 @@ async function run(init) {
     const sp = t.closest('[data-spot]'); if (sp) { const [, x, y] = LOGO_SPOTS[+sp.dataset.spot]; edit(d => { d.logo.x = x; d.logo.y = y; }, { now: true }); return; }
     const cpos = t.closest('[data-crestpos]'); if (cpos) { edit(d => { d.crest.pos = cpos.dataset.crestpos; }, { now: true, panel: true }); return; }
     if (t.closest('[data-logo-clear]')) { logoBlob = null; logoPreview = ''; const k = kit(); k.logo_path = null; k.logo_status = 'none'; imgs.logo = null; edit(() => {}, { now: true, panel: true }); return; }
+    if (t.closest('[data-sheet]')) { downloadSheet().catch(e => toast(e.message || String(e), true)); return; }
     const tp = t.closest('[data-template]'); if (tp) { download(tp.dataset.template); return; }
     if (t.closest('[data-art-clear]')) { artBlob = null; artPreview = ''; const k = kit(); k.art_path = null; k.art_status = 'none'; k.art = null; imgs.art = null; edit(d => { if (d.pattern === 'custom') d.pattern = 'plain'; }, { now: true, panel: true }); return; }
     if (t.closest('[data-undo]')) { step(-1); return; }
