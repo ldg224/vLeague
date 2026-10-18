@@ -43,7 +43,8 @@ function currentCard(o) {
     + `${o.current.live && !decided ? '<span class="ss-pill is-live">In progress</span>' : '<span class="ss-pill">Finished</span>'}</header>`
     + `<p class="ss-comp">League</p><dl class="ss-rows">`
     + row('Winner', decided ? who(f.winner, o) : pending) + row('Runner-up', decided ? who(f.runnerUp, o) : pending) + '</dl>'
-    + `<p class="ss-comp">vLeague Shield</p><dl class="ss-rows">${row('Winner', o.shield?.winner ? who(o.shield.winner, o) : pending)}</dl></section>`;
+    + `<p class="ss-comp">vLeague Shield</p><dl class="ss-rows">${row('Winner', o.shield?.winner ? who(o.shield.winner, o) : pending)}</dl>`
+    + `<p class="ss-comp">Wooden spoon</p><dl class="ss-rows">${row('Last place', o.spoon?.winner ? who(o.spoon.winner, o) : pending)}</dl></section>`;
 }
 
 function pastCard(season, h, o) {

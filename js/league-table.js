@@ -78,6 +78,17 @@ export function shield(season, { now = new Date(), hidden = new Set() } = {}) {
   return top ? { winner: top.team.code } : null;
 }
 
+// The wooden spoon: the club bottom of the table once the league matches are all played (same rule as the Shield).
+export function woodenSpoon(season, { now = new Date(), hidden = new Set() } = {}) {
+  const league = season.fixtures.filter(counts);
+  if (!league.length || season.teams.filter(t => !t.withdrawn).length < 2) return null;
+  const done = f => f.result && status(f, season, now) === 'ft' && !hidden.has(f.id);
+  if (!league.every(done)) return null;
+  const rows = tableRows(season, { now, hidden });
+  const last = rows.at(-1);
+  return last ? { winner: last.team.code } : null;
+}
+
 // ---------- the card ----------
 const signed = n => (n > 0 ? `+${n}` : String(n));
 const clubName = c => c?.short_name || c?.name || '';
