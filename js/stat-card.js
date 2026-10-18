@@ -6,7 +6,7 @@
 //   listAddress(card) -> '#stats/scorers'                                       where a card's full page lives
 //   wireStatPage(root, { go })                                                  the stat switcher menu (browser only)
 //
-// ctx = { club(code) -> { name, short_name, colour }, crest(code, px) -> html, avatar?(code) -> html }, so the page decides where names,
+// ctx = { club(code) -> { name, short_name, colour }, crest(code, px) -> html, avatar?(code) -> html, face?(playerId, club code, px) -> portrait html }, so the page decides where names,
 // crests and kits come from. avatar draws the player's pill in the club's real kit; without it (or when it gives nothing) the pill is
 // a plain capsule in the club colour.
 // Look: FotMob's stat pages in vLeague's own style (css/stat-card.css): on the full page a banner in the leader's club colour says who
@@ -32,9 +32,11 @@ export const initialsCrest = (club, code, px) => {
 const clubName = club => club?.short_name || club?.name || '';
 const clubOf = (r, kind) => (kind === 'team' ? r.code : r.team);
 
-// The avatar: the player's club crest (players have no kit pill any more), or a club's crest.
+// The avatar: a player's portrait with the club crest on its corner (just the crest until the players have loaded), or a club's crest.
 function face(r, ctx, kind, px) {
-  return ctx.crest(kind === 'team' ? r.code : r.team, px || 30);
+  if (kind === 'team') return ctx.crest(r.code, px || 30);
+  const pic = ctx.face?.(r.id, r.team, px || 30);
+  return pic ? `<span class="sc-pf" style="--px:${px || 30}px">${pic}<span class="sc-pfc">${ctx.crest(r.team, Math.round((px || 30) * 0.5))}</span></span>` : ctx.crest(r.team, px || 30);
 }
 
 // One row of a card: a player (avatar pill, name, crest and club) or a club (rank, crest, name), then the value.
@@ -45,7 +47,7 @@ function row({ row: r, value, rank }, card, ctx, kind, lead, big) {
     return `<li class="sc-row${lead ? ' is-lead' : ''}" style="${clubStyle(club)}"><span class="sc-rank">${rank}</span><a class="cl sc-link" href="team.html?c=${esc(r.code)}">${ctx.crest(r.code, 30)}`
       + `<span class="sc-who"><b class="sc-name">${esc(club?.name || r.code)}</b></span></a>${val}</li>`;
   }
-  return `<li class="sc-row${lead ? ' is-lead' : ''}" style="${clubStyle(club)}">${face(r, ctx, kind, 30)}`
+  return `<li class="sc-row${lead ? ' is-lead' : ''}" style="${clubStyle(club)}">${face(r, ctx, kind, 36)}`
     + `<span class="sc-who"><b class="sc-name">${esc(r.name)}</b><a class="cl sc-club" href="team.html?c=${esc(r.team)}">${esc(clubName(club))}</a></span>${val}</li>`;
 }
 

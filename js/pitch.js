@@ -1,13 +1,14 @@
 // The XI on a pitch (0.6): the read-only team sheet (the reveal graphic, also used on Home) and the
 // editable one on My club. Formations, slot names and tactics match the match engine
 // (hcl-s3/js/sim/hcl_sim/tactics.py); keep them in step.
-//   renderPitch(el, { formation, lineup, captain, players, editable, selected, onSlot })
+//   renderPitch(el, { formation, lineup, captain, players, editable, selected, onSlot, club })
 //   normaliseSheet(row, squad)    -> a complete team sheet from a team_sheets / week_sheets row (or null)
 //   autoLineup(formation, squad)  -> the best XI for a formation { slot: id }
 //   reshape(lineup, from, to, squad) -> the XI in a new formation: same-named slots keep their player, the rest refilled
 //   customFormation(name)  -> the slots of a custom formation like '4-1-4-1' (S-30), or null; FORMATIONS[name] gives these too, for any valid name
 //   isFormation(name), customNames(), formationFromSlots(slotNames)
 import { esc } from './member.js';
+import { portrait } from './portrait.js';
 
 // Rows across a vertical pitch, attacking upwards: % up from the own goal line.
 const ROW = { GK: 9, DEF: 26, MID: 48, AM: 65, FWD: 80 };
@@ -190,7 +191,8 @@ const LINES = `<svg class="pt-lines" viewBox="0 0 68 105" preserveAspectRatio="n
 const surname = n => { const w = String(n || '').trim().split(/\s+/); return w.length > 1 ? w.slice(1).join(' ') : w[0] || ''; };
 const POS_NAME = { GK: 'goalkeeper', DEF: 'defender', MID: 'midfielder', FWD: 'forward' };
 
-export function renderPitch(el, { formation, lineup = {}, captain = null, players = [], editable = false, selected = null, onSlot = null } = {}) {
+// `club` ({ code, colour, colour2 }) dresses each player's portrait (js/portrait.js) in the club's colours; the slot name moves to a small tag on it.
+export function renderPitch(el, { formation, lineup = {}, captain = null, players = [], editable = false, selected = null, onSlot = null, club = null } = {}) {
   const f = FORMATIONS[formation] ? formation : DEFAULT_FORMATION;
   const byId = new Map(players.map(p => [String(p.id), p]));
   const tokens = Object.entries(slotsOf(f)).map(([slot, sl]) => {
@@ -198,7 +200,7 @@ export function renderPitch(el, { formation, lineup = {}, captain = null, player
     const off = p && p.position !== sl.want, cap = p && String(captain) === id;
     const label = p ? `${slot}: ${p.number != null && p.number !== '' ? `number ${p.number}, ` : ''}${p.name}${cap ? ', captain' : ''}${off ? `, a ${POS_NAME[p.position] || 'player'} out of position` : ''}` : `${slot}: empty`;
     const cls = `pt-slot${p ? '' : ' empty'}${off ? ' off' : ''}${slot === selected ? ' sel' : ''}`;
-    const inner = `<span class="pt-disc">${esc(slot)}${cap ? '<b class="pt-c" aria-hidden="true">C</b>' : ''}</span><span class="pt-name">${p ? `${p.number != null && p.number !== '' ? `<b class="pt-no">${esc(p.number)}</b> ` : ''}${esc(surname(p.name))}` : '&nbsp;'}</span>`;
+    const inner = `<span class="pt-disc${p ? ' has-face' : ''}">${p ? `<span class="pt-face">${portrait(p, club, undefined, true)}</span><b class="pt-slotl">${esc(slot)}</b>` : esc(slot)}${cap ? '<b class="pt-c" aria-hidden="true">C</b>' : ''}</span><span class="pt-name">${p ? `${p.number != null && p.number !== '' ? `<b class="pt-no">${esc(p.number)}</b> ` : ''}${esc(surname(p.name))}` : '&nbsp;'}</span>`;
     const pos = `left:${sl.x.toFixed(1)}%;bottom:${sl.y.toFixed(1)}%`;
     return editable
       ? `<button type="button" class="${cls}" data-slot="${esc(slot)}" style="${pos}" aria-label="${esc(label)}" aria-pressed="${slot === selected}">${inner}</button>`

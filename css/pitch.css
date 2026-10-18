@@ -45,3 +45,13 @@
 .pt-slot:focus-visible { outline: none; }
 .pt-slot:focus-visible .pt-disc { outline: 2px solid var(--focus); outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { .pt-edit .pt-disc { transition: none; } }
+
+/* Player portraits (js/portrait.js) in the discs: the portrait fills the disc, the slot name is a small tag under it. The pitch is dark in
+   both themes, so the portrait gets a light backdrop and outline. */
+.pt-disc.has-face { width: clamp(30px, 12cqw, 52px); font-size: 0; }
+.pt-face { position: absolute; inset: 0; overflow: hidden; border-radius: 50%; line-height: 0; --text: #fff;
+  background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--club, #4a90d9) 40%, #4a5b78), #223350); }
+.pt-face > svg { display: block; width: 150%; height: auto; margin: -24% 0 0 -25%; }
+.pt-slotl { position: absolute; left: -4px; top: -3px; padding: 0 4px; border-radius: 4px; background: rgba(6, 12, 22, .88); color: var(--white);
+  font: 700 clamp(7px, 2.3cqw, 10px)/1.35 var(--font); letter-spacing: .03em; }
+.pt-slot.sel .pt-face { background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--club, #4a90d9) 75%, #fff), var(--club, #4a90d9)); }

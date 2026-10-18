@@ -100,3 +100,9 @@
 }
 .tm-cols-head + .tm-strip, .tm-strip + .tm-pl { border-top: 0; }
 @media (max-width: 560px) { .tm-ghost { display: none; } }
+
+/* A player's portrait (js/portrait.js) beside his name in the squad list. */
+.tm-who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.tm-pic { flex: none; width: 34px; height: 40px; line-height: 0; }
+.tm-pic svg { display: block; width: 100%; height: 100%; }
+.tm-who b { min-width: 0; }

@@ -24,7 +24,7 @@
 .ml-p { position: absolute; display: grid; justify-items: center; gap: 4px; width: 96px; translate: -50% -50%; text-align: center; }
 .ml-p.is-home { left: calc(3% + var(--y) * .5%); top: calc(8% + var(--x) * .84%); }
 .ml-p.is-away { left: calc(100% - (3% + var(--y) * .5%)); top: calc(100% - (8% + var(--x) * .84%)); }
-.ml-av { position: relative; display: grid; place-items: center; width: 64px; height: 64px; }
+.ml-av { position: relative; display: grid; place-items: center; width: 72px; height: 72px; }
 .ml-av img { width: 64px; height: 64px; object-fit: contain; }
 .ml-disc { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--c); color: var(--on); font: 700 var(--fs-s) var(--font); font-style: normal; font-variant-numeric: tabular-nums; }
 .ml-cap { position: absolute; top: 0; left: 2px; display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); color: var(--text-strong); font: 700 var(--fs-xs) var(--font); box-shadow: 0 0 0 1px var(--line); }
@@ -68,7 +68,7 @@
   .ml-av, .ml-av img { width: 48px; height: 48px; }
   .ml-disc { width: 38px; height: 38px; }
   .ml-n { font-size: var(--fs-xs); }
-  .ml-n i { display: none; }
+  .ml-n { max-width: 80px; }   /* room for the shirt number beside the surname */
   .ml-p.is-home { left: calc(5% + var(--x) * .9%); top: calc(4% + var(--y) * .5%); }
   .ml-p.is-away { left: calc(100% - (5% + var(--x) * .9%)); top: calc(100% - (4% + var(--y) * .5%)); }
   .ml-empty.is-home { inset: 0 0 50% 0; } .ml-empty.is-away { inset: 50% 0 0 0; }
@@ -116,3 +116,8 @@
 .mk.is-red { background: #e5322d; }
 
 .ml-kit { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; flex: none; box-shadow: 0 0 0 1px var(--line, rgba(0,0,0,.15)); }
+
+/* A player's portrait (js/portrait.js) instead of the kit shirt; the shirt number sits beside the surname underneath. */
+.ml-face { position: absolute; inset: 0; display: block; line-height: 0; }
+.ml-face svg { display: block; width: 100%; height: 100%; }
+.ml-n i { margin-right: 1px; color: var(--muted); font-weight: 700; }

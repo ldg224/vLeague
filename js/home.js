@@ -115,7 +115,7 @@ function drawPitches(s) {
     const row = sheetOf(fig.dataset.club), el = fig.querySelector('.hm-pitch');
     if (!row || !el) return;
     // Exactly as locked: an empty slot stays empty (the engine fills it on the day).
-    try { renderPitch(el, { formation: row.formation, lineup: row.lineup || {}, captain: row.captain, players: s.players }); } catch { el.remove(); }
+    try { renderPitch(el, { formation: row.formation, lineup: row.lineup || {}, captain: row.captain, players: s.players, club: (s.teams || []).find(t => t.code === fig.dataset.club) }); } catch { el.remove(); }
   });
 }
 

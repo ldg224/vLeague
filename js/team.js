@@ -19,7 +19,8 @@ import { accentFor, onColour } from './club-colour.js';
 import { POS_ORDER } from './pitch.js';
 import { tableRows, tableCard } from './league-table.js';
 import { countedFixtures, totals, rank, PLAYER_CARDS } from './season-stats.js';
-import { statCard } from './stat-card.js';
+import { statCard } from './stat-card.js';import { portrait } from './portrait.js';
+
 
 chrome();
 const main = document.getElementById('main');
@@ -76,7 +77,9 @@ function render(club, team, season, won, rows) {
 
   // What the league page's pieces need: clubs (with their saved names and colours), crests, times, spoilers.
   const clubFor = c => { const t = season ? teamOf(season, c) : { code: c, name: c }, r = byCode.get(c); return { ...t, ...(r ? { name: r.name, short_name: r.short_name, colour: r.colour, crest_path: r.crest_path } : {}) }; };
-  const ctx = { now, mine: club.code, club: clubFor, crest: (c, px) => crest(clubFor(c), px), time: fmtTime, hidden, avatar: () => '' };
+  const playerById = new Map((season?.players || []).map(p => [String(p.id), p]));
+  const ctx = { now, mine: club.code, club: clubFor, crest: (c, px) => crest(clubFor(c), px), time: fmtTime, hidden, avatar: () => '',
+    face: (id, code, px) => { const p = playerById.get(String(id)); return p ? portrait(p, byCode.get(code) || clubFor(code), undefined, true) : ''; } };
 
   const about = [club.manager_name && `Managed by ${esc(club.manager_name)}`, club.stadium && `${club.manager_name ? 'at' : 'Plays at'} ${esc(club.stadium)}`].filter(Boolean).join(' ');
   let tab = TABS.some(([k]) => k === location.hash.slice(1)) ? location.hash.slice(1) : 'overview';
@@ -102,7 +105,7 @@ function render(club, team, season, won, rows) {
 
   const panels = {
     overview: () => overviewHtml(club, season, ctx, fixtures, squad, won, sum),
-    squad: () => squadHtml(squad),
+    squad: () => squadHtml(squad, club),
     fixtures: () => fixturesHtml(club, season, ctx, fixtures),
   };
   const draw = () => {
@@ -182,7 +185,7 @@ function overviewHtml(club, season, ctx, fixtures, squad, won, sum) {
 
 // ---------- squad ----------
 
-function squadHtml(squad) {
+function squadHtml(squad, club) {
   if (!squad.length) return '<section class="lg-card tm-squad"><p class="empty">No players yet. The squad appears here after the draft.</p></section>';
   const used = squad.reduce((t, p) => t + (Number(p.value) || 0), 0);
   return `<section class="lg-card tm-squad" aria-labelledby="tm-squad-h">
@@ -190,7 +193,7 @@ function squadHtml(squad) {
     <ul class="tm-list"><li class="tm-cols-head" aria-hidden="true"><span></span><span>Name</span><span>Att</span><span>Def</span><span>Value</span></li>${POS_ORDER.filter(pos => squad.some(p => p.position === pos)).map(pos => {
       const list = squad.filter(p => p.position === pos);
       return `<li class="tm-strip pos-${esc(pos)}"><h3>${POS_NAME[pos] || esc(pos)}</h3><span>${list.length}</span></li>
-        ${list.map(p => `<li class="tm-pl pos-${esc(p.position)}"><span class="tm-no">${esc(p.number ?? '')}</span><b>${esc(p.name)}</b>
+        ${list.map(p => `<li class="tm-pl pos-${esc(p.position)}"><span class="tm-no">${esc(p.number ?? '')}</span><span class="tm-who"><span class="tm-pic">${portrait(p, club, undefined, true)}</span><b>${esc(p.name)}</b></span>
           <span class="rt rt-${Number(p.offense) || 5}" title="Attack">${esc(p.offense)}</span><span class="rt rt-${Number(p.defense) || 5}" title="Defence">${esc(p.defense)}</span>
           <span class="tm-val">${p.value != null ? money(p.value) : '–'}</span></li>`).join('')}`;
     }).join('')}</ul></section>`;

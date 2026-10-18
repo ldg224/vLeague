@@ -11,7 +11,7 @@ import { onColour } from './club-colour.js';
 import { esc } from './member.js';
 import { goalMark, assistMark, cardMark, captainMark } from './match-marks.js';
 import { ratingsAt } from './live-rating.js';
-import { VIEWS, money, surname, initials, STAR, PITCH_H, PITCH_V, coach } from './match-lineup.js';
+import { VIEWS, money, surname, initials, STAR, PITCH_H, PITCH_V, coach, faceOf, nameTag } from './match-lineup.js';
 
 const POS = { GK: 0, DEF: 1, MID: 2, FWD: 3 };
 
@@ -55,7 +55,7 @@ function side(fx, L, ctx, F, star, which) {
     const p = byId.get(String(id)), f = F[id] || {}, gk = slots[slot].want === 'GK';
     const pic = L?.kits?.[which]?.[gk ? 'gk' : 'field'] || L?.kits?.[which]?.field;
     const num = numberOf(p, id);
-    const face = pic ? `<img src="${pic}" alt="">${num !== '' ? `<i class="ml-sn">${esc(num)}</i>` : ''}` : `<i class="ml-disc" style="--c:${esc(colour)};--on:${esc(onColour(colour))}">${esc(num)}</i>`;
+    const face = faceOf(p, code, ctx) || (pic ? `<img src="${pic}" alt="">${num !== '' ? `<i class="ml-sn">${esc(num)}</i>` : ''}` : `<i class="ml-disc" style="--c:${esc(colour)};--on:${esc(onColour(colour))}">${esc(num)}</i>`);
     const cap = sheet && String(sheet.captain) === String(id) ? captainMark() : '';
     let marks = '';
     if (ctx.view === 'rating' && f.r != null) {
@@ -68,7 +68,7 @@ function side(fx, L, ctx, F, star, which) {
       if (ctx.view === 'rating' && (f.rc || f.yc)) marks += `<span class="ml-off">${f.rc && f.off ? `<em>${esc(f.off)}′</em>` : ''}${cardMark(f.rc ? 'red' : 'yellow')}</span>`;
     } else if (p) marks += `<b class="ml-v" aria-label="Value ${esc(money(p.value))}">${esc(money(p.value))}</b>`;
     return `<li class="ml-p is-${which}" style="--x:${slots[slot].x.toFixed(1)};--y:${slots[slot].y.toFixed(1)}"><span class="ml-av">${face}${marks}</span>`
-      + `<span class="ml-n">${cap}${esc(surname(name))}</span></li>`;
+      + `<span class="ml-n">${nameTag(cap, p ? num : '', name)}</span></li>`;
   }).join('');
   const rated = xi.list.map(p => F[p.id]?.r).filter(r => r != null);
   return { html, formation: xi.formation, avg: rated.length ? rated.reduce((a, b) => a + b, 0) / rated.length : null, ids: new Set(xi.list.map(p => String(p.id))) };

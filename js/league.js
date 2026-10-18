@@ -36,6 +36,7 @@ import { openDraft, phase as draftPhase } from './draft-data.js';
 import { db } from './auth.js';
 import { loadChanceSheets, chanceOf } from './win-chance.js';
 import { VERSION } from './version.js';
+import { portrait } from './portrait.js';
 import { sheen, pinClock } from './silk.js';
 
 const params = new URLSearchParams(location.search);
@@ -91,11 +92,14 @@ if (ctx) {
     }
   }
   const teamOf = code => season?.teams.find(t => t.code === code) || { code, name: code, colour: '#64748b' };
+  let playersById = new Map();   // every player by id, for portraits (read a moment after the page, with the shirt numbers)
+  const faceOf = (id, team, px) => { const p = playersById.get(String(id)), c = clubRows?.get(team) || teamOf(team); return p ? portrait(p, { code: team, colour: c.colour, colour2: c.colour2 }, undefined, true) : ''; };
   // A club's logo when it has one, else its colour (the page's crest() would draw a blank image for a club without a logo).
   const sctx = {
     club: teamOf,
     crest: (code, px) => (teamOf(code).crest_path || !logoUrl(code).startsWith('data:') ? crestHtml(teamOf(code), px) : initialsCrest(teamOf(code), code, px)),
     avatar: code => (kitPics[code] ? `<img src="${kitPics[code]}" alt="">` : ''),
+    face: faceOf,   // (player id, club code, px) -> the player's portrait, or '' until the players have loaded
   };
   const played = () => (!season ? [] : demo != null ? countedFixtures(season.fixtures) : countedFixtures(finished(season)));
   const KINDS = { player: PLAYER_CARDS, team: TEAM_CARDS };
@@ -277,7 +281,7 @@ if (ctx) {
   const refreshChance = async () => { const x = await loadChanceSheets(), same = JSON.stringify(x) === JSON.stringify(chanceSheets); if (!same) { chanceSheets = x; rerender(true); } };
   refreshChance(); setInterval(() => { if (!document.hidden) refreshChance(); }, 60000);
   clubs().then(rows => { clubRows = new Map(rows.map(c => [c.code, c])); stadiums = Object.fromEntries(rows.filter(c => c.stadium).map(c => [c.code, c.stadium])); drawInSoon(); }).catch(() => {});
-  if (demo == null) loadPlayers().then(list => { numbers = new Map(list.filter(p => p.number != null).map(p => [String(p.id), p.number])); drawInSoon(); }).catch(() => {});
+  if (demo == null) loadPlayers().then(list => { numbers = new Map(list.filter(p => p.number != null).map(p => [String(p.id), p.number])); playersById = new Map(list.map(p => [String(p.id), p])); drawInSoon(); }).catch(() => {});
 
   // The Draft tab (WR-27): shown only while the office has made a draft visible, with LIVE while picks can be made. The draft itself (js/draft.js) is mounted into
   // an element of its own when you open the tab and unmounted (clock, poll and live channel stopped) when you leave it.

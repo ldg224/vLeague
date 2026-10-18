@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## Unreleased (on the revamp branch, waiting for a release)
+
+Headlines: Faces everywhere
+
+**Added:** player portraits now show in more places: Team of the Week, the stat leader cards and full stat lists, both match lineups (Predicted and as played), the My club pitch and squad picker, and the squad list on each team page.
+**Changed:** in the match lineups the shirt number now sits beside the surname (7 Rodriguez) instead of on the shirt, and the portrait replaces the kit shirt. On the My club pitch the slot name (ST, CB) moves to a small tag on the portrait.
+
+No database change.
+
 ## 1.2.0 (2026-10-18)
 
 Headlines: Player portraits | Faces on the Draft tab

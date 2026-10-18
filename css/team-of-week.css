@@ -44,6 +44,9 @@
 .tw-line { position: relative; list-style: none; margin: 0; padding: 0; display: flex; justify-content: space-around; align-items: flex-start; gap: 4px; min-height: 66px; }
 .tw-p { display: grid; justify-items: center; gap: 4px; flex: 1 1 0; min-width: 0; max-width: 25%; }
 .tw-av { position: relative; display: grid; place-items: center; width: 52px; height: 48px; }
+.tw-av.has-face { width: 52px; height: 60px; }
+.tw-av.has-face > svg { width: auto; height: 100%; }
+.tw-cr { position: absolute; left: -2px; bottom: 2px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--surface); box-shadow: 0 0 0 2px var(--surface); }
 .tw-p.is-mine .tw-av .crest { filter: drop-shadow(0 0 0 var(--club-accent, var(--c))) drop-shadow(0 0 3px var(--club-accent, transparent)); }
 .tw-r {
   position: absolute; top: -4px; right: -4px; display: inline-flex; align-items: center; gap: 2px; min-width: 30px; height: 20px; padding: 0 6px; justify-content: center;

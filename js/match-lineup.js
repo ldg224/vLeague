@@ -1,5 +1,5 @@
 // The match page's Predicted Lineup card (WR-32): both clubs' XIs on one pitch, the home side on the left half and the away side on the right
-// (home above away on a phone), each player a kit shirt with the number and surname under it, a bar of crest, name, formation and team value
+// (home above away on a phone), each player a portrait in his club's colours with his number and surname under it, a bar of crest, name, formation and team value
 // above, and the coaches below.
 //   loadLineups(fx, season, rows) -> { home, away, kits } once: each side is { sheet, locked }; kits are small shirt pictures (data URLs)
 //   lineupCard(L, ctx)            -> the card's html. ctx = { season, club(code) -> clubs row | undefined, team(code) -> team, crest(team, px) -> html,
@@ -17,6 +17,7 @@ import { onColour } from './club-colour.js';
 import { esc } from './member.js';
 import { icon } from './icons.js';
 import { goalMark, assistMark, captainMark } from './match-marks.js';
+import { portrait } from './portrait.js';
 
 const image = url => new Promise(res => { if (!url) return res(null); const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
 const filled = row => Boolean(row && row.lineup && Object.keys(row.lineup).length);
@@ -70,6 +71,10 @@ export const money = v => {
   return n >= 1e6 ? `$${(n / 1e6).toFixed(1).replace(/\.0$/, '')}M` : `$${Math.round(n / 1e3)}K`;
 };
 export const surname = n => { const w = String(n || '').trim().split(/\s+/); return w.length > 1 ? w.slice(1).join(' ') : w[0] || ''; };
+// A player's portrait for this match page, in his club's colours (js/portrait.js), or '' for a player the league has no portrait data for.
+export const faceOf = (p, code, ctx) => (p ? `<span class="ml-face">${portrait(p, { code, colour: ctx.club(code)?.colour || ctx.team(code)?.colour, colour2: ctx.club(code)?.colour2 }, undefined, true)}</span>` : '');
+// The label under a player: his shirt number beside his surname, and the captain's armband first.
+export const nameTag = (cap, number, name) => `${cap}${number != null && number !== '' ? `<i>${esc(number)}</i> ` : ''}${esc(surname(name))}`;
 export const initials = n => String(n || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
 export const VIEWS = [['rating', 'Average rating'], ['contrib', 'Contributions'], ['value', 'Value']];
@@ -89,8 +94,7 @@ function players(side, L, ctx, cls, star) {
   const code = ctx.code[side], team = ctx.team(code), colour = ctx.club(code)?.colour || team.colour;
   return Object.entries(sheet.lineup).filter(([slot]) => slots[slot]).map(([slot, id]) => {
     const p = byId.get(String(id)); if (!p) return '';
-    const gk = slots[slot].want === 'GK', pic = L.kits[side]?.[gk ? 'gk' : 'field'] || L.kits[side]?.field;
-    const face = pic ? `<img src="${pic}" alt=""><i class="ml-sn">${esc(p.number ?? '')}</i>` : `<i class="ml-disc" style="--c:${esc(colour)};--on:${esc(onColour(colour))}">${esc(p.number ?? '')}</i>`;
+    const face = faceOf(p, code, ctx);
     const cap = String(sheet.captain) === String(id) ? captainMark() : '';
     const st = ctx.stats?.get(String(id)), avg = avgOf(ctx.stats, id);
     let mark = '';
@@ -102,7 +106,7 @@ function players(side, L, ctx, cls, star) {
     }
     const worth = ctx.view === 'value' ? `<b class="ml-v" aria-label="Value ${esc(money(p.value))}">${esc(money(p.value))}</b>` : '';
     return `<li class="ml-p ${cls}" style="--x:${slots[slot].x.toFixed(1)};--y:${slots[slot].y.toFixed(1)}" data-id="${esc(id)}"><span class="ml-av">${face}${mark}${worth}</span>`
-      + `<span class="ml-n">${cap}${esc(surname(p.name))}</span></li>`;
+      + `<span class="ml-n">${nameTag(cap, p.number, p.name)}</span></li>`;
   }).join('');
 }
 

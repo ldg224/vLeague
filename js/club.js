@@ -10,7 +10,8 @@ import { tableRows } from './league-table.js';
 import { rating } from './places.js';
 import { prefsNow, spoilerHidden } from './prefs.js';
 import { kitSprite, cleanDesign, kitName, FIELD_SLOTS } from './kit.js';
-import { renderPitch, FORMATIONS, isFormation, positionPenalty, DEFAULT_FORMATION, TACTICS, STEPS, PRESETS, POS_ORDER, normaliseSheet, reshape, benchOf, autoLineup, fillLineup } from './pitch.js';
+import { renderPitch, FORMATIONS, isFormation, positionPenalty, DEFAULT_FORMATION, TACTICS, STEPS, PRESETS, POS_ORDER, normaliseSheet, reshape, benchOf, autoLineup, fillLineup } from './pitch.js';import { portrait } from './portrait.js';
+
 
 const PIECES = [['captain', 'Captain'], ['penalties', 'Penalties'], ['freekicks', 'Free kicks'], ['corners', 'Corners']];
 const TZ = 'Australia/Melbourne';
@@ -259,7 +260,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   }
 
   function drawPitch() {
-    renderPitch($('#pitch', box), { ...sheet, players: squad, editable: true, selected: sel?.slot || null, onSlot });
+    renderPitch($('#pitch', box), { ...sheet, players: squad, editable: true, selected: sel?.slot || null, onSlot, club });
     drawFormations();
     // S-25: a player out of position loses rating in the match, more the further the slot is from his own (positionPenalty).
     const off = Object.keys(FORMATIONS[sheet.formation]).map(sl => ({ sl, p: byId.get(String(sheet.lineup[sl])) })).filter(x => x.p && x.p.position !== wantOf(x.sl))
@@ -288,7 +289,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
       const id = String(p.id), slot = slotOf(id), off = slot && p.position !== wantOf(slot), on = sel?.player === id;
       return `<li><button type="button" class="pl${slot ? ' in' : ''}${on ? ' sel' : ''}${want && p.position === want ? ' fits' : ''}" data-id="${esc(id)}" aria-pressed="${on}">
         <span class="pl-pos pos-${esc(p.position)}">${esc(p.position)}</span>
-        <span class="pl-name">${esc(p.name)}<small>${p.number != null && p.number !== '' ? `#${esc(p.number)}` : ''}</small></span>
+        <span class="pl-name"><span class="pl-pic">${portrait(p, club, undefined, true)}</span>${esc(p.name)}<small>${p.number != null && p.number !== '' ? `#${esc(p.number)}` : ''}</small></span>
         <span class="pl-rts"><span class="rt rt-${Number(p.offense) || 5}" title="Attack">${esc(p.offense)}</span><span class="rt rt-${Number(p.defense) || 5}" title="Defence">${esc(p.defense)}</span></span>
         <span class="pl-slot${off ? ' off' : ''}"${off ? ` title="Out of position: match rating drops by ${positionPenalty(wantOf(slot), p.position)}"` : ''}>${slot ? esc(slot) : 'Bench'}</span></button></li>`;
     }).join('');
