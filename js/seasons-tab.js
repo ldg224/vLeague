@@ -61,7 +61,7 @@ function pastCard(season, h, o, live = false) {
     return path ? `<img class="ss-cup" src="${esc(o.trophy(path))}" alt="" loading="lazy">` : '';
   };
   const comps = h.comps.filter(c => at(c, 'winner') || at(c, 'runner_up'));
-  const body = comps.map(c => `<p class="ss-comp">${esc(c.name)}</p><dl class="ss-rows">${row('Winner', side(at(c, 'winner')), at(c, 'winner') ? picture(at(c, 'winner'), c) : '')}${row('Runner-up', side(at(c, 'runner_up')))}</dl>`).join('');
+  const body = comps.map(c => `<p class="ss-comp">${esc(c.name)}</p><dl class="ss-rows">${row(/spoon/i.test(c.name) ? 'Last place' : 'Winner', side(at(c, 'winner')), at(c, 'winner') ? picture(at(c, 'winner'), c) : '')}${/spoon|shield/i.test(c.name) ? '' : row('Runner-up', side(at(c, 'runner_up')))}</dl>`).join('');
   // the season being played, once its winners are recorded: the Shield and the wooden spoon still come from the table unless History records them
   const has = re => comps.some(c => re.test(c.name));
   const extra = !live ? '' : (has(/shield/i) ? '' : `<p class="ss-comp">vLeague Shield</p><dl class="ss-rows">${row('Winner', o.shield?.winner ? who(o.shield.winner, o) : pending)}</dl>`)

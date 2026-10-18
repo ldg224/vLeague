@@ -10,6 +10,9 @@ import { uploadTrophy } from './trophy.js';
 export const historyView = () => '<h1>History</h1><div id="hi-root"><p class="quiet">Loading…</p></div>';
 
 const PLACES = [['winner', 'Winner'], ['runner_up', 'Runner-up']];
+// The wooden spoon and the Shield have one holder each: no runner-up. Name a competition "Wooden spoon" (or "vLeague Shield") and it is set from a single row.
+const single = c => /spoon|shield/i.test(c.name);
+const placesOf = c => (single(c) ? PLACES.slice(0, 1).map(([pl]) => [pl, /spoon/i.test(c.name) ? 'Last place' : 'Winner']) : PLACES);
 let msg = '', openSeason = null;   // openSeason: a season just added, opened so it can be filled in
 
 export async function mountHistory(ctx) {
@@ -60,7 +63,7 @@ export async function mountHistory(ctx) {
       <p class="quiet">The trophies a season can have. Each has a picture for the winner and one for the runner-up (400 × 400 PNG); a season can swap in its own.</p>
       ${comps.length ? `<ul class="hi-list">${comps.map((c, i) => `<li class="hi-comp" data-comp="${c.id}">
         <input class="hi-name" data-comp-name value="${esc(c.name)}" maxlength="40" aria-label="Competition name">
-        ${PLACES.map(([pl, l]) => { const k = pl === 'winner' ? 'winner_art' : 'runner_art'; return `<span class="hi-art">${pic(c[k], `${c.name} ${l.toLowerCase()} trophy`)}<span>${l}<br>${upload(`data-comp-art="${k}"`, c[k] ? 'Change' : 'Upload')}${c[k] ? ` · <button type="button" class="link-btn" data-comp-clear="${k}">Remove</button>` : ''}</span></span>`; }).join('')}
+        ${placesOf(c).map(([pl, l]) => { const k = pl === 'winner' ? 'winner_art' : 'runner_art'; return `<span class="hi-art">${pic(c[k], `${c.name} ${l.toLowerCase()} trophy`)}<span>${l}<br>${upload(`data-comp-art="${k}"`, c[k] ? 'Change' : 'Upload')}${c[k] ? ` · <button type="button" class="link-btn" data-comp-clear="${k}">Remove</button>` : ''}</span></span>`; }).join('')}
         <span class="hi-acts"><button type="button" class="link-btn" data-move="-1" ${i ? '' : 'disabled'} aria-label="Move up">↑</button><button type="button" class="link-btn" data-move="1" ${i < comps.length - 1 ? '' : 'disabled'} aria-label="Move down">↓</button>
         <button type="button" class="link-btn danger" data-comp-del>Delete</button></span></li>`).join('')}</ul>` : '<p class="empty">No competitions yet. Add the first one, for example “League”.</p>'}
       <form class="hi-add" data-add="comp"><input name="name" maxlength="40" required placeholder="New competition, e.g. Grand Final" aria-label="New competition name"><button class="btn small">Add competition</button></form></section>`;
@@ -87,7 +90,7 @@ export async function mountHistory(ctx) {
         <div class="hi-season-in">
           <label class="hi-sname">Name <input data-season-name value="${esc(s.name)}" maxlength="40"></label>
           <label class="hi-sname">Ran under <select data-season-league>${leagues.slice().reverse().map(l => `<option value="${l.id}"${leagueOf(s)?.id === l.id ? ' selected' : ''}>${esc(l.name)}</option>`).join('')}</select></label>
-          ${comps.map(c => `<div class="hi-award-c"><h3>${esc(c.name)}</h3>${PLACES.map(([pl, l]) => {
+          ${comps.map(c => `<div class="hi-award-c"><h3>${esc(c.name)}</h3>${placesOf(c).map(([pl, l]) => {
             const a = awardOf(s.id, c.id, pl), def = pl === 'winner' ? c.winner_art : c.runner_art;
             return `<div class="hi-award" data-comp="${c.id}" data-place="${pl}">${pic(a?.art_path || def, `${c.name} ${l.toLowerCase()} trophy`)}
               <span class="hi-award-l">${l}</span>${teamSelect(a, `${s.name} ${c.name} ${l}`)}
