@@ -16,7 +16,7 @@ import { kitSprite, kitChest, startDesign } from './kit.js';
 import { countedFixtures, totals, rank, PLAYER_CARDS, TEAM_CARDS } from './season-stats.js';
 import { statCard, statPage, wireStatPage, initialsCrest } from './stat-card.js';
 import { demoSeason } from './demo-season.js';
-import { tableRows, tableCard, rowTops, reshuffle, shield } from './league-table.js';
+import { tableRows, tableCard, rowTops, reshuffle, shield, woodenSpoon } from './league-table.js';
 import { paint, quietly, busy, snapshotInputs, restoreInputs } from './paint.js';
 import { spoilerHidden, revealScore, fmtTime } from './prefs.js';
 import { fixturesView, parseSub, roundWidget, rounds } from './league-fixtures.js';
@@ -250,7 +250,7 @@ if (ctx) {
     const now = tableNow(), all = season ? season.fixtures : [], hidden = new Set(all.filter(f => f.result && !f.test && spoilerHidden(f, season, now)).map(f => f.id));
     const gf = all.find(f => f.stage === 'GF' && !f.test && f.result);
     return seasonsView({
-      current: { label: picked?.label || 'Season 1', live: picked?.live !== false }, final: grandFinal(all.filter(f => f.result), { hidden }), shield: season ? shield(season, { now, hidden }) : null, history: honours,
+      current: { label: picked?.label || 'Season 1', live: picked?.live !== false }, final: grandFinal(all.filter(f => f.result), { hidden }), shield: season ? shield(season, { now, hidden }) : null, spoon: season ? woodenSpoon(season, { now, hidden }) : null,history: honours,
       club: code => clubRows?.get(code) || sctx.club(code), crest: sctx.crest, trophy: trophyUrl, hiddenCount: gf && hidden.has(gf.id) ? 1 : 0,
     });
   };
