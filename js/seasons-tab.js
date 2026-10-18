@@ -47,7 +47,7 @@ function currentCard(o) {
     + `<p class="ss-comp">Wooden spoon</p><dl class="ss-rows">${row('Last place', o.spoon?.winner ? who(o.spoon.winner, o) : pending)}</dl></section>`;
 }
 
-function pastCard(season, h, o) {
+function pastCard(season, h, o, live = false) {
   const at = (comp, place) => h.awards.find(a => a.season === season.id && a.competition === comp.id && a.place === place);
   const side = a => {
     if (!a) return '<span class="ss-tbd">Not recorded</span>';
@@ -62,8 +62,12 @@ function pastCard(season, h, o) {
   };
   const comps = h.comps.filter(c => at(c, 'winner') || at(c, 'runner_up'));
   const body = comps.map(c => `<p class="ss-comp">${esc(c.name)}</p><dl class="ss-rows">${row('Winner', side(at(c, 'winner')), at(c, 'winner') ? picture(at(c, 'winner'), c) : '')}${row('Runner-up', side(at(c, 'runner_up')))}</dl>`).join('');
+  // the season being played, once its winners are recorded: the Shield and the wooden spoon still come from the table unless History records them
+  const has = re => comps.some(c => re.test(c.name));
+  const extra = !live ? '' : (has(/shield/i) ? '' : `<p class="ss-comp">vLeague Shield</p><dl class="ss-rows">${row('Winner', o.shield?.winner ? who(o.shield.winner, o) : pending)}</dl>`)
+    + (has(/spoon/i) ? '' : `<p class="ss-comp">Wooden spoon</p><dl class="ss-rows">${row('Last place', o.spoon?.winner ? who(o.spoon.winner, o) : pending)}</dl>`);
   return `<section class="lg-card ss" aria-label="${esc(season.name)}"><header class="ss-head"><h3>${esc(season.name)}</h3><span class="ss-pill">Finished</span></header>`
-    + `${body || '<p class="ss-comp">No winners recorded yet</p>'}</section>`;
+    + `${body || '<p class="ss-comp">No winners recorded yet</p>'}${extra}</section>`;
 }
 
 export function seasonsView(o) {
@@ -73,7 +77,7 @@ export function seasonsView(o) {
   const leagueOf = s => leagues.find(l => l.id === s.league) || newest;   // a season with no league counts as the newest name
   const record = seasons.find(s => leagueOf(s) === newest && s.name === o.current.label);   // the current season, already recorded in History
   const decided = record && h.awards.some(a => a.season === record.id && a.place === 'winner');
-  const current = decided ? pastCard(record, h, o) : currentCard({ ...o, final: o.final?.hiddenFinal ? null : o.final });
+  const current = decided ? pastCard(record, h, o, true) : currentCard({ ...o, final: o.final?.hiddenFinal ? null : o.final });
   const cardsOf = l => seasons.filter(s => leagueOf(s) === l && s !== record).map(s => pastCard(s, h, o));
   const group = (title, cards, tone) => `<div class="sc-group">${title ? `<h3 class="ss-league is-${tone}">${esc(title)}</h3>` : ''}<div class="sc-grid">${cards.join('')}</div></div>`;
   const groups = leagues.length
