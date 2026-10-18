@@ -12,7 +12,7 @@ import { esc, crestUrl, clubs } from './member.js';
 import { finished, logoUrl } from './dashboard-data.js';
 import { crest as crestHtml, useClubs } from './places.js';
 import { loadKits } from './kits-data.js';
-import { kitSprite, startDesign } from './kit.js';
+import { kitSprite, kitChest, startDesign } from './kit.js';
 import { countedFixtures, totals, rank, PLAYER_CARDS, TEAM_CARDS } from './season-stats.js';
 import { statCard, statPage, wireStatPage, initialsCrest } from './stat-card.js';
 import { demoSeason } from './demo-season.js';
@@ -92,6 +92,19 @@ if (ctx) {
     }
   }
   const teamOf = code => season?.teams.find(t => t.code === code) || { code, name: code, colour: '#64748b' };
+  // Each club's real kit on its players' portraits in the Draft tab: the chest of its home kit, and of its goalkeeper kit (drawn once, when the tab first opens).
+  let kitChests = null;
+  const imageOf = url => new Promise(res => { if (!url) return res(null); const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
+  const loadChests = async () => {
+    const kits = await loadKits(), out = {};
+    await Promise.all((season?.teams || []).map(async t => {
+      const k = kits[t.code];
+      if (!k?.home) return;
+      const [art, logo, gart, glogo] = await Promise.all([imageOf(k.home.artUrl), imageOf(k.home.logoUrl), imageOf(k.gk?.artUrl), imageOf(k.gk?.logoUrl)]);
+      out[t.code] = { field: kitChest(k.home.design, { art, logo }), gk: k.gk ? kitChest(k.gk.design, { art: gart, logo: glogo }) : '' };
+    }));
+    return (kitChests = out);
+  };
   let playersById = new Map();   // every player by id, for portraits (read a moment after the page, with the shirt numbers)
   const faceOf = (id, team, px) => { const p = playersById.get(String(id)), c = clubRows?.get(team) || teamOf(team); return p ? portrait(p, { code: team, colour: c.colour, colour2: c.colour2 }, undefined, true) : ''; };
   // A club's logo when it has one, else its colour (the page's crest() would draw a blank image for a club without a logo).
@@ -291,7 +304,7 @@ if (ctx) {
     paint(main, '<div class="lg-draft"></div>');
     const root = main.querySelector('.lg-draft');
     draftApi = null;
-    mountDraft(root, { club: ctx.club, season, sub, crest: (c, px) => sctx.crest(c, px), colourOf: (c, theme) => { const col = (clubRows?.get(c) || sctx.club(c))?.colour; return isHex(col) ? accentFor(col, theme) : ''; }, kitOf: c => { const r = clubRows?.get(c) || sctx.club(c); return c && r ? { code: c, colour: r.colour, colour2: r.colour2 } : null; }, onGone: () => { frameApi?.setDraft({ visible: false, live: false }); if (current?.[0] === 'draft') location.replace('#overview'); } })
+    Promise.resolve(kitChests || loadChests().catch(() => {})).then(() => mountDraft(root, { club: ctx.club, season, sub, crest: (c, px) => sctx.crest(c, px), colourOf: (c, theme) => { const col = (clubRows?.get(c) || sctx.club(c))?.colour; return isHex(col) ? accentFor(col, theme) : ''; }, kitOf: c => { const r = clubRows?.get(c) || sctx.club(c); return c && r ? { code: c, colour: r.colour, colour2: r.colour2, chest: kitChests?.[c]?.field, gkChest: kitChests?.[c]?.gk } : null; }, onGone: () => { frameApi?.setDraft({ visible: false, live: false }); if (current?.[0] === 'draft') location.replace('#overview'); } }))
       .then(api => { if (current?.[0] === 'draft' && root.isConnected) draftApi = api; else api.unmount(); })
       .catch(() => { if (root.isConnected) root.innerHTML = '<section class="lg-card"><div class="lg-card-head"><h2>Draft</h2></div><div class="sc-empty"><b>The draft didn’t load</b><span>Check your connection and refresh the page.</span></div></section>'; });
   };

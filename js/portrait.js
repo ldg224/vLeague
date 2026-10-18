@@ -75,7 +75,7 @@ function draw(seed, club, group, pattern, label, size) {
       ' L' + (60 + w - 1) + ' ' + (cy - 12) + ' Q60 ' + ctrl + ' ' + (60 - w + 1) + ' ' + (cy - 12) + 'Z" fill="' + hairC + '"/>';
   };
 
-  s += '<svg class="pt" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 140"' + (size ? ' width="' + size + '" height="' + Math.round(size * 7 / 6) + '"' : '') + (label ? ' role="img" aria-label="' + label + '"' : ' aria-hidden="true"') + ' style="overflow:visible;filter:' + RIM + '">';
+  s += '<svg class="portrait" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 140"' + (size ? ' width="' + size + '" height="' + Math.round(size * 7 / 6) + '"' : '') + (label ? ' role="img" aria-label="' + label + '"' : ' aria-hidden="true"') + ' style="overflow:visible;filter:' + RIM + '">';
   s += '<defs><clipPath id="' + id + 'k"><path d="M8 140 C8 112 32 104 60 104 C88 104 112 112 112 140Z"/></clipPath>' +
        '</defs>';
   s += '<g>';
@@ -155,7 +155,8 @@ function draw(seed, club, group, pattern, label, size) {
   return s;
 }
 
-const cache = new Map();
+const cache = new Map(), chestIds = new Map();
+const chestId = c => chestIds.get(c) ?? (chestIds.set(c, chestIds.size + 1), chestIds.size);   // a short id for a long data URL, so the cache key stays small
 const hash = s => [...String(s)].reduce((n, c) => (Math.imul(n, 31) + c.charCodeAt(0)) >>> 0, 7);
 export function portrait(p, club, size, decorative = false) {
   if (!p) return '';
@@ -163,7 +164,7 @@ export function portrait(p, club, size, decorative = false) {
   const look = lookOf(p), pattern = club?.code ? KIT[hash(club.code) % KIT.length] : 'plain';
   const label = decorative ? '' : `Portrait of ${String(p.name || '').replace(/[<>&"]/g, '')}`;
   const chest = club?.chest && String(club.chest).startsWith('data:image/') ? club.chest : '';
-  const key = [p.id, p.face || 0, look, a, b, pattern, size || 0, label, chest ? hash(chest) : ''].join('|');
+  const key = [p.id, p.face || 0, look, a, b, pattern, size || 0, label, chest ? chestId(chest) : ''].join('|');
   if (!cache.has(key)) {
     if (cache.size > 800) cache.clear();
     cache.set(key, draw(`${p.id}#${p.face || 0}`, { a, b, chest }, look, pattern, label, size));

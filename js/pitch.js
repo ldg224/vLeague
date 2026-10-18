@@ -192,7 +192,8 @@ const surname = n => { const w = String(n || '').trim().split(/\s+/); return w.l
 const POS_NAME = { GK: 'goalkeeper', DEF: 'defender', MID: 'midfielder', FWD: 'forward' };
 
 // `club` ({ code, colour, colour2 }) dresses each player's portrait (js/portrait.js) in the club's colours; the slot name moves to a small tag on it.
-export function renderPitch(el, { formation, lineup = {}, captain = null, players = [], editable = false, selected = null, onSlot = null, club = null } = {}) {
+// `kits` ({ field, gk }: kitChest() pictures) dresses them in the club's real kit instead.
+export function renderPitch(el, { formation, lineup = {}, captain = null, players = [], editable = false, selected = null, onSlot = null, club = null, kits = null } = {}) {
   const f = FORMATIONS[formation] ? formation : DEFAULT_FORMATION;
   const byId = new Map(players.map(p => [String(p.id), p]));
   const tokens = Object.entries(slotsOf(f)).map(([slot, sl]) => {
@@ -200,7 +201,7 @@ export function renderPitch(el, { formation, lineup = {}, captain = null, player
     const off = p && p.position !== sl.want, cap = p && String(captain) === id;
     const label = p ? `${slot}: ${p.number != null && p.number !== '' ? `number ${p.number}, ` : ''}${p.name}${cap ? ', captain' : ''}${off ? `, a ${POS_NAME[p.position] || 'player'} out of position` : ''}` : `${slot}: empty`;
     const cls = `pt-slot${p ? '' : ' empty'}${off ? ' off' : ''}${slot === selected ? ' sel' : ''}`;
-    const inner = `<span class="pt-disc${p ? ' has-face' : ''}">${p ? `<span class="pt-face">${portrait(p, club, undefined, true)}</span><b class="pt-slotl">${esc(slot)}</b>` : esc(slot)}${cap ? '<b class="pt-c" aria-hidden="true">C</b>' : ''}</span><span class="pt-name">${p ? `${p.number != null && p.number !== '' ? `<b class="pt-no">${esc(p.number)}</b> ` : ''}${esc(surname(p.name))}` : '&nbsp;'}</span>`;
+    const inner = `<span class="pt-disc${p ? ' has-face' : ''}">${p ? `<span class="pt-face">${portrait(p, club && kits ? { ...club, chest: (sl.want === 'GK' && kits.gk) || kits.field } : club, undefined, true)}</span><b class="pt-slotl">${esc(slot)}</b>` : esc(slot)}${cap ? '<b class="pt-c" aria-hidden="true">C</b>' : ''}</span><span class="pt-name">${p ? `${p.number != null && p.number !== '' ? `<b class="pt-no">${esc(p.number)}</b> ` : ''}${esc(surname(p.name))}` : '&nbsp;'}</span>`;
     const pos = `left:${sl.x.toFixed(1)}%;bottom:${sl.y.toFixed(1)}%`;
     return editable
       ? `<button type="button" class="${cls}" data-slot="${esc(slot)}" style="${pos}" aria-label="${esc(label)}" aria-pressed="${slot === selected}">${inner}</button>`

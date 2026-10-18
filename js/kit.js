@@ -208,6 +208,21 @@ export function kitSprite(design, imgs = {}, size = 128, side = 'front') {
   return out;
 }
 
+// The chest of a kit (no head cap or legs) as a picture: it becomes the shirt on a player's portrait (js/portrait.js). '' where it can't be drawn.
+const chests = new WeakMap();
+export function kitChest(design, imgs = {}) {
+  try {
+    const sprite = kitSprite({ ...design, text: { name: '', number: '', colour: '' } }, imgs, 160);
+    if (!chests.has(sprite)) {
+      const q = document.createElement('canvas');
+      q.width = sprite.width; q.height = Math.round(sprite.height * 0.34);
+      q.getContext('2d').drawImage(sprite, 0, sprite.height * 0.16, sprite.width, q.height, 0, 0, q.width, q.height);
+      chests.set(sprite, q.toDataURL());
+    }
+    return chests.get(sprite);
+  } catch { return ''; }
+}
+
 // Two shirts too alike to tell apart on a pitch? Compared on the colours the shirt really shows: the main colour, plus the second one on a patterned shirt
 // (stripes, hoops, halves...). They clash if the main colours are close, or if every colour of each shirt has a close match on the other (a navy and maroon
 // striped shirt against a maroon and navy one: the main colours differ but the shirts look the same from a distance).

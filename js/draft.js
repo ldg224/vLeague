@@ -64,7 +64,7 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
     let msg = '', sub = 'players';   // sub: which part of Available players shows on a phone (players, queue or auto-pick)
     const byId = () => new Map(players.map(p => [p.id, p]));
     // A player's portrait (js/portrait.js), in his club's colours once he has one. The name is always printed beside it, so it is decorative.
-    const face = (p, px) => `<span class="dr-face">${portrait(p, kitOf(p.team), px, true)}</span>`;
+    const face = (p, px) => { const k = kitOf(p.team); return `<span class="dr-face">${portrait(p, k && { ...k, chest: p.position === 'GK' && k.gkChest ? k.gkChest : k.chest }, px, true)}</span>`; };
 
     const turn = () => st.order.find(o => o.pick_no === st.draft.current_pick) || null;
     const myTurn = () => phase(st.draft) === 'live' && turn()?.club === code;

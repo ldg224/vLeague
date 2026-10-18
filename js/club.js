@@ -9,7 +9,7 @@ import { finished, logoUrl, kickoff, status, matchUrl } from './dashboard-data.j
 import { tableRows } from './league-table.js';
 import { rating } from './places.js';
 import { prefsNow, spoilerHidden } from './prefs.js';
-import { kitSprite, cleanDesign, kitName, FIELD_SLOTS } from './kit.js';
+import { kitSprite, kitChest, cleanDesign, kitName, FIELD_SLOTS } from './kit.js';
 import { renderPitch, FORMATIONS, isFormation, positionPenalty, DEFAULT_FORMATION, TACTICS, STEPS, PRESETS, POS_ORDER, normaliseSheet, reshape, benchOf, autoLineup, fillLineup } from './pitch.js';import { portrait } from './portrait.js';
 
 
@@ -111,11 +111,16 @@ async function teamSheet(box, { club, squad, userId, season }) {
     ok(c.from('club_kits').select('*').eq('club', club.code)),
     ok(c.from('submitted_sheets').select('week, sheet, submitted_at').eq('club', club.code)),
   ]);
-  const kitRows = (kitRes.error ? [] : kitRes.data || []).filter(k => FIELD_SLOTS.includes(k.slot));
-  const kitsMade = Object.fromEntries(kitRows.map(k => [k.slot, cleanDesign(k.design)]));   // the club's outfield kits (none until the kits table exists)
+  const kitRows = (kitRes.error ? [] : kitRes.data || []).filter(k => FIELD_SLOTS.includes(k.slot) || k.slot === 'gk');   // the goalkeeper kit is only drawn, never picked
+  const kitsMade = Object.fromEntries(kitRows.filter(k => k.slot !== 'gk').map(k => [k.slot, cleanDesign(k.design)]));   // the club's outfield kits (none until the kits table exists)
   const kitArt = Object.fromEntries(await Promise.all(kitRows.filter(k => k.art_path).map(k => new Promise(res => {   // its own whole-kit designs, approved or not
     const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res([k.slot, i]); i.onerror = () => res([k.slot, null]); i.src = `${SUPABASE_URL}/storage/v1/object/public/kits/${k.art_path}`;
   }))));
+  // The club's real kit on the portraits in the pitch: the kit this sheet wears (automatic = home) for outfield players, the goalkeeper kit for the keeper.
+  const gkDesign = kitRows.find(k => k.slot === 'gk')?.design;
+  const chestMemo = new Map();
+  const chestOf = (key, design, art) => { if (!design) return ''; if (!chestMemo.has(key)) chestMemo.set(key, kitChest(cleanDesign(design), { art })); return chestMemo.get(key); };
+  const pitchKits = () => { const wear = sheet.kit && kitsMade[sheet.kit] ? sheet.kit : 'home'; return { field: chestOf(wear, kitsMade[wear], kitArt[wear]), gk: chestOf('gk', gkDesign, kitArt.gk) }; };
   let deadlines = dlRes.error ? [] : dlRes.data || [];   // no table yet (or it didn't load) = no deadline set
   let sheet = normaliseSheet(rowRes.data, squad);
   if (!rowRes.data && !rowRes.error) suggestPieces(sheet, byId);
@@ -260,7 +265,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   }
 
   function drawPitch() {
-    renderPitch($('#pitch', box), { ...sheet, players: squad, editable: true, selected: sel?.slot || null, onSlot, club });
+    renderPitch($('#pitch', box), { ...sheet, players: squad, editable: true, selected: sel?.slot || null, onSlot, club, kits: pitchKits() });
     drawFormations();
     // S-25: a player out of position loses rating in the match, more the further the slot is from his own (positionPenalty).
     const off = Object.keys(FORMATIONS[sheet.formation]).map(sl => ({ sl, p: byId.get(String(sheet.lineup[sl])) })).filter(x => x.p && x.p.position !== wantOf(x.sl))
@@ -588,7 +593,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
     } else if (t.closest('[data-cancel]')) { sel = null; redraw(); }
     else if (pr) { sheet.tactics = { ...PRESETS[pr.dataset.preset] }; changed(); drawTactics(); box.querySelector(`[data-preset="${pr.dataset.preset}"]`)?.focus(); }
     else if (st) { sheet.tactics[st.dataset.tac] = Number(st.dataset.v); changed(); drawTactics(); box.querySelector(`[data-tac="${st.dataset.tac}"][data-v="${st.dataset.v}"]`)?.focus(); }
-    else if (t.closest('[data-kit]')) { sheet.kit = t.closest('[data-kit]').dataset.kit || null; changed(); drawKit(); box.querySelector(`[data-kit="${sheet.kit || ''}"]`)?.focus(); }
+    else if (t.closest('[data-kit]')) { sheet.kit = t.closest('[data-kit]').dataset.kit || null; changed(); drawKit(); drawPitch(); box.querySelector(`[data-kit="${sheet.kit || ''}"]`)?.focus(); }
     else if (t.closest('[data-clear]')) {
       const was = { lineup: { ...sheet.lineup }, ...Object.fromEntries(PIECES.map(([k]) => [k, sheet[k]])) };
       sheet.lineup = {}; sel = null; changed(); cleared = was; undoMsg = 'Positions cleared.'; redraw('[data-unclear]');

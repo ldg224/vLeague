@@ -12,7 +12,7 @@
 import { db } from './auth.js';
 import { FORMATIONS, DEFAULT_FORMATION, autoLineup } from './pitch.js';
 import { loadKits, matchKits } from './kits-data.js';
-import { kitSprite, startDesign } from './kit.js';
+import { kitSprite, kitChest, startDesign } from './kit.js';
 import { onColour } from './club-colour.js';
 import { esc } from './member.js';
 import { icon } from './icons.js';
@@ -21,14 +21,6 @@ import { portrait } from './portrait.js';
 
 const image = url => new Promise(res => { if (!url) return res(null); const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
 const filled = row => Boolean(row && row.lineup && Object.keys(row.lineup).length);
-
-// The chest of a kit sprite (no head cap or legs) as a picture: it becomes the shirt on the player's portrait (js/portrait.js).
-const chestOf = sprite => {
-  const q = document.createElement('canvas');
-  q.width = sprite.width; q.height = Math.round(sprite.height * 0.34);
-  q.getContext('2d').drawImage(sprite, 0, sprite.height * 0.16, sprite.width, q.height, 0, 0, q.width, q.height);
-  return q.toDataURL();
-};
 
 // fake (localhost preview only): a club with no locked sheet gets the best XI the squad can make, to look at the pitch with both halves full.
 export async function loadLineups(fx, season, rows, { fake = false } = {}) {
@@ -59,7 +51,7 @@ export async function loadLineups(fx, season, rows, { fake = false } = {}) {
       try {
         const [art, logo] = await Promise.all([image(k.artUrl), image(k.logoUrl)]);
         pics[side][role] = kitSprite({ ...k.design, text: { name: '', number: '', colour: '' } }, { art, logo }, 96).toDataURL();
-        pics[side][`${role}Chest`] = chestOf(kitSprite({ ...k.design, text: { name: '', number: '', colour: '' } }, { art, logo }, 160));
+        pics[side][`${role}Chest`] = kitChest(k.design, { art, logo });
         if (role === 'field') {   // the chest of the shirt, square, for the round badge in the bar
           const sprite = kitSprite({ ...k.design, text: { name: '', number: '', colour: '' } }, { art, logo }, 96), q = document.createElement('canvas');
           q.width = q.height = sprite.width; q.getContext('2d').drawImage(sprite, 0, 12, sprite.width, sprite.width, 0, 0, q.width, q.height);
