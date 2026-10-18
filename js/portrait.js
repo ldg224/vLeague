@@ -3,7 +3,8 @@
 // same man. `look` picks the skin tones, hair, beard and facial features that suit his name (see LOOKS); `face` is a number the Editor bumps to
 // re-roll. The shirt is the player's club colours (a free agent wears grey), with a pattern chosen from the club's code so a squad matches.
 //
-//   portrait(player, club, size, decorative) -> SVG markup. player: { id, name, look, face }; club: { code, colour, colour2 } or null;
+//   portrait(player, club, size, decorative) -> SVG markup. player: { id, name, look, face }; club: { code, colour, colour2, chest? } or null (chest: a
+//                                     data URL of the chest of the club's real kit, which then replaces the simple shirt);
 //                                     size: width in px (the height follows), or omit it to let CSS size the SVG. It is an image for
 //                                     screen readers, unless `decorative` is true (the name is printed beside it).
 //   LOOKS                          -> [[look, label]] for the Editor's picker.
@@ -85,13 +86,15 @@ function draw(seed, club, group, pattern, label, size) {
   // neck, shirt
   s += '<rect x="51" y="84" width="18" height="28" fill="' + skinD + '"/>';
   s += '<g clip-path="url(#' + id + 'k)"><rect x="0" y="100" width="120" height="40" fill="' + club.a + '"/>';
-  if (kit === 'hoops') for (let y = 108; y < 140; y += 10) s += '<rect x="0" y="' + y + '" width="120" height="5" fill="' + club.b + '"/>';
-  if (kit === 'stripes') for (let x = 6; x < 114; x += 16) s += '<rect x="' + x + '" y="100" width="8" height="40" fill="' + club.b + '"/>';
-  if (kit === 'sash') s += '<polygon points="14,104 38,104 106,140 82,140" fill="' + club.b + '"/>';
-  if (kit === 'half') s += '<rect x="60" y="100" width="60" height="40" fill="' + club.b + '"/>';
+  // The club's real kit (js/kit.js) when given: its chest, cropped to fill the shirt, in place of the simple pattern.
+  if (club.chest) s += '<image href="' + club.chest + '" x="0" y="100" width="120" height="40" preserveAspectRatio="xMidYMid slice"/>';
+  else if (kit === 'hoops') for (let y = 108; y < 140; y += 10) s += '<rect x="0" y="' + y + '" width="120" height="5" fill="' + club.b + '"/>';
+  else if (kit === 'stripes') for (let x = 6; x < 114; x += 16) s += '<rect x="' + x + '" y="100" width="8" height="40" fill="' + club.b + '"/>';
+  else if (kit === 'sash') s += '<polygon points="14,104 38,104 106,140 82,140" fill="' + club.b + '"/>';
+  else if (kit === 'half') s += '<rect x="60" y="100" width="60" height="40" fill="' + club.b + '"/>';
   s += '</g>';
   s += '<path d="M46 104 L60 123 L74 104Z" fill="' + skinD + '"/>';
-  s += '<path d="M44 104 L60 124 L76 104" fill="none" stroke="' + (kit === 'plain' || kit === 'half' ? club.b : shade(club.a, -0.25)) + '" stroke-width="4.5" stroke-linejoin="round"/>';
+  s += '<path d="M44 104 L60 124 L76 104" fill="none" stroke="' + (!club.chest && (kit === 'plain' || kit === 'half') ? club.b : shade(club.a, -0.25)) + '" stroke-width="4.5" stroke-linejoin="round"/>';
 
   // head
   s += '<circle cx="' + (60 - w) + '" cy="' + (cy + 4) + '" r="4.6" fill="' + skin + '"/><circle cx="' + (60 + w) + '" cy="' + (cy + 4) + '" r="4.6" fill="' + skin + '"/>';
@@ -159,10 +162,11 @@ export function portrait(p, club, size, decorative = false) {
   const a = isHex(club?.colour) ? club.colour : '#7d8798', b = isHex(club?.colour2) ? club.colour2 : '#ffffff';
   const look = lookOf(p), pattern = club?.code ? KIT[hash(club.code) % KIT.length] : 'plain';
   const label = decorative ? '' : `Portrait of ${String(p.name || '').replace(/[<>&"]/g, '')}`;
-  const key = [p.id, p.face || 0, look, a, b, pattern, size || 0, label].join('|');
+  const chest = club?.chest && String(club.chest).startsWith('data:image/') ? club.chest : '';
+  const key = [p.id, p.face || 0, look, a, b, pattern, size || 0, label, chest ? hash(chest) : ''].join('|');
   if (!cache.has(key)) {
     if (cache.size > 800) cache.clear();
-    cache.set(key, draw(`${p.id}#${p.face || 0}`, { a, b }, look, pattern, label, size));
+    cache.set(key, draw(`${p.id}#${p.face || 0}`, { a, b, chest }, look, pattern, label, size));
   }
   return cache.get(key);
 }

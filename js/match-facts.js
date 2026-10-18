@@ -1,7 +1,7 @@
 // The match page's Facts tab for a played or live match (WR-38), built from the saved match file (js/match-file.js):
 //   factsView(fx, file, ctx) -> html: one card with the Momentum chart beside the Top stats, then the Events card.
 //   ctx = { team(code) -> team, club(code) -> clubs row, accent(code) -> '#rrggbb' | '', horizon: match seconds seen so far (Infinity once it is over),
-//           live: bool, scoreAt?: unused }
+//           live: bool, players?: the league's players (their portraits show beside the names in Events), scoreAt?: unused }
 // Momentum: the pressure each side puts on the other's goal (touches in the final third, nearer goal counts more, plus corners and the expected goals of shots), home minus
 // away, so the home side fills up from the line in its club colour while it has the better of it and the away side fills down in its own; goals along each side's edge,
 // red cards (straight red or second yellow, no plain yellows) just inside them (the chips of js/match-marks.js), 0', HT and FT underneath.
@@ -13,6 +13,7 @@ import { esc } from './member.js';
 import { icon } from './icons.js';
 import { goalMark, cardMark, redBallMark } from './match-marks.js';
 import { onColour } from './club-colour.js';
+import { portrait } from './portrait.js';
 
 const W = 640, H = 170, MID = 85;   // the chart's own coordinates
 
@@ -92,14 +93,14 @@ function events(fx, file, ctx) {
     if (e.type === 'goal') {
       const own = e.own_goal, side = (own ? e.team === fx.home : e.team === fx.away) ? 'away' : 'home', s = shots.get(e.shot), pen = s?.subtype === 'penalty';
       const assist = !own && e.assist ? `Assist: ${surname(nameOf(file, e.assist))}` : '';
-      list.push({ t: e.t, minute: e.minute, side, icon: own ? 'own' : 'ball', who: nameOf(file, e.scorer), sub: [Array.isArray(e.score) ? `${e.score[0]} – ${e.score[1]}` : '', own ? 'Own goal' : pen ? 'Penalty' : '', assist].filter(Boolean).join(' · '), goal: true });
+      list.push({ t: e.t, minute: e.minute, side, icon: own ? 'own' : 'ball', pid: e.scorer, who: nameOf(file, e.scorer), sub: [Array.isArray(e.score) ? `${e.score[0]} – ${e.score[1]}` : '', own ? 'Own goal' : pen ? 'Penalty' : '', assist].filter(Boolean).join(' · '), goal: true });
     } else if (e.type === 'shot' && e.subtype === 'penalty' && (e.outcome === 'saved' || e.outcome === 'off_target')) {   // a penalty that did not go in (one that hit the post has its own row)
-      list.push({ t: e.t, minute: e.minute, side: e.team === fx.home ? 'home' : 'away', icon: 'miss', who: nameOf(file, e.player), sub: e.outcome === 'saved' ? 'Penalty saved' : 'Penalty missed' });
+      list.push({ t: e.t, minute: e.minute, side: e.team === fx.home ? 'home' : 'away', icon: 'miss', pid: e.player, who: nameOf(file, e.player), sub: e.outcome === 'saved' ? 'Penalty saved' : 'Penalty missed' });
     } else if (e.type === 'card') {
       const red = e.card !== 'yellow';
-      list.push({ t: e.t, minute: e.minute, side: e.team === fx.home ? 'home' : 'away', icon: red ? 'red' : 'yellow', who: nameOf(file, e.player), sub: e.card === 'second_yellow' ? 'Second yellow card' : red ? 'Red card' : 'Yellow card' });
+      list.push({ t: e.t, minute: e.minute, side: e.team === fx.home ? 'home' : 'away', icon: red ? 'red' : 'yellow', pid: e.player, who: nameOf(file, e.player), sub: e.card === 'second_yellow' ? 'Second yellow card' : red ? 'Red card' : 'Yellow card' });
     } else if (e.type === 'woodwork') {
-      list.push({ t: e.t, minute: e.minute, side: e.team === fx.home ? 'home' : 'away', icon: 'wood', who: nameOf(file, e.player), sub: e.part === 'bar' ? 'Hit the crossbar' : 'Hit the post' });
+      list.push({ t: e.t, minute: e.minute, side: e.team === fx.home ? 'home' : 'away', icon: 'wood', pid: e.player, who: nameOf(file, e.player), sub: e.part === 'bar' ? 'Hit the crossbar' : 'Hit the post' });
     } else if (e.type === 'added_time') {
       list.push({ t: e.t, divider: `+${e.minutes} ${e.minutes === 1 ? 'minute' : 'minutes'} added` });
     } else if (e.type === 'period_end') {
@@ -109,9 +110,11 @@ function events(fx, file, ctx) {
     }
   }
   const ic = { ball: goalMark(), own: redBallMark('Own goal'), miss: redBallMark('Penalty not scored'), yellow: cardMark('yellow'), red: cardMark('red'), wood: icon('map-pin') };
+  const byPlayer = new Map((ctx.players || []).map(p => [String(p.id), p]));
+  const face = it => { const p = byPlayer.get(String(it.pid)); return p ? `<span class="ev-face">${portrait(p, ctx.club(p.team), undefined, true)}</span>` : ''; };
   const row = it => it.divider
     ? `<li class="ev-div${it.strong ? ' is-strong' : ''}"><span>${esc(it.divider)}</span></li>`
-    : `<li class="ev-row is-${it.side}${it.goal ? ' is-goal' : ''}"><div class="ev-text">${it.who ? `<b>${esc(it.who)}</b>` : ''}${it.sub ? `<small>${esc(it.sub)}</small>` : ''}</div>`
+    : `<li class="ev-row is-${it.side}${it.goal ? ' is-goal' : ''}"><div class="ev-text">${face(it)}<span class="ev-tx">${it.who ? `<b>${esc(it.who)}</b>` : ''}${it.sub ? `<small>${esc(it.sub)}</small>` : ''}</span></div>`
       + `<span class="ev-badge">${esc(it.minute)}′</span><span class="ev-ic">${ic[it.icon]}</span></li>`;
   return list.length ? `<ol class="ev-list" aria-label="Match events">${list.map(row).join('')}</ol>` : '<p class="ev-none">No goals, cards or other events yet.</p>';
 }

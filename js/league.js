@@ -215,7 +215,7 @@ if (ctx) {
   // (js/gotw-card.js). The tab's dot flashes while this manager has not voted. Read once before the frame is built, then every minute.
   const accent = (code, theme) => { const col = (clubRows?.get(code) || sctx.club(code))?.colour; return isHex(col) ? accentFor(col, theme) : ''; };
   const gotw = season && !demo ? createGotw({
-    db, season, crest: (c, px) => sctx.crest(c, px), accent, mine: ctx.club?.code, now: tableNow, hiddenFx: () => fixturesCtx().hidden, esc, rounds: [...rounds(season), { week: 99, label: 'Test matches' }],
+    db, season, crest: (c, px) => sctx.crest(c, px), face: faceOf, accent, mine: ctx.club?.code, now: tableNow, hiddenFx: () => fixturesCtx().hidden, esc, rounds: [...rounds(season), { week: 99, label: 'Test matches' }],
     afterDraw: () => sheen(main),
     onChange: info => {
       frameApi?.setVote({ visible: info.open, due: info.due });

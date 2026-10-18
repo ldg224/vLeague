@@ -121,3 +121,8 @@
 .gv-go.due { border-color: transparent; background: var(--brand-grad); color: #fff; }
 @media (hover: hover) { .gv-go:not(.due):hover { background: var(--surface-hover); } .gv-go.due:hover { filter: brightness(1.08); } }
 @media (prefers-reduced-motion: reduce) { .gw-yes, .gw-no { transition: none; } .gv-vote.on svg { animation: none; } }
+
+/* The scorer's portrait (js/portrait.js) with his club's crest on the corner. */
+.gw-pf { position: relative; flex: none; display: block; width: var(--px); height: calc(var(--px) * 7 / 6); line-height: 0; }
+.gw-pf > svg { width: 100%; height: 100%; display: block; }
+.gw-pfc { position: absolute; right: -6px; bottom: -3px; display: grid; place-items: center; padding: 1px; border-radius: 50%; background: var(--surface); box-shadow: 0 0 0 1.5px var(--surface); line-height: 0; }

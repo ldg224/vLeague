@@ -44,8 +44,8 @@ export function overviewHtml(d) {
   const ranked = [...fin].sort((a, b) => votes(b.key) - votes(a.key) || b.wow - a.wow);
   const row1 = (m, i) => {
     const secret = hidden.has(m.fixture), win = i === 0 && votes(m.key) > 0, pct = total ? Math.round(votes(m.key) / total * 100) : 0;
-    return `<li class="gwc-row${win ? ' win' : ''}">${crest(m.team, 36)}<span class="gwc-t"><b>${esc(m.scorerName)}</b>`
-      + `<small>${secret ? 'Result hidden' : `${esc(name(m.home))} v ${esc(name(m.away))} · ${m.minute}′`}</small><i class="gwc-bar" style="--w:${pct}%"></i></span>`
+    return `<li class="gwc-row${win ? ' win' : ''}">${avatar(d, m, 36)}<span class="gwc-t"><b>${esc(m.scorerName)}</b>`
+      + `<small>${secret ? 'Result hidden' : `${fixtureLine(m, esc, name)}`}</small><i class="gwc-bar" style="--w:${pct}%"></i></span>`
       + `<span class="gwc-score"><b>${votes(m.key)}</b><small>${pct}%</small></span></li>`;
   };
   const hid = fin.filter(m => hidden.has(m.fixture)).length;
@@ -53,6 +53,15 @@ export function overviewHtml(d) {
     + `${hid ? `<p class="tb-hidden">${hid} of these goals ${hid === 1 ? 'is' : 'are'} from a hidden result. <button type="button" data-reveal-all>Show all</button></p>` : ''}`
     + `<ol class="gwc-list">${ranked.map(row1).join('')}</ol><p class="gwc-note">${total ? `${total} manager${total === 1 ? '' : 's'} voted.` : 'Nobody voted.'}</p></section>`;
 }
+
+// The scorer's portrait with his club's crest on its corner, or just the crest until the players have loaded (d.face(playerId, club, px) -> html).
+const avatar = (d, m, px) => {
+  const pic = d.face?.(m.scorer, m.team, px);
+  return pic ? `<span class="gw-pf" style="--px:${px}px">${pic}<span class="gw-pfc">${d.crest(m.team, Math.round(px / 2))}</span></span>` : d.crest(m.team, px);
+};
+
+// "Neegy FC · v Lucky FC · 23′": the scorer's club first, so a goal in "Lucky FC v Neegy FC" isn't read as Lucky's.
+const fixtureLine = (m, esc, name) => `${esc(name(m.team))} · v ${esc(name(m.team === m.home ? m.away : m.home))} · ${m.minute}′`;
 
 export function voteHtml(d) {
   const { row, mine, myVote, now, hidden = new Set(), label, name, crest, esc, playing } = d;
@@ -62,7 +71,7 @@ export function voteHtml(d) {
     const act = own ? '<span class="gv-tag">Your club</span>'
       : mine ? `<button type="button" class="gv-vote${on ? ' on' : ''}" data-gw-vote="${esc(m.key)}" aria-pressed="${on}">${icon(on ? 'check' : 'thumbs-up')}<span>${on ? 'Your vote' : 'Vote'}</span></button>` : '';
     return `<li class="gv-row${playing === m.key ? ' now' : ''}${on ? ' voted' : ''}"><button type="button" class="gv-watch" data-gw-watch="${esc(m.key)}" ${secret ? 'disabled' : ''} aria-label="Watch ${esc(m.scorerName)}’s goal">`
-      + `${crest(m.team, 40)}<span class="gv-t"><b>${esc(m.scorerName)}</b><small>${secret ? 'Result hidden' : `${esc(name(m.home))} v ${esc(name(m.away))} · ${m.minute}′`}</small></span></button>${act}</li>`;
+      + `${avatar(d, m, 40)}<span class="gv-t"><b>${esc(m.scorerName)}</b><small>${secret ? 'Result hidden' : `${fixtureLine(m, esc, name)}`}</small></span></button>${act}</li>`;
   }).join('');
   const hid = list.filter(m => hidden.has(m.fixture)).length;
   const first = list.find(m => m.key === playing) || list[0];
@@ -75,4 +84,4 @@ export function voteHtml(d) {
     + `<ul class="gv-list">${rows}</ul><p class="gwc-note gv-note">${mine ? 'Tap a goal to watch its 5 seconds. You can’t vote for your own club’s goal. The tally shows when voting ends.' : 'Tap a goal to watch its 5 seconds.'}</p></section></aside></div>`;
 }
 
-export const nowLine = (m, esc, name) => `<b>${esc(m.scorerName)}</b><span>${esc(name(m.home))} v ${esc(name(m.away))} · ${m.minute}′</span><small>${esc(describe(m))}</small>`;
+export const nowLine = (m, esc, name) => `<b>${esc(m.scorerName)}</b><span>${fixtureLine(m, esc, name)}</span><small>${esc(describe(m))}</small>`;

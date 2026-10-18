@@ -1,5 +1,5 @@
 // Goal of the week on the league page (S-05): one store for the latest round the office has put to a vote, shown in two places.
-//   const gw = createGotw({ db, season, crest, accent, mine, now, hiddenFx, esc, rounds, onChange, afterDraw });
+//   const gw = createGotw({ db, season, crest, face (playerId, club, px -> the scorer's portrait), accent, mine, now, hiddenFx, esc, rounds, onChange, afterDraw });
 //   gw.refresh()            read the round, this manager's vote and (once voting has ended) the tally; calls onChange(gw.info()) when anything the page shows changed
 //   gw.info()               { open, due }: voting is open; this manager has not voted yet (drives the Vote tab and its flashing dot)
 //   gw.overview()           the Overview card's html ('' when no round has been put to a vote): a teaser while open, the result once ended
@@ -10,7 +10,7 @@ import { ClipStage } from './goal-clip.js';
 import { icon } from './icons.js';
 import { overviewHtml, voteHtml, isOpen, ballot, left, nowLine } from './gotw-html.js';
 
-export function createGotw({ db, season, crest, accent = () => '', mine, now = () => new Date(), hiddenFx = () => new Set(), esc, rounds = [], onChange, afterDraw }) {
+export function createGotw({ db, season, crest, face = () => '', accent = () => '', mine, now = () => new Date(), hiddenFx = () => new Set(), esc, rounds = [], onChange, afterDraw }) {
   let state = null, page = null;
   const name = code => season.teams.find(t => t.code === code)?.name || code;
   const labelOf = w => rounds.find(r => r.week === w)?.label || `Round ${w}`;
@@ -33,7 +33,7 @@ export function createGotw({ db, season, crest, accent = () => '', mine, now = (
     if (sig() !== before) { onChange?.(info()); page?.draw(); }
   }
 
-  const data = extra => ({ row: state.row, mine, myVote: state.myVote, tally: state.tally, now: now(), hidden: hiddenFx(), label: labelOf(state.row.week), name, crest, esc, ...extra });
+  const data = extra => ({ row: state.row, mine, myVote: state.myVote, tally: state.tally, now: now(), hidden: hiddenFx(), label: labelOf(state.row.week), name, crest, face, esc, ...extra });
   const overview = () => (state ? overviewHtml(data()) : '');
 
   function mountVote(root) {

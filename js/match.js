@@ -119,7 +119,7 @@ function start() {
     // One line per scorer with every minute after the name (Grimaldo 53′ (pen), 71′), as FotMob does.
     const lines = list => {
       const by = new Map();
-      for (const g of list) { const k = g.scorer_name || 'Goal'; (by.get(k) || by.set(k, []).get(k)).push(`${g.minute}′${g.own_goal ? ' (og)' : ''}`); }
+      for (const g of list) { const k = g.scorer_name || 'Goal'; (by.get(k) || by.set(k, []).get(k)).push(`${g.minute}′${g.own_goal ? ' (og)' : g.pen ? ' (pen)' : ''}`); }
       return [...by].map(([name, mins]) => `<li>${esc(name)} <small>${esc(mins.join(', '))}</small></li>`).join('');
     };
     return `<div class="mh-scorers"><ul class="is-home">${lines(side(fx.home))}</ul><span class="mh-ball">${goalMark()}</span><ul class="is-away">${lines(side(fx.away))}</ul></div>`;
@@ -180,7 +180,7 @@ function start() {
       if (s.hid) main = `<section class="lg-card mh-soon"><p class="empty">Results hidden · <button type="button" data-reveal>Show</button></p></section>`;
       else if (fileState === 'error') main = '<section class="lg-card mh-soon"><p class="empty">The match file isn’t available yet. Try again in a moment.</p></section>';
       else if (!file) { needFile(); main = '<section class="lg-card mh-soon"><p class="empty">Loading the match…</p></section>'; }
-      else main = factsView(fx, file, { team, club, accent: acc, horizon: s.st === 'live' ? liveSimTime(fx, season, s.now) : Infinity, live: s.st === 'live' });
+      else main = factsView(fx, file, { team, club, accent: acc, players: season.players, horizon: s.st === 'live' ? liveSimTime(fx, season, s.now) : Infinity, live: s.st === 'live' });
     } else if (tab === 'stats') {
       if (s.hid) main = `<section class="lg-card mh-soon"><p class="empty">Results hidden · <button type="button" data-reveal>Show</button></p></section>`;
       else if (fileState === 'error') main = '<section class="lg-card mh-soon"><p class="empty">The match file isn’t available yet. Try again in a moment.</p></section>';

@@ -46,7 +46,12 @@
 .ev-row.is-home .ev-ic { grid-column: 2; grid-row: 1; justify-self: center; }
 .ev-row.is-away .ev-ic { grid-column: 4; grid-row: 1; justify-self: center; }
 .ev-row.is-away .ev-text { grid-column: 5; grid-row: 1; text-align: left; }
-.ev-text { display: grid; gap: 2px; min-width: 0; }
+.ev-text { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ev-row.is-home .ev-text { flex-direction: row-reverse; }
+.ev-tx { display: grid; gap: 2px; min-width: 0; }
+.ev-face { flex: none; width: 34px; height: 40px; line-height: 0; }
+.ev-face svg { display: block; width: 100%; height: 100%; }
+@media (max-width: 767px) { .ev-face { width: 26px; height: 30px; } .ev-text { gap: 6px; } }
 .ev-text b { color: var(--text-strong); font: 600 var(--fs-m)/1.25 var(--font); overflow-wrap: anywhere; }
 .ev-text small { color: var(--muted); font: 400 var(--fs-s)/1.25 var(--font); }
 .ev-badge { display: grid; place-items: center; width: 52px; height: 44px; border-radius: 999px; background: var(--surface-sunk); color: var(--text-strong); font: 700 var(--fs-s) var(--font); font-variant-numeric: tabular-nums; }

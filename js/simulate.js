@@ -231,9 +231,10 @@ export function summariseMatch(d) {
   const names = Object.fromEntries(d.players.map(p => [p.id, p.name]));
   const slot = Object.fromEntries(d.players.map(p => [p.id, p.slot]));
   const team = Object.fromEntries(d.players.map(p => [p.id, p.team]));
+  const pens = new Set(d.events.filter(e => e.type === 'shot' && e.subtype === 'penalty').map(e => e.id));
   const goals = d.events.filter(e => e.type === 'goal').map(e => ({
     t: e.t, minute: e.minute, team: e.team, scorer: e.scorer, scorer_name: names[e.scorer] ?? null,
-    assist: e.assist ?? null, assist_name: e.assist ? names[e.assist] ?? null : null, own_goal: !!e.own_goal,
+    assist: e.assist ?? null, assist_name: e.assist ? names[e.assist] ?? null : null, own_goal: !!e.own_goal, pen: pens.has(e.shot),
   }));
   const cards = d.events.filter(e => e.type === 'card').map(e => ({ t: e.t, minute: e.minute, team: e.team, player: e.player, name: names[e.player] ?? null, card: e.card }));
   const players = {};

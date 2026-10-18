@@ -55,7 +55,7 @@ function side(fx, L, ctx, F, star, which) {
     const p = byId.get(String(id)), f = F[id] || {}, gk = slots[slot].want === 'GK';
     const pic = L?.kits?.[which]?.[gk ? 'gk' : 'field'] || L?.kits?.[which]?.field;
     const num = numberOf(p, id);
-    const face = faceOf(p, code, ctx) || (pic ? `<img src="${pic}" alt="">${num !== '' ? `<i class="ml-sn">${esc(num)}</i>` : ''}` : `<i class="ml-disc" style="--c:${esc(colour)};--on:${esc(onColour(colour))}">${esc(num)}</i>`);
+    const kk = L?.kits?.[which], face = faceOf(p, code, ctx, kk?.[gk ? 'gkChest' : 'fieldChest'] || kk?.fieldChest) || (pic ? `<img src="${pic}" alt="">${num !== '' ? `<i class="ml-sn">${esc(num)}</i>` : ''}` : `<i class="ml-disc" style="--c:${esc(colour)};--on:${esc(onColour(colour))}">${esc(num)}</i>`);
     const cap = sheet && String(sheet.captain) === String(id) ? captainMark() : '';
     let marks = '';
     if (ctx.view === 'rating' && f.r != null) {

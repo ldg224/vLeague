@@ -22,6 +22,14 @@ import { portrait } from './portrait.js';
 const image = url => new Promise(res => { if (!url) return res(null); const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
 const filled = row => Boolean(row && row.lineup && Object.keys(row.lineup).length);
 
+// The chest of a kit sprite (no head cap or legs) as a picture: it becomes the shirt on the player's portrait (js/portrait.js).
+const chestOf = sprite => {
+  const q = document.createElement('canvas');
+  q.width = sprite.width; q.height = Math.round(sprite.height * 0.34);
+  q.getContext('2d').drawImage(sprite, 0, sprite.height * 0.16, sprite.width, q.height, 0, 0, q.width, q.height);
+  return q.toDataURL();
+};
+
 // fake (localhost preview only): a club with no locked sheet gets the best XI the squad can make, to look at the pitch with both halves full.
 export async function loadLineups(fx, season, rows, { fake = false } = {}) {
   const c = await db(), now = new Date();
@@ -51,6 +59,7 @@ export async function loadLineups(fx, season, rows, { fake = false } = {}) {
       try {
         const [art, logo] = await Promise.all([image(k.artUrl), image(k.logoUrl)]);
         pics[side][role] = kitSprite({ ...k.design, text: { name: '', number: '', colour: '' } }, { art, logo }, 96).toDataURL();
+        pics[side][`${role}Chest`] = chestOf(kitSprite({ ...k.design, text: { name: '', number: '', colour: '' } }, { art, logo }, 160));
         if (role === 'field') {   // the chest of the shirt, square, for the round badge in the bar
           const sprite = kitSprite({ ...k.design, text: { name: '', number: '', colour: '' } }, { art, logo }, 96), q = document.createElement('canvas');
           q.width = q.height = sprite.width; q.getContext('2d').drawImage(sprite, 0, 12, sprite.width, sprite.width, 0, 0, q.width, q.height);
@@ -72,7 +81,8 @@ export const money = v => {
 };
 export const surname = n => { const w = String(n || '').trim().split(/\s+/); return w.length > 1 ? w.slice(1).join(' ') : w[0] || ''; };
 // A player's portrait for this match page, in his club's colours (js/portrait.js), or '' for a player the league has no portrait data for.
-export const faceOf = (p, code, ctx) => (p ? `<span class="ml-face">${portrait(p, { code, colour: ctx.club(code)?.colour || ctx.team(code)?.colour, colour2: ctx.club(code)?.colour2 }, undefined, true)}</span>` : '');
+// `chest` is the chest of the club's real kit for the match (loadLineups' kits), once the line-up has locked.
+export const faceOf = (p, code, ctx, chest) => (p ? `<span class="ml-face">${portrait(p, { code, colour: ctx.club(code)?.colour || ctx.team(code)?.colour, colour2: ctx.club(code)?.colour2, chest }, undefined, true)}</span>` : '');
 // The label under a player: his shirt number beside his surname, and the captain's armband first.
 export const nameTag = (cap, number, name) => `${cap}${number != null && number !== '' ? `<i>${esc(number)}</i> ` : ''}${esc(surname(name))}`;
 export const initials = n => String(n || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
@@ -94,7 +104,7 @@ function players(side, L, ctx, cls, star) {
   const code = ctx.code[side], team = ctx.team(code), colour = ctx.club(code)?.colour || team.colour;
   return Object.entries(sheet.lineup).filter(([slot]) => slots[slot]).map(([slot, id]) => {
     const p = byId.get(String(id)); if (!p) return '';
-    const face = faceOf(p, code, ctx);
+    const gk = slots[slot].want === 'GK', k = L.kits[side], face = faceOf(p, code, ctx, k?.[gk ? 'gkChest' : 'fieldChest'] || k?.fieldChest);
     const cap = String(sheet.captain) === String(id) ? captainMark() : '';
     const st = ctx.stats?.get(String(id)), avg = avgOf(ctx.stats, id);
     let mark = '';
