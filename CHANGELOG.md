@@ -3,9 +3,9 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
-## Unreleased (on the revamp branch, waiting for a release)
+## 1.3.0 (2026-10-18)
 
-Headlines: Faces everywhere
+Headlines: Faces everywhere | Real kits on portraits
 
 **Added:** player portraits now show in more places: Team of the Week, the stat leader cards and full stat lists, both match lineups (Predicted and as played), the My club pitch and squad picker, the squad list on each team page, the scorer and card rows in a match's Events, and the Goal of the week cards and ballot.
 **Changed:** in the match lineups the portrait wears the club's real kit for the match (once the lineup has locked), and the shirt number now sits beside the surname (7 Rodriguez) instead of on the shirt. The My club pitch and the Draft tab dress the portraits in the club's real home kit (and goalkeeper kit) too. On the My club pitch the slot name (ST, CB) moves to a small tag on the portrait.
