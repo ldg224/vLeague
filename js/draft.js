@@ -10,6 +10,7 @@ import { openDraft, phase, loadDraft, saveQueue, savePrefs, makePick, quietState
 import { loadPlayers, forgetPlayers } from './players-data.js';
 import { ago } from './places.js';
 import { overall } from './names.js';
+import { portrait } from './portrait.js';
 import { gridOf, renderGrid } from './draft-grid.js';
 import { startTour, tourSeen } from './tour.js';
 import { db } from './auth.js';
@@ -44,7 +45,7 @@ const fmt = ms => { const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor
 // mountDraft(main, { club, season, sub, onGone }): draws the draft into `main` (an element of its own, so its listeners go with it) and returns
 // { unmount(), setTab(sub) }. onGone() is called when the office has hidden the draft while the tab was open (the page used to reload).
 // unmount() stops the clock, the 15 s poll, the live channel and the visibility listener; nothing of the draft runs once you leave the tab.
-export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGone, crest = () => '', colourOf = () => '' } = {}) {
+export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGone, crest = () => '', colourOf = () => '', kitOf = () => null } = {}) {
   const code = club?.code;
   const clubName = new Map((season?.teams || []).map(t => [t.code, t.name]));
   const nameOf = c => (c === code && club?.name) || clubName.get(c) || c;
@@ -62,6 +63,8 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
     let qSaves = 0, qChain = Promise.resolve(), failed = false;   // queue saves in flight
     let msg = '', sub = 'players';   // sub: which part of Available players shows on a phone (players, queue or auto-pick)
     const byId = () => new Map(players.map(p => [p.id, p]));
+    // A player's portrait (js/portrait.js), in his club's colours once he has one. The name is always printed beside it, so it is decorative.
+    const face = (p, px) => `<span class="dr-face">${portrait(p, kitOf(p.team), px, true)}</span>`;
 
     const turn = () => st.order.find(o => o.pick_no === st.draft.current_pick) || null;
     const myTurn = () => phase(st.draft) === 'live' && turn()?.club === code;
@@ -95,7 +98,7 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
       return needed > left ? 'Taking this player would leave too few picks to fill every position.' : '';
     };
     const playerRow = (p, extra = '', attrs = '') => `<li class="dr-p"${attrs}><span class="pos pos-${esc(p.position)}">${esc(p.position)}</span>
-      <span class="nm"><button class="dr-name" data-player="${esc(p.id)}">${esc(p.name)}</button></span><span class="rts">${chip(p.offense)}${chip(p.defense)}</span><span class="val">${money(p.value)}</span>${extra}</li>`;
+      <span class="nm dr-pc">${face(p, 30)}<button class="dr-name" data-player="${esc(p.id)}">${esc(p.name)}</button></span><span class="rts">${chip(p.offense)}${chip(p.defense)}</span><span class="val">${money(p.value)}</span>${extra}</li>`;
 
     // What this club's squad is worth now.
     const squadValue = () => players.filter(p => p.team === code).reduce((n, p) => n + (p.value || 0), 0);
@@ -196,7 +199,7 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
       const map = byId();
       const grid = renderGrid(gridOf(st.order, st.picks), {
         esc, clubName: nameOf, me: code, current: phase(st.draft) === 'live' ? st.draft.current_pick : null, made: st.picks.length, crest: c => crest(c, 28),
-        who: x => { const p = map.get(x.pick?.player); return p ? `<button class="dr-name" data-player="${esc(p.id)}">${esc(p.name)}</button> <small class="pos-${esc(p.position)}">${esc(p.position)}</small>` : '<i>skipped</i>'; },
+        who: x => { const p = map.get(x.pick?.player); return p ? `<span class="dr-pc">${face(p, 30)}<span><button class="dr-name" data-player="${esc(p.id)}">${esc(p.name)}</button> <small class="pos-${esc(p.position)}">${esc(p.position)}</small></span></span>` : '<i>skipped</i>'; },
       });
       return `<section class="lg-card dr-boardcard"><div class="lg-card-head"><h2>Draft board</h2>${st.picks.length ? '<button class="dr-ghost dr-export" data-export title="Download every pick so far as a spreadsheet">Download CSV</button>' : ''}</div>`
         + `${grid || '<div class="sc-empty"><b>No draft order yet</b><span>The board appears once the office sets the order.</span></div>'}</section>`;
@@ -233,7 +236,7 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
       return `<div class="dr-availwrap"><nav class="dr-sub sc-toggle" aria-label="Show">${[['players', 'Players'], ['queue', `My queue${qn ? ` (${qn})` : ''}`], ['auto', 'Auto-pick']].map(([k, l]) => `<button type="button" data-sub="${k}" aria-pressed="${sub === k}">${l}</button>`).join('')}</nav>
         <div class="dr-avail" data-sub="${sub}"><aside class="dr-side">${queuePanel()}${autoPanel()}</aside>
         <section class="lg-card dr-main"><div class="lg-card-head"><h2>Available players</h2><span class="dr-count">${free().length} left</span></div>${toolbar('avail')}
-        ${table('avail', shown, p => `<tr><td class="c-position pos-${esc(p.position)}">${esc(p.position)}</td><td class="c-name"><button class="dr-name" data-player="${esc(p.id)}">${esc(p.name)}</button></td><td class="c-number">${esc(p.number ?? '')}</td>${ratings(p)}
+        ${table('avail', shown, p => `<tr><td class="c-position pos-${esc(p.position)}">${esc(p.position)}</td><td class="c-name"><span class="dr-pc">${face(p, 30)}<button class="dr-name" data-player="${esc(p.id)}">${esc(p.name)}</button></span></td><td class="c-number">${esc(p.number ?? '')}</td>${ratings(p)}
           <td class="c-act">${code ? `<button class="dr-b" data-add="${esc(p.id)}" aria-label="${q.has(p.id) ? 'In your queue' : `Add ${esc(p.name)} to your queue`}"${q.has(p.id) ? ' disabled' : ''}>${q.has(p.id) ? `${icon('check')}<span class="dr-bt">Queued</span>` : `${icon('plus')}<span class="dr-bt">Queue</span>`}</button>` : ''}${myTurn() ? `<button class="dr-b pick" data-pick="${esc(p.id)}"${blocked(p) ? ` disabled title="${esc(blocked(p))}"` : ''}>Pick</button>` : ''}</td></tr>`, 'No players match.')}</section></div></div>`;
     }
 
@@ -248,7 +251,7 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
           <header class="dr-thead">${crest(c, 28)}<b>${esc(nameOf(c))}</b></header>
           <p class="dr-tsum"><b>${money(total)}</b><span>${ps.length} player${ps.length === 1 ? '' : 's'}</span></p>
           <span class="dr-tbar" role="img" aria-label="${money(total)} of the ${money(CAP)} cap"><i style="width:${Math.min(100, total / CAP * 100).toFixed(1)}%"></i></span>
-          <ol class="dr-tlist">${ps.map(p => `<li><span class="pos pos-${esc(p.position)}">${esc(p.position)}</span><button class="dr-name" data-player="${esc(p.id)}" aria-label="${esc(p.name)}">${(([f, ...r]) => (r.length ? `<span class="dr-fn">${esc(f)} </span>${esc(r.join(' '))}` : esc(f)))(String(p.name).split(' '))}</button><span class="dr-tval">${short(p.value || 0)}</span></li>`).join('')}</ol></article>`;
+          <ol class="dr-tlist">${ps.map(p => `<li><span class="pos pos-${esc(p.position)}">${esc(p.position)}</span><span class="dr-pc">${face(p, 24)}<button class="dr-name" data-player="${esc(p.id)}" aria-label="${esc(p.name)}">${(([f, ...r]) => (r.length ? `<span class="dr-fn">${esc(f)} </span>${esc(r.join(' '))}` : esc(f)))(String(p.name).split(' '))}</button></span><span class="dr-tval">${short(p.value || 0)}</span></li>`).join('')}</ol></article>`;
       return `<section class="lg-card dr-teamscard"><div class="lg-card-head"><h2>Team values</h2><span class="dr-count">Cap ${money(CAP)} a week</span></div>`
         + `${clubs.length ? `<div class="dr-teams">${clubs.map(box).join('')}</div>` : '<div class="sc-empty"><b>No picks yet</b><span>Each club’s squad and what it costs appear here as the draft goes.</span></div>'}</section>`;
     }
@@ -321,7 +324,7 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
     async function confirmPick(p) {
       const mine = players.filter(x => x.team === code), used = mine.reduce((n, x) => n + (x.value || 0), 0), after = used + (p.value || 0);
       const same = mine.filter(x => x.position === p.position).length + 1;
-      return await sheet(`<h2>Pick ${esc(p.name)}?</h2><p class="dr-sub1">${esc(p.position)}${p.number != null ? ` · #${esc(p.number)}` : ''} for ${esc(nameOf(code))}</p>${bigRatings(p)}
+      return await sheet(`<div class="dr-card-top">${face(p, 72)}<div><h2>Pick ${esc(p.name)}?</h2><p class="dr-sub1">${esc(p.position)}${p.number != null ? ` · #${esc(p.number)}` : ''} for ${esc(nameOf(code))}</p></div></div>${bigRatings(p)}
         <p class="dr-line">Squad value <b>${money(used)}</b> → <b class="${after > CAP ? 'over' : ''}">${money(after)}</b> of ${money(CAP)}${after > CAP ? ' <span class="over">(over the cap)</span>' : ''}</p>
         <p class="dr-line">You’d have ${same} ${esc(p.position)}.</p>
         <div class="dr-btns"><button class="dr-b" data-close="">Cancel</button><button class="dr-b pick" data-close="ok">Pick ${esc(p.name)}</button></div>`) === 'ok';
@@ -335,7 +338,7 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
       const worth = !p.team && code ? `<p class="dr-line">Your squad <b>${money(used)}</b> → <b class="${after > CAP ? 'over' : ''}">${money(after)}</b> of ${money(CAP)} with ${esc(p.name)}${after > CAP ? ' <span class="over">(over the cap)</span>' : ` (${afterText(after)})`}</p>` : '';
       const acts = [!p.team && code ? `<button class="dr-b" data-close="queue"${queued ? ' disabled' : ''}>${queued ? 'In your queue' : '+ Queue'}</button>` : '',
         !p.team && myTurn() ? `<button class="dr-b pick" data-close="pick"${why ? ` disabled title="${esc(why)}"` : ''}>Pick</button>` : ''].join('');
-      const r = await sheet(`<h2>${esc(p.name)}</h2><p class="dr-sub1">${esc(p.position)}${p.number != null ? ` · #${esc(p.number)}` : ''} · ${status}</p>${bigRatings(p)}
+      const r = await sheet(`<div class="dr-card-top">${face(p, 72)}<div><h2>${esc(p.name)}</h2><p class="dr-sub1">${esc(p.position)}${p.number != null ? ` · #${esc(p.number)}` : ''} · ${status}</p></div></div>${bigRatings(p)}
         ${worth}${why ? `<p class="dr-line over">${esc(why)}</p>` : ''}<div class="dr-btns"><button class="dr-b" data-close="">Close</button>${acts}</div>`);
       if (r === 'queue') await addToQueue(id); else if (r === 'pick') await pickPlayer(id);
     }

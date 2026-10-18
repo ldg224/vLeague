@@ -1,9 +1,11 @@
 // Editor → Players. The league's players: generate a pool, paste a list, edit in place.
 // Generated players are free agents (no club); the office deals them to clubs in the Draft.
 // The database checks everything again (supabase/migrations/0008_players.sql); this page only asks.
-import { generate, namer, rate, playerValue, numbersFor, POSITIONS, MAX_TOTAL } from './names.js';
+import { generate, namer, rate, playerValue, numbersFor, lookFromName, POSITIONS, MAX_TOTAL } from './names.js';
 import { forgetPlayers } from './players-data.js';
+import { portrait, LOOKS } from './portrait.js';
 
+const COLS = 'id, name, position, number, offense, defense, club, value, look, face';
 const POS_NAME = { GK: 'Goalkeeper', DEF: 'Defender', MID: 'Midfielder', FWD: 'Forward' };
 const chip = n => `<span class="rt rt-${n}">${n}</span>`;
 const money = n => `$${Number(n).toLocaleString('en-AU')}`;
@@ -24,7 +26,7 @@ export async function mountPlayers(ctx) {
 
   async function fetchAll() {
     const { data, error } = await (await ctx.db()).from('players')
-      .select('id, name, position, number, offense, defense, club, value').order('id').range(0, 1999);
+      .select(COLS).order('id').range(0, 1999);
     if (error) throw new Error(explain(error));
     players = data;
     forgetPlayers();
@@ -33,6 +35,9 @@ export async function mountPlayers(ctx) {
   const opts = (list, sel) => list.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(sel) ? 'selected' : ''}>${esc(l)}</option>`).join('');
   const clubOpts = sel => opts([['', 'Free agent'], ...active().map(c => [c.code, c.name])], sel || '');
   const posOpts = sel => opts(POSITIONS.map(p => [p, POS_NAME[p]]), sel);
+  const lookOpts = sel => opts(LOOKS, sel);
+  const clubOf = code => ctx.clubs.find(c => c.code === code) || null;
+  const face = p => portrait(p, clubOf(p.club), 44);
   const ratingOpts = sel => opts(Array.from({ length: 10 }, (_, i) => [i + 1, i + 1]), sel);
 
   function summary() {
@@ -80,24 +85,27 @@ export async function mountPlayers(ctx) {
     const shown = players.filter(p => (filter.club === '' || (filter.club === '-' ? !p.club : p.club === filter.club))
       && (!filter.pos || p.position === filter.pos) && (!q || p.name.toLowerCase().includes(q) || String(p.number) === q));
     const rows = shown.map(p => `<tr data-id="${esc(p.id)}">
+      <td class="pl-face"><button type="button" class="pl-face-b" data-act="reroll" title="Try a different face" aria-label="New face for ${esc(p.name)}">${face(p)}</button></td>
       <td><input class="pl-name" value="${esc(p.name)}" maxlength="40" aria-label="Name"></td>
       <td><select data-f="position" aria-label="Position">${opts(POSITIONS.map(x => [x, x]), p.position)}</select></td>
       <td><input class="pl-num" type="number" min="1" max="99" value="${p.number}" data-f="number" aria-label="Singlet number"></td>
       <td><select data-f="offense" class="rt rt-${p.offense}" aria-label="Offense">${ratingOpts(p.offense)}</select></td>
       <td><select data-f="defense" class="rt rt-${p.defense}" aria-label="Defense">${ratingOpts(p.defense)}</select></td>
       <td class="pl-value">${money(p.value)}</td>
+      <td><select data-f="look" aria-label="Look">${p.look ? '' : '<option value="" selected>Not set</option>'}${lookOpts(p.look)}</select></td>
       <td><select data-f="club" aria-label="Club">${clubOpts(p.club)}</select></td>
       <td class="pl-row-act"><button class="btn ghost small" type="button" data-act="remove">Remove</button>
         <span class="ed-confirm" hidden><button class="btn small" type="button" data-act="remove-yes">Remove ${esc(p.name)}</button>
         <button class="btn ghost small" type="button" data-act="remove-no">Keep</button></span></td></tr>`).join('');
     return `<section class="pl-list">
       <h2>All players</h2>
+      ${unsetLooks()}
       <div class="pl-filters">
         <input type="search" id="pl-q" placeholder="Search by name or number" value="${esc(filter.q)}" aria-label="Search by name or number">
         <select id="pl-fclub" aria-label="Club"><option value="">All players</option><option value="-" ${filter.club === '-' ? 'selected' : ''}>Free agents</option>${active().map(c => `<option value="${esc(c.code)}" ${filter.club === c.code ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>
         <select id="pl-fpos" aria-label="Position"><option value="">Any position</option>${posOpts(filter.pos)}</select>
       </div>
-      ${players.length ? `<div class="pl-scroll"><table class="pl-table pl-edit"><thead><tr><th>Name</th><th>Pos</th><th>No.</th><th>Off</th><th>Def</th><th>Value</th><th>Club</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+      ${players.length ? `<div class="pl-scroll"><table class="pl-table pl-edit"><thead><tr><th><span class="sr-only">Portrait</span></th><th>Name</th><th>Pos</th><th>No.</th><th>Off</th><th>Def</th><th>Value</th><th>Look</th><th>Club</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
         ${shown.length ? '' : '<p class="quiet">No players match.</p>'}`
         : '<p class="quiet">No players yet.</p>'}
       <p class="ed-msg" role="status" id="pl-msg"></p>
@@ -107,6 +115,11 @@ export async function mountPlayers(ctx) {
           <button class="btn ghost small" type="button" data-act="wipe-no">Cancel</button></span></div>` : ''}
     </section>`;
   }
+
+  // Players added before portraits have no look yet: one button works every one out from his name (the culture his name comes from).
+  const unset = () => players.filter(p => !p.look);
+  const unsetLooks = () => (unset().length ? `<p class="pl-looks">${unset().length} player${unset().length === 1 ? ' has' : 's have'} no portrait look yet.
+      <button class="btn small" type="button" data-act="looks">Set looks from names</button></p>` : '');
 
   // Only the list is redrawn while typing in the filters, so the cursor stays put.
   function drawList() {
@@ -122,7 +135,7 @@ export async function mountPlayers(ctx) {
   async function insert(rows, msgEl) {
     const c = await ctx.db();
     for (let i = 0; i < rows.length; i += 100) {
-      const { error } = await c.from('players').insert(rows.slice(i, i + 100).map(({ name, position, number, offense, defense }) => ({ name, position, number, offense, defense })));
+      const { error } = await c.from('players').insert(rows.slice(i, i + 100).map(({ name, position, number, offense, defense, look }) => ({ name, position, number, offense, defense, look })));
       if (error) throw new Error(/players_name_unique/i.test(error.message) ? 'One of those names is already a player. Try again.'
         : `${explain(error)} (${String(error.message || error).slice(0, 140)})`);   // the real reason too, so a failure can be reported
     }
@@ -170,7 +183,7 @@ export async function mountPlayers(ctx) {
       if (name) { const f = name.split(/\s+/); if (f.length < 2) throw new Error(`“${line}” needs a first and last name.`); }
       else { name = n.next(); if (!name) throw new Error('Ran out of unused names.'); }
       const r = rate(position);
-      out.push({ name, position, number: numbersFor(position, 1)[0], offense: nums[0] ?? r.offense, defense: nums[1] ?? r.defense });
+      out.push({ name, position, number: numbersFor(position, 1)[0], offense: nums[0] ?? r.offense, defense: nums[1] ?? r.defense, look: lookFromName(name) });
     }
     return out;
   }
@@ -180,6 +193,22 @@ export async function mountPlayers(ctx) {
     if (!b) return;
     const act = b.dataset.act, row = b.closest('tr');
     if (act === 'discard') { preview = null; draw(); }
+    else if (act === 'reroll') {
+      const p = players.find(x => x.id === row.dataset.id), msg = document.getElementById('pl-msg');
+      const { error } = await (await ctx.db()).from('players').update({ face: Math.floor(Math.random() * 10000) }).eq('id', p.id);
+      if (error) return say(msg, explain(error));
+      await fetchAll(); say(msg, '');
+      const q = players.find(x => x.id === p.id); if (q) row.querySelector('.pl-face-b').innerHTML = face(q);
+    } else if (act === 'looks') {
+      b.disabled = true;
+      const by = {};
+      for (const p of unset()) (by[lookFromName(p.name)] ||= []).push(p.id);
+      for (const [look, ids] of Object.entries(by)) {
+        const { error } = await (await ctx.db()).from('players').update({ look }).in('id', ids);
+        if (error) { b.disabled = false; return say(document.getElementById('pl-msg'), explain(error)); }
+      }
+      await fetchAll(); drawList();
+    }
     else if (act === 'accept') {
       const msg = root.querySelector('.pl-preview .ed-msg');
       root.querySelectorAll('.pl-preview button').forEach(x => { x.disabled = true; });
@@ -222,13 +251,14 @@ export async function mountPlayers(ctx) {
       if (v + other > MAX_TOTAL) { say(document.getElementById('pl-msg'), `Offense and defense can add up to ${MAX_TOTAL} at most: nobody is a 10/10.`); el.value = p[field]; return; }
     }
     if (field === 'club') v = v || null;
+    if (field === 'look' && !v) return;
     if (field === 'number') {
       v = Math.round(Number(v));
       if (!(v >= 1 && v <= 99)) { say(document.getElementById('pl-msg'), 'Singlet numbers are 1 to 99.'); el.value = p.number; return; }
     }
     if (field === 'name') v = v.trim().replace(/\s+/g, ' ');
     const msg = document.getElementById('pl-msg');
-    const { data, error } = await (await ctx.db()).from('players').update({ [field]: v }).eq('id', p.id).select('id, name, position, number, offense, defense, club, value').single();
+    const { data, error } = await (await ctx.db()).from('players').update({ [field]: v }).eq('id', p.id).select(COLS).single();
     if (error) {
       say(msg, /players_club_number/i.test(error.message) ? 'Another player at that club already wears that number.'
         : /players_name_unique|duplicate/i.test(error.message) ? 'Another player already has that name.' : explain(error));
@@ -240,6 +270,7 @@ export async function mountPlayers(ctx) {
     if (field === 'club') row.querySelector('[data-f="number"]').value = p.number;   // a clash is moved to the next free number
     for (const f of ['offense', 'defense']) { const sel = row.querySelector(`[data-f="${f}"]`); sel.className = `rt rt-${p[f]}`; }
     row.querySelector('.pl-value').textContent = money(p.value);
+    if (field === 'club' || field === 'look') row.querySelector('.pl-face-b').innerHTML = face(p);
     root.querySelector('.pl-sum').outerHTML = summary();
   });
 

@@ -378,3 +378,16 @@
 .dr-tlist .dr-name { font: 400 var(--fs-s) var(--font); color: var(--text); }
 .dr-tval { color: var(--muted); font: 400 var(--fs-xs) var(--font); font-variant-numeric: tabular-nums; }
 @media (max-width: 767px) { .lg-draft .dr-teams { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .dr-tbox { padding: 10px; } .dr-tlist .dr-fn { display: none; } }
+
+/* Player portraits (js/portrait.js) beside names on the Draft tab: the board, the lists, Team values and the player card. */
+.lg-draft .dr-pc, .dr-dialog .dr-pc { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.dr-face { flex: none; display: inline-block; line-height: 0; }
+.lg-draft .dr-pc .dr-name { min-width: 0; }
+.lg-draft .dr-pc > span:not(.dr-face) { min-width: 0; }
+.lg-draft .dr-table .c-name .dr-pc .dr-name { display: block; }
+.dr-card-top { display: flex; align-items: center; gap: 16px; margin: 0 0 16px; }
+.dr-card-top h2 { margin: 0 0 4px; }
+.dr-card-top .dr-sub1 { margin: 0; }
+.dr-tlist li .dr-pc { gap: 6px; }
+@media (max-width: 767px) { .lg-draft .dr-p .nm.dr-pc { gap: 6px; } }
+.lg-draft .dg-pick { align-items: center; }

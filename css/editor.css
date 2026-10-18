@@ -522,3 +522,10 @@
 .fx-kits { display: flex; flex-wrap: wrap; gap: 6px 12px; flex: 1 1 100%; font-size: .85rem; color: var(--muted); }
 .fx-kits label { display: flex; align-items: center; gap: 6px; }
 .fx-kits select { min-width: 0; max-width: 100%; }
+
+/* Player portraits in Editor -> Players (js/portrait.js): click the face for a new one. */
+.pl-face { width: 56px; padding-block: 2px; }
+.pl-face-b { display: block; border: 0; padding: 0; background: none; border-radius: 8px; cursor: pointer; line-height: 0; }
+.pl-face-b:focus-visible { outline: 2px solid var(--focus, var(--blue-400)); outline-offset: 2px; }
+@media (hover: hover) { .pl-face-b:hover { background: color-mix(in srgb, var(--blue-400) 14%, transparent); } }
+.pl-looks { margin: 0 0 10px; color: var(--muted); display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }

@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## Unreleased (on the revamp branch, waiting for a release)
+
+Headlines: Player portraits
+
+**Added:** every player now has an illustrated portrait in his club's colours, drawn in the browser from his id (`js/portrait.js`), so no image files are stored. Each player has a look (European, Latin, Middle Eastern, South Asian, East Asian, Black or Pacific Islander) that sets his skin tone, hair, beard and facial features. They show on the Draft tab: the board, Available players, My queue, Team values and the player card.
+**Added, Editor > Players:** a portrait on every row (click it for a new face), a Look picker, and a "Set looks from names" button. New and pasted players get a look from their name.
+
+**Database change:** migration 0058 adds `look` and `face` to `players` (additive, already run on the live project; the 200 existing players have had their looks set).
+
 ## 1.1.0 (2026-10-18)
 
 Headlines: Kit sheet download

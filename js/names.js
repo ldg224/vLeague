@@ -98,6 +98,24 @@ function pickCulture(mix) {
   return entries[0][0];
 }
 
+// The portrait look (js/portrait.js LOOKS) that suits each culture's names. Greek names get 'latin' (olive skin, dark hair).
+export const CULTURE_LOOK = {
+  Australian: 'euro', Irish: 'euro', French: 'euro', German: 'euro', Dutch: 'euro', Nordic: 'euro', Slavic: 'euro',
+  Italian: 'latin', Spanish: 'latin', Brazilian: 'latin', Greek: 'latin',
+  Turkish: 'mena', Arabic: 'mena', Indian: 'southasian', Chinese: 'eastasian', Japanese: 'eastasian', African: 'black', Pacific: 'pacific',
+};
+// The look for a name already in the league: the culture whose first and last name lists match it best (a last name counts double,
+// since first names are shared more). A name from no list is 'euro'. The Editor shows it as a suggestion the office can change.
+export function lookFromName(full) {
+  const [first, ...rest] = String(full).trim().split(/\s+/), last = rest.join(' ');
+  let best = 'euro', top = 0;
+  for (const [culture, p] of Object.entries(NAME_POOLS)) {
+    const score = (p.first.some(x => key(x) === key(first)) ? 1 : 0) + (p.last.some(x => key(x) === key(last)) ? 2 : 0);
+    if (score > top) { top = score; best = CULTURE_LOOK[culture]; }
+  }
+  return best;
+}
+
 export const POSITIONS = ['GK', 'DEF', 'MID', 'FWD'];
 // A 16-man squad: 2 GK, 5 DEF, 5 MID, 4 FWD.
 const SHARE = { GK: 2 / 16, DEF: 5 / 16, MID: 5 / 16, FWD: 4 / 16 };
@@ -175,11 +193,12 @@ export function namer(existing = []) {
     // One unused full name, or null if every combination is taken. `mix` is 'local' (mostly Australian) or 'mixed'.
     next(mix) {
       for (let tries = 0; tries < 600; tries++) {
-        const p = NAME_POOLS[pickCulture(mix)];
+        const culture = pickCulture(mix), p = NAME_POOLS[culture];
         const f = pick(p.first), l = pick(p.last);
         if (key(f) === key(l) || firsts.has(key(f)) || lasts.has(key(l))) continue;
         const full = `${f} ${l}`;
         note(full);
+        this.culture = culture;
         return full;
       }
       return null;
@@ -202,7 +221,7 @@ export function generate(count, existing = [], { mean = 5.5, spread = 1.3, names
     for (let i = 0; i < counts[position]; i++) {
       const name = n.next(names);
       if (!name) throw new Error('Ran out of unused names. Add fewer players, or remove some first.');
-      out.push({ name, position, number: numbers[i], ...rate(position, mean, spread), club: null });
+      out.push({ name, position, number: numbers[i], ...rate(position, mean, spread), club: null, look: CULTURE_LOOK[n.culture] });
     }
   }
   return out;
