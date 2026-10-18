@@ -3,7 +3,7 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
-## Unreleased (on the revamp branch, waiting for a release)
+## 1.3.1 (2026-10-18)
 
 Headlines: Kits on the predicted lineup
 
