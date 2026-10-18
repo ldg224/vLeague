@@ -7,7 +7,7 @@
 // Three views of the same pitch (WR-33), picked with the pills: Average rating (season average match rating as a badge, red under 5.0, orange under 7.0, green from 7.0,
 // blue with a star for the standout), Contributions (goals and assists, nothing for zero) and Value (the editor's value under the shirt).
 // LINEUP RULE (changed by the user, 15 Oct 2026): a club's XI appears as soon as it SUBMITS a team sheet (submitted_lineups(), formation, XI,
-// captain and kit only), and from the lock on the locked sheet (week_sheets) is used. A club that has not submitted (or locked) keeps an empty
+// captain and kit only; the portraits wear that kit from then on, user 18 Oct 2026), and from the lock on the locked sheet (week_sheets) is used. A club that has not submitted (or locked) keeps an empty
 // half-pitch saying so; unsubmitted drafts are never shown.
 import { db } from './auth.js';
 import { FORMATIONS, DEFAULT_FORMATION, autoLineup } from './pitch.js';
@@ -59,9 +59,9 @@ export async function loadLineups(fx, season, rows, { fake = false } = {}) {
         }
       } catch { /* a kit that won't draw falls back to the club-colour disc */ }
     }));
-    // the little shirt in the bar shows which kit the club picked; on the pitch, a submitted-but-not-locked XI stays the club-colour circles until the lock
-    const badge = pics[side].badgeArt || null, early = sub.includes(sides[side]);
-    pics[side] = early ? { badge } : (({ badgeArt, ...rest }) => ({ ...rest, badge }))(pics[side]);
+    // the little shirt in the bar shows which kit the club picked; the portraits on the pitch wear it as soon as the club submits (user, 18 Oct 2026), before the lock too
+    const badge = pics[side].badgeArt || null;
+    pics[side] = (({ badgeArt, ...rest }) => ({ ...rest, badge }))(pics[side]);
   }));
   return { home: { sheet: sides.home, locked: open }, away: { sheet: sides.away, locked: open }, kits: pics };
 }

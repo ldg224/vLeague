@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## Unreleased (on the revamp branch, waiting for a release)
+
+Headlines: Kits on the predicted lineup
+
+**Changed:** the portraits on the Predicted lineup now wear the club's real kit as soon as the club submits its team, not only after the lock.
+
+No database change.
+
 ## 1.3.0 (2026-10-18)
 
 Headlines: Faces everywhere | Real kits on portraits
