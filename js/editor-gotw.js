@@ -6,7 +6,7 @@
 // Everything is one row in gotw_rounds (supabase/migrations/0057_goal_of_week.sql); each Yes / No is saved as it is made, so the office can stop and come back.
 import { goalMoments, shortlist, describe } from './goal-wow.js';
 import { loadMatchFile } from './match-file.js';
-import { ClipStage, recordClip } from './goal-clip.js';
+import { ClipStage, recordClip, recordClips } from './goal-clip.js';
 import { rounds } from './league-fixtures.js';
 import { icon } from './icons.js';
 
@@ -144,23 +144,36 @@ export async function mountGotw({ db, esc, explain, clubs, season, deadlines }) 
     const yes = done(), c = row.candidates, left = c.filter(x => x.d === 'n' || x.d === 'x');
     const nextLock = (deadlines || []).map(d => new Date(d.locks_at || d.locked_at)).filter(d => d > new Date()).sort((a, b) => a - b)[0];
     const opts = [...(nextLock ? [['lock', `When the next round locks (${when(nextLock)})`]] : []), ['24', 'In 1 day'], ['48', 'In 2 days'], ['72', 'In 3 days'], ['168', 'In a week']];
-    const rows = yes.map((m, i) => `<li><span class="gw-n">${i + 1}</span><span class="gw-t"><b>${who(m)}</b><small>${fixLine(m)}, ${esc(describe(m))}</small></span><button class="gw-x" data-key="${esc(m.key)}" type="button">Take out</button></li>`).join('');
+    const rows = yes.map((m, i) => `<li><span class="gw-n">${i + 1}</span><span class="gw-t"><b>${who(m)}</b><small>${fixLine(m)}, ${esc(describe(m))}</small></span><button class="btn ghost" data-dl="${esc(m.key)}" type="button">Download</button><button class="gw-x" data-key="${esc(m.key)}" type="button">Take out</button></li>`).join('');
     root.innerHTML = head(`<section class="nw-card"><h2>${esc(label(week))}: your ${yes.length}</h2>
       ${yes.length < WANT ? `<p class="nw-note">You said Yes to ${yes.length} of ${c.length}; you wanted ${WANT}. ${left.length ? 'Look at the No pile again, or go ahead with fewer.' : ''}</p>` : ''}
       <ol class="gw-list">${rows || '<li class="quiet">No goals chosen yet.</li>'}</ol>
       <div class="nw-actions">${left.length ? '<button class="btn ghost" id="gw-again" type="button">Look at the No pile again</button>' : ''}<button class="btn ghost" id="gw-all" type="button">Show all ${c.length} again</button><button class="btn ghost" id="gw-reset" type="button">Reset this week</button></div>
-      ${yes.length >= 2 ? `<label class="nw-field">Voting closes<select id="gw-close">${opts.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('')}</select></label>
-      <p class="nw-note">Opening voting adds a Vote tab for every signed-in person (managers vote, the tab’s dot flashes until they do). It goes again when voting closes.</p>
-      <div class="nw-actions"><button class="btn" id="gw-open" type="button">Open voting for ${yes.length}</button></div>` : ''}</section>`);
+      ${yes.length ? `<p class="nw-note">Voting happens on WhatsApp. Download the clips one by one, or all ${yes.length} as one video.</p>
+      <div class="nw-actions"><button class="btn" id="gw-all-dl" type="button">Download all ${yes.length} as one video</button></div><p class="nw-msg" role="status"></p>` : ''}</section>`);
     root.querySelectorAll('.gw-x').forEach(b => b.addEventListener('click', async () => { c.find(x => x.key === b.dataset.key).d = 'n'; await save({ candidates: c, finalists: [] }); draw(); }));
     root.querySelector('#gw-again')?.addEventListener('click', async () => { left.forEach(x => { x.d = null; }); await save({ candidates: c, finalists: [] }); draw(); });
     root.querySelector('#gw-all').addEventListener('click', async () => { c.forEach(x => { x.d = null; }); await save({ candidates: c, finalists: [] }); draw(); });
     root.querySelector('#gw-reset').addEventListener('click', resetWeek);
-    root.querySelector('#gw-open')?.addEventListener('click', async () => {
-      const v = root.querySelector('#gw-close').value, now = Date.now();
-      const closes = v === 'lock' ? nextLock : new Date(now + Number(v) * 3600e3);
-      await save({ status: 'voting', finalists: yes.map(m => m.key), opens_at: new Date(now).toISOString(), closes_at: closes.toISOString() });
-      draw();
+    const save1 = ({ blob, ext }, name) => {
+      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `${name}.${ext}` });
+      document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    };
+    const slug = t => t.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const note = t => { const n = root.querySelector('.nw-msg'); if (n) n.textContent = t; };
+    root.querySelectorAll('[data-dl]').forEach(b => b.addEventListener('click', async () => {
+      const i = yes.findIndex(x => x.key === b.dataset.dl), m = yes[i], was = b.textContent;
+      b.disabled = true; b.textContent = 'Recording… keep this tab open';
+      try { save1(await recordClip(season, m), `goal-of-the-week-${slug(label(week))}-${i + 1}-${slug(m.scorerName)}`); b.textContent = 'Downloaded'; }
+      catch (err) { b.textContent = was; note(err.message || 'The clip wouldn’t record.'); }
+      b.disabled = false;
+    }));
+    root.querySelector('#gw-all-dl')?.addEventListener('click', async e => {
+      const b = e.currentTarget, was = b.textContent;
+      b.disabled = true;
+      try { save1(await recordClips(season, yes, { onProgress: (i, n) => { b.textContent = `Recording ${i + 1} of ${n}… keep this tab open`; } }), `goal-of-the-week-${slug(label(week))}`); b.textContent = 'Downloaded'; }
+      catch (err) { b.textContent = was; note(err.message || 'The video wouldn’t record.'); }
+      b.disabled = false;
     });
   }
 

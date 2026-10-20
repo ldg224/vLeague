@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.4.0 (2026-10-20)
+
+Headlines: Voting moves to WhatsApp
+
+**Removed:** the Vote tab and the Goal of the week card on the league page. Voting now happens on WhatsApp.
+**Added:** in the Editor, once the five goals are picked, each clip can be downloaded on its own, or all five as one video.
+**Changed:** the Editor no longer opens voting.
+
+No database change.
+
 ## 1.3.1 (2026-10-18)
 
 Headlines: Kits on the predicted lineup

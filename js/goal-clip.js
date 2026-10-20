@@ -85,3 +85,27 @@ export async function recordClip(season, m, { width = 1280 } = {}) {
     return { blob: new Blob(chunks, { type: type.split(';')[0] }), ext: type.startsWith('video/mp4') ? 'mp4' : 'webm' };
   } finally { stage.destroy(); }
 }
+
+// Several goals recorded back to back into one video (the five of the week, about a minute with the load gaps). onProgress(i, n) fires as each starts.
+export async function recordClips(season, list, { width = 1280, onProgress } = {}) {
+  const cv = document.createElement('canvas'); cv.width = width; cv.height = Math.round(width * 9 / 16);
+  const stage = new ClipStage(cv, season);
+  try {
+    const type = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'].find(t => window.MediaRecorder?.isTypeSupported(t));
+    if (!type) throw new Error('This browser can’t record video.');
+    const rec = new MediaRecorder(cv.captureStream(30), { mimeType: type, videoBitsPerSecond: 8e6 }), chunks = [];
+    rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+    const done = new Promise(res => { rec.onstop = res; });
+    rec.start();
+    for (let i = 0; i < list.length; i++) {
+      onProgress?.(i, list.length);
+      await stage.show(list[i], { autoplay: false });
+      stage.t = stage.from; stage.dirty = true;
+      stage.set(true);
+      await new Promise(r => setTimeout(r, (stage.to - stage.from) * 1000 + 150));
+      stage.set(false);
+    }
+    rec.stop(); await done;
+    return { blob: new Blob(chunks, { type: type.split(';')[0] }), ext: type.startsWith('video/mp4') ? 'mp4' : 'webm' };
+  } finally { stage.destroy(); }
+}
