@@ -309,7 +309,7 @@ async function run(init) {
       <div class="kt-two"><label class="kt-field"><span>Back name</span><input type="text" data-text="name" maxlength="14" value="${esc(d.text.name)}" placeholder="Optional" autocomplete="off" autocapitalize="characters"></label>
       <label class="kt-field"><span>Number</span><input type="text" inputmode="numeric" pattern="[0-9]*" data-text="number" maxlength="2" value="${esc(d.text.number)}" placeholder="Optional" autocomplete="off"></label></div>
       <p class="kt-sub">Print colour</p><div class="kt-ink">${INK.map(([h, n]) => `<button type="button" class="kt-chipbtn${(d.text.colour || '') === h ? ' on' : ''}" data-ink="${h}" aria-pressed="${(d.text.colour || '') === h}">${h ? `<i style="background:${h}"></i>` : ''}${n}</button>`).join('')}</div>
-      <p class="kt-note">Turn the player round with Back to see the print. In matches each player’s own shirt number is used.</p>`;
+      <p class="kt-note">Turn the player round with Back to see the print. In matches each player’s own shirt number is used, in this print colour.</p>`;
     // logo
     const st = STATUS[k.logo_status], has = !!(k.logo_path || logoPreview);
     return `<h2 class="kt-h">Logo and crest</h2>

@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.4.1 (2026-10-22)
+
+Headlines: Shirt number colour in matches
+
+**Fixed:** the print colour a manager picks in the kit editor now shows on the shirt numbers in the match viewer and highlights. Before, the number was always black or white.
+
+No database change.
+
 ## 1.4.0 (2026-10-20)
 
 Headlines: Voting moves to WhatsApp

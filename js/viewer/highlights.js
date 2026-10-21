@@ -1015,7 +1015,7 @@ export class HighlightsRenderer {
     if (holder) { c.lineWidth = 3; c.strokeStyle = '#fff'; c.beginPath(); c.ellipse(p[0], p[1], r * 1.5, r * 0.6, 0, 0, Math.PI * 2); c.stroke(); }
     // shirt number
     const pl = this.d.players[it.i];
-    this.number(this.shirtNo(pl.id), bx, top + bh * 0.62, Math.max(9, bw * 0.55), onColour(col));
+    this.number(this.shirtNo(pl.id), bx, top + bh * 0.62, Math.max(9, bw * 0.55), kit?.ink || onColour(col));   // the kit's print colour from the kit editor, else readable on the shirt
     if (tilt) c.restore();
     if (holder) {
       const name = lastName(pl.name).toUpperCase(), fs = 24;

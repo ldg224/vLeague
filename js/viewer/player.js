@@ -55,7 +55,7 @@ export async function buildKitArt(wear) {
     for (const role of ['field', 'gk']) {
       const k = wear[side]?.[role]; if (!k) continue;
       const [logo, shirt] = await Promise.all([loadImg(k.logoUrl), loadImg(k.artUrl)]);
-      art[side][role] = { main: k.main, sprite: kitSprite({ ...k.design, text: { name: '', number: '', colour: '' } }, { logo, art: shirt }) };
+      art[side][role] = { main: k.main, ink: k.design.text?.colour || '', sprite: kitSprite({ ...k.design, text: { name: '', number: '', colour: '' } }, { logo, art: shirt }) };
     }
   }
   return art;
