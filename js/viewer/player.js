@@ -260,6 +260,7 @@ export class MatchPlayer {
     this._keys = e => {
       if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented || e.target.closest?.('input, select, textarea, [contenteditable]')) return;
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); this.seek(this.t + (e.key === 'ArrowLeft' ? -10 : 10) * this.videoRate()); }
+      else if (e.key === ' ' && !e.target.closest?.('button, a, summary')) { e.preventDefault(); (this.view === 'tactical' ? this.tactical?.playing : this.playing) ? this.pause() : this.play(); }
       else if (e.key === 'f' || e.key === 'F') { e.preventDefault(); this.fullscreen(); }
     };
     document.addEventListener('keydown', this._keys);

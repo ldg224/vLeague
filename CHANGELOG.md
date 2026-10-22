@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.5.0 (2026-10-23)
+
+Headlines: Team sheet shows Submitted; space pauses matches
+
+**Changed:** once a team sheet is submitted and unchanged, the panel says SUBMITTED and offers a button to submit the next round's sheet instead of asking again.
+**Added:** pressing space while watching a match pauses and plays it.
+
+No database change.
+
 ## 1.4.1 (2026-10-22)
 
 Headlines: Shirt number colour in matches

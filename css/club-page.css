@@ -187,6 +187,7 @@
 .ts-sub-line { display: block; margin: 0; color: var(--muted); font: 400 var(--fs-s)/1.45 var(--font); }
 .ts-sub-line b { color: var(--text-strong); font-weight: 700; }
 .ts-sub-line::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: var(--faint); vertical-align: 1px; }
+.ts-sub-done { margin-bottom: 10px; } .ts-sub-done b { letter-spacing: .06em; color: var(--res-w); }
 .ts-sub-line.is-done::before { background: var(--res-w); } .ts-sub-line:is(.is-todo, .is-changed)::before { background: var(--amber); }
 .ts-sub-msg { color: var(--text); font-weight: 600; }
 .ts-rounds { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }

@@ -369,6 +369,13 @@ async function teamSheet(box, { club, squad, userId, season }) {
       : `<b>Not submitted</b> for ${esc(wk(next.week))} yet. If you don’t, your latest saved sheet is used.`;
     const cls = s ? (same ? 'is-done' : 'is-changed') : 'is-todo';
     if (!picking) {
+      // Already submitted and unchanged: say so, and offer the next round's sheet instead of asking again.
+      if (s && same) {
+        const after = rounds.find(r => !submitted.has(r.week));
+        el.innerHTML = `<p class="ts-sub-line ${cls} ts-sub-done" role="status"><b>SUBMITTED</b> for ${esc(wk(next.week))} · ${esc(tidy(dayTime.format(new Date(s.submitted_at))))}${subMsg ? ` <span class="ts-sub-msg">${esc(subMsg)}</span>` : ''}</p>`
+          + (after ? `<button type="button" class="ts-submit-btn" data-sub-open data-sub-week="${after.week}">Submit ${esc(wk(after.week))} instead</button>` : '');
+        return;
+      }
       el.innerHTML = `<button type="button" class="ts-submit-btn" data-sub-open>Submit team sheet</button><p class="ts-sub-line ${cls}" role="status">${line}${subMsg ? ` <span class="ts-sub-msg">${esc(subMsg)}</span>` : ''}</p>`;
       return;
     }
@@ -604,7 +611,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
       Object.assign(sheet, cleared); cleared = null; changed(); redraw('[data-clear]');
     }
     else if (t.closest('[data-save]')) save();
-    else if (t.closest('[data-sub-open]')) { picking = true; subMsg = ''; drawSubmit(); $('#submit input[name="sub-week"]:checked', box)?.focus(); }
+    else if (t.closest('[data-sub-open]')) { picking = true; subMsg = ''; const w = Number(t.closest('[data-sub-open]').dataset.subWeek); if (w) pickWeek = w; drawSubmit(); $('#submit input[name="sub-week"]:checked', box)?.focus(); }
     else if (t.closest('[data-sub-cancel]')) { picking = false; subMsg = ''; drawSubmit(); $('#submit .ts-submit-btn', box)?.focus(); }
     else if (t.closest('[data-sub-go]')) submitFor(pickWeek);
     else if (t.closest('[data-withdraw]')) { e.preventDefault(); withdraw(Number(t.closest('[data-withdraw]').dataset.withdraw)); }
