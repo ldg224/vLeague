@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.5.1 (2026-10-23)
+
+Headlines: No more false line-up warning
+
+**Fixed:** the "Line-ups due" dot on the Club button and the "Line-ups due shortly" pop-up kept appearing after a team sheet was submitted. They now look at the submitted sheet for the club's next round, and no longer show for a round the club doesn't play (a bye or postponed match).
+
+No database change.
+
 ## 1.5.0 (2026-10-23)
 
 Headlines: Team sheet shows Submitted; space pauses matches
