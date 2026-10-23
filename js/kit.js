@@ -5,7 +5,10 @@
 //   drawKit(ctx, design, w, h, imgs)           paints the unrolled shirt; imgs = { crest, logo, art } (loaded images, all optional)
 //   drawTemplate(ctx, w, h)                    the kit template to paint over in Photoshop: the unrolled shirt with its parts marked
 //   drawKitFront(ctx, design, imgs, x, y, w, h, side)   paints the shirt as seen from the front or back into a box of any shape
-//   kitSprite(design, imgs, size, side)        a small cached canvas of the front (or back), for the 2D match views
+//   kitSprite(design, imgs, size, side)        a small cached canvas of the front (or back), for the 2D match views; side can also be an angle in radians
+//                                              (0 = front, PI = back, PI/2 = the player faces the viewer's right) to turn the player
+//   drawPrint(ctx, print, x, y, w, h, theta)   the print on top of that sprite for one player: small chest number at the front, surname and big number at the back,
+//                                              placed exactly where drawKit puts them on the editor's shirt
 // The unrolled shirt has the same pixel density across and down (TEX_W x TEX_H matches the 3D body's circumference and height), so
 // a round logo is round on the 3D player and in every flat view. Pure canvas, so every view draws the same shirt.
 import { isHex, onColour } from './club-colour.js';
@@ -24,6 +27,9 @@ export const TEX_W = 1024, TEX_H = 694;   // 2 pi r : (cylinder + caps) of the 3
 const FALLBACK = ['#1e88e5', '#ffffff', '#0a0f19'];
 export const GK_DEFAULT = { home: '#f5b042', away: '#a855f7' };
 const CREST_POS = { left: 0.075, centre: 0, right: -0.075 };
+// Where the print goes on the unrolled shirt (u round, v down, sizes as a fraction of its height); drawKit and drawPrint both read it, so the match views match the editor.
+const PRINT = { chest: { u: 0.5 - 0.075, v: 0.31, size: 0.08 }, backNo: { u: 0, v: 0.6, size: 0.3 }, name: { u: 0, v: 0.23, size: 0.075, fit: 0.2 } };
+const FONT = 'Oswald, Arial Narrow, sans-serif';
 
 const col = (c, i) => (isHex(c) ? c : FALLBACK[i]);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, Number.isFinite(+v) ? +v : lo));
@@ -105,14 +111,14 @@ export function drawKit(ctx, design, w, h, imgs = {}) {
   // number on the chest (small), name and number on the back
   ctx.fillStyle = ink; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   if (d.text.number) {
-    ctx.font = `900 ${h * 0.08}px Oswald, Arial Narrow, sans-serif`; ctx.fillText(d.text.number, (front - 0.075) * w, h * 0.31);
-    for (const u of [back, back + 1]) { ctx.font = `900 ${h * 0.3}px Oswald, Arial Narrow, sans-serif`; ctx.fillText(d.text.number, u * w, h * 0.6); }
+    ctx.font = `900 ${h * PRINT.chest.size}px ${FONT}`; ctx.fillText(d.text.number, PRINT.chest.u * w, h * PRINT.chest.v);
+    for (const u of [back, back + 1]) { ctx.font = `900 ${h * PRINT.backNo.size}px ${FONT}`; ctx.fillText(d.text.number, u * w, h * PRINT.backNo.v); }
   }
   if (d.text.name) {   // long names shrink to stay on the flat of the back (about a fifth of the way round)
-    ctx.font = `800 ${h * 0.075}px Oswald, Arial Narrow, sans-serif`;
-    const fit = Math.min(1, (w * 0.2) / ctx.measureText(d.text.name).width);
-    ctx.font = `800 ${h * 0.075 * fit}px Oswald, Arial Narrow, sans-serif`;
-    for (const u of [back, back + 1]) ctx.fillText(d.text.name, u * w, h * 0.23);
+    ctx.font = `800 ${h * PRINT.name.size}px ${FONT}`;
+    const fit = Math.min(1, (w * PRINT.name.fit) / ctx.measureText(d.text.name).width);
+    ctx.font = `800 ${h * PRINT.name.size * fit}px ${FONT}`;
+    for (const u of [back, back + 1]) ctx.fillText(d.text.name, u * w, h * PRINT.name.v);
   }
 }
 
@@ -182,7 +188,7 @@ function texture(d, imgs) {
 // shows a little more of the sides instead of stretching the logo; a narrower one shows a little less.
 export function drawKitFront(ctx, design, imgs, x, y, w, h, side = 'front') {
   const d = cleanDesign(design), tex = texture(d, imgs), W = tex.width;
-  const centre = (side === 'back' ? 0 : 0.5) * W, wide = (w / h) / 0.47, perRad = W / (2 * Math.PI);
+  const centre = (typeof side === 'number' ? 0.5 - side / (2 * Math.PI) : side === 'back' ? 0 : 0.5) * W, wide = (w / h) / 0.47, perRad = W / (2 * Math.PI);
   const n = Math.max(8, Math.min(64, Math.round(w / 2)));
   const blit = (sx, sw, dx, dw) => {   // a source slice of the unrolled shirt, wrapping round its seam
     sx = ((sx % W) + W) % W;
@@ -196,9 +202,12 @@ export function drawKitFront(ctx, design, imgs, x, y, w, h, side = 'front') {
   }
 }
 
-// A small front-view sprite for the flat match views (cached by design). Pass loaded images to include the crest and an approved logo.
+// A small sprite for the flat match views (cached by design). Pass loaded images to include the crest and an approved logo.
 const cache = new Map();
+export const TURNS = Array.from({ length: 24 }, (_, i) => -Math.PI + (i * 2 * Math.PI) / 24);   // the angles a turned player is drawn at (15 degrees apart)
+export const turnIndex = a => ((Math.round((((a + Math.PI) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI) / ((2 * Math.PI) / 24))) % 24);
 export function kitSprite(design, imgs = {}, size = 128, side = 'front') {
+  if (typeof side === 'number') side = TURNS[turnIndex(side)];   // an angle is rounded to one of the 24 turns, so the cache stays small
   const d = cleanDesign(design), key = `${size}|${side}|${JSON.stringify(d)}|${imgs.crest?.src || ''}|${imgs.logo?.src || ''}|${imgs.art?.src || ''}`;
   if (cache.has(key)) return cache.get(key);
   const out = document.createElement('canvas'); out.width = Math.round(size * 0.58); out.height = size;   // the match views draw a body about 0.58 wide to 1 tall
@@ -233,4 +242,27 @@ export function kitsClash(a, b, limit = 70) {
   const x = shown(a), y = shown(b);
   if (near(x[0], y[0], limit)) return true;
   return x.every(c => y.some(o => near(c, o, limit))) && y.every(c => x.some(o => near(c, o, limit)));
+}
+
+// The print for one player on a kit drawn into the box x, y, w, h (the same box as drawKitFront), for a player turned `theta` (0 = facing the viewer,
+// PI = back to the viewer). print = { name, number, ink }. A thing printed round the shirt at angle alpha shows at alpha + theta, slides across the
+// body with the sine and is squeezed with the cosine, exactly as drawKitFront bends the shirt itself, so a number sits on the shirt, not on top of it.
+export function drawPrint(ctx, print, x, y, w, h, theta = 0) {
+  const wide = (w / h) / 0.47, TAU = 2 * Math.PI;
+  const put = (text, alphaU, v, size, weight, maxW) => {
+    let phi = (alphaU - 0.5) * TAU + theta; phi = ((phi + Math.PI) % TAU + TAU) % TAU - Math.PI;   // -PI..PI, 0 = straight at the viewer
+    const k = phi / wide;
+    if (Math.abs(k) >= Math.PI / 2) return;
+    ctx.save();
+    ctx.translate(x + w / 2 + (w / 2) * Math.sin(k), y + v * h); ctx.scale(Math.max(0.08, Math.cos(k)), 1);
+    ctx.fillStyle = print.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `${weight} ${h * size}px ${FONT}`;
+    if (maxW) { const fit = Math.min(1, (maxW * h) / ctx.measureText(text).width); ctx.font = `${weight} ${h * size * fit}px ${FONT}`; }
+    ctx.fillText(text, 0, 0); ctx.restore();
+  };
+  if (print.number) {
+    put(print.number, PRINT.chest.u, PRINT.chest.v, PRINT.chest.size, 900);
+    put(print.number, PRINT.backNo.u, PRINT.backNo.v, PRINT.backNo.size, 900);
+  }
+  if (print.name) put(print.name, PRINT.name.u, PRINT.name.v, PRINT.name.size, 800, PRINT.name.fit * TEX_W / TEX_H);
 }

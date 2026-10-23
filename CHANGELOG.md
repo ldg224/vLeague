@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.6.1 (2026-10-23)
+
+Headlines: Players turn, with faces and printed backs
+
+**Changed:** players in the match views (Highlights and Full match) now have a front and a back. A player turns to face the way he runs (or the ball, when standing), seen from whichever camera is showing: a simple face and a hairline on the front, hair and his surname and number on the back. The shirt is drawn from the kit editor's own design (pattern, whole-kit art, uploaded logo, and now the club crest, which was missing), with the small chest number at the front and the surname and big number at the back, placed exactly where the editor puts them. Each player's own name and number are printed, not the editor's sample text.
+
+**Fixed:** players were drawn tiny on steep and far cameras (the cable cam, the gantry, the corner, the wide shot). A player is now drawn at his real height for the camera's distance whatever its tilt, never smaller than a set minimum, and the wide and gantry cameras are a little closer.
+
+No database change.
+
 ## 1.6.0 (2026-10-23)
 
 Headlines: Preseason table and stats

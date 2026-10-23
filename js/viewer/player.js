@@ -3,7 +3,7 @@
 // sped up, match file). Renderers live in js/highlights.js and js/broadcast.js; this file only
 // plays them onto the page. Nothing here runs until a match is live or finished.
 
-import { kitSprite } from '../kit.js';
+import { logoUrl } from '../dashboard-data.js';
 import { liveSimTime, liveSpeed, clockAt, addedAt } from './data.js';
 import { esc, statusPill } from './ui.js';
 import { Replay } from './replay.js';
@@ -47,15 +47,17 @@ export function playerCard(st) {
 
 // Each side's kits as small front-view sprites for the flat match views (shirt numbers come from the players, so the design's own text is dropped).
 const loadImg = url => new Promise(res => { if (!url) return res(null); const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
-export async function buildKitArt(wear) {
+export async function buildKitArt(wear, crests) {
   if (!wear) return null;
   const art = {};
   for (const side of ['home', 'away']) {
     art[side] = {};
     for (const role of ['field', 'gk']) {
       const k = wear[side]?.[role]; if (!k) continue;
-      const [logo, shirt] = await Promise.all([loadImg(k.logoUrl), loadImg(k.artUrl)]);
-      art[side][role] = { main: k.main, ink: k.design.text?.colour || '', sprite: kitSprite({ ...k.design, text: { name: '', number: '', colour: '' } }, { logo, art: shirt }) };
+      const crestUrl = crests?.[side] && !crests[side].startsWith('data:') ? crests[side] : '';
+      const [crest, logo, shirt] = await Promise.all([loadImg(crestUrl), loadImg(k.logoUrl), loadImg(k.artUrl)]);
+      // The whole design as the kit editor has it (pattern, crest, logo, whole-kit art); each player's own number and surname are printed on top (drawPrint).
+      art[side][role] = { main: k.main, ink: k.design.text?.colour || '', design: { ...k.design, text: { name: '', number: '', colour: '' } }, imgs: { crest, logo, art: shirt } };
     }
   }
   return art;
@@ -82,7 +84,7 @@ export class MatchPlayer {
       this.bc = await import('./broadcast.js').catch(() => null);
       const teams = this.S.teams.filter(t => t.code === this.FX.home || t.code === this.FX.away);
       this.assets = await this.hl.loadAssets(teams);
-      this.kitArt = await buildKitArt(this.kits);
+      this.kitArt = await buildKitArt(this.kits, { home: logoUrl(this.FX.home), away: logoUrl(this.FX.away) });
     } catch (e) {
       this.hl = null;   // no graphics: tactical view still works
       console.warn('Match graphics unavailable', e);

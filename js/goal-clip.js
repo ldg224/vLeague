@@ -26,7 +26,8 @@ export class ClipStage {
       const colour = code => this.season.teams.find(t => t.code === code)?.colour;
       const wear = matchKits(kits, fx.home, fx.away, { [fx.home]: colour(fx.home), [fx.away]: colour(fx.away) }, {});
       const teams = this.season.teams.filter(t => t.code === fx.home || t.code === fx.away);
-      const [assets, kitArt] = await Promise.all([hl.loadAssets(teams), buildKitArt(wear)]);
+      const { logoUrl } = await import('./dashboard-data.js');
+      const [assets, kitArt] = await Promise.all([hl.loadAssets(teams), buildKitArt(wear, { home: logoUrl(fx.home), away: logoUrl(fx.away) })]);
       return new bc.BroadcastRenderer(file, { season: this.season, fixture: fx, assets, scale: Math.min(1, this.cv.width / 1920), kitArt });
     })();
     this.rend.set(m.fixture, p);

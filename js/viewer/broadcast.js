@@ -256,7 +256,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
   }
 
   drawScene(cam, t) {
-    const c = this.c, st = this.fr.at(t);
+    const c = this.c, st = this.fr.at(t); this.ballAt = st.ball;
     this.drawPitch(cam);
     this.drawGoal(cam, 0); this.drawGoal(cam, 105);
     // Players and referee, far to near.

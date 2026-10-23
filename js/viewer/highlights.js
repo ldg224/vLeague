@@ -7,8 +7,10 @@
 import { safeColour, onColour, logoPath } from './ui.js';
 import { kickoff } from './data.js';
 import { buildEffects } from './effects.js';
+import { kitSprite, cleanDesign, drawPrint, TURNS, turnIndex } from '../kit.js';
 
 export const W = 1920, H = 1080, FPS = 30;
+const MIN_PLAYER = 110;   // px at 1920 x 1080: the smallest a player is drawn, however far the camera (highlights were showing tiny players on high and wide shots)
 const GOAL_Y1 = 30.34, GOAL_Y2 = 37.66, GOAL_H = 2.44;
 // vLeague brand (docs/BRAND.md): Material Blue ramp, white as the accent, navy background. The old
 // names stay so the graphics code reads the same: LIME = Blue 300 (accent text), YEL -> LIME2 = the
@@ -155,6 +157,8 @@ function makeCamAt(C, T, fovDeg) {
   return {
     focal, C,
     p(x, y, z = 0) { const q = toCam(x, y, z); return q[2] < NEAR ? null : proj(q); },
+    // The way a player at (x, y) facing (hx, hy) turns to this camera: 0 = his front to the camera, PI = his back, PI/2 = he faces the right of the screen.
+    turn(x, y, hx, hy) { const a = toCam(x, y, 0), b = toCam(x + hx, y + hy, 0); return Math.atan2(b[0] - a[0], -(b[2] - a[2])); },
     // Polygon clipped against the near plane (so shapes partly behind the camera still draw).
     poly(pts) {
       const inp = pts.map(([x, y, z = 0]) => toCam(x, y, z)), out = [];
@@ -718,9 +722,9 @@ export class HighlightsRenderer {
         cam = makeCamAt([bx, by + dist * Math.cos(e), 1.7 + dist * Math.sin(e)], [bx, by, 1.75], 36); break;
       }
       case 'wide':   // high and far: shows the team shapes
-        cam = makeCam(clamp(lerp(bx, 52.5, 0.4), 30, 75), 34 + (by - 34) * 0.3, 54, 44, 38); break;   // 54 m (was 74): players stay readable (B-06)
+        cam = makeCam(clamp(lerp(bx, 52.5, 0.4), 30, 75), 34 + (by - 34) * 0.3, 46, 44, 38); break;   // 46 m (74, then 54): players stay readable (B-06)
       case 'high':   // steep from the gantry, following play
-        cam = makeCam(clamp(bx, 14, 91), clamp(by, 18, 50), 46, 58, 40); break;
+        cam = makeCam(clamp(bx, 14, 91), clamp(by, 18, 50), 40, 58, 40); break;
       case 'tight':  // low on the touchline, close to the ball
         cam = makeCam(clamp(bx, 4, 101), clamp(by, 6, 62), 19, 15, 36); break;
       case 'celebrate':
@@ -740,7 +744,7 @@ export class HighlightsRenderer {
   drawClip(s, local) {
     const c = this.c;
     const { cam, tSim, cut, angle, plan } = this.camFor(s, local);
-    const st = this.fr.at(tSim);
+    const st = this.fr.at(tSim); this.ballAt = st.ball;
     this.drawPitch(cam);
     this.drawGoal(cam, 0); this.drawGoal(cam, 105);
     // Players (and the referee) far to near, by distance from this camera
@@ -991,8 +995,10 @@ export class HighlightsRenderer {
     if (this.gkIdx.has(it.i)) col = side ? '#a855f7' : '#f5b042';
     const kit = this.kitOf(it); if (kit) col = kit.main;
     const r = Math.max(10, p[2] * 0.6);
+    // How tall he is drawn: his real height at this distance (1.85 m x the camera's scale), whatever the camera's tilt. The projected height alone shrank players to
+    // slivers on steep cameras (the cable cam, the gantry, the corner), so he is never drawn shorter than that, nor than MIN_PLAYER pixels on a far shot.
     const head = cam.p(it.x, it.y, 1.85);
-    const top = head ? head[1] : p[1] - r * 2;
+    const top = p[1] - Math.max(head ? p[1] - head[1] : r * 2, 1.85 * p[2], MIN_PLAYER);
     // shadow
     c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(p[0] + r * 0.4, p[1], r * 1.05, r * 0.42, 0, 0, Math.PI * 2); c.fill();
     // A diving keeper (S-10): the whole figure tips over from his feet towards the way he goes (as it looks from this camera), off the ground, arms out.
@@ -1006,16 +1012,19 @@ export class HighlightsRenderer {
     }
     // body: a short upright capsule, like a player figure seen from the stand
     const bx = p[0], bh = p[1] - top, bw = Math.max(12, bh * 0.42);
-    const g = c.createLinearGradient(bx - bw, 0, bx + bw, 0); g.addColorStop(0, col); g.addColorStop(1, shade(col, 0.55));
-    if (kit?.sprite) {   // the club's own kit (S-23), clipped to the same body shape
-      c.save(); c.beginPath(); c.roundRect(bx - bw / 2, top + bh * 0.28, bw, bh * 0.72, bw / 2); c.clip();
-      c.drawImage(kit.sprite, bx - bw / 2, top + bh * 0.28, bw, bh * 0.72); c.restore();
-    } else { c.fillStyle = g; c.beginPath(); c.roundRect(bx - bw / 2, top + bh * 0.28, bw, bh * 0.72, bw / 2); c.fill(); }
-    c.fillStyle = '#f1c9a5'; c.beginPath(); c.arc(bx, top + bh * 0.16, bw * 0.34, 0, Math.PI * 2); c.fill();
+    // Which way he faces (the way he runs, or at the ball when he is standing) as this camera sees it: front, back or side on.
+    const spd = Math.hypot(it.vx, it.vy), wv = Math.min(1, spd / 1.5), ball = this.ballAt || [52.5, 34, 0];
+    let tx = ball[0] - it.x, ty = ball[1] - it.y; const tl = Math.hypot(tx, ty) || 1; tx /= tl; ty /= tl;
+    let fx = (spd ? it.vx / spd : 0) * wv + tx * (1 - wv), fy = (spd ? it.vy / spd : 0) * wv + ty * (1 - wv);
+    if (Math.hypot(fx, fy) < 0.05) { fx = tx; fy = ty; }
+    const theta = cam.turn(it.x, it.y, fx, fy), turn = turnIndex(theta);
+    // The shirt as the kit editor draws it (pattern, crest, logo or whole-kit design), turned to the camera, with this player's own print:
+    // the small chest number at the front, his surname and big number at the back.
+    c.save(); c.beginPath(); c.roundRect(bx - bw / 2, top + bh * 0.28, bw, bh * 0.72, bw / 2); c.clip();
+    c.drawImage(this.bodyOf(it, kit, col, turn), bx - bw / 2, top + bh * 0.28, bw, bh * 0.72); c.restore();
+    this.drawHead(bx, top + bh * 0.16, bw * 0.34, TURNS[turn]);
     if (holder) { c.lineWidth = 3; c.strokeStyle = '#fff'; c.beginPath(); c.ellipse(p[0], p[1], r * 1.5, r * 0.6, 0, 0, Math.PI * 2); c.stroke(); }
-    // shirt number
     const pl = this.d.players[it.i];
-    this.number(this.shirtNo(pl.id), bx, top + bh * 0.62, Math.max(9, bw * 0.55), kit?.ink || onColour(col));   // the kit's print colour from the kit editor, else readable on the shirt
     if (tilt) c.restore();
     if (holder) {
       const name = lastName(pl.name).toUpperCase(), fs = 24;
@@ -1023,6 +1032,42 @@ export class HighlightsRenderer {
       this.pill(bx - w / 2, top - 46, w, 36, 'rgba(6,26,56,0.88)', 10);
       c.fillStyle = (side ? this.kitArt?.away?.field?.main : this.kitArt?.home?.field?.main) || (side ? this.ac : this.hc); c.fillRect(bx - w / 2, top - 46, 6, 36);   // the team's colour, not the goalkeeper's own shirt (B-22)
       this.text(name, bx + 3, top - 20, { size: fs, weight: 900, align: 'center' });
+    }
+  }
+
+  // A player's body for one turn: the kit sprite plus his print, drawn once and kept (22 players x 24 turns at most), so a frame is just a stamp.
+  bodyOf(it, kit, col, turn) {
+    const side = it.i < this.nHome ? 0 : 1, pl = this.d.players[it.i], key = `${side}|${this.gkIdx.has(it.i) ? 1 : 0}|${pl.id}|${turn}|${kit ? 'kit' : col}`;
+    const cache = (this._bodies ||= new Map());
+    let b = cache.get(key);
+    if (!b) {
+      const src = kitSprite(kit?.design || cleanDesign({ colours: [col, col, col] }), kit?.imgs || {}, 144, TURNS[turn]);
+      b = document.createElement('canvas'); b.width = src.width; b.height = src.height;
+      const g = b.getContext('2d'); g.drawImage(src, 0, 0);
+      drawPrint(g, { name: lastName(pl.name).toUpperCase(), number: this.shirtNo(pl.id), ink: kit?.ink || onColour(kit?.main || col) }, 0, 0, b.width, b.height, TURNS[turn]);
+      if (cache.size > 900) cache.clear();
+      cache.set(key, b);
+    }
+    return b;
+  }
+
+  // The head, turned to the camera: a face (eyes and a mouth) when his front is towards us, hair round the back of it when his back is.
+  drawHead(cx, cy, R, theta) {
+    const c = this.c, cs = Math.cos(theta), sn = Math.sin(theta);
+    c.fillStyle = '#f1c9a5'; c.beginPath(); c.arc(cx, cy, R, 0, Math.PI * 2); c.fill();
+    c.save(); c.beginPath(); c.arc(cx, cy, R, 0, Math.PI * 2); c.clip();
+    c.fillStyle = '#2b2118';
+    const back = Math.min(1, Math.max(0, (-cs + 0.15) / 0.75));   // 0 = face to us, 1 = back of the head to us
+    c.fillRect(cx - R, cy - R, R * 2, R * 2 * (0.36 + 0.64 * back));   // a hairline across the top, falling to cover the whole head from behind
+    if (Math.abs(sn) > 0.45 && cs > -0.3) { c.beginPath(); c.ellipse(cx - sn * R * 0.62, cy + R * 0.05, R * 0.5, R * 0.95, 0, 0, Math.PI * 2); c.fill(); }   // side on: the back of the head
+    c.restore();
+    if (cs > -0.2) {
+      c.fillStyle = '#1b1b1f';
+      for (const a of [-0.5, 0.5]) {   // eyes sit either side of his front, on the head's curve
+        const k = Math.cos(a + theta); if (k < 0.2) continue;
+        c.beginPath(); c.ellipse(cx + R * 0.9 * Math.sin(a + theta), cy + R * 0.12, Math.max(0.8, R * 0.13 * k), Math.max(1.1, R * 0.2), 0, 0, Math.PI * 2); c.fill();
+      }
+      if (cs > 0.3) { c.strokeStyle = '#7a4a3a'; c.lineWidth = Math.max(1, R * 0.08); c.beginPath(); c.arc(cx + R * 0.9 * sn, cy + R * 0.42, R * 0.28 * cs, 0.15 * Math.PI, 0.85 * Math.PI); c.stroke(); }
     }
   }
 
