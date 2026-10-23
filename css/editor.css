@@ -373,14 +373,11 @@
 .fx-round.is-over { outline: 2px dashed var(--brand); outline-offset: 2px; }
 .fx-body { padding: 0 14px 12px; }
 .fx-lock { margin: 0 0 8px; color: var(--muted); font-size: var(--fs-s); }
-.fx-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 0; border-top: 1px solid var(--line); }
 .fx-row.is-postponed .fx-teams { opacity: .6; }
-.fx-teams { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; flex: 1 1 280px; }
+.fx-teams { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
 .fx-teams select { min-width: 0; max-width: 100%; flex: 1 1 120px; }
 .fx-row input[type="datetime-local"] { padding: 6px 8px; }
-.fx-state { min-width: 4.5rem; color: var(--muted); font-size: var(--fs-s); }
-.fx-score { color: var(--text); font-size: var(--fs-l); font-variant-numeric: tabular-nums; }
-.fx-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+.fx-btns { display: flex; flex-wrap: wrap; gap: 6px; }
 .fx-warn { margin: 6px 0 0; color: var(--amber-text, var(--muted)); font-size: var(--fs-s); font-weight: 600; }
 .fx-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 10px 0 0; }
 .fx-rest { flex: 1 1 100%; color: var(--muted); font-size: var(--fs-s); }
@@ -529,3 +526,33 @@
 .pl-face-b:focus-visible { outline: 2px solid var(--focus, var(--blue-400)); outline-offset: 2px; }
 @media (hover: hover) { .pl-face-b:hover { background: color-mix(in srgb, var(--blue-400) 14%, transparent); } }
 .pl-looks { margin: 0 0 10px; color: var(--muted); display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+
+/* ---------- Editor, Fixtures: match cards (1.7.0) ----------
+   Every match is a card whose outline says what state it is in: blue still to simulate, red kicked off without a result, green simulated (never
+   a score: the office doesn't see results before they're out), dashed amber postponed, dashed grey no kick-off yet. A preseason round is purple. */
+.fx-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 12px; margin: 4px 0 10px; }
+.fx-row {
+  --st: var(--line); display: grid; gap: 10px; align-content: start; padding: 12px; border: 2px solid var(--st); border-radius: var(--r-md);
+  background: color-mix(in oklab, var(--st) 6%, var(--surface-sunk));
+}
+.fx-row.is-todo { --st: var(--blue-500, #2196f3); }
+.fx-row.is-overdue { --st: var(--res-l); }
+.fx-row.is-done { --st: var(--res-w); }
+.fx-row.is-postponed { --st: var(--amber); border-style: dashed; }
+.fx-row.is-tba { --st: color-mix(in oklab, var(--text) 30%, transparent); border-style: dashed; }
+.fx-row.is-postponed .fx-teams { opacity: .6; }
+.fx-rtop { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.fx-chip { padding: 3px 10px; border-radius: 999px; background: var(--st); color: #fff; font: 700 var(--fs-xs)/1.3 var(--font); letter-spacing: .04em; text-transform: uppercase; }
+.fx-row.is-tba .fx-chip { color: var(--text); background: color-mix(in oklab, var(--text) 14%, transparent); }
+.fx-row.is-postponed .fx-chip { color: #1b1300; }
+.fx-hint { color: var(--muted); font-size: var(--fs-xs); font-weight: 600; }
+.fx-row .fx-teams { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; }
+.fx-row .fx-teams select { width: 100%; min-width: 0; font-weight: 600; }
+.fx-v { color: var(--faint); font: 700 var(--fs-s) var(--font); text-transform: uppercase; }
+.fx-ko { display: grid; gap: 4px; color: var(--muted); font: 600 var(--fs-xs) var(--font); text-transform: uppercase; letter-spacing: .05em; }
+.fx-ko input { width: 100%; font-weight: 500; text-transform: none; letter-spacing: 0; }
+.fx-row .fx-kits { flex: none; display: grid; gap: 6px; }
+.fx-row .fx-btns { margin-top: 2px; }
+.fx-row > select[data-k="stage"] { width: 100%; }
+.fx-round.is-pre { border-left: 3px solid var(--preseason, #8522f0); }
+.fx-round .ed-pill.fx-pre, .fx-pre { background: var(--preseason, #8522f0); color: #fff; border-color: transparent; }

@@ -215,14 +215,22 @@ export async function mountFixtures(ctx) {
     return out;
   }
 
+  // Each match is a card whose outline says where it is: blue to simulate, red if it has kicked off without a result, green simulated, dashed amber postponed.
+  // No score is ever shown here: a played match only says it is simulated, and that it stays hidden until kick-off.
+  function matchState(f, done) {
+    if (f.postponed) return ['postponed', 'Postponed', ''];
+    if (done) return ['done', 'Simulated', f.starts_at && new Date(f.starts_at) > new Date() ? 'Hidden until kick-off' : ''];
+    if (!f.starts_at) return ['tba', 'No kick-off yet', ''];
+    return new Date(f.starts_at) < new Date() ? ['overdue', 'Kicked off, not simulated', ''] : ['todo', 'To simulate', ''];
+  }
   function matchRow(f, r) {
-    const res = results.get(f.id), done = !!res;
-    return `<div class="fx-row${f.postponed ? ' is-postponed' : ''}" data-id="${esc(f.id)}">
-      <span class="fx-teams"><select data-k="home" aria-label="Home club">${clubOpts(f.home)}</select><span>v</span><select data-k="away" aria-label="Away club">${clubOpts(f.away)}</select></span>
-      <input type="datetime-local" value="${toLocalInput(f.starts_at)}" aria-label="Kick-off (Melbourne time)">
+    const res = results.get(f.id), done = !!res, [state, label, hint] = matchState(f, done);
+    return `<div class="fx-row is-${state}" data-id="${esc(f.id)}">
+      <div class="fx-rtop"><span class="fx-chip">${esc(label)}</span>${hint ? `<span class="fx-hint">${esc(hint)}</span>` : ''}</div>
+      <span class="fx-teams"><select data-k="home" aria-label="Home club">${clubOpts(f.home)}</select><span class="fx-v">v</span><select data-k="away" aria-label="Away club">${clubOpts(f.away)}</select></span>
+      <label class="fx-ko"><span>Kick-off</span><input type="datetime-local" value="${toLocalInput(f.starts_at)}" aria-label="Kick-off (Melbourne time)"></label>
       ${hasKitPick && (kits[f.home] || kits[f.away]) ? `<span class="fx-kits"><label>${esc(name(f.home))} kit <select data-k="home_kit">${kitOpts(f.home, f.home_kit)}</select></label><label>${esc(name(f.away))} kit <select data-k="away_kit">${kitOpts(f.away, f.away_kit)}</select></label></span>` : ''}
       ${r.kind === 'finals' ? `<select data-k="stage" aria-label="Stage">${opts(STAGES, f.stage || '')}</select>` : ''}
-      <span class="fx-state">${done ? '<b class="fx-score">Simulated</b>' : f.postponed ? 'Postponed' : ''}</span>
       <span class="fx-btns">
         ${f.postponed ? '' : done ? '<button class="btn ghost small" type="button" data-act="again">Play again</button><button class="btn ghost small" type="button" data-act="unplay">Remove result</button>' : '<button class="btn small" type="button" data-act="sim">Simulate</button>'}
         <button class="btn ghost small" type="button" data-act="postpone">${f.postponed ? 'Restore' : 'Postpone'}</button>
@@ -235,11 +243,11 @@ export async function mountFixtures(ctx) {
     const span = first ? (dateOf(first) === dateOf(times.at(-1)) ? dayFmt.format(new Date(first)) : `${dayFmt.format(new Date(first))} to ${dayFmt.format(new Date(times.at(-1)))}`) : 'no dates yet';
     const playing = new Set(list.flatMap(f => [f.home, f.away])), resting = active().filter(c => !playing.has(c.code));
     const warn = warnings(list), isOpen = open.has(w) || (nextUp === w && !open.has(-w));
-    return `<details class="fx-round${locked ? ' is-locked' : ''}" data-week="${w}" ${isOpen ? 'open' : ''}>
-      <summary>${w === TEST_WEEK ? '' : `<span class="fx-grip" role="button" tabindex="${locked ? -1 : 0}" draggable="${!locked}" data-grip="${w}" aria-disabled="${locked}" aria-label="Move ${esc(L.label)}: drag onto another round, or press the up and down arrow keys" title="${locked ? 'Locked: this round can’t be moved' : 'Drag to reorder the rounds'}">${icon('grip-vertical')}</span>`}<b>${esc(L.label)}</b> <span>${esc(span)} · ${list.length ? `${done} of ${list.length} played` : 'no matches'}</span>${locked ? '<span class="ed-pill approved">Locked</span>' : ''}${r.counts_for_ladder === false && w !== TEST_WEEK ? '<span class="ed-pill warn">Not on the table</span>' : ''}</summary>
+    return `<details class="fx-round${locked ? ' is-locked' : ''}${r.kind === 'preseason' ? ' is-pre' : ''}" data-week="${w}" ${isOpen ? 'open' : ''}>
+      <summary>${w === TEST_WEEK ? '' : `<span class="fx-grip" role="button" tabindex="${locked ? -1 : 0}" draggable="${!locked}" data-grip="${w}" aria-disabled="${locked}" aria-label="Move ${esc(L.label)}: drag onto another round, or press the up and down arrow keys" title="${locked ? 'Locked: this round can’t be moved' : 'Drag to reorder the rounds'}">${icon('grip-vertical')}</span>`}<b>${esc(L.label)}</b> <span>${esc(span)} · ${list.length ? `${done} of ${list.length} played` : 'no matches'}</span>${locked ? '<span class="ed-pill approved">Locked</span>' : ''}${r.kind === 'preseason' ? '<span class="ed-pill fx-pre">Preseason</span>' : r.counts_for_ladder === false && w !== TEST_WEEK ? '<span class="ed-pill warn">Not on the table</span>' : ''}</summary>
       <div class="fx-body">
         <p class="fx-lock">${esc(lockText(w, list))}${locked ? ' <button class="btn ghost small" type="button" data-act="unlock">Unlock line-ups</button>' : ''}</p>
-        ${list.map(f => matchRow(f, r)).join('') || '<p class="quiet">No matches yet. Add one below.</p>'}
+        <div class="fx-cards">${list.map(f => matchRow(f, r)).join('') || '<p class="quiet">No matches yet. Add one below.</p>'}</div>
         ${warn.map(t => `<p class="fx-warn">${esc(t)}</p>`).join('')}
         <p class="fx-foot">${resting.length && list.length ? `<span class="fx-rest">Not playing: ${resting.map(c => esc(c.name)).join(', ')}</span>` : ''}
           <button class="btn ghost small" type="button" data-act="add-match">Add a match</button>

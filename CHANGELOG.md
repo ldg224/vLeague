@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.7.0 (2026-10-23)
+
+Headlines: Editor Fixtures match cards
+
+**Changed:** Editor, Fixtures is redone. Each match is a card with an outline that says its state: blue "To simulate", red "Kicked off, not simulated", green "Simulated" (with "Hidden until kick-off" while it is still to come), dashed amber "Postponed", dashed grey "No kick-off yet". Cards sit two across where there is room. The kick-off, clubs, kits and buttons are laid out inside each card; a preseason round gets a purple edge and tag. Every button and setting works as before, and no score is shown.
+
+No database change.
+
 ## 1.6.3 (2026-10-23)
 
 **Changed:** Editor, Fixtures no longer shows the score of a simulated match. A played match says "Simulated" instead, so the office can't read results before they are released and managers have nobody to ask. Play again and Remove result still work as before.
