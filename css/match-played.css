@@ -12,6 +12,7 @@
 .pl-nm { display: grid; min-width: 0; }
 .pl-nm b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-strong); font: 600 var(--fs-m) var(--font); }
 .pl-nm small { color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.pl-bench .is-susp .pl-nm b, .pl-bench .is-susp .pl-nm small { color: #e53935; }
 .pl-none { color: var(--muted); font: 400 var(--fs-s) var(--font); }
 @media (max-width: 767px) {
   .pl-subs { padding: 16px; }
