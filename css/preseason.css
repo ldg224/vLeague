@@ -23,3 +23,6 @@
 .ps-row, .ts-round.ps-row.on { --ps-edge: var(--preseason); }
 .ps-row { box-shadow: inset 3px 0 0 var(--preseason); }
 .ts-round.ps-row.on { border-color: var(--preseason); }
+
+/* The match page's header card (round, clubs, date, the Preview / Head-to-Head tabs) is outlined in purple all the way round for a preseason match. */
+.mh-head.is-pre { outline: 2px solid var(--preseason); outline-offset: -2px; }

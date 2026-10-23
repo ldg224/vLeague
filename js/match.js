@@ -68,6 +68,7 @@ try {
   // ?demo=6 (localhost or the office): made-up players, results and locked line-ups for the league's real clubs, as on the league page.
   demo = q.has('demo') && (preview || prof?.role === 'office') ? Number(q.get('demo') || 6) : null;
   if (demo != null) season = demoMatchSeason(rows, demo);
+  if (demo != null && preview && q.has('pre')) season.fixtures.forEach(f => { f.preseason = true; f.exhibition = true; });   // localhost only: look at a preseason match page
   fx = season?.fixtures.find(f => String(f.id) === String(id)) || (demo != null ? season.fixtures[0] : null) || null;
   if (!fx) main.innerHTML = '<div class="mh"><section class="lg-card"><p class="empty">That match couldn’t be found. <a href="league.html#fixtures">See all matches</a></p></section></div>';
   else {
@@ -134,7 +135,7 @@ function start() {
         + `<span class="mh-badge">${crest(t, 88)}</span></a>`;
     };
     const ghost = (code, t, cls) => `<span class="mh-ghost ${cls}" aria-hidden="true"><b class="mh-full">${esc(fullNameOf(t))}</b><b class="mh-code">${esc(code)}</b></span>`;
-    return `<section class="lg-card mh-head" aria-label="Match">
+    return `<section class="lg-card mh-head${fx.preseason ? ' is-pre' : ''}" aria-label="Match">
       <div class="mh-band">
         <p class="mh-round">${esc(fx.round || `Round ${fx.week}`)}${fx.preseason ? tag : ''}</p>
         <p class="mh-info">${k ? `<span>${icon('calendar-days')}${esc(when(k))}</span>` : ''}${ground ? `<span>${icon('map-pin')}${esc(ground)}</span>` : ''}</p>

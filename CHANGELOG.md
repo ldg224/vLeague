@@ -3,6 +3,12 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.7.2 (2026-10-23)
+
+**Changed:** the match page's top card (round, clubs, date and time, and the Preview / Head-to-Head tabs) is outlined in purple all the way round for a preseason match.
+
+No database change.
+
 ## 1.7.1 (2026-10-23)
 
 **Fixed:** red-card marks showed beside the clubs on the Fixtures tab, the Overview round card and team pages for a match that had been simulated ahead of time, before it kicked off. They now show only once the match has finished (or, while it is live, as they happen). The old Game centre's "Met this season" line also left out matches that haven't been played yet. A test covers it.
