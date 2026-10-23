@@ -158,3 +158,11 @@ test('the Overview round widget: the current round, arrows that step by button, 
   assert.match(second, /Round 2/); assert.match(second, /data-wround="1"[^>]*aria-label="Previous round"/);
   assert.match(roundWidget(null, ctx()), /No fixtures yet/);
 });
+
+test('a match simulated ahead of time shows nothing of its result before kick-off, red cards included', () => {
+  const ahead = rowHtml(fx('CCC', 'DDD', '2026-10-14', '19:30', done(3, 1, [{ team: 'DDD', card: 'red' }, { team: 'CCC', card: 'second_yellow' }])), season, ctx(), {});
+  assert.equal(count(ahead, /fx-reds/g), 0, 'no red-card marks before kick-off');
+  assert.doesNotMatch(ahead, /fx-score/, 'no score before kick-off');
+  const over = rowHtml(fx('CCC', 'DDD', '2026-10-13', '19:30', done(3, 1, [{ team: 'DDD', card: 'red' }])), season, ctx(), {});
+  assert.equal(count(over, /fx-reds/g), 1, 'a finished match still shows its red card');
+});

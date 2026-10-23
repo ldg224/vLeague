@@ -161,7 +161,7 @@ async function run() {
   function previewSection() {
     const { w, pct: [ph, pd, pa] } = chanceOf(season, fx, { sheets: chanceSheets, hidden: spoilerHidden(fx, season) }), now = new Date();
     const sum = c => clubSummary(season, c, now), hs = sum(fx.home), as = sum(fx.away), R = w.factors.ratings;
-    const meets = season.fixtures.filter(f => f.result && f.id !== fx.id && ((f.home === fx.home && f.away === fx.away) || (f.home === fx.away && f.away === fx.home)));
+    const meets = season.fixtures.filter(f => f.result && status(f, season, new Date()) === 'ft' && f.id !== fx.id && ((f.home === fx.home && f.away === fx.away) || (f.home === fx.away && f.away === fx.home)));
     const rec = r => `${r.w}-${r.d}-${r.l}`, rate = v => (v == null ? '–' : v.toFixed(1));
     // A club's locked eleven, in pitch order: { formation, captain, items: [{ id, name, slot, position }] }.
     const lineup = c => {
