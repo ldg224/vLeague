@@ -3,6 +3,12 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.6.3 (2026-10-23)
+
+**Changed:** Editor, Fixtures no longer shows the score of a simulated match. A played match says "Simulated" instead, so the office can't read results before they are released and managers have nobody to ask. Play again and Remove result still work as before.
+
+No database change.
+
 ## 1.6.2 (2026-10-23)
 
 **Changed:** the table and stats switch now reads Preseason | vLeague (it said Season).

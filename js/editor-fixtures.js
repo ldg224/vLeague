@@ -222,7 +222,7 @@ export async function mountFixtures(ctx) {
       <input type="datetime-local" value="${toLocalInput(f.starts_at)}" aria-label="Kick-off (Melbourne time)">
       ${hasKitPick && (kits[f.home] || kits[f.away]) ? `<span class="fx-kits"><label>${esc(name(f.home))} kit <select data-k="home_kit">${kitOpts(f.home, f.home_kit)}</select></label><label>${esc(name(f.away))} kit <select data-k="away_kit">${kitOpts(f.away, f.away_kit)}</select></label></span>` : ''}
       ${r.kind === 'finals' ? `<select data-k="stage" aria-label="Stage">${opts(STAGES, f.stage || '')}</select>` : ''}
-      <span class="fx-state">${done ? `<b class="fx-score">${res.home}–${res.away}</b>` : f.postponed ? 'Postponed' : ''}</span>
+      <span class="fx-state">${done ? '<b class="fx-score">Simulated</b>' : f.postponed ? 'Postponed' : ''}</span>
       <span class="fx-btns">
         ${f.postponed ? '' : done ? '<button class="btn ghost small" type="button" data-act="again">Play again</button><button class="btn ghost small" type="button" data-act="unplay">Remove result</button>' : '<button class="btn small" type="button" data-act="sim">Simulate</button>'}
         <button class="btn ghost small" type="button" data-act="postpone">${f.postponed ? 'Restore' : 'Postpone'}</button>
