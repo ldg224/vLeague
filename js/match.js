@@ -5,6 +5,7 @@
 // Each tab has its own address (match.html?id=7#lineup). The tab cards arrive card by card (WR-32 onwards); until then a tab says so.
 // Spoiler-free mode: a result, the scorers and the red cards stay out of the header until the viewer chooses "Show".
 // Localhost only, to look at it without signing in: match.html?id=...&preview&mine=TUR&theme=light
+import { tag } from './preseason.js';
 import { chrome, esc, clubs, crestUrl } from './member.js';
 import { currentUser, myProfile } from './auth.js';
 import { paintClub, startSilk, styleCards } from './shell.js';
@@ -135,7 +136,7 @@ function start() {
     const ghost = (code, t, cls) => `<span class="mh-ghost ${cls}" aria-hidden="true"><b class="mh-full">${esc(fullNameOf(t))}</b><b class="mh-code">${esc(code)}</b></span>`;
     return `<section class="lg-card mh-head" aria-label="Match">
       <div class="mh-band">
-        <p class="mh-round">${esc(fx.round || `Round ${fx.week}`)}</p>
+        <p class="mh-round">${esc(fx.round || `Round ${fx.week}`)}${fx.preseason ? tag : ''}</p>
         <p class="mh-info">${k ? `<span>${icon('calendar-days')}${esc(when(k))}</span>` : ''}${ground ? `<span>${icon('map-pin')}${esc(ground)}</span>` : ''}</p>
         <div class="mh-teams">${ghost(fx.home, home, 'is-home')}${ghost(fx.away, away, 'is-away')}${side(fx.home, home, 'is-home')}<div class="mh-mid">${middle(s)}</div>${side(fx.away, away, 'is-away')}</div>
         ${scorers(s)}

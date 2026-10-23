@@ -4,6 +4,7 @@
 import { enterPlace, styleCards } from './shell.js';
 import { esc, crestUrl } from './member.js';
 import { db } from './auth.js';
+import { tag } from './preseason.js';
 import { SUPABASE_URL } from './config.js';
 import { finished, logoUrl, kickoff, status, matchUrl } from './dashboard-data.js';
 import { tableRows } from './league-table.js';
@@ -384,8 +385,8 @@ async function teamSheet(box, { club, squad, userId, season }) {
     el.innerHTML = `<fieldset class="ts-rounds"><legend>Which round is this team sheet for?</legend>
       ${rounds.map(r => {
         const home = r.fx.home === club.code, opp = home ? r.fx.away : r.fx.home, k = kickoff(r.fx), sub = submitted.get(r.week);
-        return `<label class="ts-round${pickWeek === r.week ? ' on' : ''}"><input type="radio" name="sub-week" value="${r.week}" ${pickWeek === r.week ? 'checked' : ''}>
-          <span class="ts-round-main"><b>${esc(wk(r.week))}</b><span>${home ? 'v' : 'at'} ${esc(teamName(opp))}${k ? ` · ${esc(when(k, now))}` : ''}</span><small>Locks ${esc(when(r.locks, now))}</small></span>
+        return `<label class="ts-round${pickWeek === r.week ? ' on' : ''}${season?.rounds?.[r.week]?.preseason ? ' ps-row' : ''}"><input type="radio" name="sub-week" value="${r.week}" ${pickWeek === r.week ? 'checked' : ''}>
+          <span class="ts-round-main"><b>${esc(wk(r.week))}${season?.rounds?.[r.week]?.preseason ? tag : ''}</b><span>${home ? 'v' : 'at'} ${esc(teamName(opp))}${k ? ` · ${esc(when(k, now))}` : ''}</span><small>Locks ${esc(when(r.locks, now))}</small></span>
           <span class="ts-round-state">${sub ? `Submitted<button type="button" class="link-btn" data-withdraw="${r.week}">Withdraw</button>` : 'Not submitted'}</span></label>`;
       }).join('')}</fieldset>
       ${xi < slots ? `<p class="ts-sub-warn">Your XI has ${xi} of ${slots} players. Empty spots are filled automatically.</p>` : ''}

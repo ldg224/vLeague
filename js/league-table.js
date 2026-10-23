@@ -100,8 +100,9 @@ function chips(form) {
 }
 
 // opts: filter ('all' | 'home' | 'away' | 'last5'), filters (show the pills), hiddenCount (results the viewer hasn't opened yet).
-export function tableCard(rows, ctx, { filter = 'all', filters = true, hiddenCount = 0, title = 'Table' } = {}) {
-  const zones = zonesFor(rows.length);
+// scopeBar: the Preseason | Season switch (js/preseason.js); pre: this is the preseason table (purple, and no Finals / Wooden spoon / Shield zones).
+export function tableCard(rows, ctx, { filter = 'all', filters = true, hiddenCount = 0, title = 'Table', scopeBar = '', pre = false } = {}) {
+  const zones = pre ? { finals: 0, spoon: false, shield: false } : zonesFor(rows.length);
   const pills = filters
     ? `<nav class="tb-pills sc-toggle" aria-label="Table filter">${FILTERS.map(([key, label]) => `<button type="button" data-tfilter="${key}"${key === filter ? ' aria-pressed="true"' : ' aria-pressed="false"'}>${esc(label)}</button>`).join('')}</nav>`
     : '';
@@ -116,7 +117,7 @@ export function tableCard(rows, ctx, { filter = 'all', filters = true, hiddenCou
       + `<td class="t-pm">${r.gf}-${r.ga}</td><td>${signed(r.gd)}</td><td class="tb-pts">${r.pts}</td>`
       + `<td class="tb-formcell">${chips(r.form)}</td><td class="t-next">${next}</td></tr>`;
   }).join('');
-  const key = rows.length
+  const key = rows.length && (zones.shield || zones.finals || zones.spoon)
     ? `<ul class="tb-key">${zones.shield ? '<li data-zone="shield">vLeague Shield</li>' : ''}${zones.finals ? '<li data-zone="finals">Finals</li>' : ''}${zones.spoon ? '<li data-zone="spoon">Wooden spoon</li>' : ''}</ul>`
     : '';
   const hid = hiddenCount
@@ -129,7 +130,7 @@ export function tableCard(rows, ctx, { filter = 'all', filters = true, hiddenCou
       + `<th scope="col" class="t-pm"><abbr title="Goals for and against">+/-</abbr></th><th scope="col"><abbr title="Goal difference">GD</abbr></th><th scope="col"><abbr title="Points">PTS</abbr></th>`
       + `<th scope="col">Form</th><th scope="col" class="t-next">Next</th></tr></thead><tbody>${body}</tbody></table></div>`
     : empty;
-  return `<section class="lg-card lg-table" aria-label="${esc(title)}"><div class="lg-card-head"><h2>${esc(title)}</h2></div>${pills}${hid}${table}${key}</section>`;
+  return `<section class="lg-card lg-table${pre ? ' is-pre' : ''}" aria-label="${esc(title)}"><div class="lg-card-head"><h2>${esc(title)}</h2>${scopeBar}</div>${pills}${hid}${table}${key}</section>`;
 }
 
 // ---------- the reshuffle (browser only) ----------

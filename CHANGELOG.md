@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.6.0 (2026-10-23)
+
+Headlines: Preseason ladder
+
+**Added:** preseason rounds. A round marked "Preseason" in Editor, Fixtures is shown in deep purple (#8522f0) with a Preseason tag in Fixtures, the match page and the "Which round is this team sheet for?" picker. While preseason is on, the Overview table, Stats tab, leaders and Team of the week show the preseason games only (a purple "Preseason table"); once the first real round kicks off they switch to the real season on their own. A Preseason | Season switch on the table and Stats lets anyone look at the other one at any time. Preseason results are kept, never deleted.
+
+**Changed:** ticking Preseason on a round also turns "Counts for the table" off, so preseason never touches the real ladder, win chances or form.
+
+Database change: `0059_preseason_rounds.sql` (a `preseason` column on rounds; rounds 2 to 4 set as preseason). Already applied.
+
 ## 1.5.1 (2026-10-23)
 
 Headlines: No more false line-up warning

@@ -1,0 +1,25 @@
+/* Preseason (js/preseason.js): everything about a preseason round is deep purple, so it is never mistaken for the real season. */
+:root { --preseason: #8522f0; --preseason-ink: #6d12d6; --preseason-soft: color-mix(in oklab, #8522f0 14%, transparent); }
+:root:not([data-theme="light"]) { --preseason-ink: #b78cff; }
+
+.ps-tag {
+  display: inline-block; vertical-align: middle; margin-left: 6px; padding: 1px 7px; border-radius: 999px;
+  background: var(--preseason); color: #fff; font: 700 .6875rem/1.5 var(--font); letter-spacing: .04em; text-transform: uppercase; white-space: nowrap;
+}
+
+/* Preseason | Season switch: the Preseason button is purple when it is the one showing. */
+.ps-pills { margin-left: auto; }
+.ps-pills button[data-scope="pre"][aria-pressed="true"] { background: var(--preseason); color: #fff; }
+:root:not([data-theme="light"]) .ps-pills button[data-scope="pre"][aria-pressed="true"] { color: #fff; }
+
+/* The preseason table and stats */
+.lg-table.is-pre, .sc-section.is-pre > .sc-head { border-top: 3px solid var(--preseason); }
+.lg-table.is-pre { border-top-left-radius: 0; border-top-right-radius: 0; }
+.lg-table.is-pre .lg-card-head h2, .sc-section.is-pre .sc-title { color: var(--preseason-ink); }
+.lg-table.is-pre .tb-pts { color: var(--preseason-ink); }
+.sc-section.is-pre > .sc-head { padding-top: 8px; }
+
+/* A preseason round in a list or picker */
+.ps-row, .ts-round.ps-row.on { --ps-edge: var(--preseason); }
+.ps-row { box-shadow: inset 3px 0 0 var(--preseason); }
+.ts-round.ps-row.on { border-color: var(--preseason); }

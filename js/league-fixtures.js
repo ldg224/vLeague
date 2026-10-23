@@ -15,6 +15,7 @@
 // has its club colour as a slim edge, the score sits in a plate with the winner in full strength, a match still to play carries a slim
 // win-chance bar, and a wide screen also gets the ground. A row is a link to the match page. Test matches never show. A hidden score shows a dash and nothing is given away
 // (no red cards, no result letters, no winner); opening the match reveals it.
+import { tag } from './preseason.js';
 import { status, kickoff, shownScore, liveMinute, liveState, byKickoff, matchUrl, activeWeek } from './dashboard-data.js';
 import { addDays, mondayOf } from './roster.js';
 import { accentFor, isHex } from './club-colour.js';
@@ -121,7 +122,7 @@ export function rowHtml(fx, season, ctx, opts = {}) {
   const label = `${home} against ${away}`;
   const mine = ctx.mine && (fx.home === ctx.mine || fx.away === ctx.mine);
   const ground = ctx.venue?.(fx.home);
-  return `<li class="fx-row is-${st}${mine ? ' has-mine' : ''}${opts.forTeam ? ' with-res' : ''}" style="${hues(ctx, fx)}"><a href="${esc(matchUrl(fx))}" aria-label="${esc(label)}">${ghost(fx.home, 'home', ctx)}${ghost(fx.away, 'away', ctx)}${tag}${team(fx, 'home', ctx, live, hid, edge[0])}<span class="fx-mid">${mid}</span>${team(fx, 'away', ctx, live, hid, edge[1])}<span class="fx-venue">${ground ? esc(ground) : ''}</span>${res}</a></li>`;
+  return `<li class="fx-row is-${st}${fx.preseason ? ' ps-row' : ''}${mine ? ' has-mine' : ''}${opts.forTeam ? ' with-res' : ''}" style="${hues(ctx, fx)}"><a href="${esc(matchUrl(fx))}" aria-label="${esc(label)}">${ghost(fx.home, 'home', ctx)}${ghost(fx.away, 'away', ctx)}${tag}${team(fx, 'home', ctx, live, hid, edge[0])}<span class="fx-mid">${mid}</span>${team(fx, 'away', ctx, live, hid, edge[1])}<span class="fx-venue">${ground ? esc(ground) : ''}</span>${res}</a></li>`;
 }
 
 // ---------- groups ----------
@@ -155,7 +156,7 @@ export function byDate(season, ctx, arg) {
 
 export function rounds(season) {
   const weeks = [...new Set(season.fixtures.filter(f => !f.test && f.week != null).map(f => f.week))].sort((a, b) => a - b);
-  return weeks.map(w => ({ week: w, label: season.fixtures.find(f => f.week === w && f.round)?.round || `Round ${w}` }));
+  return weeks.map(w => ({ week: w, label: season.fixtures.find(f => f.week === w && f.round)?.round || `Round ${w}`, pre: season.fixtures.some(f => f.week === w && f.preseason) }));
 }
 
 export function byRound(season, ctx, arg) {
@@ -164,7 +165,7 @@ export function byRound(season, ctx, arg) {
   const want = Number(arg), current = activeWeek(season, ctx.now);
   const i = Math.max(0, list.findIndex(r => r.week === (list.some(r => r.week === want) ? want : current)));
   const r = list[i], fixtures = season.fixtures.filter(f => f.week === r.week && !f.test).sort(byKickoff);
-  return `${arrows(esc(r.label), i > 0 ? fixturesAddress('round', list[i - 1].week) : '', i < list.length - 1 ? fixturesAddress('round', list[i + 1].week) : '', 'round')}<ul class="fx-list">${dayGroups(fixtures, season, ctx, {})}</ul>`;
+  return `${arrows(esc(r.label) + (r.pre ? tag : ''), i > 0 ? fixturesAddress('round', list[i - 1].week) : '', i < list.length - 1 ? fixturesAddress('round', list[i + 1].week) : '', 'round')}<ul class="fx-list">${dayGroups(fixtures, season, ctx, {})}</ul>`;
 }
 
 export function byTeam(season, ctx, arg) {
@@ -175,7 +176,7 @@ export function byTeam(season, ctx, arg) {
   const groups = [];
   for (const label of [...new Set(fixtures.map(f => f.round || `Round ${f.week}`))]) {
     const rows = fixtures.filter(f => (f.round || `Round ${f.week}`) === label);
-    groups.push(`<li class="fx-day"><h3>${esc(label)}</h3><span>${count(rows.length)}</span></li>${rows.map(f => rowHtml(f, season, ctx, { forTeam: code })).join('')}`);
+    groups.push(`<li class="fx-day"><h3>${esc(label)}${rows.some(f => f.preseason) ? tag : ''}</h3><span>${count(rows.length)}</span></li>${rows.map(f => rowHtml(f, season, ctx, { forTeam: code })).join('')}`);
   }
   const club = ctx.club(code);
   return `${strip}<div class="fx-head is-team"><b class="fx-title">${esc(club?.name || code)}</b></div>${fixtures.length ? `<ul class="fx-list">${groups.join('')}</ul>` : none('No matches yet', 'This club has no fixtures so far.')}`;
@@ -198,7 +199,7 @@ export function roundWidget(season, ctx, week = null) {
   const i = Math.max(0, list.findIndex(r => r.week === (list.some(r => r.week === week) ? week : activeWeek(season, ctx.now)))), r = list[i];
   const step = (to, icon, what) => (to ? `<button type="button" class="fx-arrow" data-wround="${to.week}" aria-label="${what} round">${icon}</button>` : `<span class="fx-arrow" aria-disabled="true" aria-label="${what} round">${icon}</span>`);
   const fixtures = season.fixtures.filter(f => f.week === r.week && !f.test).sort(byKickoff);
-  return `<section class="lg-card fx-card fx-widget" aria-label="This round"><div class="fx-head">${step(list[i - 1], PREV, 'Previous')}<b class="fx-title">${esc(r.label)}</b>${step(list[i + 1], NEXT, 'Next')}</div>`
+  return `<section class="lg-card fx-card fx-widget" aria-label="This round"><div class="fx-head">${step(list[i - 1], PREV, 'Previous')}<b class="fx-title">${esc(r.label)}${r.pre ? tag : ''}</b>${step(list[i + 1], NEXT, 'Next')}</div>`
     + `<ul class="fx-list">${dayGroups(fixtures, season, ctx, {})}</ul></section>`;
 }
 
