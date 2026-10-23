@@ -3,12 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
-## 1.8.0 (2026-10-23)
 ## 1.8.1 (2026-10-24)
 
 **Changed, Team of the week:** a round's team now shows only once every game in that round has been played (postponed games do not hold it back).
 No database change.
 
+
+## 1.8.0 (2026-10-23)
 
 - **Added, suspensions:** a player sent off (red card or two yellows) can't be picked for their club's next game. On the team sheet they show greyed out as "Suspended" with the reason, they're left out of the XI, the bench and Pick best XI, and a saved sheet that had them is refilled. Only finished matches count, so nothing shows before kick-off. The match engine already left them out.
 - **Added, match page:** under Substitutes, a player suspended for that match shows with a red name and the reason ("Suspended · Red card v LFC (week 2)").
