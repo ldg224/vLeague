@@ -199,9 +199,12 @@ function suspendedCard(club, season, ctx, squad) {
   const { now } = ctx, seen = { ...season, fixtures: season.fixtures.map(f => (status(f, season, now) === 'ft' && !ctx.hidden.has(f.id) ? f : { ...f, result: null })) };
   const next = season.fixtures.filter(f => f.date && !f.postponed && !f.test && (f.home === club.code || f.away === club.code) && status(f, season, now) !== 'ft').sort(byKickoff)[0];
   const bans = next ? suspensions(seen).get(next.id) || [] : [];
-  const no = id => squad.find(p => String(p.id) === String(id))?.number;
-  return `<section class="lg-card tm-club" aria-labelledby="tm-sus-h"><div class="lg-card-head"><h2 id="tm-sus-h">Suspended</h2>${bans.length ? '<span class="tm-cnote">Miss the next game</span>' : ''}</div>
-      ${bans.length ? `<ul class="tm-facts">${bans.map(b => `<li class="tm-fact"><span>${no(b.player) != null ? `${esc(no(b.player))} ` : ''}${esc(b.name)}</span><b>${esc(b.reason)}</b></li>`).join('')}</ul>` : '<p class="empty">Nobody is suspended.</p>'}</section>`;
+  const who = b => squad.find(p => String(p.id) === String(b.player));
+  const row = b => { const p = who(b); return `<li class="sus-row"><span class="sus-pic">${p ? portrait(p, club, undefined, true) : ''}</span>`
+    + `<span class="sus-who"><b>${esc(b.name)}</b>${p ? `<small>${p.number != null ? `${esc(p.number)} · ` : ''}${esc(p.position || '')}</small>` : ''}</span>`
+    + `<span class="sus-why"><i class="sus-card" aria-hidden="true"></i>${esc(b.reason)}</span></li>`; };
+  return `<section class="lg-card tm-sus${bans.length ? ' has-bans' : ''}" aria-labelledby="tm-sus-h"><div class="lg-card-head"><h2 id="tm-sus-h">Suspended</h2>${bans.length ? `<span class="sus-count">${bans.length}</span>` : ''}</div>
+      ${bans.length ? `<ul class="sus-list"><li class="sus-head" aria-hidden="true"><span>Player</span><span>Reason</span></li>${bans.map(row).join('')}</ul>` : '<p class="empty">Nobody is suspended.</p>'}</section>`;
 }
 
 // ---------- squad ----------
