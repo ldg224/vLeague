@@ -6,7 +6,7 @@
 // Everything is one row in gotw_rounds (supabase/migrations/0057_goal_of_week.sql); each Yes / No is saved as it is made, so the office can stop and come back.
 import { goalMoments, shortlist, describe } from './goal-wow.js';
 import { loadMatchFile } from './match-file.js';
-import { ClipStage, recordClip, recordClips } from './goal-clip.js';
+import { ClipStage, recordClip, recordReel } from './goal-clip.js';
 import { rounds } from './league-fixtures.js';
 import { icon } from './icons.js';
 
@@ -171,7 +171,7 @@ export async function mountGotw({ db, esc, explain, clubs, season, deadlines }) 
     root.querySelector('#gw-all-dl')?.addEventListener('click', async e => {
       const b = e.currentTarget, was = b.textContent;
       b.disabled = true;
-      try { save1(await recordClips(season, yes, { onProgress: (i, n) => { b.textContent = `Recording ${i + 1} of ${n}… keep this tab open`; } }), `goal-of-the-week-${slug(label(week))}`); b.textContent = 'Downloaded'; }
+      try { save1(await recordReel(season, yes, { label: label(week), onProgress: (i, n) => { b.textContent = `Recording ${i + 1} of ${n}… keep this tab open`; } }), `goal-of-the-week-${slug(label(week))}`); b.textContent = 'Downloaded'; }
       catch (err) { b.textContent = was; note(err.message || 'The video wouldn’t record.'); }
       b.disabled = false;
     });
