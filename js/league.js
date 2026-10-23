@@ -16,7 +16,7 @@ import { kitSprite, kitChest, startDesign } from './kit.js';
 import { countedFixtures, totals, rank, PLAYER_CARDS, TEAM_CARDS } from './season-stats.js';
 import { statCard, statPage, wireStatPage, initialsCrest } from './stat-card.js';
 import { demoSeason } from './demo-season.js';
-import { counts } from './scope.js';
+import { counts, inStats } from './scope.js';
 import { tableRows, tableCard, rowTops, reshuffle, shield, woodenSpoon } from './league-table.js';
 import { paint, quietly, busy, snapshotInputs, restoreInputs } from './paint.js';
 import { spoilerHidden, revealScore, fmtTime } from './prefs.js';
@@ -196,7 +196,9 @@ if (ctx) {
   let twWeek = null;   // the round shown (null = the latest played)
   const teamHtml = () => {
     if (!season) return teamOfWeekCard([], sctx);
-    const now = tableNow(), all = played(), seen = all.filter(f => !spoilerHidden(f, season, now)), labels = new Map(rounds(season).map(r => [r.week, r.label]));
+    // A round's team shows only once every game of that round is played (postponed games don't hold it back).
+    const done = new Set(played().map(f => f.id)), open = new Set(season.fixtures.filter(f => inStats(f, scopeNow()) && !f.postponed && !done.has(f.id)).map(f => f.week));
+    const now = tableNow(), all = played().filter(f => !open.has(f.week)), seen = all.filter(f => !spoilerHidden(f, season, now)), labels = new Map(rounds(season).map(r => [r.week, r.label]));
     return teamOfWeekCard(seen, { ...sctx, mine: ctx.club?.code, number: shirt }, { week: twWeek, labelOf: w => labels.get(w) || `Round ${w}`, hiddenCount: all.length - seen.length });
   };
   // The three leader cards under the table (WR-19): the top three of each stat, each with its ">" link to the full list.
