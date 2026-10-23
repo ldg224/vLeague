@@ -3,6 +3,11 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.8.3 (2026-10-24)
+
+**Changed, team pages:** the Suspended card is redone: each player shows their kit icon, name, number and position, with a Reason column; the card is red so a ban reads as bad news.
+No database change.
+
 ## 1.8.2 (2026-10-24)
 
 **Added, team pages:** a Suspended card under the table on a club's Overview, listing the players banned for the club's next game and why. Results hidden by spoiler-free mode stay out.
