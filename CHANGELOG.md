@@ -3,6 +3,12 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.8.0 (2026-10-23)
+
+- **Added, suspensions:** a player sent off (red card or two yellows) can't be picked for their club's next game. On the team sheet they show greyed out as "Suspended" with the reason, they're left out of the XI, the bench and Pick best XI, and a saved sheet that had them is refilled. Only finished matches count, so nothing shows before kick-off. The match engine already left them out.
+- **Added, preseason scorebug:** the score bug on the broadcast and highlights has a purple plate, outline and clock for preseason matches.
+- No database change.
+
 ## 1.7.2 (2026-10-23)
 
 **Changed:** the match page's top card (round, clubs, date and time, and the Preview / Head-to-Head tabs) is outlined in purple all the way round for a preseason match.

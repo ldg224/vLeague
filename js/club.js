@@ -9,6 +9,7 @@ import { SUPABASE_URL } from './config.js';
 import { finished, logoUrl, kickoff, status, matchUrl } from './dashboard-data.js';
 import { tableRows } from './league-table.js';
 import { rating } from './places.js';
+import { suspensions } from './simulate.js';
 import { prefsNow, spoilerHidden } from './prefs.js';
 import { kitSprite, kitChest, cleanDesign, kitName, FIELD_SLOTS } from './kit.js';
 import { renderPitch, FORMATIONS, isFormation, positionPenalty, DEFAULT_FORMATION, TACTICS, STEPS, PRESETS, POS_ORDER, normaliseSheet, reshape, benchOf, autoLineup, fillLineup } from './pitch.js';import { portrait } from './portrait.js';
@@ -123,7 +124,15 @@ async function teamSheet(box, { club, squad, userId, season }) {
   const chestOf = (key, design, art) => { if (!design) return ''; if (!chestMemo.has(key)) chestMemo.set(key, kitChest(cleanDesign(design), { art })); return chestMemo.get(key); };
   const pitchKits = () => { const wear = sheet.kit && kitsMade[sheet.kit] ? sheet.kit : 'home'; return { field: chestOf(wear, kitsMade[wear], kitArt[wear]), gk: chestOf('gk', gkDesign, kitArt.gk) }; };
   let deadlines = dlRes.error ? [] : dlRes.data || [];   // no table yet (or it didn't load) = no deadline set
-  let sheet = normaliseSheet(rowRes.data, squad);
+  // A red card (or two yellows) bans the player from the club's next game. Only matches that have kicked off and finished
+  // count here, so nothing shows early. The banned can't be picked, and the club's next game says who is out.
+  const now0 = new Date();
+  const seen = { ...season, fixtures: season.fixtures.map(f => (status(f, season, now0) === 'ft' ? f : { ...f, result: null })) };
+  const nextGame = season.fixtures.filter(f => f.date && !f.postponed && !f.test && (f.home === club.code || f.away === club.code) && status(f, season, now0) !== 'ft')
+    .sort((a, b) => `${a.date}T${a.time || ''}`.localeCompare(`${b.date}T${b.time || ''}`))[0];
+  const bans = new Map((nextGame ? suspensions(seen).get(nextGame.id) || [] : []).map(b => [String(b.player), b]));
+  const avail = squad.filter(p => !bans.has(String(p.id)));
+  let sheet = normaliseSheet(rowRes.data, avail);
   if (!rowRes.data && !rowRes.error) suggestPieces(sheet, byId);
   let saved = rowRes.data ? JSON.stringify(sheet) : null;   // what the database has; null = never saved
   let state = rowRes.error ? 'error-load' : rowRes.data ? 'saved' : 'new';   // 'new' saves at once (below)
@@ -260,7 +269,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   }
   function setFormation(f) {
     if (f === sheet.formation) return;
-    sheet.lineup = reshape(sheet.lineup, sheet.formation, f, squad);
+    sheet.lineup = reshape(sheet.lineup, sheet.formation, f, avail);
     sheet.formation = f; sel = null;
     changed(); redraw(`[data-f="${f}"]`);
   }
@@ -290,9 +299,14 @@ async function teamSheet(box, { club, squad, userId, season }) {
 
   function drawPlayers() {
     const want = sel?.slot ? wantOf(sel.slot) : null;
-    const list = want ? [...squad].sort((a, b) => (b.position === want) - (a.position === want)) : squad;
+    const list = want ? [...squad].sort((a, b) => bans.has(String(a.id)) - bans.has(String(b.id)) || (b.position === want) - (a.position === want)) : [...squad].sort((a, b) => bans.has(String(a.id)) - bans.has(String(b.id)));
     $('#players', box).innerHTML = list.map(p => {
-      const id = String(p.id), slot = slotOf(id), off = slot && p.position !== wantOf(slot), on = sel?.player === id;
+      const id = String(p.id), ban = bans.get(id);
+      if (ban) return `<li><div class="pl-ban" aria-disabled="true" title="${esc(ban.reason)}">
+        <span class="pl-pos pos-${esc(p.position)}">${esc(p.position)}</span>
+        <span class="pl-name"><span class="pl-pic">${portrait(p, club, undefined, true)}</span>${esc(p.name)}<small>${esc(ban.reason)}</small></span><span></span>
+        <span class="pl-slot">Suspended</span></div></li>`;
+      const slot = slotOf(id), off = slot && p.position !== wantOf(slot), on = sel?.player === id;
       return `<li><button type="button" class="pl${slot ? ' in' : ''}${on ? ' sel' : ''}${want && p.position === want ? ' fits' : ''}" data-id="${esc(id)}" aria-pressed="${on}">
         <span class="pl-pos pos-${esc(p.position)}">${esc(p.position)}</span>
         <span class="pl-name"><span class="pl-pic">${portrait(p, club, undefined, true)}</span>${esc(p.name)}<small>${p.number != null && p.number !== '' ? `#${esc(p.number)}` : ''}</small></span>
@@ -356,7 +370,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
     return fx ? { week: d.week, locks: new Date(d.locks_at), fx } : null;
   }).filter(Boolean).sort((a, b) => a.locks - b.locks);
   const bodyOf = () => { const b = JSON.parse(JSON.stringify(sheet)); if (b.kit == null) delete b.kit; return b; };
-  const sameAsNow = s => s && JSON.stringify(normaliseSheet(s.sheet, squad)) === JSON.stringify(normaliseSheet(bodyOf(), squad));
+  const sameAsNow = s => s && JSON.stringify(normaliseSheet(s.sheet, avail)) === JSON.stringify(normaliseSheet(bodyOf(), avail));
   const teamName = code => season?.teams?.find(x => x.code === code)?.name || code;
   const filled = () => Object.keys(FORMATIONS[sheet.formation]).filter(s => sheet.lineup[s]).length;
 
@@ -418,7 +432,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
     // The captain and set-piece takers must be in the XI; the bench is everyone else.
     const inXI = new Set(Object.values(sheet.lineup));
     for (const [k] of PIECES) if (sheet[k] && !inXI.has(sheet[k])) sheet[k] = null;
-    sheet.bench = benchOf(sheet.lineup, squad);
+    sheet.bench = benchOf(sheet.lineup, avail);
     if (state === 'saving') { again = true; return; }
     state = saved && JSON.stringify(sheet) === saved ? 'saved' : 'dirty';
     drawSave(); if (!picking) drawSubmit(); drawForm();
@@ -607,7 +621,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
       sheet.lineup = {}; sel = null; changed(); cleared = was; undoMsg = 'Positions cleared.'; redraw('[data-unclear]');
     } else if (t.closest('[data-best]')) {
       const was = { lineup: { ...sheet.lineup }, ...Object.fromEntries(PIECES.map(([k]) => [k, sheet[k]])) };
-      sheet.lineup = autoLineup(sheet.formation, squad); sel = null; changed(); cleared = was; undoMsg = 'Best XI picked.'; redraw('[data-unclear]');
+      sheet.lineup = autoLineup(sheet.formation, avail); sel = null; changed(); cleared = was; undoMsg = 'Best XI picked.'; redraw('[data-unclear]');
     } else if (t.closest('[data-unclear]')) {
       Object.assign(sheet, cleared); cleared = null; changed(); redraw('[data-clear]');
     }

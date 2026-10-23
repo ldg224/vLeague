@@ -1206,6 +1206,7 @@ export class HighlightsRenderer {
   scoreBoard(x, y, sc, clock) {
     const c = this.c, L = this.look(), w = 560, h = 64, key = L.key, acc = L.accent;
     const plateText = [L.ornament, L.big.toUpperCase(), L.banner && L.banner.toLowerCase() !== L.big.toLowerCase() ? `· ${L.banner}` : ''].filter(Boolean).join(' ');
+    const pre = !!(this.fx?.preseason || this.season?.rounds?.[this.fx?.week]?.preseason), PRE = '#8522f0';
     const star = key === 'grand_final' ? '★ ' : '';
     const label = `${star}${plateText}${star ? ' ★' : ''}`.trim();
     c.save(); c.font = `800 22px ${FONT}`; const pw = Math.min(w, Math.max(180, c.measureText(label).width + 56)); c.restore();
@@ -1218,6 +1219,7 @@ export class HighlightsRenderer {
     else if (key === 'christmas') { plateFill = '#c62828'; }
     else if (key === 'derby') { plateFill = gold('#ff8a50', '#ff7043'); plateInk = '#1b0a00'; }
     else if (key !== 'classic' && acc) { plateFill = acc; plateInk = onColour(acc); }
+    if (pre) { plateFill = PRE; plateInk = '#fff'; }
     c.save(); c.shadowColor = 'rgba(0,0,0,.4)'; c.shadowBlur = 16;
     c.beginPath(); c.roundRect(x, py, pw, ph + 6, [12, 12, 0, 0]); c.fillStyle = plateFill; c.fill(); c.restore();
     if (key === 'christmas') { c.save(); c.strokeStyle = '#fff'; c.lineWidth = 2; c.beginPath(); c.roundRect(x + 3, py + 3, pw - 6, ph - 2, [9, 9, 0, 0]); c.stroke(); c.restore(); }
@@ -1241,6 +1243,7 @@ export class HighlightsRenderer {
       c.fillStyle = 'rgba(15,38,26,.97)'; c.beginPath(); c.roundRect(x + 5, y + 5, w - 10, h - 10, 10); c.fill();
     } else if (key === 'derby') { c.fillStyle = '#ff7043'; c.fillRect(x, y + h - 5, w, 5); }
     else if (key !== 'classic' && acc) { c.strokeStyle = acc; c.beginPath(); c.roundRect(x, y, w, h, [0, 14, 14, 14]); c.stroke(); }
+    if (pre) { c.strokeStyle = PRE; c.lineWidth = 4; c.beginPath(); c.roundRect(x, y, w, h, [0, 14, 14, 14]); c.stroke(); }
     c.restore();
     // contents
     if (this.A.league) this.leagueFit((x + 12) + (44) / 2, (y + 10) + (44) / 2, 44, 44);
@@ -1250,9 +1253,9 @@ export class HighlightsRenderer {
     this.text(`${sc[0]} - ${sc[1]}`, x + 246, y + 44, { size: 32, weight: 900, align: 'center', colour: DARK });
     this.text(this.away.code, x + 322, y + 44, { size: 32, weight: 900 });
     c.fillStyle = this.ac; c.fillRect(x + 408, y + 12, 6, 40);
-    const clockFill = key === 'finals' || key === 'grand_final' ? gold('#ffe08a', '#d4a900') : key === 'christmas' ? '#c62828' : key === 'derby' ? '#ff7043' : this.limeGrad(x + 428, y, x + 548, y);
+    const clockFill = pre ? PRE : key === 'finals' || key === 'grand_final' ? gold('#ffe08a', '#d4a900') : key === 'christmas' ? '#c62828' : key === 'derby' ? '#ff7043' : this.limeGrad(x + 428, y, x + 548, y);
     this.pill(x + 428, y + 12, 120, 40, clockFill, 10);
-    this.text(clock, x + 488, y + 42, { size: 26, weight: 900, align: 'center', colour: key === 'finals' || key === 'grand_final' || key === 'derby' ? '#1b1400' : '#fff' });
+    this.text(clock, x + 488, y + 42, { size: 26, weight: 900, align: 'center', colour: !pre && (key === 'finals' || key === 'grand_final' || key === 'derby') ? '#1b1400' : '#fff' });
     // A test match (made-up players) says so on screen, in the broadcast and the highlights.
     if (this.fx?.test) {
       const tw = 330, tx = W / 2 - tw / 2, ty = 22;

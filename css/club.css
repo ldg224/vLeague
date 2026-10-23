@@ -63,6 +63,11 @@
 .pls { list-style: none; margin: 0; padding: 0; }
 .pls li + li { border-top: 1px solid var(--line); }
 .pl { width: 100%; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 6px; border: 0; border-radius: 8px; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.pl-ban { width: 100%; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 6px; opacity: .6; cursor: not-allowed; }
+.pl-ban .pl-name { display: grid; min-width: 0; font-weight: 600; }
+.pl-ban .pl-name small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--faint); font-size: .76rem; font-weight: 500; }
+.pl-ban .pl-pos { font-size: .74rem; font-weight: 700; color: var(--muted); }
+.pl-ban .pl-slot { min-width: 48px; padding: 3px 8px; border-radius: 999px; font-size: .74rem; font-weight: 700; color: #fff; background: #e53935; }
 .pl:hover { background: rgba(var(--ink),.04); }
 .pl-pos { font-size: .74rem; font-weight: 700; color: var(--muted); }
 .pl-name { display: grid; min-width: 0; font-weight: 600; }
