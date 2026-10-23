@@ -5,7 +5,7 @@
 //   phaseOf(season, now)       'preseason' until every preseason game has finished or the first real match kicks off (whichever is first), then 'season'
 //   scopeNow(season, now)      what a page shows: the viewer's pick if they made one in this phase, else the phase
 //   pickScope(season, scope, now)   remember the viewer's pick (browser only; lasts while the phase stays the same)
-//   scopePills(scope)          the Preseason | Season switch (buttons with data-scope)
+//   scopePills(scope)          the Preseason | vLeague switch (buttons with data-scope)
 //   tag                        the purple "Preseason" chip
 import { kickoff, status } from './dashboard-data.js';
 import { tableOf } from './scope.js';
@@ -36,7 +36,7 @@ export function pickScope(season, scope, now = new Date()) {
 
 export function scopePills(scope) {
   const b = (key, label) => `<button type="button" data-scope="${key}" aria-pressed="${scope === key}">${label}</button>`;
-  return `<nav class="sc-toggle ps-pills" aria-label="Which games">${b('preseason', 'Preseason')}${b('season', 'Season')}</nav>`;
+  return `<nav class="sc-toggle ps-pills" aria-label="Which games">${b('preseason', 'Preseason')}${b('season', 'vLeague')}</nav>`;
 }
 
 export const tag = '<span class="ps-tag">Preseason</span>';

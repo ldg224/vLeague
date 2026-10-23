@@ -3,6 +3,12 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.6.2 (2026-10-23)
+
+**Changed:** the table and stats switch now reads Preseason | vLeague (it said Season).
+
+No database change.
+
 ## 1.6.1 (2026-10-23)
 
 Headlines: Players turn, with faces and printed backs
