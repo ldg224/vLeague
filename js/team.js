@@ -20,6 +20,7 @@ import { POS_ORDER } from './pitch.js';
 import { tableRows, tableCard } from './league-table.js';
 import { countedFixtures, totals, rank, PLAYER_CARDS } from './season-stats.js';
 import { hasPreseason, scopeNow, pickScope, scopePills } from './preseason.js';
+import { suspensions } from './simulate.js';
 import { statCard } from './stat-card.js';import { portrait } from './portrait.js';
 
 
@@ -187,9 +188,20 @@ function overviewHtml(club, season, ctx, fixtures, squad, won, sum) {
       <ul class="tm-facts">${facts.map(([k, v]) => `<li class="tm-fact"><span>${k}</span><b>${v}</b></li>`).join('')}${squad.length ? cap : ''}${honours}</ul></section>`;
 
   return `<div class="tm-cols">
-      <div class="tm-main">${matches}${table}</div>
+      <div class="tm-main">${matches}${table}${suspendedCard(club, season, ctx, squad)}</div>
       <div class="tm-side">${leaders}${clubCard}</div>
     </div>`;
+}
+
+// Players banned for the club's next game (red card or two yellows). Only finished matches count, and results hidden by spoiler-free mode stay out.
+function suspendedCard(club, season, ctx, squad) {
+  if (!season) return '';
+  const { now } = ctx, seen = { ...season, fixtures: season.fixtures.map(f => (status(f, season, now) === 'ft' && !ctx.hidden.has(f.id) ? f : { ...f, result: null })) };
+  const next = season.fixtures.filter(f => f.date && !f.postponed && !f.test && (f.home === club.code || f.away === club.code) && status(f, season, now) !== 'ft').sort(byKickoff)[0];
+  const bans = next ? suspensions(seen).get(next.id) || [] : [];
+  const no = id => squad.find(p => String(p.id) === String(id))?.number;
+  return `<section class="lg-card tm-club" aria-labelledby="tm-sus-h"><div class="lg-card-head"><h2 id="tm-sus-h">Suspended</h2>${bans.length ? '<span class="tm-cnote">Miss the next game</span>' : ''}</div>
+      ${bans.length ? `<ul class="tm-facts">${bans.map(b => `<li class="tm-fact"><span>${no(b.player) != null ? `${esc(no(b.player))} ` : ''}${esc(b.name)}</span><b>${esc(b.reason)}</b></li>`).join('')}</ul>` : '<p class="empty">Nobody is suspended.</p>'}</section>`;
 }
 
 // ---------- squad ----------
