@@ -3,6 +3,11 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.8.2 (2026-10-24)
+
+**Added, team pages:** a Suspended card under the table on a club's Overview, listing the players banned for the club's next game and why. Results hidden by spoiler-free mode stay out.
+No database change.
+
 ## 1.8.1 (2026-10-24)
 
 **Changed, Team of the week:** a round's team now shows only once every game in that round has been played (postponed games do not hold it back).
