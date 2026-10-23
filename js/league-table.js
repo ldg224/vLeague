@@ -12,13 +12,13 @@
 // not played, so the table never gives a score away. Form is always the last five league results; the filter changes only the sums.
 // ctx = { club(code) -> { name, short_name, colour }, crest(code, px) -> html, mine?: code }
 import { status, kickoff, byKickoff } from './dashboard-data.js';
+import { counts } from './scope.js';
 
 export const FILTERS = [['all', 'All'], ['home', 'Home'], ['away', 'Away'], ['last5', 'Last 5']];
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ESC[c]);
 
-const counts = f => !f.test && !f.exhibition && !f.stage;
 const FORM = 5;
 
 // The zones follow the number of clubs: Finals is the top four (fewer in a small league, always leaving room for last place),
@@ -28,11 +28,12 @@ export function zonesFor(n) {
   return { finals, spoon: n >= 2, shield: n >= 2 };   // the vLeague Shield is first place (S-26), which is also in the finals
 }
 
-export function tableRows(season, { filter = 'all', now = new Date(), hidden = new Set() } = {}) {
+// scope: 'season' (the default) or 'preseason' (js/scope.js): which games the table is made from.
+export function tableRows(season, { filter = 'all', now = new Date(), hidden = new Set(), scope = 'season' } = {}) {
   const pts = season.points || { win: 3, draw: 1, loss: 0 };
   const teams = season.teams.filter(t => !t.withdrawn);
   const rows = Object.fromEntries(teams.map(t => [t.code, { team: t, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0, games: [], form: [], next: null }]));
-  const played = season.fixtures.filter(f => counts(f) && f.result && status(f, season, now) === 'ft' && !hidden.has(f.id)).sort(byKickoff);
+  const played = season.fixtures.filter(f => counts(f, scope) && f.result && status(f, season, now) === 'ft' && !hidden.has(f.id)).sort(byKickoff);
 
   // Every club's games in order, as { home: bool, gf, ga }.
   for (const f of played) {
@@ -53,10 +54,10 @@ export function tableRows(season, { filter = 'all', now = new Date(), hidden = n
     }
     delete r.games;
   }
-  if (filter === 'all') for (const a of season.adjustments || []) if (rows[a.team]) rows[a.team].pts += a.points;
+  if (filter === 'all' && scope === 'season') for (const a of season.adjustments || []) if (rows[a.team]) rows[a.team].pts += a.points;
 
   // The next match for each club: its first league or finals match that isn't counted yet (not postponed, no Test or showcase games).
-  const todo = season.fixtures.filter(f => !f.test && !f.exhibition && !f.postponed && kickoff(f) && !(f.result && status(f, season, now) === 'ft' && !hidden.has(f.id))).sort(byKickoff);
+  const todo = season.fixtures.filter(f => !f.test && (scope === 'preseason' ? f.preseason : !f.exhibition) && !f.postponed && kickoff(f) && !(f.result && status(f, season, now) === 'ft' && !hidden.has(f.id))).sort(byKickoff);
   for (const f of todo) {
     if (rows[f.home] && !rows[f.home].next) rows[f.home].next = { code: f.away, home: true };
     if (rows[f.away] && !rows[f.away].next) rows[f.away].next = { code: f.home, home: false };
@@ -70,7 +71,7 @@ export function tableRows(season, { filter = 'all', now = new Date(), hidden = n
 
 // The vLeague Shield (S-26): the club top of the table when the league matches (not the finals) are all played.
 export function shield(season, { now = new Date(), hidden = new Set() } = {}) {
-  const league = season.fixtures.filter(counts);
+  const league = season.fixtures.filter(f => counts(f));
   if (!league.length || season.teams.filter(t => !t.withdrawn).length < 2) return null;
   const done = f => f.result && status(f, season, now) === 'ft' && !hidden.has(f.id);
   if (!league.every(done)) return null;
@@ -80,7 +81,7 @@ export function shield(season, { now = new Date(), hidden = new Set() } = {}) {
 
 // The wooden spoon: the club bottom of the table once the league matches are all played (same rule as the Shield).
 export function woodenSpoon(season, { now = new Date(), hidden = new Set() } = {}) {
-  const league = season.fixtures.filter(counts);
+  const league = season.fixtures.filter(f => counts(f));
   if (!league.length || season.teams.filter(t => !t.withdrawn).length < 2) return null;
   const done = f => f.result && status(f, season, now) === 'ft' && !hidden.has(f.id);
   if (!league.every(done)) return null;

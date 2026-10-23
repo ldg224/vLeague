@@ -96,7 +96,7 @@ export function roundLabels(weeks, rounds) {
     const numbered = r.numbered !== false;
     if (numbered) count++;
     const no = numbered ? (r.number_override ?? count) : null;
-    const base = numbered ? `Round ${no}` : (r.kind === 'finals' ? 'Finals' : 'Special round');
+    const base = numbered ? `Round ${no}` : (r.kind === 'finals' ? 'Finals' : r.kind === 'preseason' ? 'Preseason' : 'Special round');
     out.set(w, { no, numbered, name: r.name || null, label: r.name ? (numbered ? `${base} · ${r.name}` : r.name) : base, short: numbered ? String(no) : '★' });
   }
   return out;

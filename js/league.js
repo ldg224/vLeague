@@ -16,12 +16,13 @@ import { kitSprite, kitChest, startDesign } from './kit.js';
 import { countedFixtures, totals, rank, PLAYER_CARDS, TEAM_CARDS } from './season-stats.js';
 import { statCard, statPage, wireStatPage, initialsCrest } from './stat-card.js';
 import { demoSeason } from './demo-season.js';
+import { counts } from './scope.js';
 import { tableRows, tableCard, rowTops, reshuffle, shield, woodenSpoon } from './league-table.js';
 import { paint, quietly, busy, snapshotInputs, restoreInputs } from './paint.js';
 import { spoilerHidden, revealScore, fmtTime } from './prefs.js';
 import { fixturesView, parseSub, roundWidget, rounds } from './league-fixtures.js';
 import { teamOfWeekCard } from './team-of-week.js';
-import { hasPreseason, phaseOf, scoped, scopePills } from './preseason.js';
+import { hasPreseason, scopeNow as scopeOf, pickScope, scopePills } from './preseason.js';
 import { loadPlayers } from './players-data.js';
 import { instagramCard } from './instagram.js';
 import { seasonsView, grandFinal } from './seasons-tab.js';
@@ -78,6 +79,9 @@ if (ctx) {
     const [rows, kits] = await Promise.all([clubs().catch(() => []), loadKits()]);
     const active = rows.filter(r => r.status === 'active' && r.colour);
     season = demoSeason({ rounds: demo, clubs: active.length >= 4 ? active : undefined });
+    // &pre=N makes the first N demo rounds preseason rounds, to look at the purple preseason table and stats
+    const preN = Number(params.get('pre') || 0);
+    if (preN) season.fixtures.forEach(f => { if (f.week <= preN) { f.preseason = true; f.exhibition = true; } });
     if (active.length >= 4) {
       realClubs = true;
       useClubs(active);
@@ -116,11 +120,9 @@ if (ctx) {
   };
   // Preseason (js/preseason.js): the table, stats and Team of the week show either the preseason games or the real season. Automatic: preseason until the
   // first real match kicks off; the Preseason | Season switch lets anyone look at the other one (a viewer's pick lasts until the page is closed).
-  let scope = null;
-  const scopeNow = () => scope ?? phaseOf(season, tableNow());
-  const view = () => scoped(season, scopeNow());
+  const scopeNow = () => scopeOf(season, tableNow());
   const bar = () => (hasPreseason(season) ? scopePills(scopeNow()) : '');
-  const played = () => { const v = view(); return !v ? [] : demo != null ? countedFixtures(v.fixtures) : countedFixtures(finished(v)); };
+  const played = () => (!season ? [] : demo != null ? countedFixtures(season.fixtures, scopeNow()) : countedFixtures(finished(season), scopeNow()));
   const KINDS = { player: PLAYER_CARDS, team: TEAM_CARDS };
   // Address changes made by the page itself replace the entry (a stat switched, a position picked), so "Back" still goes to where the
   // full page was opened from: `moved` counts the changes that added an entry.
@@ -144,7 +146,7 @@ if (ctx) {
       });
     }
     const note = demo != null ? `<p class="sc-demo"><b>Demo data</b> ${realClubs ? 'Real clubs and kits, made-up players and results' : 'Made-up clubs, players and results'}, ${demo} ${demo === 1 ? 'round' : 'rounds'} (try <code>demo=0</code> to <code>demo=6</code>). Not real.</p>` : '';
-    const pre = hasPreseason(season) && scopeNow() === 'pre';
+    const pre = hasPreseason(season) && scopeNow() === 'preseason';
     if (!data.players.length && demo == null) {
       return `${bar() ? `<div class="sc-section"><div class="sc-head"><h2 class="sc-title">${pre ? 'Preseason stats' : 'Stats'}</h2>${bar()}</div></div>` : ''}<section class="lg-card sc-none"><div class="sc-empty"><b>No matches played yet</b><span>Player and team stats appear here as ${pre ? 'preseason is' : 'the season is'} played.</span></div></section>`;
     }
@@ -165,9 +167,9 @@ if (ctx) {
   const tableNow = () => (demo != null ? new Date(params.get('now') || '2027-01-01T00:00:00') : new Date());   // demo matches are dated in the coming days: treat them as played (or pick the moment: &now=2026-10-16T12:00)
   const tableHtml = () => {
     if (!season) return tableCard([], sctx, { filter: tableFilter });
-    const now = tableNow(), v = view(), pre = hasPreseason(season) && scopeNow() === 'pre', counted = v.fixtures.filter(f => f.result && !f.test && !f.exhibition && !f.stage);
+    const now = tableNow(), scope = scopeNow(), pre = scope === 'preseason', counted = season.fixtures.filter(f => f.result && counts(f, scope));
     const hiddenIds = counted.filter(f => spoilerHidden(f, season, now)).map(f => f.id);
-    return tableCard(tableRows(v, { filter: tableFilter, now, hidden: new Set(hiddenIds) }), { ...sctx, mine: ctx.club?.code },
+    return tableCard(tableRows(season, { filter: tableFilter, now, hidden: new Set(hiddenIds), scope }), { ...sctx, mine: ctx.club?.code },
       { filter: tableFilter, hiddenCount: hiddenIds.length, scopeBar: bar(), pre, title: pre ? 'Preseason table' : 'Table' });
   };
   // ---- The Fixtures tab (WR-15 to WR-17) ----
@@ -369,7 +371,7 @@ if (ctx) {
     const step = e.target.closest('[data-wround]');
     if (step) { widgetWeek = Number(step.dataset.wround); rerender(); main.querySelector('.fx-widget [data-wround]')?.focus({ preventScroll: true }); return; }
     const sw = e.target.closest('[data-scope]');
-    if (sw) { scope = sw.dataset.scope; twWeek = null; rerender(); main.querySelector(`[data-scope="${scope}"]`)?.focus({ preventScroll: true }); return; }
+    if (sw) { pickScope(season, sw.dataset.scope, tableNow()); twWeek = null; rerender(); main.querySelector(`[data-scope="${sw.dataset.scope}"]`)?.focus({ preventScroll: true }); return; }
     const pill = e.target.closest('[data-tfilter]'), all = e.target.closest('[data-reveal-all]'), go2 = e.target.closest('[data-fxgo]');
     if (go2?.getAttribute('href')) { e.preventDefault(); go(go2.getAttribute('href')); return; }   // week, round, club and view changes replace the entry, so Back leaves the tab
     if (!pill && !all) return;

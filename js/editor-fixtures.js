@@ -21,7 +21,7 @@ export function fixturesView() {
 
 const TEST_WEEK = 99;   // test matches live here (js/simulate.js); they never count as part of the season
 const LOCKS = [[0, 'At the first kick-off'], [30, '30 minutes'], [60, '1 hour'], [180, '3 hours'], [360, '6 hours'], [720, '12 hours'], [1440, '1 day'], [2880, '2 days'], [4320, '3 days'], [10080, '1 week']];
-const KINDS = [['regular', 'Regular'], ['special', 'Special'], ['finals', 'Finals']];
+const KINDS = [['regular', 'Regular'], ['preseason', 'Preseason'], ['special', 'Special'], ['finals', 'Finals']];   // Preseason: its own purple table and stats, never the real season (js/preseason.js)
 const STAGES = [['', 'Regular'], ['SF', 'Semi-final'], ['GF', 'Grand Final']];
 // When the games of a round kick off: blocks of games. games 0 = "all the rest".
 const PATTERNS = {
@@ -83,7 +83,7 @@ export async function mountFixtures(ctx) {
     const weeks = R.weekNumbers(fixtures, rounds), labels = R.roundLabels(weeks, rounds);
     return { weeks, labels, by: new Map(weeks.map(w => [w, fixtures.filter(f => f.week === w).sort(byKick)])) };
   };
-  const round = w => ({ week: w, name: null, kind: 'regular', look: 'classic', lock_minutes_before: 180, lock_at_override: null, numbered: true, number_override: null, note: null, counts_for_ladder: true, preseason: false, byes: [], ...(rounds.find(r => r.week === w) || {}) });
+  const round = w => ({ week: w, name: null, kind: 'regular', look: 'classic', lock_minutes_before: 180, lock_at_override: null, numbered: true, number_override: null, note: null, counts_for_ladder: true, byes: [], ...(rounds.find(r => r.week === w) || {}) });
   // Who sat out each round: the byes written down, plus any club missing from a round that has matches.
   const byeMap = () => {
     const out = new Map([...R.byeMapOf(rounds)].map(([w, s]) => [w, new Set(s)]));
@@ -179,7 +179,7 @@ export async function mountFixtures(ctx) {
     const prev = Object.fromEntries(Object.keys(patch).map(k => [k, f[k] ?? null]));
     return step(tx, async () => (await ctx.db()).from('fixtures').update(patch).eq('id', f.id), async () => (await ctx.db()).from('fixtures').update(prev).eq('id', f.id));
   };
-  const KNOWN = ['week', 'name', 'kind', 'look', 'lock_minutes_before', 'lock_at_override', 'preseason'];
+  const KNOWN = ['week', 'name', 'kind', 'look', 'lock_minutes_before', 'lock_at_override'];
   const roundRow = (w, patch = {}) => { const all = { ...round(w), ...patch, week: w }; return Object.fromEntries(Object.entries(all).filter(([k]) => KNOWN.includes(k) || (hasRoster && NEW_COLS.includes(k)) || (hasLadder && k === 'counts_for_ladder') || (hasByes && k === 'byes'))); };
   function setRound(tx, w, patch) {
     const prev = rounds.find(r => r.week === w), row = roundRow(w, patch);
@@ -250,8 +250,7 @@ export async function mountFixtures(ctx) {
             <label>Type <select data-r="kind">${opts(KINDS, r.kind)}</select></label>
             <label>Scoreboard look <select data-r="look">${lookOpts(r.look)}</select></label>
             <label>Lock line-ups <select data-r="lock_minutes_before">${opts(LOCKS, r.lock_minutes_before)}</select> before the first match</label>
-            <label class="fx-check"><input type="checkbox" data-r="preseason" ${r.preseason ? 'checked' : ''}> Preseason round (purple; its own preseason table and stats, not the real season)</label>
-            <label class="fx-check"><input type="checkbox" data-r="counts_for_ladder" ${r.counts_for_ladder === false ? '' : 'checked'} ${hasLadder ? '' : 'disabled'}> Counts for the table</label>
+            <label class="fx-check"><input type="checkbox" data-r="counts_for_ladder" ${r.counts_for_ladder === false || r.kind === 'preseason' ? '' : 'checked'} ${hasLadder && r.kind !== 'preseason' ? '' : 'disabled'}> Counts for the table${r.kind === 'preseason' ? ' (a preseason round has its own table)' : ''}</label>
             <label class="fx-check"><input type="checkbox" data-r="numbered" ${r.numbered ? 'checked' : ''} ${hasRoster ? '' : 'disabled'}> Has a round number</label>
             <label>Move the whole round to <input type="date" data-k="date" value="${esc(first ? dateOf(first) : '')}"></label>
             <span><button class="btn small" type="button" data-act="round-date">Move</button></span>
@@ -608,7 +607,7 @@ export async function mountFixtures(ctx) {
       let value = t.type === 'checkbox' ? t.checked : t.value;
       if (k === 'name') value = String(value).trim() || null;
       else if (k === 'lock_minutes_before') value = Number(value);
-      return run(`Update the round`, async tx => setRound(tx, w, { [k]: value, ...(k === 'preseason' && value ? { counts_for_ladder: false } : {}) }));   // a preseason round never counts for the real table
+      return run(`Update the round`, async tx => setRound(tx, w, { [k]: value }));
     }
     const row = t.closest('.fx-row'); if (!row) return;
     const f = fixtures.find(x => x.id === row.dataset.id);

@@ -4,7 +4,7 @@
 import { enterPlace, styleCards } from './shell.js';
 import { esc, crestUrl } from './member.js';
 import { db } from './auth.js';
-import { tag } from './preseason.js';
+import { tag, scopeNow } from './preseason.js';
 import { SUPABASE_URL } from './config.js';
 import { finished, logoUrl, kickoff, status, matchUrl } from './dashboard-data.js';
 import { tableRows } from './league-table.js';
@@ -187,10 +187,10 @@ async function teamSheet(box, { club, squad, userId, season }) {
     return `<a class="ov-fx" href="${esc(matchUrl(f))}"><img src="${esc(crestOf(opp))}" alt="" width="24" height="24" onerror="this.style.visibility='hidden'"><span class="ov-fx-name"><b>${esc(teamName(opp))}</b><small>${home ? 'Home' : 'Away'}${f.round ? ` · ${esc(f.round)}` : ''}</small></span>${right}</a>`;
   }
   function drawInfo(now = new Date()) {
-    const rows = tableRows(season, { hidden: hiddenIds, now }), me = rows.find(r => r.team.code === club.code);
+    const scope = scopeNow(season, now), rows = tableRows(season, { hidden: hiddenIds, now, scope }), me = rows.find(r => r.team.code === club.code);
     if (me) {
       const set = (id, h) => { const el = $(id); if (el) el.innerHTML = h; };
-      set('#f-pos', `${ordinal(me.rank)} <small>of ${rows.length}</small>`); set('#f-pts', String(me.pts));
+      set('#f-pos', `${ordinal(me.rank)} <small>of ${rows.length}</small>${scope === 'preseason' ? tag : ''}`); set('#f-pts', String(me.pts));
       set('#f-p', `${me.p} <small>${me.w}W ${me.d}D ${me.l}L</small>`); set('#f-form', chipsOf(me.form) || '–');
     }
     const mineFx = (season.fixtures || []).filter(f => !f.test && !f.postponed && kickoff(f) && (f.home === club.code || f.away === club.code)).sort((a, b) => kickoff(a) - kickoff(b));

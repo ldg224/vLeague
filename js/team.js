@@ -19,6 +19,7 @@ import { accentFor, onColour } from './club-colour.js';
 import { POS_ORDER } from './pitch.js';
 import { tableRows, tableCard } from './league-table.js';
 import { countedFixtures, totals, rank, PLAYER_CARDS } from './season-stats.js';
+import { hasPreseason, scopeNow, pickScope, scopePills } from './preseason.js';
 import { statCard } from './stat-card.js';import { portrait } from './portrait.js';
 
 
@@ -128,6 +129,13 @@ function render(club, team, season, won, rows) {
   });
   addEventListener('hashchange', () => { const h = location.hash.slice(1); if (panels[h] && h !== tab) { tab = h; draw(); } });
   draw();
+  // The Preseason | Season switch on the table.
+  main.addEventListener('click', e => {
+    const sw = e.target.closest('[data-scope]');
+    if (!sw) return;
+    pickScope(season, sw.dataset.scope, new Date()); draw();
+    main.querySelector(`[data-scope="${sw.dataset.scope}"]`)?.focus({ preventScroll: true });
+  });
 }
 
 // ---------- header ----------
@@ -155,10 +163,11 @@ function overviewHtml(club, season, ctx, fixtures, squad, won, sum) {
       ${games.length ? `<ul class="fx-list">${games.map(([f, what]) => `<li class="fx-day"><h3>${what}</h3><span>${esc(dayOf(f, now))}</span></li>${rowHtml(f, season, ctx, { forTeam: club.code })}`).join('')}</ul>`
         : '<p class="empty">No fixtures yet.</p>'}</section>`;
 
-  const table = season ? tableCard(tableRows(season, { now, hidden: ctx.hidden }), ctx, { filters: false, title: 'Table' }) : '';
+  const scope = season ? scopeNow(season, now) : 'season', pre = scope === 'preseason';   // preseason games make a preseason table until the real season starts (js/preseason.js)
+  const table = season ? tableCard(tableRows(season, { now, hidden: ctx.hidden, scope }), ctx, { filters: false, title: pre ? 'Preseason table' : 'Table', pre, scopeBar: hasPreseason(season) ? scopePills(scope) : '' }) : '';
 
   // The club's own leaders, from the same numbers as the Stats tab.
-  const played = season ? countedFixtures(finished(season, now)).filter(f => !ctx.hidden.has(f.id)) : [];
+  const played = season ? countedFixtures(finished(season, now), scope).filter(f => !ctx.hidden.has(f.id)) : [];
   const players = played.length ? totals(played).players.filter(r => r.team === club.code) : [];
   const leaders = players.length
     ? ['rating', 'scorers', 'assists'].map(id => { const c = PLAYER_CARDS.find(x => x.id === id); return statCard(c, rank(players, c, 3), ctx, { kind: 'player' }); }).join('')

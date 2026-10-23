@@ -10,6 +10,7 @@
 // conceded, yc / rc cards, fl fouls, dr dribbles, aw aerials won, cr crosses, r rating. Matches saved before WR-07 have no
 // fl / dr / aw / off / cr / tch, so those count as 0 for them.
 
+import { inStats } from './scope.js';
 // A per-90 or rating list ignores anyone with fewer minutes than this, so a 10-minute cameo can't top it. Nobody is
 // substituted in this league (a player plays the whole match unless sent off), so 90 is one full match.
 export const MIN_MINUTES = 90;
@@ -20,12 +21,12 @@ const TEAM_SUMS = ['xg', 'shots', 'shots_on_target', 'big_chances', 'passes', 'p
 const KEEPER = 'GK';
 const NOTE_MIN = `Players with at least ${MIN_MINUTES} minutes played`, NOTE_GK = `Goalkeepers with at least ${MIN_MINUTES} minutes in goal`;
 
-// League matches with a result: not a Test match, not an exhibition round.
+// League matches with a result: not a Test match, not an exhibition round (finals count; `scope` 'preseason' takes the preseason games instead).
 // Where a player plays: from the formation slot he was last picked in (GK, LB, LCB, CDM, LCM, LW, ST...).
 export const lineOf = slot => (slot === KEEPER ? 'GK' : /B$/.test(slot || '') ? 'DEF' : /(^|[LR])ST$|^[LR]W$|^CF$/.test(slot || '') ? 'FWD' : 'MID');
 export const POSITIONS = [['all', 'All'], ['FWD', 'Forwards'], ['MID', 'Midfielders'], ['DEF', 'Defenders'], ['GK', 'Goalkeepers']];
 
-export const countedFixtures = list => list.filter(f => f.result?.players && !f.test && !f.exhibition);
+export const countedFixtures = (list, scope = 'season') => list.filter(f => f.result?.players && inStats(f, scope));
 
 const blank = (keys, extra) => Object.assign(Object.fromEntries(keys.map(k => [k, 0])), extra);
 

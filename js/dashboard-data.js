@@ -58,11 +58,11 @@ export async function loadSeason() {
   const labels = roundLabels(weekNumbers(fx.data, rd.data || []), rd.data || []);
   const lookOf = f => windowLook.get(f.window_id) || rounds.get(f.week)?.look || 'classic';
   return {
-    looks, rounds: Object.fromEntries([...labels].map(([w, l]) => [w, { label: l.label, short: l.short, numbered: l.numbered, no: l.no, name: l.name, ...(rounds.get(w)?.preseason ? { preseason: true } : {}) }])),
+    looks, rounds: Object.fromEntries([...labels].map(([w, l]) => [w, { label: l.label, short: l.short, numbered: l.numbered, no: l.no, name: l.name, ...(rounds.get(w)?.kind === 'preseason' ? { preseason: true } : {}) }])),
     season: 1, league: 'vLeague', live_minutes: 45, points: { win: 3, draw: 1, loss: 0 }, news: [], players,
     teams: cl.data.map(x => ({ code: x.code, name: x.name, short_name: x.short_name, colour: x.colour || '#475569', manager: x.manager_name || '',
       ...(x.status === 'withdrawn' || x.status === 'pending' ? { withdrawn: true } : {}) })),
-    fixtures: fx.data.map(f => ({ id: f.id, week: f.week, ...(f.week === 99 ? { test: true } : {}), look: lookOf(f), round: labels.get(f.week).label, ...(rounds.get(f.week)?.counts_for_ladder === false ? { exhibition: true } : {}), ...(rounds.get(f.week)?.preseason ? { preseason: true } : {}), ...(labels.get(f.week).name ? { round_name: labels.get(f.week).name } : {}), home: f.home, away: f.away, ...(f.starts_at ? melbParts(f.starts_at) : {}),
+    fixtures: fx.data.map(f => ({ id: f.id, week: f.week, ...(f.week === 99 ? { test: true } : {}), look: lookOf(f), round: labels.get(f.week).label, ...(rounds.get(f.week)?.counts_for_ladder === false || rounds.get(f.week)?.kind === 'preseason' ? { exhibition: true } : {}), ...(rounds.get(f.week)?.kind === 'preseason' ? { preseason: true } : {}), ...(labels.get(f.week).name ? { round_name: labels.get(f.week).name } : {}), home: f.home, away: f.away, ...(f.starts_at ? melbParts(f.starts_at) : {}),
       ...(f.stage ? { stage: f.stage } : {}), ...(f.postponed ? { postponed: true } : {}), ...(result.has(f.id) ? { result: result.get(f.id) } : {}) })),
   };
 }

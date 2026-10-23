@@ -9,8 +9,8 @@
 
 /* Preseason | Season switch: the Preseason button is purple when it is the one showing. */
 .ps-pills { margin-left: auto; }
-.ps-pills button[data-scope="pre"][aria-pressed="true"] { background: var(--preseason); color: #fff; }
-:root:not([data-theme="light"]) .ps-pills button[data-scope="pre"][aria-pressed="true"] { color: #fff; }
+.ps-pills button[data-scope="preseason"][aria-pressed="true"] { background: var(--preseason); color: #fff; }
+:root:not([data-theme="light"]) .ps-pills button[data-scope="preseason"][aria-pressed="true"] { color: #fff; }
 
 /* The preseason table and stats */
 .lg-table.is-pre, .sc-section.is-pre > .sc-head { border-top: 3px solid var(--preseason); }

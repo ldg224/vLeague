@@ -5,13 +5,13 @@ Every published version of the vLeague app. Newest first. How versions work and 
 
 ## 1.6.0 (2026-10-23)
 
-Headlines: Preseason ladder
+Headlines: Preseason table and stats
 
-**Added:** preseason rounds. A round marked "Preseason" in Editor, Fixtures is shown in deep purple (#8522f0) with a Preseason tag in Fixtures, the match page and the "Which round is this team sheet for?" picker. While preseason is on, the Overview table, Stats tab, leaders and Team of the week show the preseason games only (a purple "Preseason table"); once the first real round kicks off they switch to the real season on their own. A Preseason | Season switch on the table and Stats lets anyone look at the other one at any time. Preseason results are kept, never deleted.
+**Added:** "Preseason" is now a round Type in Editor, Fixtures (beside Regular, Special and Finals). A preseason round is shown in deep purple (#8522f0) with a Preseason tag in Fixtures, the match page, My club's position and the "Which round is this team sheet for?" picker. While preseason is on, the Overview table, Stats tab, leaders, Team of the week and each team page's table show the preseason games only (a purple "Preseason table"). They switch to the real season on their own once every preseason game has finished, or the first real match kicks off, whichever is first. A Preseason | Season switch on the table and Stats lets anyone look at the other one at any time, and the choice is remembered until the phase changes. Preseason results are kept, never deleted, and never touch the real ladder, the Shield, win chances or form.
 
-**Changed:** ticking Preseason on a round also turns "Counts for the table" off, so preseason never touches the real ladder, win chances or form.
+**Changed:** one shared rule (`js/scope.js`) now decides which table a game belongs to, instead of each page repeating it.
 
-Database change: `0059_preseason_rounds.sql` (a `preseason` column on rounds; rounds 2 to 4 set as preseason). Already applied.
+Database change: `0059_preseason_rounds.sql` and `0060_preseason_kind.sql` (the round Type "preseason"; rounds 2 to 4 are set to it). Already applied.
 
 ## 1.5.1 (2026-10-23)
 
