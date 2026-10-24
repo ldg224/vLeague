@@ -32,7 +32,7 @@ export function zonesFor(n) {
 export function tableRows(season, { filter = 'all', now = new Date(), hidden = new Set(), scope = 'season' } = {}) {
   const pts = season.points || { win: 3, draw: 1, loss: 0 };
   const teams = season.teams.filter(t => !t.withdrawn);
-  const rows = Object.fromEntries(teams.map(t => [t.code, { team: t, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0, games: [], form: [], next: null }]));
+  const rows = Object.fromEntries(teams.map(t => [t.code, { team: t, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0, red: 0, yellow: 0, awayGf: 0, games: [], form: [], next: null }]));
   const played = season.fixtures.filter(f => counts(f, scope) && f.result && status(f, season, now) === 'ft' && !hidden.has(f.id)).sort(byKickoff);
 
   // Every club's games in order, as { home: bool, gf, ga }.
@@ -41,6 +41,11 @@ export function tableRows(season, { filter = 'all', now = new Date(), hidden = n
     if (!h || !a) continue;
     h.games.push({ home: true, gf: f.result.home, ga: f.result.away });
     a.games.push({ home: false, gf: f.result.away, ga: f.result.home });
+    for (const c of f.result.cards || []) {   // cards count against the club that took them (tie-breaks: fewest red, then fewest yellow)
+      const r = rows[c.team || season.players?.find(p => String(p.id) === String(c.player))?.team];
+      if (!r) continue;
+      if (c.card === 'red' || c.card === 'second_yellow') r.red++; else if (c.card === 'yellow') r.yellow++;
+    }
   }
   const outcome = g => (g.gf > g.ga ? 'W' : g.gf < g.ga ? 'L' : 'D');
   for (const r of Object.values(rows)) {
@@ -49,6 +54,7 @@ export function tableRows(season, { filter = 'all', now = new Date(), hidden = n
     for (const g of used) {
       const o = outcome(g);
       r.p++; r.gf += g.gf; r.ga += g.ga;
+      if (!g.home) r.awayGf += g.gf;
       r[o.toLowerCase()]++;
       r.pts += o === 'W' ? pts.win : o === 'D' ? pts.draw : pts.loss;
     }
@@ -64,7 +70,26 @@ export function tableRows(season, { filter = 'all', now = new Date(), hidden = n
   }
 
   const list = Object.values(rows).map(r => ({ ...r, gd: r.gf - r.ga }));
-  list.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf || a.team.name.localeCompare(b.team.name));
+  // Ladder order: points, goal difference, goals for, goals against (fewest), red cards (fewest), yellow cards (fewest), head to head among the clubs still level
+  // (their points, then goal difference, then goals in the games between them), away goals (most), then name (the office's order, 24 Oct 2026).
+  const level = (a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf || a.ga - b.ga || a.red - b.red || a.yellow - b.yellow;
+  list.sort((a, b) => level(a, b) || a.team.name.localeCompare(b.team.name));
+  for (let i = 0; i < list.length;) {
+    let j = i + 1;
+    while (j < list.length && level(list[i], list[j]) === 0) j++;
+    if (j - i > 1) {
+      const group = list.slice(i, j), codes = new Set(group.map(r => r.team.code)), mini = Object.fromEntries(group.map(r => [r.team.code, { pts: 0, gf: 0, ga: 0 }]));
+      for (const f of played) {
+        if (!codes.has(f.home) || !codes.has(f.away)) continue;
+        const h = mini[f.home], aw = mini[f.away], hg = f.result.home, ag = f.result.away;
+        h.gf += hg; h.ga += ag; aw.gf += ag; aw.ga += hg;
+        if (hg > ag) h.pts += pts.win; else if (hg < ag) aw.pts += pts.win; else { h.pts += pts.draw; aw.pts += pts.draw; }
+      }
+      group.sort((x, y) => { const m = mini[x.team.code], n = mini[y.team.code]; return n.pts - m.pts || (n.gf - n.ga) - (m.gf - m.ga) || n.gf - m.gf || y.awayGf - x.awayGf || x.team.name.localeCompare(y.team.name); });
+      list.splice(i, group.length, ...group);
+    }
+    i = j;
+  }
   list.forEach((r, i) => { r.rank = i + 1; });
   return list;
 }

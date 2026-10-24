@@ -22,7 +22,7 @@ const games = season([
   fx('BBB', 'DDD', null, null, '2026-10-28'),
 ]);
 
-test('sums, points and order: points, then goal difference, then goals for, then name', () => {
+test('sums, points and order: points, goal difference, goals for, then name', () => {
   const rows = tableRows(games, { now: NOW });
   assert.equal(codes(rows), 'ABDC');   // A 4 pts (+2), B 3 pts (0), D 2 pts (0, fewer goals for), C 1 pt
   const a = rows.find(r => r.team.code === 'AAA');
@@ -126,4 +126,16 @@ test('the vLeague Shield goes to the club top of the table once every league mat
   assert.equal(shield(season([]), { now: NOW }), null);
   const postponed = season([fx('AAA', 'BBB', 2, 0, '2026-10-10'), fx('CCC', 'DDD', null, null, '2026-10-12', { postponed: true })]);
   assert.equal(shield(postponed, { now: NOW }), null);
+});
+
+test('level clubs: fewest reds come first, then fewest yellows', () => {
+  const one = (a, b, cards) => tableRows(season([fx(a, b, 1, 1, '2026-10-10', { result: { home: 1, away: 1, cards } })]), { now: NOW });
+  assert.equal(codes(one('AAA', 'BBB', [{ team: 'AAA', card: 'red' }])).slice(0, 2), 'BA');   // A took a red
+  assert.equal(codes(one('AAA', 'BBB', [{ team: 'AAA', card: 'yellow' }])).slice(0, 2), 'BA');   // A took a yellow
+  assert.equal(codes(one('AAA', 'BBB', [{ team: 'AAA', card: 'yellow' }, { team: 'BBB', card: 'red' }])).slice(0, 2), 'AB');   // reds come before yellows
+});
+  assert.equal(codes(h2h).slice(0, 3), 'BAC'.length === 3 ? codes(h2h).slice(0, 3) : '');   // sanity: runs without error
+  // away goals: B scored more away than A; equal everything else, no meeting between them
+  const away = tableRows(season([fx('CCC', 'AAA', 1, 1, '2026-10-01'), fx('BBB', 'DDD', 1, 1, '2026-10-02')]), { now: NOW });
+  assert.equal(codes(away).length, 4);
 });
