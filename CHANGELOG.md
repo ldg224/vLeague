@@ -3,6 +3,12 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.10.0 (2026-10-24)
+
+- **Fixed, shot map:** the little goal now shows where a shot crossed the line as the shooter sees it (standing on the pitch facing the goal), and the line from the shot on the big pitch ends at the matching side of the goal. Before, shots at one end of the pitch showed on the wrong side. Which goal a shot was aimed at now comes from each half's attacking direction in the match file.
+- **Changed, shot map:** every shot on the pitch is the same size, goals included (it used to follow xG).
+No database change.
+
 ## 1.9.2 (2026-10-24)
 
 **Fixed, Goal of the week:** the Editor's tab no longer gives away goals from matches that have not kicked off yet. Rounds and goals only count once their match has kicked off (the Test matches round is unchanged). Reset a week and find the best 15 again to clear any shortlist made earlier.

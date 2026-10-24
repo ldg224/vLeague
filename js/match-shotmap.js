@@ -32,15 +32,16 @@ const SETPLAY = new Set(['Corner', 'Set piece', 'Free kick', 'Throw-in set piece
 
 // Every shot of the match up to `horizon`, oldest first. Each has pitch spots (X along the pitch, Y across it) with the home club attacking the left goal.
 export function shotsOf(file, fx, horizon = Infinity) {
-  const ev = file.events || [], out = [];
+  const ev = file.events || [], out = [], per = n => (file.periods || []).find(p => p.period === n);
   for (const e of ev) {
     if (e.type !== 'shot' || e.x == null || e.t > horizon || (e.team !== fx.home && e.team !== fx.away)) continue;
-    const home = e.team === fx.home, flip = e.x <= HALF, nx = flip ? 105 - e.x : e.x, ny = flip ? 68 - e.y : e.y;
+    const home = e.team === fx.home, right = per(e.period)?.home_attacks, flip = right ? (right === 'right') !== home : e.x <= HALF, nx = flip ? 105 - e.x : e.x, ny = flip ? 68 - e.y : e.y;
+    const ey = e.end_y == null ? null : flip ? 68 - e.end_y : e.end_y;   // where it crossed the goal line, turned the same way as X and Y
     const head = e.body === 'head' || e.subtype === 'header';
     out.push({
       id: String(e.id), e, team: e.team, home, period: e.period, minute: e.minute, xg: e.xg || 0, xgot: xgot(e), result: e.outcome || (e.on_target ? 'saved' : 'off_target'),
       situation: situationOf(e, ev), type: e.subtype === 'penalty' ? 'Penalty' : e.subtype === 'free_kick' ? 'Free kick' : head ? 'Header' : e.subtype === 'volley' ? 'Volley' : 'Foot',
-      X: home ? 105 - nx : nx, Y: home ? 68 - ny : ny,
+      X: home ? 105 - nx : nx, Y: home ? 68 - ny : ny, endY: ey == null ? null : home ? 68 - ey : ey,
     });
   }
   return out;
@@ -56,15 +57,15 @@ export function xgSplit(file, fx, code, horizon = Infinity) {
 const f2 = v => (v == null ? '–' : Number(v).toFixed(2));
 const kind = s => (s.result === 'goal' ? 'is-goal' : s.result === 'saved' ? 'is-save' : 'is-miss');
 const BALL = '<path d="m0-.45.43.31-.16.51h-.54l-.16-.51z" class="sm-pent"/>';
-const radius = s => 0.9 + 2.3 * Math.sqrt(s.xg);
+const radius = () => 2;   // every shot is the same size, goals included
 
 const PITCH = '<g class="sm-lines"><rect x="0" y="0" width="105" height="68" rx="3"/><path d="M52.5 0v68"/><circle cx="52.5" cy="34" r="9.15"/>'
   + '<path d="M0 13.84h16.5v40.32H0M0 24.84h5.5v18.32H0M105 13.84H88.5v40.32H105M105 24.84h-5.5v18.32h5.5"/><path d="M16.5 26.69a9.15 9.15 0 0 1 0 14.62M88.5 26.69a9.15 9.15 0 0 0 0 14.62"/>'
   + '<circle cx="11" cy="34" r=".5" class="sm-spot"/><circle cx="94" cy="34" r=".5" class="sm-spot"/><path class="sm-goal" d="M0 30.34h-1.6v7.32H0M105 30.34h1.6v7.32H105"/></g>';
 
-// A goal seen from the pitch, with the shot where it crossed the line.
+// The goal as the shooter sees it, standing on the pitch facing it, with the shot where it crossed the line (the home club shoots at the left goal of the map, the away club at the right).
 function mouth(s) {
-  const e = s.e, has = e.end_y != null, x = (has ? e.end_y - (MID - GOAL_W / 2) : 0) * 10, y = (GOAL_H - clamp(e.end_z ?? 0, 0, 3)) * 10;
+  const e = s.e, has = e.end_y != null, x = (has ? (s.home ? MID + GOAL_W / 2 - s.endY : s.endY - (MID - GOAL_W / 2)) : 0) * 10, y = (GOAL_H - clamp(e.end_z ?? 0, 0, 3)) * 10;
   const net = Array.from({ length: 7 }, (_, i) => `M${(i + 1) * 9.15} 0V24.4`).join('') + Array.from({ length: 3 }, (_, i) => `M0 ${(i + 1) * 6.1}H73.2`).join('');
   return `<svg class="sm-mouth" viewBox="-8 -6 89.2 36" aria-hidden="true"><path class="sm-net" d="${net}"/><path class="sm-frame" d="M0 24.4V0h73.2v24.4"/>${has ? `<circle class="sm-md ${kind(s)}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.4"/>` : ''}</svg>`;
 }
@@ -80,11 +81,11 @@ export function shotMapCard(fx, file, ctx, st) {
   const nameOf = s => ctx.players?.find(p => String(p.id) === String(s.e.player))?.name || '';
   const dots = list.map(s => {
     const r = radius(s), common = `class="sm-dot ${kind(s)}${s === sel ? ' is-sel' : ''}" style="--k:${esc(col(s.team))}" data-sm-shot="${esc(s.id)}" tabindex="0" role="button" aria-label="${esc(`${s.minute}′, ${RESULT[s.result] || s.result}, ${f2(s.xg)} xG`)}"`;
-    return s.result === 'goal' ? `<g ${common} transform="translate(${s.X.toFixed(2)} ${s.Y.toFixed(2)}) scale(${(r * 1.1).toFixed(2)})"><circle r="1" class="sm-ball"/>${BALL}</g>`
+    return s.result === 'goal' ? `<g ${common} transform="translate(${s.X.toFixed(2)} ${s.Y.toFixed(2)}) scale(${r.toFixed(2)})"><circle r="1" class="sm-ball"/>${BALL}</g>`
       : `<circle ${common} cx="${s.X.toFixed(2)}" cy="${s.Y.toFixed(2)}" r="${r.toFixed(2)}"/>`;
   }).join('');
   // The picked shot: a ring round it and a line to where it crossed the goal line.
-  const ring = sel ? `${sel.e.end_y != null ? `<line class="sm-trail" x1="${sel.X.toFixed(2)}" y1="${sel.Y.toFixed(2)}" x2="${sel.home ? 0 : 105}" y2="${(sel.home ? 68 - sel.e.end_y : sel.e.end_y).toFixed(2)}"/>` : ''}<circle class="sm-ring${sel.result === 'goal' ? ' is-goal' : ''}" cx="${sel.X.toFixed(2)}" cy="${sel.Y.toFixed(2)}" r="${(radius(sel) * (sel.result === 'goal' ? 1.1 : 1) + 1.3).toFixed(2)}"/>` : '';
+  const ring = sel ? `${sel.endY != null ? `<line class="sm-trail" x1="${sel.X.toFixed(2)}" y1="${sel.Y.toFixed(2)}" x2="${sel.home ? 0 : 105}" y2="${sel.endY.toFixed(2)}"/>` : ''}<circle class="sm-ring${sel.result === 'goal' ? ' is-goal' : ''}" cx="${sel.X.toFixed(2)}" cy="${sel.Y.toFixed(2)}" r="${(radius(sel) + 1.3).toFixed(2)}"/>` : '';
   const who = sel ? `${ctx.crest(ctx.team(sel.team), 28)}<b>${esc(nameOf(sel) || ctx.club(sel.team)?.short_name || ctx.team(sel.team).name)}</b>` : '';
   const head = sel ? `<div class="sm-pick"><span class="sm-who">${who}</span><span class="sm-step"><button type="button" class="sm-arrow" data-sm-step="-1" aria-label="Previous shot"${idx <= 0 ? ' disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button><b>${esc(sel.minute)}′</b><button type="button" class="sm-arrow" data-sm-step="1" aria-label="Next shot"${idx >= list.length - 1 ? ' disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button></span></div>
       <div class="sm-detail"><dl class="sm-facts"><div><dt>Shot type</dt><dd>${esc(sel.type)}</dd></div><div><dt>Situation</dt><dd>${esc(sel.situation)}</dd></div><div><dt>Result</dt><dd>${esc(RESULT[sel.result] || sel.result)}</dd></div></dl>
