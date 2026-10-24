@@ -8,6 +8,7 @@ import { goalMoments, shortlist, describe } from './goal-wow.js';
 import { loadMatchFile } from './match-file.js';
 import { ClipStage, recordClip, recordReel } from './goal-clip.js';
 import { rounds } from './league-fixtures.js';
+import { kickoff } from './dashboard-data.js';
 import { icon } from './icons.js';
 
 export const gotwView = () => '<h1>Goal of the week</h1><div id="gw-root"><p class="quiet">Loading…</p></div>';
@@ -24,7 +25,9 @@ export async function mountGotw({ db, esc, explain, clubs, season, deadlines }) 
   const client = await db();
   const nameOf = code => clubs.find(c => c.code === code)?.name || code;
   // The Test matches (week 99, made in Editor > Test) count as a round here, so the whole thing can be tried before a real round has been played.
-  const list = [...rounds(season), { week: 99, label: 'Test matches' }].filter(r => season.fixtures.some(f => f.week === r.week && (r.week === 99 || !f.test) && f.result?.file));
+  // A match is simulated before it kicks off, so its goals stay out of sight (and out of the list) until kick-off.
+  const played = f => f.week === 99 || (!f.test && kickoff(f) && kickoff(f) <= new Date());
+  const list = [...rounds(season), { week: 99, label: 'Test matches' }].filter(r => season.fixtures.some(f => f.week === r.week && played(f) && f.result?.file));
   if (!list.length) { root.innerHTML = '<p class="quiet">No round has been played yet.</p>'; return; }
   let week = Number(sessionStorage.getItem('gw-week')) || list[list.length - 1].week;
   if (!list.some(r => r.week === week)) week = list[list.length - 1].week;
@@ -87,7 +90,7 @@ export async function mountGotw({ db, esc, explain, clubs, season, deadlines }) 
   }
 
   async function find() {
-    const fixtures = season.fixtures.filter(f => f.week === week && (week === 99 || !f.test) && f.result?.file);
+    const fixtures = season.fixtures.filter(f => f.week === week && played(f) && f.result?.file);
     const all = [];
     for (let i = 0; i < fixtures.length; i++) {
       busy = `Reading match ${i + 1} of ${fixtures.length}…`; draw();

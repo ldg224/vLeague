@@ -3,6 +3,11 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.9.2 (2026-10-24)
+
+**Fixed, Goal of the week:** the Editor's tab no longer gives away goals from matches that have not kicked off yet. Rounds and goals only count once their match has kicked off (the Test matches round is unchanged). Reset a week and find the best 15 again to clear any shortlist made earlier.
+No database change.
+
 ## 1.9.1 (2026-10-24)
 
 **Changed, ladder order:** clubs level on points are now split by goal difference, goals for, goals against, fewest red cards, fewest yellow cards, head to head among the clubs still level, away goals (most), then name.
