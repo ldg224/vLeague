@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.9.0 (2026-10-24)
+
+- **Added, shot map:** the match page's Stats tab has a shot map after FotMob's: one pitch with both clubs' shots in their colours (ring = missed or blocked, filled = on target, ball = goal, size = xG), the picked shot's type, situation and result with a little goal and its xG and xGOT, arrows to step through the shots, and All / 1st / 2nd pills.
+- **Added, xG by type of play:** the Stats card has an Expected goals group: xG, xG open play, xG set play, non-penalty xG and xG on target. xGOT is an estimate worked out from where the shot crossed the line, as the engine does not rate placement.
+- **Changed, Goal of the week:** the Editor's "Download all as one video" now makes an edited reel: branded intro, a title card and lower-third for each goal, the highlights' blue wipes, and an outro.
+- No database change.
+
 ## 1.8.3 (2026-10-24)
 
 **Changed, team pages:** the Suspended card is redone: each player shows their kit icon, name, number and position, with a Reason column; the card is red so a ban reads as bad news.
