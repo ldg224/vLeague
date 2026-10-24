@@ -134,8 +134,3 @@ test('level clubs: fewest reds come first, then fewest yellows', () => {
   assert.equal(codes(one('AAA', 'BBB', [{ team: 'AAA', card: 'yellow' }])).slice(0, 2), 'BA');   // A took a yellow
   assert.equal(codes(one('AAA', 'BBB', [{ team: 'AAA', card: 'yellow' }, { team: 'BBB', card: 'red' }])).slice(0, 2), 'AB');   // reds come before yellows
 });
-  assert.equal(codes(h2h).slice(0, 3), 'BAC'.length === 3 ? codes(h2h).slice(0, 3) : '');   // sanity: runs without error
-  // away goals: B scored more away than A; equal everything else, no meeting between them
-  const away = tableRows(season([fx('CCC', 'AAA', 1, 1, '2026-10-01'), fx('BBB', 'DDD', 1, 1, '2026-10-02')]), { now: NOW });
-  assert.equal(codes(away).length, 4);
-});
