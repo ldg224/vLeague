@@ -6,10 +6,12 @@
 // Under each row a split bar shows the share of the two values: the better side in its club's colour, the other muted, so a glance down the card shows who had the match.
 import { esc } from './member.js';
 import { onColour } from './club-colour.js';
+import { xgSplit } from './match-shotmap.js';
 
 // [label, key, decimals, unit, lowerIsBetter]
 const GROUPS = [
   ['Top stats', [['Ball possession', 'possession', 0, '%'], ['Expected goals (xG)', 'xg', 2], ['Total shots', 'shots', 0], ['Shots on target', 'shots_on_target', 0], ['Big chances', 'big_chances', 0], ['Corners', 'corners', 0]]],
+  ['Expected goals (xG)', [['Expected goals (xG)', 'xg', 2], ['xG open play', 'xg_open', 2], ['xG set play', 'xg_set', 2], ['Non-penalty xG', 'xg_np', 2], ['xG on target (xGOT)', 'xgot', 2]]],
   ['Passes', [['Passes', 'passes', 0], ['Accurate passes', 'passes_completed', 0], ['Pass accuracy', 'pass_accuracy', 0, '%'], ['Crosses', 'crosses', 0]]],
   ['Defending', [['Tackles won', 'tackles_won', 0], ['Interceptions', 'interceptions', 0], ['Clearances', 'clearances', 0], ['Blocks', 'blocks', 0], ['Saves', 'saves', 0]]],
   ['Discipline', [['Fouls', 'fouls', 0, '', true], ['Yellow cards', 'yellow_cards', 0, '', true], ['Red cards', 'red_cards', 0, '', true], ['Offsides', 'offsides', 0, '', true]]],
@@ -33,7 +35,8 @@ function counted(fx, file, ctx, code) {
 export function statsView(fx, file, ctx) {
   const T = file.stats?.teams;
   if (!ctx.live && !T) return '<section class="lg-card mh-soon"><p class="empty">No team stats for this match.</p></section>';
-  const h = ctx.live ? counted(fx, file, ctx, fx.home) : T.home, a = ctx.live ? counted(fx, file, ctx, fx.away) : T.away;
+  const split = code => (file.events?.some(e => e.type === 'shot') ? xgSplit(file, fx, code, ctx.horizon) : {});   // xG by type of play, from the shots (the xG on target is an estimate, see js/match-shotmap.js)
+  const h = { ...(ctx.live ? counted(fx, file, ctx, fx.home) : T.home), ...split(fx.home) }, a = { ...(ctx.live ? counted(fx, file, ctx, fx.away) : T.away), ...split(fx.away) };
   const pill = code => { const c = ctx.accent(code); return c ? ` style="--k:${esc(c)};--on:${esc(onColour(c))}"` : ''; };
   const num = (v, dp, unit) => `${dp ? Number(v).toFixed(dp) : Math.round(Number(v))}${unit || ''}`;
   const groups = GROUPS.map(([title, rows]) => {

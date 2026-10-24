@@ -1,59 +1,52 @@
-/* The shot map (js/match-shotmap.js), on the match page's Stats tab. Built on FotMob's: half pitch with the goal at the bottom, hollow ring = missed or blocked,
-   light fill = saved, solid = goal; a card for the picked shot; filter pills with counts. The side's own colour is --k (its accent for the theme). Tokens only. */
-.sm { --k: var(--blue-600); }
-.sm-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.sm-team { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 12px; min-width: 0; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--text-soft); font: 600 var(--fs-m) var(--font); cursor: pointer; }
-.sm-team b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-.sm-team.is-on { border-color: var(--k); background: color-mix(in oklab, var(--k) 14%, transparent); color: var(--text-strong); }
-.sm-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; padding: 4px 20px 20px; }
-.sm-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; }
-.sm-sub { color: var(--muted); font: 400 var(--fs-s) var(--font); }
-.sm-switch { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0; border: 0; background: none; color: var(--text-soft); font: 600 var(--fs-s) var(--font); cursor: pointer; }
-.sm-switch i { position: relative; width: 36px; height: 20px; border-radius: 999px; background: color-mix(in oklab, var(--text) 18%, transparent); transition: background .15s; }
-.sm-switch i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); transition: transform .15s; }
-.sm-switch.is-on i { background: var(--blue-600); }
-.sm-switch.is-on i::after { transform: translateX(16px); }
-.sm-stage { margin-top: 6px; }
-.sm-pitch, .sm-mouth { display: block; width: 100%; height: auto; }
-.sm-pitch { background: var(--surface-sunk); border-radius: var(--r-lg); }
-.sm-lines { fill: none; stroke: color-mix(in oklab, var(--text) 18%, transparent); stroke-width: .5; stroke-linejoin: round; }
-.sm-lines circle { fill: color-mix(in oklab, var(--text) 18%, transparent); }
-.sm-lines .sm-goal { stroke-width: .9; stroke: var(--text-soft); }
-.sm-dot { cursor: pointer; stroke-width: .5; outline: none; }
-.sm-dot.is-miss { fill: transparent; stroke: var(--k); stroke-width: .6; }
-.sm-dot.is-save { fill: color-mix(in oklab, var(--k) 45%, transparent); stroke: var(--k); }
-.sm-dot.is-goal { fill: var(--k); stroke: var(--surface); stroke-width: .7; }
-.sm-dot:focus-visible { stroke: var(--text-strong); stroke-width: .9; }
-.sm-ring { fill: none; stroke: var(--text-strong); stroke-width: .5; pointer-events: none; }
-.sm-mouth { background: var(--surface-sunk); border-radius: var(--r-lg); }
+/* The shot map (js/match-shotmap.js), on the match page's Stats tab, after FotMob's: All / 1st / 2nd pills, the picked shot (club and shooter, arrows through the minutes,
+   Shot type / Situation / Result, a little goal with the xG and xGOT), then one full pitch with both clubs' shots in their own colours (--k on each dot). Tokens only. */
+.sm-per-row { display: flex; gap: 8px; padding: 16px 20px 0; }
+.sm-per { min-height: 36px; padding: 0 18px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--text-soft); font: 600 var(--fs-s) var(--font); cursor: pointer; }
+.sm-per.is-on { background: var(--text); border-color: var(--text); color: var(--bg); }
+.sm .st-head { padding-top: 12px; padding-bottom: 8px; }
+.sm-body { display: grid; gap: 16px; padding: 4px 20px 20px; }
+.sm-pick { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sm-who { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--text-strong); font: 600 var(--fs-m) var(--font); }
+.sm-who b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.sm-step { display: flex; align-items: center; gap: 12px; color: var(--text-strong); font: 700 var(--fs-m) var(--font); font-variant-numeric: tabular-nums; }
+.sm-step b { min-width: 3ch; text-align: center; font-weight: 700; }
+.sm-arrow { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%; background: var(--surface-sunk); color: var(--text-strong); cursor: pointer; }
+.sm-arrow:disabled { opacity: .35; cursor: default; }
+.sm-arrow svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.sm-detail { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px; }
+.sm-facts { margin: 0; display: grid; gap: 10px; }
+.sm-facts div { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 8px; font: 400 var(--fs-m) var(--font); }
+.sm-facts dt { color: var(--muted); }
+.sm-facts dd { margin: 0; color: var(--text-strong); font-weight: 600; }
+.sm-xg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; text-align: center; min-width: 150px; }
+.sm-xg .sm-mouth { grid-column: 1 / -1; justify-self: center; width: 110px; height: auto; }
+.sm-xg b { display: block; color: var(--text-strong); font: 700 var(--fs-m) var(--font); font-variant-numeric: tabular-nums; }
+.sm-xg span { color: var(--muted); font: 400 var(--fs-s) var(--font); }
 .sm-net { stroke: color-mix(in oklab, var(--text) 12%, transparent); stroke-width: .4; fill: none; }
 .sm-frame { stroke: var(--text-soft); stroke-width: 1.4; fill: none; }
-.sm-ground { stroke: color-mix(in oklab, var(--text) 25%, transparent); stroke-width: .6; }
-.sm-mouth .sm-dot.is-miss { stroke-width: 1; }
-.sm-mouth .sm-dot.is-goal { stroke-width: 1.2; }
-.sm-mouth .sm-dot.is-sel, .sm-mini .is-sel { stroke: var(--text-strong); stroke-width: 1.4; }
-.sm-key { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 10px 0 0; color: var(--muted); font: 400 var(--fs-xs) var(--font); }
-.sm-key i { display: inline-block; width: 10px; height: 10px; margin-right: -6px; border-radius: 50%; border: 1.5px solid var(--k); }
-.sm-key .k-save { background: color-mix(in oklab, var(--k) 45%, transparent); }
-.sm-key .k-goal { background: var(--k); }
-.sm-key em { margin-left: auto; font-style: normal; }
-.sm-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; text-align: center; }
-.sm-stats b { display: block; color: var(--text-strong); font: 700 var(--fs-l) var(--font); font-variant-numeric: tabular-nums; }
-.sm-stats span { color: var(--muted); font: 400 var(--fs-s) var(--font); }
-.sm-facts { margin: 0; }
-.sm-facts div { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); font: 400 var(--fs-m) var(--font); }
-.sm-facts div:first-child { border-top: 0; }
-.sm-facts dt { color: var(--muted); }
-.sm-facts dd { margin: 0; color: var(--text-strong); font-weight: 600; text-align: right; }
-.sm-xg { display: grid; grid-template-columns: minmax(0, 1.4fr) 1fr 1fr; align-items: end; gap: 8px; padding: 12px 0 14px; border-block: 1px solid var(--line); text-align: center; }
-.sm-xg b { display: block; color: var(--text-strong); font: 700 var(--fs-l) var(--font); font-variant-numeric: tabular-nums; }
-.sm-xg span { color: var(--muted); font: 400 var(--fs-s) var(--font); }
-.sm-mini { width: 100%; height: auto; }
-.sm-fh { margin: 16px 0 10px; color: var(--text-strong); font: 700 var(--fs-m) var(--font); }
-.sm-pills { display: flex; flex-wrap: wrap; gap: 8px; }
-.sm-pill { min-height: 36px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--text-soft); font: 600 var(--fs-s) var(--font); cursor: pointer; }
-.sm-pill b { margin-left: 4px; color: var(--text-strong); font-variant-numeric: tabular-nums; }
-.sm-pill.is-on { background: var(--text); border-color: var(--text); color: var(--bg); }
-.sm-pill.is-on b { color: inherit; }
-@media (hover: hover) { .sm-team:hover, .sm-pill:hover { background: var(--surface-hover); } .sm-dot:hover { stroke: var(--text-strong); } }
-@media (max-width: 767px) { .sm-body { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 4px 16px 16px; } }
+.sm-md { stroke-width: 1; }
+.sm-md.is-goal { fill: var(--text-strong); stroke: var(--surface); }
+.sm-md.is-save { fill: var(--text-soft); stroke: var(--surface); }
+.sm-md.is-miss { fill: transparent; stroke: var(--text-soft); }
+.sm-pitch { display: block; width: 100%; height: auto; background: var(--surface-sunk); border: 1px solid var(--line); border-radius: var(--r-lg); }
+.sm-lines { fill: none; stroke: color-mix(in oklab, var(--text) 20%, transparent); stroke-width: .35; stroke-linejoin: round; }
+.sm-lines .sm-spot { fill: color-mix(in oklab, var(--text) 20%, transparent); stroke: none; }
+.sm-lines .sm-goal { stroke: var(--text-soft); stroke-width: .7; }
+.sm-dot { --k: var(--blue-600); cursor: pointer; outline: none; }
+.sm-dot.is-miss { fill: transparent; stroke: var(--k); stroke-width: .5; }
+.sm-dot.is-save { fill: color-mix(in oklab, var(--k) 55%, transparent); stroke: var(--k); stroke-width: .5; }
+.sm-dot .sm-ball { fill: var(--text-strong); stroke: var(--k); stroke-width: .22; }
+.sm-dot .sm-pent { fill: var(--surface); stroke: none; }
+.sm-dot:focus-visible { stroke: var(--text-strong); }
+.sm-dot:focus-visible .sm-ball { stroke: var(--text-strong); }
+.sm-trail { stroke: var(--res-l); stroke-width: .35; stroke-linecap: round; pointer-events: none; }
+.sm-ring { fill: none; stroke: var(--text-strong); stroke-width: .4; pointer-events: none; }
+.sm-ring.is-goal { stroke: var(--res-l); stroke-width: .5; }
+@media (hover: hover) { .sm-per:not(.is-on):hover { background: var(--surface-hover); } .sm-arrow:not(:disabled):hover { background: var(--line); } .sm-dot:hover.is-miss, .sm-dot:hover.is-save { stroke-width: .9; } }
+@media (max-width: 767px) {
+  .sm-per-row { padding: 12px 16px 0; }
+  .sm-body { padding: 4px 16px 16px; }
+  .sm-detail { grid-template-columns: minmax(0, 1fr); }
+  .sm-xg { grid-template-columns: 1fr 1fr 1fr; align-items: center; }
+  .sm-xg .sm-mouth { grid-column: auto; width: 100%; }
+}
