@@ -12,7 +12,7 @@ export async function loadChanceSheets() {
   try {
     const c = await db();
     const [locked, open] = await Promise.all([
-      c.from('week_sheets').select('week, club, formation, captain, lineup, kit').range(0, 1999).then(r => r.data || []).catch(() => []),
+      c.from('week_sheets').select('week, club, formation, captain, lineup, kit, submitted').range(0, 1999).then(r => (r.data || []).filter(x => x.submitted)).catch(() => []),
       c.rpc('all_submitted_lineups').then(r => r.data || []).catch(() => []),
     ]);
     const have = new Set(locked.map(s => `${s.week}|${s.club}`));

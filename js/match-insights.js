@@ -215,15 +215,15 @@ export function insights(season, fx, { club, hide = () => false, now = new Date(
     if (gks.length === 2 && gks[0].p.defense !== gks[1].p.defense) { const [g, o] = gks[0].p.defense > gks[1].p.defense ? gks : [gks[1], gks[0]]; add(g.c, `${name(g.c)}'s goalkeeper ${g.p.name} has a defence rating of ${g.p.defense} out of 10, against ${o.p.defense} for ${name(o.c)}'s ${o.p.name}`, 4); }
   }
   // the calendar: first matches, first home or away match, rest, the last round
-  const before = c => (cutoff ? season.fixtures.filter(f => !f.test && !f.exhibition && (f.home === c || f.away === c) && f.id !== fx.id && kickoff(f) && kickoff(f) < cutoff).sort(byKickoff) : []);
-  const rest = {};
+  const before = c => (cutoff ? season.fixtures.filter(f => !f.test && (fx.preseason ? f.preseason : !f.exhibition) && (f.home === c || f.away === c) && f.id !== fx.id && kickoff(f) && kickoff(f) < cutoff).sort(byKickoff) : []);
+  const rest = {}, per = fx.preseason ? 'preseason' : 'season';   // a preseason match counts the preseason games before it, not the real season
   for (const code of [fx.home, fx.away]) {
     const prior = before(code), n = name(code);
     if (!cutoff) continue;
-    if (!prior.length) { if (code === fx.home) { if (!before(fx.away).length) add(fx.home, 'Neither club has played yet this season: this is the opening match for both', 6); else add(code, `${n} have not played yet this season: this is their opening match`, 6); } else if (before(fx.home).length) add(code, `${n} have not played yet this season: this is their opening match`, 6); continue; }
+    if (!prior.length) { if (code === fx.home) { if (!before(fx.away).length) add(fx.home, `Neither club has played yet this ${per}: this is the opening match for both`, 6); else add(code, `${n} have not played yet this ${per}: this is their opening match`, 6); } else if (before(fx.home).length) add(code, `${n} have not played yet this ${per}: this is their opening match`, 6); continue; }
     rest[code] = Math.round((cutoff - kickoff(prior[prior.length - 1])) / 864e5);
-    if (code === fx.home && !prior.some(f => f.home === code)) add(code, `This is ${n}'s first home match of the season`, 5);
-    if (code === fx.away && !prior.some(f => f.away === code)) add(code, `This is ${n}'s first away match of the season`, 5);
+    if (code === fx.home && !prior.some(f => f.home === code)) add(code, `This is ${n}'s first home match of ${fx.preseason ? 'preseason' : 'the season'}`, 5);
+    if (code === fx.away && !prior.some(f => f.away === code)) add(code, `This is ${n}'s first away match of ${fx.preseason ? 'preseason' : 'the season'}`, 5);
   }
   if (rest[fx.home] != null && rest[fx.away] != null && Math.abs(rest[fx.home] - rest[fx.away]) >= 2) {
     const [f, o] = rest[fx.home] > rest[fx.away] ? [fx.home, fx.away] : [fx.away, fx.home];

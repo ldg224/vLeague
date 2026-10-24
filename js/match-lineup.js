@@ -7,7 +7,7 @@
 // Three views of the same pitch (WR-33), picked with the pills: Average rating (season average match rating as a badge, red under 5.0, orange under 7.0, green from 7.0,
 // blue with a star for the standout), Contributions (goals and assists, nothing for zero) and Value (the editor's value under the shirt).
 // LINEUP RULE (changed by the user, 15 Oct 2026): a club's XI appears as soon as it SUBMITS a team sheet (submitted_lineups(), formation, XI,
-// captain and kit only; the portraits wear that kit from then on, user 18 Oct 2026), and from the lock on the locked sheet (week_sheets) is used. A club that has not submitted (or locked) keeps an empty
+// captain and kit only; the portraits wear that kit from then on, user 18 Oct 2026), and from the lock on the locked sheet (week_sheets) is used. A club that has not submitted (a draft the lock picked up for it is not shown) keeps an empty
 // half-pitch saying so; unsubmitted drafts are never shown.
 import { db } from './auth.js';
 import { FORMATIONS, DEFAULT_FORMATION, autoLineup } from './pitch.js';
@@ -27,13 +27,13 @@ export async function loadLineups(fx, season, rows, { fake = false } = {}) {
   const c = await db(), now = new Date();
   const [dl, ws, sub, kits] = await Promise.all([
     c.from('deadlines').select('week, locks_at, locked_at').eq('week', fx.week).maybeSingle().then(r => r.data || null).catch(() => null),
-    c.from('week_sheets').select('club, formation, captain, lineup, kit').eq('week', fx.week).in('club', [fx.home, fx.away]).then(r => r.data || []).catch(() => []),
+    c.from('week_sheets').select('club, formation, captain, lineup, kit, submitted').eq('week', fx.week).in('club', [fx.home, fx.away]).then(r => r.data || []).catch(() => []),
     c.rpc('submitted_lineups', { p_week: fx.week, p_clubs: [fx.home, fx.away] }).then(r => r.data || []).catch(() => []),   // submitted, not yet locked
     loadKits(),
   ]);
   const open = Boolean(dl && (dl.locked_at || new Date(dl.locks_at) <= now));   // the week's line-ups have locked
   const known = new Set((season.players || []).map(p => String(p.id)));
-  const sheetOf = code => { const r = open ? ws.find(x => x.club === code) : sub.find(x => x.club === code); return filled(r) && Object.values(r.lineup).some(id => known.has(String(id))) ? r : null; };
+  const sheetOf = code => { const r = open ? ws.find(x => x.club === code && x.submitted) : sub.find(x => x.club === code); return filled(r) && Object.values(r.lineup).some(id => known.has(String(id))) ? r : null; };
   const made = (code, f) => ({ club: code, formation: f, lineup: autoLineup(f, (season.players || []).filter(p => p.team === code)) });
   const sides = season.demoSheets   // the demo (js/demo-match.js): every club has locked its team
     ? { home: season.demoSheets[fx.home] || null, away: season.demoSheets[fx.away] || null }

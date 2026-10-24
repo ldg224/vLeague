@@ -3,6 +3,12 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.10.1 (2026-10-24)
+
+- **Fixed, insights:** a preseason match's calendar insights (opening match, first home or away match, days since the last match) now count the earlier preseason games, so the second preseason game no longer says every club is playing its first.
+- **Fixed, line-ups:** the match page's lineup card, the win chance and the insights only use a team sheet the club actually submitted. A draft that the lock picked up for a club that never submitted is no longer shown or used as its line-up.
+No database change.
+
 ## 1.10.0 (2026-10-24)
 
 - **Fixed, shot map:** the little goal now shows where a shot crossed the line as the shooter sees it (standing on the pitch facing the goal), and the line from the shot on the big pitch ends at the matching side of the goal. Before, shots at one end of the pitch showed on the wrong side. Which goal a shot was aimed at now comes from each half's attacking direction in the match file.
