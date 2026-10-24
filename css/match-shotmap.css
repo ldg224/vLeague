@@ -1,0 +1,59 @@
+/* The shot map (js/match-shotmap.js), on the match page's Stats tab. Built on FotMob's: half pitch with the goal at the bottom, hollow ring = missed or blocked,
+   light fill = saved, solid = goal; a card for the picked shot; filter pills with counts. The side's own colour is --k (its accent for the theme). Tokens only. */
+.sm { --k: var(--blue-600); }
+.sm-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sm-team { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 12px; min-width: 0; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--text-soft); font: 600 var(--fs-m) var(--font); cursor: pointer; }
+.sm-team b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.sm-team.is-on { border-color: var(--k); background: color-mix(in oklab, var(--k) 14%, transparent); color: var(--text-strong); }
+.sm-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; padding: 4px 20px 20px; }
+.sm-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; }
+.sm-sub { color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.sm-switch { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0; border: 0; background: none; color: var(--text-soft); font: 600 var(--fs-s) var(--font); cursor: pointer; }
+.sm-switch i { position: relative; width: 36px; height: 20px; border-radius: 999px; background: color-mix(in oklab, var(--text) 18%, transparent); transition: background .15s; }
+.sm-switch i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); transition: transform .15s; }
+.sm-switch.is-on i { background: var(--blue-600); }
+.sm-switch.is-on i::after { transform: translateX(16px); }
+.sm-stage { margin-top: 6px; }
+.sm-pitch, .sm-mouth { display: block; width: 100%; height: auto; }
+.sm-pitch { background: var(--surface-sunk); border-radius: var(--r-lg); }
+.sm-lines { fill: none; stroke: color-mix(in oklab, var(--text) 18%, transparent); stroke-width: .5; stroke-linejoin: round; }
+.sm-lines circle { fill: color-mix(in oklab, var(--text) 18%, transparent); }
+.sm-lines .sm-goal { stroke-width: .9; stroke: var(--text-soft); }
+.sm-dot { cursor: pointer; stroke-width: .5; outline: none; }
+.sm-dot.is-miss { fill: transparent; stroke: var(--k); stroke-width: .6; }
+.sm-dot.is-save { fill: color-mix(in oklab, var(--k) 45%, transparent); stroke: var(--k); }
+.sm-dot.is-goal { fill: var(--k); stroke: var(--surface); stroke-width: .7; }
+.sm-dot:focus-visible { stroke: var(--text-strong); stroke-width: .9; }
+.sm-ring { fill: none; stroke: var(--text-strong); stroke-width: .5; pointer-events: none; }
+.sm-mouth { background: var(--surface-sunk); border-radius: var(--r-lg); }
+.sm-net { stroke: color-mix(in oklab, var(--text) 12%, transparent); stroke-width: .4; fill: none; }
+.sm-frame { stroke: var(--text-soft); stroke-width: 1.4; fill: none; }
+.sm-ground { stroke: color-mix(in oklab, var(--text) 25%, transparent); stroke-width: .6; }
+.sm-mouth .sm-dot.is-miss { stroke-width: 1; }
+.sm-mouth .sm-dot.is-goal { stroke-width: 1.2; }
+.sm-mouth .sm-dot.is-sel, .sm-mini .is-sel { stroke: var(--text-strong); stroke-width: 1.4; }
+.sm-key { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 10px 0 0; color: var(--muted); font: 400 var(--fs-xs) var(--font); }
+.sm-key i { display: inline-block; width: 10px; height: 10px; margin-right: -6px; border-radius: 50%; border: 1.5px solid var(--k); }
+.sm-key .k-save { background: color-mix(in oklab, var(--k) 45%, transparent); }
+.sm-key .k-goal { background: var(--k); }
+.sm-key em { margin-left: auto; font-style: normal; }
+.sm-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; text-align: center; }
+.sm-stats b { display: block; color: var(--text-strong); font: 700 var(--fs-l) var(--font); font-variant-numeric: tabular-nums; }
+.sm-stats span { color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.sm-facts { margin: 0; }
+.sm-facts div { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); font: 400 var(--fs-m) var(--font); }
+.sm-facts div:first-child { border-top: 0; }
+.sm-facts dt { color: var(--muted); }
+.sm-facts dd { margin: 0; color: var(--text-strong); font-weight: 600; text-align: right; }
+.sm-xg { display: grid; grid-template-columns: minmax(0, 1.4fr) 1fr 1fr; align-items: end; gap: 8px; padding: 12px 0 14px; border-block: 1px solid var(--line); text-align: center; }
+.sm-xg b { display: block; color: var(--text-strong); font: 700 var(--fs-l) var(--font); font-variant-numeric: tabular-nums; }
+.sm-xg span { color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.sm-mini { width: 100%; height: auto; }
+.sm-fh { margin: 16px 0 10px; color: var(--text-strong); font: 700 var(--fs-m) var(--font); }
+.sm-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.sm-pill { min-height: 36px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--text-soft); font: 600 var(--fs-s) var(--font); cursor: pointer; }
+.sm-pill b { margin-left: 4px; color: var(--text-strong); font-variant-numeric: tabular-nums; }
+.sm-pill.is-on { background: var(--text); border-color: var(--text); color: var(--bg); }
+.sm-pill.is-on b { color: inherit; }
+@media (hover: hover) { .sm-team:hover, .sm-pill:hover { background: var(--surface-hover); } .sm-dot:hover { stroke: var(--text-strong); } }
+@media (max-width: 767px) { .sm-body { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 4px 16px 16px; } }

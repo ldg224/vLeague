@@ -28,6 +28,7 @@ import { loadMatchFile, prepareMatchFile } from './match-file.js';
 import { factsView } from './match-facts.js';
 import { playedCard } from './match-played.js';
 import { statsView } from './match-stats.js';
+import { shotMapCard, shotMapClick } from './match-shotmap.js';
 import { goalMark } from './match-marks.js';
 import { liveReactions } from './reactions.js';
 import { playerCard, MatchPlayer } from './viewer/player.js';
@@ -187,7 +188,8 @@ function start() {
       if (s.hid) main = `<section class="lg-card mh-soon"><p class="empty">Results hidden · <button type="button" data-reveal>Show</button></p></section>`;
       else if (fileState === 'error') main = '<section class="lg-card mh-soon"><p class="empty">The match file isn’t available yet. Try again in a moment.</p></section>';
       else if (!file) { needFile(); main = '<section class="lg-card mh-soon"><p class="empty">Loading the stats…</p></section>'; }
-      else main = statsView(fx, file, { team, club, crest, accent: acc, horizon: s.st === 'live' ? liveSimTime(fx, season, s.now) : Infinity, live: s.st === 'live' });
+      else { const sx = { team, club, crest, accent: acc, horizon: s.st === 'live' ? liveSimTime(fx, season, s.now) : Infinity, live: s.st === 'live' };
+        main = (file.events?.some(e => e.type === 'shot') ? shotMapCard(fx, file, sx, shotMap) : '') + statsView(fx, file, sx); }
     } else if (tab === 'lineup') {
       const live = s.st === 'live';
       if (s.hid) main = `<section class="lg-card mh-soon"><p class="empty">Results hidden · <button type="button" data-reveal>Show</button></p></section>`;
@@ -209,6 +211,7 @@ function start() {
     const c = club(code)?.colour || teamOf(season, code).colour, theme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
     return isHex(c) ? accentFor(c, theme) : '';
   };
+  const shotMap = { team: null, sel: null, filter: null, view: 'pitch' };   // the shot map's picks, kept across redraws
   const draw = () => {
     const s = state();
     document.title = `${nameOf(home)} v ${nameOf(away)} | vLeague`;
@@ -256,6 +259,8 @@ function start() {
   loadChanceSheets().then(x => { chanceSheets = x; draw(); });
   loadHistory().then(h => { history = h; draw(); }).catch(() => {});   // the league's past seasons, for the Insights
   addEventListener('hashchange', draw);
+  main.addEventListener('click', e => { if (shotMapClick(e.target, shotMap, fx)) draw(); });
+  main.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('[data-sm-shot]')) { e.preventDefault(); if (shotMapClick(e.target, shotMap, fx)) draw(); } });
   main.addEventListener('click', async e => {
     const fl = e.target.closest('[data-h2h]');
     if (fl) { h2hFilter = h2hFilter === fl.dataset.h2h ? null : fl.dataset.h2h; draw(); return; }
