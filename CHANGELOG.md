@@ -3,6 +3,11 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.9.1 (2026-10-24)
+
+**Changed, ladder order:** clubs level on points are now split by goal difference, goals for, goals against, fewest red cards, fewest yellow cards, head to head among the clubs still level, away goals (most), then name.
+No database change.
+
 ## 1.9.0 (2026-10-24)
 
 - **Added, shot map:** the match page's Stats tab has a shot map after FotMob's: one pitch with both clubs' shots in their colours (ring = missed or blocked, filled = on target, ball = goal, size = xG), the picked shot's type, situation and result with a little goal and its xG and xGOT, arrows to step through the shots, and All / 1st / 2nd pills.
