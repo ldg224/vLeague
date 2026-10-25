@@ -3,6 +3,11 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.11.1 (2026-10-25)
+
+**Fixed, season planner:** the preview named rounds by their database week number ("round 6") instead of the Editor's round names, so unnumbered weeks such as preseason threw the count off. It now shows the same labels the rounds will get ("Round 1").
+No database change.
+
 ## 1.11.0 (2026-10-25)
 
 - **Added, season planner:** Editor → Fixtures has "Plan the rest of the season". Pick how many rounds (it suggests enough to finish the current round robin), and it tries dozens of plans and previews the best one with a score out of 100: every pair meeting equally often, home and away level, no long home or away runs, fair byes and rematches kept apart. Press Create to save the rounds, dated a week apart like the last round.

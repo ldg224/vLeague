@@ -443,9 +443,9 @@ export async function mountFixtures(ctx) {
 
   function plannerHtml(hasWeeks) {
     const n = codes().length, room = Math.max(0, WEEK_MAX - 1 - lastWeek()), rec = Math.min(room, R.defaultRounds(n, model().weeks.filter(w => w !== TEST_WEEK).length));
-    const body = !plan ? '' : `<div class="fx-plan"><p class="fx-plan-q"><b>${plan.quality}/100</b> · ${plural(plan.weeks.length, 'round')} from round ${plan.first}</p>
+    const body = !plan ? '' : `<div class="fx-plan"><p class="fx-plan-q"><b>${plan.quality}/100</b> · ${plural(plan.weeks.length, 'round')} from ${esc(plan.weeks[0].label.toLowerCase())}</p>
         <ul>${plan.notes.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
-        <div class="mx-wrap"><table class="mx mx-plan"><thead><tr><th>Round</th><th>Matches (home v away)</th><th>Bye</th></tr></thead><tbody>${plan.weeks.map(w => `<tr><th scope="row">${w.week}</th><td>${w.games.map(([h, a]) => `${esc(h)} v ${esc(a)}`).join(' · ')}</td><td>${esc(w.byes.join(', ')) || '·'}</td></tr>`).join('')}</tbody></table></div>
+        <div class="mx-wrap"><table class="mx mx-plan"><thead><tr><th>Round</th><th>Matches (home v away)</th><th>Bye</th></tr></thead><tbody>${plan.weeks.map(w => `<tr><th scope="row">${esc(w.label)}</th><td>${w.games.map(([h, a]) => `${esc(h)} v ${esc(a)}`).join(' · ')}</td><td>${esc(w.byes.join(', ')) || '·'}</td></tr>`).join('')}</tbody></table></div>
         <div class="ed-actions"><button class="btn" type="button" data-act="plan-create" ${busy ? 'disabled' : ''}>Create these rounds</button> <button class="btn ghost" type="button" data-act="plan-preview">Try another plan</button> <button class="btn ghost" type="button" data-act="plan-clear">Discard</button></div></div>`;
     return `<div class="fx-card" id="fx-planner"><h2>Plan the rest of the season</h2>
       <p class="ed-hint">Works out many rounds at once so every pair meets the same number of times, home and away stay level, byes are shared and rematches are kept apart. It tries dozens of plans and shows the best. Nothing is saved until you press Create.</p>
@@ -459,7 +459,8 @@ export async function mountFixtures(ctx) {
     if (cs.length < 2) return notify('You need at least two active clubs.', 'bad');
     if (!(n >= 1)) return notify('Pick how many rounds to plan (there is room for ' + room + ').', 'bad');
     const first = lastWeek() + 1, p = R.planSeason({ codes: cs, fixtures: real(), byeWeeks: byeMap(), firstWeek: first, rounds: n, seed: Math.floor(Math.random() * 2 ** 31) });
-    plan = { first, weeks: p.weeks, quality: p.quality, notes: p.notes, preview: p.weeks.flatMap(w => w.games.map(([home, away]) => ({ id: `plan-${w.week}-${home}-${away}`, week: w.week, home, away }))) };
+    const planned = p.weeks.map(w => w.week), labels = R.roundLabels([...model().weeks, ...planned], [...rounds, ...planned.map(week => ({ week, numbered: true }))]);
+    plan = { first, weeks: p.weeks.map(w => ({ ...w, label: labels.get(w.week).label })), quality: p.quality, notes: p.notes, preview: p.weeks.flatMap(w => w.games.map(([home, away]) => ({ id: `plan-${w.week}-${home}-${away}`, week: w.week, home, away }))) };
     draw();
     root.querySelector('#fx-planner')?.scrollIntoView({ block: 'nearest' });
   }
