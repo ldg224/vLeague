@@ -3,6 +3,11 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.11.2 (2026-10-25)
+
+**Fixed, Fixtures planning:** preseason rounds no longer count as games in the Who plays who table, the season planner or the Add the next round pairing (who has met, home and away, and the round count it suggests). Test matches were already left out.
+No database change.
+
 ## 1.11.1 (2026-10-25)
 
 **Fixed, season planner:** the preview named rounds by their database week number ("round 6") instead of the Editor's round names, so unnumbered weeks such as preseason threw the count off. It now shows the same labels the rounds will get ("Round 1").

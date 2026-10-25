@@ -78,7 +78,9 @@ export async function mountFixtures(ctx) {
     hasByes = !(await c.from('rounds').select('byes').limit(1)).error;   // false until 0028_byes.sql is run
   }
 
-  const real = () => fixtures.filter(f => f.week !== TEST_WEEK);   // the season, without any test match
+  const real = () => fixtures.filter(f => f.week !== TEST_WEEK);
+  const isPre = w => round(w).kind === 'preseason';
+  const counted = () => real().filter(f => !isPre(f.week));   // the real season: preseason games don't count towards who has played whom, home and away, or byes   // the season, without any test match
   const model = () => {
     const weeks = R.weekNumbers(fixtures, rounds), labels = R.roundLabels(weeks, rounds);
     return { weeks, labels, by: new Map(weeks.map(w => [w, fixtures.filter(f => f.week === w).sort(byKick)])) };
@@ -411,7 +413,7 @@ export async function mountFixtures(ctx) {
     const datedLast = lastW ? m.by.get(lastW).map(f => f.starts_at).filter(Boolean) : [];
     const blocks = R.inferBlocks(datedLast) || PATTERNS.saturday[1];
     const base = datedLast.length ? addDays(mondayOf(dateOf(datedLast.sort()[0])), 7) : nextMon();
-    const pr = R.pairWeek({ byeWeeks: byeMap(), codes: cs, fixtures: real(), week, seed: Math.floor(Math.random() * 2 ** 31) });
+    const pr = R.pairWeek({ byeWeeks: byeMap(), codes: cs, fixtures: counted(), week, seed: Math.floor(Math.random() * 2 ** 31) });
     let placed = R.placeWeek(pr.games, base, blocks);
     const blank = lockPasses(week, placed.map(p => p.at));
     if (blank) placed = placed.map(p => ({ ...p, at: null }));
@@ -427,7 +429,7 @@ export async function mountFixtures(ctx) {
   // ---------------------------------------------------------------- season planner and meetings table
   // Meetings: every club against every other, how often they play (what is on the books, plus the plan being previewed).
   function meetingsHtml() {
-    const cs = codes(), all = [...real(), ...(plan?.preview || [])], mm = R.meetMatrix(all, f => results.has(f.id));
+    const cs = codes(), all = [...counted(), ...(plan?.preview || [])], mm = R.meetMatrix(all, f => results.has(f.id));
     const vals = cs.flatMap((a, i) => cs.slice(i + 1).map(b => mm.get(R.pairKey(a, b))?.total || 0)), hi = Math.max(1, ...vals), lo = Math.min(...vals);
     const cell = (a, b) => {
       if (a === b) return '<td class="mx-self"></td>';
@@ -442,7 +444,7 @@ export async function mountFixtures(ctx) {
   }
 
   function plannerHtml(hasWeeks) {
-    const n = codes().length, room = Math.max(0, WEEK_MAX - 1 - lastWeek()), rec = Math.min(room, R.defaultRounds(n, model().weeks.filter(w => w !== TEST_WEEK).length));
+    const n = codes().length, room = Math.max(0, WEEK_MAX - 1 - lastWeek()), rec = Math.min(room, R.defaultRounds(n, model().weeks.filter(w => w !== TEST_WEEK && !isPre(w)).length));
     const body = !plan ? '' : `<div class="fx-plan"><p class="fx-plan-q"><b>${plan.quality}/100</b> · ${plural(plan.weeks.length, 'round')} from ${esc(plan.weeks[0].label.toLowerCase())}</p>
         <ul>${plan.notes.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
         <div class="mx-wrap"><table class="mx mx-plan"><thead><tr><th>Round</th><th>Matches (home v away)</th><th>Bye</th></tr></thead><tbody>${plan.weeks.map(w => `<tr><th scope="row">${esc(w.label)}</th><td>${w.games.map(([h, a]) => `${esc(h)} v ${esc(a)}`).join(' · ')}</td><td>${esc(w.byes.join(', ')) || '·'}</td></tr>`).join('')}</tbody></table></div>
@@ -458,7 +460,7 @@ export async function mountFixtures(ctx) {
     const cs = codes(), room = WEEK_MAX - 1 - lastWeek(), n = Math.min(Number(root.querySelector('#fx-plan-n')?.value) || 0, room);
     if (cs.length < 2) return notify('You need at least two active clubs.', 'bad');
     if (!(n >= 1)) return notify('Pick how many rounds to plan (there is room for ' + room + ').', 'bad');
-    const first = lastWeek() + 1, p = R.planSeason({ codes: cs, fixtures: real(), byeWeeks: byeMap(), firstWeek: first, rounds: n, seed: Math.floor(Math.random() * 2 ** 31) });
+    const first = lastWeek() + 1, p = R.planSeason({ codes: cs, fixtures: counted(), byeWeeks: byeMap(), firstWeek: first, rounds: n, seed: Math.floor(Math.random() * 2 ** 31) });
     const planned = p.weeks.map(w => w.week), labels = R.roundLabels([...model().weeks, ...planned], [...rounds, ...planned.map(week => ({ week, numbered: true }))]);
     plan = { first, weeks: p.weeks.map(w => ({ ...w, label: labels.get(w.week).label })), quality: p.quality, notes: p.notes, preview: p.weeks.flatMap(w => w.games.map(([home, away]) => ({ id: `plan-${w.week}-${home}-${away}`, week: w.week, home, away }))) };
     draw();
