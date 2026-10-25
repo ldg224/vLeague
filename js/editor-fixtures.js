@@ -43,7 +43,7 @@ export async function mountFixtures(ctx) {
   let fixtures = [], results = new Map(), rounds = [], looks = [], deadlines = new Map(), sheets = [];
   let busy = false, msg = '', msgKind = '', hasRoster = true, hasLadder = true, hasByes = true;
   const open = new Set();   // rounds the office has opened (the next round to play opens on its own)
-  const setOpen = new Set(); let moreOpen = false;   // which round-settings panels and the More menu are open, so a redraw leaves them as they were
+  const setOpen = new Set(); let moreOpen = false, plan = null;   // which round-settings panels and the More menu are open, so a redraw leaves them as they were
 
   const active = () => ctx.clubs.filter(c => c.status === 'active');
   const codes = () => active().map(c => c.code);
@@ -294,6 +294,8 @@ export async function mountFixtures(ctx) {
       ${weeks.map(w => roundHtml(w, m, nextUp)).join('')}
       ${weeks.length ? `<p class="fx-add"><button class="btn" type="button" data-act="next-round">Add the next round</button> <button class="btn ghost" type="button" data-act="empty-round">Add an empty round</button></p>` : ''}
       ${tests ? roundHtml(TEST_WEEK, m, null) : ''}
+      ${codes().length >= 2 ? plannerHtml(weeks.length) : ''}
+      ${codes().length >= 2 ? meetingsHtml() : ''}
       <p class="fx-test"><b>Test match</b> <select id="fx-test-look" aria-label="Scoreboard look for the test match"><option value="random">Random look</option>${looks.map(l => `<option value="${esc(l.key)}">${esc(l.name)}</option>`).join('')}</select>
         <button class="btn small" type="button" data-act="test-match" ${busy || codes().length < 2 ? 'disabled' : ''}>Play a test match now</button>
         ${tests ? `<button class="btn ghost small" type="button" data-act="test-clean" ${busy ? 'disabled' : ''}>Remove test matches (${tests})</button>` : ''}
@@ -421,6 +423,69 @@ export async function mountFixtures(ctx) {
     });
   }
 
+
+  // ---------------------------------------------------------------- season planner and meetings table
+  // Meetings: every club against every other, how often they play (what is on the books, plus the plan being previewed).
+  function meetingsHtml() {
+    const cs = codes(), all = [...real(), ...(plan?.preview || [])], mm = R.meetMatrix(all, f => results.has(f.id));
+    const vals = cs.flatMap((a, i) => cs.slice(i + 1).map(b => mm.get(R.pairKey(a, b))?.total || 0)), hi = Math.max(1, ...vals), lo = Math.min(...vals);
+    const cell = (a, b) => {
+      if (a === b) return '<td class="mx-self"></td>';
+      const e = mm.get(R.pairKey(a, b)) || { total: 0, played: 0 }, home = all.filter(f => f.home === a && f.away === b).length, away = all.filter(f => f.home === b && f.away === a).length;
+      const odd = hi !== lo && (e.total === hi || e.total === lo) ? (e.total === hi ? ' mx-hi' : ' mx-lo') : '';
+      return `<td class="mx-c${odd}" title="${esc(`${name(a)} v ${name(b)}: ${e.total} (${home} at ${name(a)}, ${away} at ${name(b)}), ${e.played} played`)}" style="--mx:${(e.total / hi).toFixed(2)}">${e.total || '·'}</td>`;
+    };
+    return `<details class="fx-card fx-mx" open><summary><h2>Who plays who</h2></summary>
+      <p class="ed-hint">How many times each pair meets${plan ? ', including the planned rounds in the preview' : ''}. Darker is more; an outlined cell has the most or the fewest while the pairs are uneven. Hover a cell for the home and away split.</p>
+      <div class="mx-wrap"><table class="mx"><thead><tr><th></th>${cs.map(c => `<th scope="col" title="${esc(name(c))}">${esc(c)}</th>`).join('')}<th scope="col">Total</th></tr></thead>
+      <tbody>${cs.map(a => `<tr><th scope="row" title="${esc(name(a))}">${esc(a)}</th>${cs.map(b => cell(a, b)).join('')}<td class="mx-t">${cs.reduce((n, b) => n + (a === b ? 0 : mm.get(R.pairKey(a, b))?.total || 0), 0)}</td></tr>`).join('')}</tbody></table></div></details>`;
+  }
+
+  function plannerHtml(hasWeeks) {
+    const n = codes().length, room = Math.max(0, WEEK_MAX - 1 - lastWeek()), rec = Math.min(room, R.defaultRounds(n, model().weeks.filter(w => w !== TEST_WEEK).length));
+    const body = !plan ? '' : `<div class="fx-plan"><p class="fx-plan-q"><b>${plan.quality}/100</b> · ${plural(plan.weeks.length, 'round')} from round ${plan.first}</p>
+        <ul>${plan.notes.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
+        <div class="mx-wrap"><table class="mx mx-plan"><thead><tr><th>Round</th><th>Matches (home v away)</th><th>Bye</th></tr></thead><tbody>${plan.weeks.map(w => `<tr><th scope="row">${w.week}</th><td>${w.games.map(([h, a]) => `${esc(h)} v ${esc(a)}`).join(' · ')}</td><td>${esc(w.byes.join(', ')) || '·'}</td></tr>`).join('')}</tbody></table></div>
+        <div class="ed-actions"><button class="btn" type="button" data-act="plan-create" ${busy ? 'disabled' : ''}>Create these rounds</button> <button class="btn ghost" type="button" data-act="plan-preview">Try another plan</button> <button class="btn ghost" type="button" data-act="plan-clear">Discard</button></div></div>`;
+    return `<div class="fx-card" id="fx-planner"><h2>Plan the rest of the season</h2>
+      <p class="ed-hint">Works out many rounds at once so every pair meets the same number of times, home and away stay level, byes are shared and rematches are kept apart. It tries dozens of plans and shows the best. Nothing is saved until you press Create.</p>
+      <p class="fx-plan-in"><label>Rounds to plan <input type="number" id="fx-plan-n" min="1" max="${room}" value="${plan ? plan.weeks.length : rec}" inputmode="numeric"></label>
+        <button class="btn small" type="button" data-act="plan-preview" ${n < 2 || !room ? 'disabled' : ''}>Preview the plan</button>
+        <span class="ed-hint">${hasWeeks ? `${rec} rounds finish the current cycle.` : `${rec} rounds is one full round robin.`}</span></p>${body}</div>`;
+  }
+
+  function previewPlan() {
+    const cs = codes(), room = WEEK_MAX - 1 - lastWeek(), n = Math.min(Number(root.querySelector('#fx-plan-n')?.value) || 0, room);
+    if (cs.length < 2) return notify('You need at least two active clubs.', 'bad');
+    if (!(n >= 1)) return notify('Pick how many rounds to plan (there is room for ' + room + ').', 'bad');
+    const first = lastWeek() + 1, p = R.planSeason({ codes: cs, fixtures: real(), byeWeeks: byeMap(), firstWeek: first, rounds: n, seed: Math.floor(Math.random() * 2 ** 31) });
+    plan = { first, weeks: p.weeks, quality: p.quality, notes: p.notes, preview: p.weeks.flatMap(w => w.games.map(([home, away]) => ({ id: `plan-${w.week}-${home}-${away}`, week: w.week, home, away }))) };
+    draw();
+    root.querySelector('#fx-planner')?.scrollIntoView({ block: 'nearest' });
+  }
+
+  // Saves the previewed plan: each round dated like the last real round, a week apart, blank where the dates have passed.
+  async function createPlan() {
+    if (!plan) return;
+    const m = model(), lastW = m.weeks.filter(w => w !== TEST_WEEK).at(-1), prev = round(lastW || 1);
+    const datedLast = lastW ? m.by.get(lastW).map(f => f.starts_at).filter(Boolean) : [];
+    const blocks = R.inferBlocks(datedLast) || PATTERNS.saturday[1];
+    const base = datedLast.length ? addDays(mondayOf(dateOf(datedLast.sort()[0])), 7) : nextMon(), first = lastWeek() + 1, weeks = plan.weeks.map(w => ({ ...w, week: first + (w.week - plan.first) }));
+    if (weeks.at(-1).week >= WEEK_MAX) return notify(`That would go past round ${WEEK_MAX - 1}.`, 'bad');
+    let blankAny = false;
+    const placedBy = weeks.map((w, i) => { let placed = R.placeWeek(w.games, addDays(base, i * 7), blocks); if (lockPasses(w.week, placed.map(p => p.at))) { blankAny = true; placed = placed.map(p => ({ ...p, at: null })); } return placed; });
+    plan = null;
+    return run(`Create ${plural(weeks.length, 'round')}`, async tx => {
+      const taken = takenIds();
+      for (let i = 0; i < weeks.length; i++) {
+        const { week, byes } = weeks[i];
+        await setRound(tx, week, { name: null, kind: 'regular', look: prev.look, lock_minutes_before: prev.lock_minutes_before, lock_at_override: null, byes, ...(hasRoster ? { numbered: true, number_override: null } : {}) });
+        await insertFx(tx, placedBy[i].map(p => { const id = R.freshId(week, p.h, p.a, taken); taken.add(id); return { id, week, home: p.h, away: p.a, starts_at: p.at }; }));
+      }
+      return blankAny ? 'Some kick-off times are blank because those dates have passed. Set them when you know them.' : '';
+    });
+  }
+
   async function addMatchTo(w) {
     const list = model().by.get(w) || [], playing = new Set(list.flatMap(f => [f.home, f.away]));
     const free = active().filter(c => !playing.has(c.code)), pool = free.length >= 2 ? free : active();
@@ -486,6 +551,9 @@ export async function mountFixtures(ctx) {
     const val = k => box?.querySelector(`[data-k="${k}"]`)?.value;
 
     if (act === 'next-round') return nextRound();
+    if (act === 'plan-preview') return previewPlan();
+    if (act === 'plan-create') return createPlan();
+    if (act === 'plan-clear') { plan = null; return draw(); }
     if (act === 'empty-round') return run('Add an empty round', async tx => setRound(tx, newWeekNumber(), { name: null, kind: 'regular' }));
     if (act === 'test-match') return testMatch();
     if (act === 'test-clean') return testClean();

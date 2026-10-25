@@ -307,3 +307,74 @@ export function freshId(week, home, away, taken) {
   for (let n = 2; n < 1000; n++) { const id = `${base}-${n}`; if (!taken.has(id)) return id; }
   return `${base}-${Date.now().toString(36)}`.slice(0, 40);
 }
+
+// ---------------------------------------------------------------- the season planner and the meetings table
+// How often each pair meets: pairKey -> { total, played }. `isPlayed(fixture)` says which matches already have a result.
+export function meetMatrix(fixtures, isPlayed = () => false) {
+  const out = new Map();
+  for (const f of fixtures) {
+    const k = pairKey(f.home, f.away), e = out.get(k) || { total: 0, played: 0 };
+    e.total++; if (isPlayed(f)) e.played++;
+    out.set(k, e);
+  }
+  return out;
+}
+
+// Rounds in one full round robin: everyone meets everyone once (odd numbers of clubs sit one out each round).
+export const cycleLength = n => (n % 2 ? n : n - 1);
+
+// How many rounds finish the current cycle of the season, or a whole new cycle when the last one is complete.
+export function defaultRounds(n, weeksSoFar) {
+  if (n < 2) return 0;
+  const cycle = cycleLength(n), rem = weeksSoFar % cycle;
+  return rem ? cycle - rem : cycle;
+}
+
+// How good a roster is, by what a league cares about: every pair meets the same number of times, home and away are
+// balanced with no long runs, byes are shared out, and rematches are not back to back. `all` is every match (with a week),
+// `planned` the weeks being judged for rematch gaps. quality is out of 100; notes say it in plain words.
+export function judgeRoster(all, codes, byeCount, plannedWeeks = []) {
+  const st = statsOf(all, codes, Infinity, null), pairs = [];
+  codes.forEach((a, i) => codes.slice(i + 1).forEach(b => pairs.push(st.meet.get(pairKey(a, b)) || 0)));
+  const pairSpread = pairs.length ? Math.max(...pairs) - Math.min(...pairs) : 0;
+  const homeGap = Math.max(0, ...codes.map(c => Math.abs(st.home.get(c) - st.away.get(c))));
+  const run = Math.max(0, ...codes.map(c => { let best = 0, cur = 0, prev = ''; for (const v of st.venues.get(c)) { cur = v === prev ? cur + 1 : 1; prev = v; best = Math.max(best, cur); } return best; }));
+  const byeVals = codes.map(c => byeCount.get(c) || 0), byeSpread = byeVals.length ? Math.max(...byeVals) - Math.min(...byeVals) : 0;
+  let minGap = Infinity;
+  const seen = new Map();
+  for (const f of [...all].sort((a, b) => a.week - b.week)) {
+    const k = pairKey(f.home, f.away);
+    if (seen.has(k) && plannedWeeks.includes(f.week)) minGap = Math.min(minGap, f.week - seen.get(k));
+    seen.set(k, f.week);
+  }
+  const penalty = pairSpread * 100 + homeGap * 8 + Math.max(0, run - 2) * 20 + byeSpread * 40 + (minGap < 4 ? (4 - minGap) * 10 : 0);
+  const notes = [
+    pairSpread ? `Some pairs meet ${pairSpread} more time${pairSpread === 1 ? '' : 's'} than others` : 'Every pair meets the same number of times',
+    homeGap <= 1 ? 'Home and away are level for every club' : `Most lopsided club hosts ${homeGap} more than it travels`,
+    run <= 2 ? 'Nobody has more than two home or away games in a row' : `Longest home or away run is ${run}`,
+    byeSpread <= (codes.length % 2 ? 1 : 0) ? 'Byes are shared fairly' : `Byes differ by ${byeSpread} between clubs`,
+    minGap === Infinity ? 'No rematches' : `Closest rematch is ${minGap} round${minGap === 1 ? '' : 's'} apart`,
+  ];
+  return { quality: Math.max(0, Math.round(100 - penalty)), penalty, notes, pairSpread, homeGap, run, byeSpread };
+}
+
+// Plan `rounds` rounds in one go, after the weeks already in `fixtures`, pairing round by round with pairWeek and keeping the
+// best of several tries. Returns { weeks: [{ week, games, byes }], quality, notes, fixtures: all matches including the plan }.
+export function planSeason({ codes, fixtures, byeWeeks = null, firstWeek, rounds, tries, seed = 1 }) {
+  const n = codes.length, count = tries ?? (n <= 12 ? 40 : n <= 16 ? 12 : 4);
+  let best = null;
+  for (let t = 0; t < count; t++) {
+    const sim = [...fixtures], byeMap = new Map([...(byeWeeks || [])].map(([w, s]) => [w, new Set(s)])), weeks = [];
+    for (let i = 0; i < rounds; i++) {
+      const week = firstWeek + i, pr = pairWeek({ codes, fixtures: sim, week, byeWeeks: byeMap, seed: seed + t * 7919 + i * 31 });
+      pr.games.forEach(([home, away]) => sim.push({ week, home, away }));
+      byeMap.set(week, new Set(pr.byes));
+      weeks.push({ week, games: pr.games, byes: pr.byes });
+    }
+    const byeCount = new Map(codes.map(c => [c, 0]));
+    byeMap.forEach(s => s.forEach(c => byeCount.has(c) && byeCount.set(c, byeCount.get(c) + 1)));
+    const j = judgeRoster(sim, codes, byeCount, weeks.map(w => w.week));
+    if (!best || j.penalty < best.penalty) best = { weeks, fixtures: sim, ...j };
+  }
+  return best;
+}

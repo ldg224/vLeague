@@ -556,3 +556,22 @@
 .fx-row > select[data-k="stage"] { width: 100%; }
 .fx-round.is-pre { border-left: 3px solid var(--preseason, #8522f0); }
 .fx-round .ed-pill.fx-pre, .fx-pre { background: var(--preseason, #8522f0); color: #fff; border-color: transparent; }
+
+/* Season planner and the meetings table (Editor → Fixtures). */
+.fx-mx > summary { cursor: pointer; }
+.fx-mx > summary h2 { display: inline; }
+.mx-wrap { overflow-x: auto; }
+.mx { border-collapse: separate; border-spacing: 2px; font-variant-numeric: tabular-nums; font-size: var(--fs-s); }
+.mx th { padding: 4px 6px; color: var(--muted); font-weight: 600; text-align: center; }
+.mx tbody th { text-align: right; }
+.mx-c { min-width: 30px; height: 30px; text-align: center; border-radius: var(--r-sm); font-weight: 600; background: color-mix(in srgb, var(--brand) calc(var(--mx) * 55%), var(--surface)); }
+.mx-self { background: var(--line); border-radius: var(--r-sm); opacity: .5; }
+.mx-hi { outline: 2px solid var(--brand); outline-offset: -2px; }
+.mx-lo { outline: 2px dashed var(--muted); outline-offset: -2px; }
+.mx-t { padding-left: 8px; font-weight: 700; text-align: center; }
+.mx-plan { border-spacing: 0; width: 100%; }
+.mx-plan th, .mx-plan td { text-align: left; padding: 5px 8px; border-top: 1px solid var(--line); }
+.fx-plan-in { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.fx-plan-in input { width: 5em; }
+.fx-plan-q { margin: 12px 0 4px; font-size: var(--fs-l); }
+.fx-plan ul { margin: 0 0 10px; padding-left: 18px; color: var(--muted); font-size: var(--fs-s); }

@@ -3,6 +3,12 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.11.0 (2026-10-25)
+
+- **Added, season planner:** Editor → Fixtures has "Plan the rest of the season". Pick how many rounds (it suggests enough to finish the current round robin), and it tries dozens of plans and previews the best one with a score out of 100: every pair meeting equally often, home and away level, no long home or away runs, fair byes and rematches kept apart. Press Create to save the rounds, dated a week apart like the last round.
+- **Added, Who plays who:** a club-by-club table in Editor → Fixtures showing how many times each pair meets, with the home and away split and games played on hover. It includes the planned rounds while you preview them.
+No database change.
+
 ## 1.10.1 (2026-10-24)
 
 - **Fixed, insights:** a preseason match's calendar insights (opening match, first home or away match, days since the last match) now count the earlier preseason games, so the second preseason game no longer says every club is playing its first.
