@@ -2,10 +2,10 @@
    behind it, the shared pill toggle, hairline rows under grey strips, the club's colour only in the header. The class colours below are this page's own five. */
 .pp {
   --club-accent: var(--club-accent-dark, var(--blue-300));
-  --k-elite: var(--blue-400); --k-great: #2fc08f; --k-avg: #7f96b2; --k-below: #f3ad45; --k-poor: #f06f67;
+  --k-elite: var(--blue-400); --k-great: var(--res-w); --k-avg: var(--muted); --k-below: var(--amber); --k-poor: var(--res-l);
   display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); max-width: 1280px; margin: 0 auto;
 }
-:root[data-theme="light"] .pp { --club-accent: var(--club-accent-light, var(--blue-800)); --k-elite: var(--blue-600); --k-great: #12936b; --k-avg: #6a819b; --k-below: #d88a14; --k-poor: #d4473f; }
+:root[data-theme="light"] .pp { --club-accent: var(--club-accent-light, var(--blue-800)); --k-elite: var(--blue-600); }
 .pp > * { min-width: 0; }
 .pp-note { margin: 12px 0 0; font: 400 var(--fs-s)/1.45 var(--font); color: var(--muted); }
 
@@ -61,7 +61,8 @@
 .pp-v { font: 700 var(--fs-m) var(--font); color: var(--text-strong); text-align: right; font-variant-numeric: tabular-nums; }
 .pp-t, .pp-a { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
 .pp-bar { --k: var(--k-avg); position: relative; height: 8px; border-radius: 999px; background: color-mix(in oklab, var(--text) 9%, transparent); }
-.pp-bar i { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: linear-gradient(90deg, color-mix(in oklab, var(--k) 45%, transparent), var(--k)); }
+.pp-bar i { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--k); }
+.pp-stat.is-elite .pp-bar i { background: var(--brand-grad); }
 .pp-bar u { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--text-strong); opacity: .6; text-decoration: none; }
 .pp-bar.none { visibility: hidden; }
 .pp-stat.is-elite .pp-bar { --k: var(--k-elite); } .pp-stat.is-great .pp-bar { --k: var(--k-great); } .pp-stat.is-below .pp-bar { --k: var(--k-below); } .pp-stat.is-poor .pp-bar { --k: var(--k-poor); }
@@ -69,7 +70,7 @@
 
 /* the class pill: a soft tint of its colour; Elite is the blue star */
 .pp-cls { --k: var(--k-avg); display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 10px; border-radius: 999px; white-space: nowrap; font: 600 var(--fs-xs) var(--font);
-  background: color-mix(in oklab, var(--k) 16%, transparent); color: color-mix(in oklab, var(--k) 72%, var(--text-strong)); }
+  background: color-mix(in oklab, var(--k) 22%, transparent); color: color-mix(in oklab, var(--k) 78%, var(--text-strong)); }
 .pp-cls .ic { width: 13px; height: 13px; fill: currentColor; }
 .pp-cls.is-elite { background: var(--brand-grad); color: var(--white); font-weight: 700; box-shadow: 0 0 14px color-mix(in oklab, var(--blue-400) 40%, transparent); }
 .pp-cls.is-great { --k: var(--k-great); } .pp-cls.is-below { --k: var(--k-below); } .pp-cls.is-poor { --k: var(--k-poor); }

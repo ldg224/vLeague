@@ -24,7 +24,8 @@ const file = {
 
 test('the away player attacking left in period 1 is turned round, and period 2 is left alone', () => {
   const m = extractMaps(file, 'b1');
-  assert.deepEqual(m.shots.map(s => [s.x, s.y]), [[85, 38], [90, 40]]);   // (20,30) -> (105-20, 68-30); (90,40) as it is
+  assert.deepEqual(m.shots.map(s => [s.x, s.y]), [[85, 38], [90, 40]]);
+  assert.equal(m.shots[0].ey, 34);   // no end_y given: heading for the middle of the goal   // (20,30) -> (105-20, 68-30); (90,40) as it is
   assert.equal(m.shots.length, 2);                                       // a1's shot is not his
   assert.equal(m.shots[0].on, true); assert.equal(m.shots[1].on, false);
 });
@@ -45,13 +46,14 @@ test('a player not in the file gives empty maps; merging adds matches up', () =>
 test('the two maps draw their marks and says what it shows', () => {
   const m = mergeMaps([extractMaps(file, 'b1')]);
   const shots = shotMap(m);
-  assert.equal((shots.match(/class="pm-shot is-/g) || []).length, 2 + 3);   // two shots plus the three in the key
-  assert.match(shots, /2 shots · 1 goals · 0\.40 xG/); assert.match(shots, /is-half/);
+  assert.equal((shots.match(/<circle[^>]*class="pm-shot is-/g) || []).length, 2);
+  assert.equal((shots.match(/class="pm-path is-/g) || []).length, 2);   // a path to where each was heading
+  assert.match(shots, /<b>2<\/b>Shots/); assert.match(shots, /<b>0\.40<\/b>xG</); assert.match(shots, /is-half/); assert.match(shots, /pm-dirtext/);
   assert.match(heatMap(m), /Average position/);
   assert.match(shotMap(mergeMaps([extractMaps(file, 'zzz')])), /No shots/);
   assert.match(heatMap(mergeMaps([extractMaps(file, 'zzz')])), /No position data/);
 });
 test('the pitch is drawn once, half or whole, and labelled', () => {
-  assert.match(pitchSvg({ label: 'x' }), /viewBox="-2 -2 109 72"/);
-  assert.match(pitchSvg({ half: true, label: 'y' }), /viewBox="50.5 -2 56.5 72"/);
+  assert.match(pitchSvg({ label: 'x' }), /viewBox="-3 -3 111 74"/);
+  assert.match(pitchSvg({ half: true, label: 'y' }), /viewBox="49.5 -3 58.5 74"/);
 });

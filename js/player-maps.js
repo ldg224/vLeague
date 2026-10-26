@@ -26,7 +26,7 @@ export function extractMaps(d, id) {
     if (!mine || e.x == null) continue;
     const [x, y] = turn(e.x, e.y, e.period);
     const at = { x: r1(x), y: r1(y), minute: e.minute };
-    if (e.type === 'shot') out.shots.push({ ...at, xg: e.xg || 0, outcome: e.outcome, on: Boolean(e.on_target || e.outcome === 'goal' || e.outcome === 'saved'), body: e.body, kind: e.subtype });
+    if (e.type === 'shot') out.shots.push({ ...at, ey: r1(turn(PW, e.end_y ?? PH / 2, e.period)[1]), xg: e.xg || 0, outcome: e.outcome, on: Boolean(e.on_target || e.outcome === 'goal' || e.outcome === 'saved'), body: e.body, kind: e.subtype });
   }
   // Time on the pitch: his position in every frame, as a grid of 5 m squares.
   const fr = d.frames;
@@ -56,33 +56,43 @@ export function mergeMaps(list) {
 }
 
 // ---- the pitch ----
-export function pitchSvg({ half = false, body = '', label = '' }) {
-  const x0 = half ? PW / 2 : 0, W = PW - x0, m = 2;
-  const goal = (x, dir) => `<rect x="${dir > 0 ? x : x - 2}" y="${PH / 2 - 3.66}" width="2" height="7.32" class="pm-goal"/>`;
-  const box = (x, dir) => `<rect x="${dir > 0 ? x : x - 16.5}" y="${PH / 2 - 20.16}" width="16.5" height="40.32" class="pm-line"/><rect x="${dir > 0 ? x : x - 5.5}" y="${PH / 2 - 9.16}" width="5.5" height="18.32" class="pm-line"/><circle cx="${x + dir * 11}" cy="${PH / 2}" r=".5" class="pm-spot"/>`;
+// 105 x 68 m with every marking: halfway line and circle, both boxes, six-yard boxes, penalty spots and arcs, corner arcs, goals. `half` crops to the attacking half
+// (x 52.5 to 105). `direction` draws a quiet arrow along the touchline with the words, so the way the team is attacking is on the pitch itself, not only in the caption.
+export function pitchSvg({ half = false, body = '', label = '', direction = true }) {
+  const x0 = half ? PW / 2 : 0, W = PW - x0, m = 3, cy = PH / 2;
+  const box = (x, dir) => `<rect x="${dir > 0 ? x : x - 16.5}" y="${cy - 20.16}" width="16.5" height="40.32" class="pm-line"/><rect x="${dir > 0 ? x : x - 5.5}" y="${cy - 9.16}" width="5.5" height="18.32" class="pm-line"/>`
+    + `<circle cx="${x + dir * 11}" cy="${cy}" r=".45" class="pm-spot"/><path d="M${x + dir * 16.5} ${cy - 7.31}A9.15 9.15 0 0 ${dir > 0 ? 1 : 0} ${x + dir * 16.5} ${cy + 7.31}" class="pm-line"/>`
+    + `<rect x="${dir > 0 ? x - 2 : x}" y="${cy - 3.66}" width="2" height="7.32" class="pm-goal"/>`;
+  const corner = (x, y, sweep) => `<path d="M${x === 0 ? 1 : x - 1} ${y}A1 1 0 0 ${sweep} ${x} ${y === 0 ? 1 : y - 1}" class="pm-line"/>`;
+  const left = half ? '' : `<circle cx="${PW / 2}" cy="${cy}" r="9.15" class="pm-line"/><circle cx="${PW / 2}" cy="${cy}" r=".45" class="pm-spot"/>${box(0, 1)}${corner(0, 0, 1)}${corner(0, PH, 0)}`;
+  const ax = half ? x0 + 6 : 36, aw = half ? 22 : 30, ay = PH - 5;
+  const arrow = direction ? `<g class="pm-dir" aria-hidden="true"><path d="M${ax} ${ay}H${ax + aw}M${ax + aw - 2.2} ${ay - 1.6}L${ax + aw} ${ay}L${ax + aw - 2.2} ${ay + 1.6}" class="pm-dirline"/><text x="${ax}" y="${ay - 2.4}" class="pm-dirtext">Attacking</text></g>` : '';
   return `<svg class="pm-svg${half ? ' is-half' : ''}" viewBox="${x0 - m} ${-m} ${W + 2 * m} ${PH + 2 * m}" role="img" aria-label="${esc(label)}">
     <rect x="${x0}" y="0" width="${W}" height="${PH}" class="pm-turf"/>
     <rect x="${x0}" y="0" width="${W}" height="${PH}" class="pm-line"/>
-    ${half ? '' : `<line x1="${PW / 2}" x2="${PW / 2}" y1="0" y2="${PH}" class="pm-line"/><circle cx="${PW / 2}" cy="${PH / 2}" r="9.15" class="pm-line"/>${box(0, 1)}${goal(0, -1)}`}
-    ${half ? `<path d="M${x0} 0V${PH}" class="pm-line"/>` : ''}${box(PW, -1)}${goal(PW, 1)}
-    ${body}
+    ${half ? '' : `<line x1="${PW / 2}" x2="${PW / 2}" y1="0" y2="${PH}" class="pm-line"/>`}${half ? `<path d="M${x0} ${cy - 9.15}A9.15 9.15 0 0 1 ${x0} ${cy + 9.15}" class="pm-line"/>` : ''}
+    ${left}${box(PW, -1)}${corner(PW, 0, 0)}${corner(PW, PH, 1)}
+    ${arrow}${body}
   </svg>`;
 }
-const arrow = '<span class="pm-arrow" aria-hidden="true">Attacking this way →</span>';
 const count = (a, f) => a.filter(f).length;
 const pctOf = (a, b) => (b ? `${Math.round((100 * a) / b)}%` : '–');
 
 // ---- shots ----
+// Each shot is a dot (bigger = bigger chance, xG) with a thin path to where it was heading on the goal line. Colour says what happened.
+const SHOT = { goal: 'Goal', saved: 'Saved', blocked: 'Blocked', off_target: 'Off target', woodwork: 'Hit the woodwork' };
 export function shotMap(m) {
   if (!m.shots.length) return '<p class="pp-note">No shots in these matches.</p>';
+  const paths = m.shots.filter(s => s.outcome !== 'blocked').map(s => `<line x1="${s.x}" y1="${s.y}" x2="${PW}" y2="${Math.max(-2, Math.min(PH + 2, s.ey))}" class="pm-path is-${s.outcome}"/>`).join('');
   const dots = m.shots.map(s => {
-    const r = 1.2 + Math.sqrt(s.xg) * 4.2, tip = `${s.minute}′ ${s.outcome === 'goal' ? 'Goal' : s.outcome === 'saved' ? 'Saved' : s.outcome === 'blocked' ? 'Blocked' : s.outcome === 'woodwork' ? 'Hit the woodwork' : 'Off target'} · xG ${s.xg.toFixed(2)}${s.kind && s.kind !== 'open' ? ` · ${s.kind.replace('_', ' ')}` : ''}${s.body === 'head' ? ' · header' : ''}`;
-    return `<circle cx="${s.x}" cy="${s.y}" r="${r.toFixed(2)}" class="pm-shot is-${s.outcome === 'goal' ? 'goal' : s.on ? 'on' : 'off'}" data-tip="${esc(tip)}" tabindex="0"/>`;
+    const r = 1.3 + Math.sqrt(s.xg) * 4.6, tip = `${s.minute}′ ${SHOT[s.outcome] || 'Shot'} · xG ${s.xg.toFixed(2)}${s.kind && s.kind !== 'open' ? ` · ${s.kind.replace('_', ' ')}` : ''}${s.body === 'head' ? ' · header' : ''}`;
+    return `<circle cx="${s.x}" cy="${s.y}" r="${r.toFixed(2)}" class="pm-shot is-${s.outcome}" data-tip="${esc(tip)}" tabindex="0"/>`;
   }).join('');
   const goals = count(m.shots, s => s.outcome === 'goal'), xg = m.shots.reduce((a, s) => a + s.xg, 0), on = count(m.shots, s => s.on);
-  return `${pitchSvg({ half: true, body: dots, label: `${m.shots.length} shots, ${goals} goals, ${xg.toFixed(1)} xG` })}
-    <div class="pm-key"><span><i class="pm-shot is-goal"></i>Goal</span><span><i class="pm-shot is-on"></i>On target</span><span><i class="pm-shot is-off"></i>Off or blocked</span><span>Bigger dot = bigger chance (xG)</span></div>
-    <p class="pp-note">${m.shots.length} shots · ${goals} goals · ${xg.toFixed(2)} xG (${(xg / m.shots.length).toFixed(2)} a shot) · ${pctOf(on, m.shots.length)} on target. ${arrow}</p>`;
+  const chip = (k, v) => `<span><b>${v}</b>${k}</span>`;
+  return `<div class="pm-chips">${chip('Shots', m.shots.length)}${chip('Goals', goals)}${chip('On target', pctOf(on, m.shots.length))}${chip('xG', xg.toFixed(2))}${chip('xG a shot', (xg / m.shots.length).toFixed(2))}</div>
+    ${pitchSvg({ half: true, body: paths + dots, label: `${m.shots.length} shots, ${goals} goals, ${xg.toFixed(1)} xG` })}
+    <div class="pm-key">${['goal', 'saved', 'blocked', 'off_target', 'woodwork'].filter(k => m.shots.some(s => s.outcome === k)).map(k => `<span><i class="pm-shot is-${k}"></i>${SHOT[k]}</span>`).join('')}<span>Bigger dot = better chance. Line = where it was heading.</span></div>`;
 }
 
 // ---- where he spent the match ----
@@ -101,6 +111,6 @@ export function heatMap(m) {
   const third = [0, 1, 2].map(k => m.grid.reduce((a, v, i) => a + ((i % GW) * cw + cw / 2 >= (k * PW) / 3 && (i % GW) * cw + cw / 2 < ((k + 1) * PW) / 3 ? v : 0), 0) / tot);
   const mark = `<circle cx="${ax.toFixed(1)}" cy="${ay.toFixed(1)}" r="2.2" class="pm-avgpos" data-tip="Average position"/>`;
   return `${pitchSvg({ body: cells + mark, label: 'Where he spent his time on the pitch' })}
-    <div class="pm-key"><span><i class="pm-heat"></i>Darker = more time</span><span><i class="pm-avgpos"></i>Average position</span></div>
-    <p class="pp-note">Average position ${Math.round(ax)} m from his own goal, ${Math.round(ay)} m across. Time by third: ${Math.round(third[0] * 100)}% in his own, ${Math.round(third[1] * 100)}% in the middle, ${Math.round(third[2] * 100)}% in the attacking third. From his position five times a second over ${m.minutes} minutes. ${arrow}</p>`;
+    <div class="pm-key"><span><i class="pm-heat"></i>Brighter = more time</span><span><i class="pm-avgpos"></i>Average position</span></div>
+    <p class="pp-note">Average position ${Math.round(ax)} m from his own goal, ${Math.round(ay)} m across. Time by third: ${Math.round(third[0] * 100)}% in his own, ${Math.round(third[1] * 100)}% in the middle, ${Math.round(third[2] * 100)}% in the attacking third. From his position five times a second over ${m.minutes} minutes.</p>`;
 }
