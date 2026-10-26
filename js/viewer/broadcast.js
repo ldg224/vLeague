@@ -199,6 +199,23 @@ export class BroadcastRenderer extends HighlightsRenderer {
       if (!stop || stop[0] - f.t > 3) continue;   // the whistle that stops play
       replay(f, 3, 3, 1.5, { from: Math.max(stop[0] + 0.8, card ? card.t + 3.4 : 0), to: stop[1] - 0.8 }, true);
     }
+    // Back-to-back moments (a save then the rebound goal) in one stoppage, at the same end, play as one continuous replay
+    // rather than two with a wipe between them (B-28). If the stoppage is too short, the lead-in is trimmed, never the second moment.
+    const reps = shots.filter(s => s.kind === 'replay').sort((a, b) => a.stop.from - b.stop.from || a.r0 - b.r0);
+    for (let i = 0; i < reps.length; i++) {
+      const a = reps[i];
+      if (a.merged) continue;
+      for (let j = i + 1; j < reps.length; j++) {
+        const b = reps[j];
+        if (b.merged || b.stop.from !== a.stop.from || b.goalX !== a.goalX || b.wide !== a.wide || b.r0 > a.r1 + 4) continue;
+        const r1 = Math.max(a.r1, b.r1), avail = a.stop.to - a.stop.from;
+        const r0 = Math.max(Math.min(a.r0, b.r0), r1 - avail * REPLAY_RATE);
+        if (r0 > a.e.t - 1) continue;   // not enough room to show the first moment too
+        Object.assign(a, { prio: Math.min(a.prio, b.prio), r0, r1, to: a.from + (r1 - r0) / REPLAY_RATE, path: path(r0 - 1, r1 + 1, t => fr.ball(t)) });
+        b.merged = true;
+      }
+    }
+    shots.splice(0, shots.length, ...shots.filter(s => !s.merged));
     // Highest priority first; skip anything that clashes with a shot already on the schedule.
     // The half-time and full-time scorelines own their moments.
     const P = d.periods, placed = [{ kind: 'panel', from: this.t1 - 4.5, to: this.t1 + 1 }];

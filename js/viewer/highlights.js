@@ -1096,7 +1096,8 @@ export class HighlightsRenderer {
     // Opening tag: minute + moment type
     const tagA = seg01(local, 0.3, 0.8) * (1 - seg01(local, 3.2, 3.7));
     if (s.type === 'clip' && tagA > 0) {
-      const label = { goal: 'GOAL', chance: 'BIG CHANCE', save: 'GREAT SAVE', woodwork: 'OFF THE WOODWORK', red: 'RED CARD', yellow: 'BOOKING' }[clip.kind];
+      const pen = ev.subtype === 'penalty' && clip.kind !== 'goal' && clip.kind !== 'woodwork';   // S-33: a penalty not scored
+      const label = pen ? (ev.outcome === 'saved' ? 'PENALTY SAVED' : 'PENALTY MISSED') : { goal: 'GOAL', chance: 'BIG CHANCE', save: 'GREAT SAVE', woodwork: 'OFF THE WOODWORK', red: 'RED CARD', yellow: 'BOOKING' }[clip.kind];
       const team = ev.team === this.home.code ? this.home : this.away;
       const x = 70 - (1 - easeOut(tagA)) * 60, y = H - 150;
       this.c.save(); this.c.globalAlpha = tagA;
@@ -1104,7 +1105,8 @@ export class HighlightsRenderer {
       this.text(`${ev.minute}'`, x + 55, y + 38, { size: 30, weight: 900, align: 'center', colour: '#fff' });
       this.pill(x + 120, y, 360, 54, 'rgba(6,26,56,0.88)', 10);
       this.c.fillStyle = safeColour(team.colour); this.c.fillRect(x + 120, y, 6, 54);
-      this.text(label, x + 142, y + 37, { size: 26, weight: 900, spacing: 3 });
+      if (pen) { this.c.fillStyle = '#ef4444'; this.c.beginPath(); this.c.arc(x + 150, y + 27, 10, 0, Math.PI * 2); this.c.fill(); }   // the red ball chip of the lineup and events
+      this.text(label, x + (pen ? 170 : 142), y + 37, { size: 26, weight: 900, spacing: 3 });
       this.c.restore();
     }
     if (s.type === 'replay') {

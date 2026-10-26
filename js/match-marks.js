@@ -8,7 +8,7 @@ const BOOT = glyph('M228.65,129.11l-28.06-9.35a4,4,0,0,0-2.63,0l-43.23,15.72A8.1
 const chip = (cls, inner, label, n = 1) => `<b class="mk ${cls}" role="img" aria-label="${n > 1 ? `${n} ${label}s` : label}">${inner}${n > 1 ? `<small>${n}</small>` : ''}</b>`;
 export const goalMark = n => chip('mk-goal', BALL, 'Goal', n);
 // The red football: an own goal, or a penalty that was saved or missed (as FotMob).
-export const redBallMark = label => chip('mk-goal is-red', BALL, label);
+export const redBallMark = (label, n) => chip('mk-goal is-red', BALL, label, n);
 export const assistMark = n => chip('mk-assist', BOOT, 'Assist', n);
 export const cardMark = which => chip('mk-card', `<i class="mk-c is-${which === 'red' ? 'r' : 'y'}"></i>`, which === 'red' ? 'Red card' : 'Yellow card');
 export const captainMark = () => '<b class="mk mk-cap" role="img" aria-label="Captain">C</b>';

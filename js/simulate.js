@@ -250,6 +250,7 @@ export function summariseMatch(d) {
     };
   }
   for (const e of d.events) {
+    if (e.type === 'shot' && e.subtype === 'penalty' && (e.outcome === 'saved' || e.outcome === 'off_target') && players[e.player]) players[e.player].pm = (players[e.player].pm || 0) + 1;   // S-33: penalties not scored
     if (e.type !== 'foul' || !e.penalty) continue;
     if (players[e.on]) players[e.on].pw++;
     if (players[e.player]) players[e.player].pcn++;

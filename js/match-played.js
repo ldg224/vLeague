@@ -9,7 +9,7 @@
 import { FORMATIONS, DEFAULT_FORMATION, formationFromSlots } from './pitch.js';
 import { onColour } from './club-colour.js';
 import { esc } from './member.js';
-import { goalMark, assistMark, cardMark, captainMark } from './match-marks.js';
+import { goalMark, redBallMark, assistMark, cardMark, captainMark } from './match-marks.js';
 import { ratingsAt } from './live-rating.js';
 import { suspensions } from './simulate.js';
 import { VIEWS, money, surname, initials, STAR, PITCH_H, PITCH_V, coach, faceOf, nameTag } from './match-lineup.js';
@@ -21,16 +21,17 @@ function facts(fx, ctx) {
   const out = {};
   if (ctx.live && ctx.file) {
     const r = ratingsAt(ctx.file, ctx.horizon);
-    for (const p of ctx.file.players) out[p.id] = { r: r[p.id] ?? null, g: 0, a: 0, yc: 0, rc: 0, off: null };
+    for (const p of ctx.file.players) out[p.id] = { r: r[p.id] ?? null, g: 0, a: 0, yc: 0, rc: 0, pm: 0, off: null };
     for (const e of ctx.file.events) {
       if (e.t > ctx.horizon) break;
+      if (e.type === 'shot' && e.subtype === 'penalty' && (e.outcome === 'saved' || e.outcome === 'off_target') && out[e.player]) out[e.player].pm++;
       if (e.type === 'goal' && !e.own_goal && out[e.scorer]) { out[e.scorer].g++; if (e.assist && out[e.assist]) out[e.assist].a++; }
       if (e.type === 'card' && out[e.player]) { if (e.card === 'yellow') out[e.player].yc++; else { out[e.player].rc++; out[e.player].off = e.minute; } }
     }
     return out;
   }
   const off = new Map((fx.result?.cards || []).filter(c => c.card !== 'yellow').map(c => [String(c.player), c.minute]));
-  for (const [id, p] of Object.entries(fx.result?.players || {})) out[id] = { r: p.r ?? null, g: p.g || 0, a: p.a || 0, yc: p.yc || 0, rc: p.rc || 0, off: p.rc ? off.get(String(id)) ?? null : null };
+  for (const [id, p] of Object.entries(fx.result?.players || {})) out[id] = { r: p.r ?? null, g: p.g || 0, a: p.a || 0, yc: p.yc || 0, rc: p.rc || 0, pm: p.pm || 0, off: p.rc ? off.get(String(id)) ?? null : null };
   return out;
 }
 
@@ -66,6 +67,7 @@ function side(fx, L, ctx, F, star, which) {
     if (ctx.view !== 'value') {
       if (f.a) marks += `<span class="ml-m is-a">${assistMark(f.a)}</span>`;
       if (f.g) marks += `<span class="ml-m is-g">${goalMark(f.g)}</span>`;
+      if (f.pm) marks += `<span class="ml-m is-g${f.g ? ' is-up' : ''}">${redBallMark('Penalty not scored', f.pm)}</span>`;
       if (ctx.view === 'rating' && (f.rc || f.yc)) marks += `<span class="ml-off">${f.rc && f.off ? `<em>${esc(f.off)}′</em>` : ''}${cardMark(f.rc ? 'red' : 'yellow')}</span>`;
     } else if (p) marks += `<b class="ml-v" aria-label="Value ${esc(money(p.value))}">${esc(money(p.value))}</b>`;
     return `<li class="ml-p is-${which}" style="--x:${slots[slot].x.toFixed(1)};--y:${slots[slot].y.toFixed(1)}"><span class="ml-av">${face}${marks}</span>`

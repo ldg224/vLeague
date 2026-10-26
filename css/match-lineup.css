@@ -89,7 +89,7 @@
 .ml-r.is-star { background: var(--blue-600, #1e88e5); color: #fff; }
 .ml-star { width: 11px; height: 11px; fill: currentColor; }
 .ml-m { position: absolute; bottom: -2px; display: inline-flex; }
-.ml-m.is-a { left: -8px; } .ml-m.is-g { right: -8px; }
+.ml-m.is-a { left: -8px; } .ml-m.is-g { right: -8px; } .ml-m.is-up { bottom: 18px; }   /* a missed penalty above the goal chip */
 .ml-v {
   position: absolute; bottom: -6px; left: 50%; translate: -50% 0; padding: 2px 8px; border-radius: 999px; white-space: nowrap;
   background: var(--surface); box-shadow: 0 0 0 1px var(--line); color: var(--text-strong); font: 700 var(--fs-xs)/1.2 var(--font); font-variant-numeric: tabular-nums;
