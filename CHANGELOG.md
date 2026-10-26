@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.13.0 (2026-10-26)
+
+Headlines: Stakes settings in the Editor
+
+**Added (MU-1):** Editor > Stakes has every Stakes setting (starting Coins, daily top-up, bail-out, payout multiplier, stake limits, lines per club, which stats are offered, how hard the lines are, when betting locks, leaderboard on or off), a switch to show the Stakes tab, a switch to open or close betting, and a wallet reset. The Stakes tab is hidden from managers until the office switches it on. A pick keeps the payout it was placed at, so changing the multiplier never changes picks already made.
+
+Database change: 0063 (Stakes settings), already applied.
+
 ## 1.12.0 (2026-10-26)
 
 Headlines: Stakes tab | Click any player name

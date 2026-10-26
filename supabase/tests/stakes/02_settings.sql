@@ -1,4 +1,4 @@
--- Stakes settings (0062): defaults, who can change them, every knob doing its job. Rolled back; safe on the live project.
+-- Stakes settings (0063): defaults, who can change them, every knob doing its job. Rolled back; safe on the live project.
 create temp table t_log(n serial, name text, ok boolean, detail text);
 grant all on t_log to authenticated; grant usage on sequence t_log_n_seq to authenticated;
 do $$

@@ -1,5 +1,5 @@
 // Editor -> Stakes (MU-1): every number of the Stakes game in one place, a switch for whether managers see the tab, and a wallet reset.
-// All of it is one row in stakes_settings (supabase/migrations/0062_stakes_settings.sql); the game's database functions read it, so a change applies straight away.
+// All of it is one row in stakes_settings (supabase/migrations/0063_stakes_settings.sql); the game's database functions read it, so a change applies straight away.
 // A pick keeps the payout it was placed at, so changing the multiplier only affects new picks.
 //   stakesView() -> the tab's shell;  mountStakes({ db, esc, explain }) -> fills it in
 export const stakesView = () => '<h1>Stakes</h1><div id="sk-root"><p class="quiet">Loading…</p></div>';
@@ -28,7 +28,7 @@ export async function mountStakes({ db, esc, explain }) {
 
   const load = async () => {
     const [a, b] = await Promise.all([c.from('stakes_settings').select('*').eq('id', 1).maybeSingle(), c.rpc('stakes_summary')]);
-    if (a.error || !a.data) { msg = a.error ? explain(a.error) : 'Stakes settings are missing. Run the database update 0062_stakes_settings.sql once.'; bad = true; S = null; } else S = a.data;
+    if (a.error || !a.data) { msg = a.error ? explain(a.error) : 'Stakes settings are missing. Run the database update 0063_stakes_settings.sql once.'; bad = true; S = null; } else S = a.data;
     sum = b.data?.[0] || null;
   };
   const say = (text, isBad = false) => { msg = text; bad = isBad; };
