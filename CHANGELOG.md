@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.13.2 (2026-10-26)
+
+Headlines: Stakes intro fix
+
+**Fixed (MU-1):** the Stakes intro now fills only the part of the screen you can see, so you always see it, and the page loads behind it.
+
+No database change.
+
 ## 1.13.1 (2026-10-26)
 
 Headlines: Stakes intro
