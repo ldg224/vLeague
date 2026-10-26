@@ -263,3 +263,8 @@ html { scrollbar-gutter: stable; }
 .tick.ok::before, #code-state.good::before { --i: var(--i-check); }
 #code-state.bad::before { --i: var(--i-x); }
 .mp-msg.err::before { --i: var(--i-alert); }
+
+/* A player's name that opens his page (js/player-link.js): looks like the text around it (the !important keeps rules for a plain span, like .sp-says span, from restyling it). A hint only where a mouse can hover; the focus ring is for the keyboard. */
+.plk { color: inherit !important; font-size: inherit !important; font-weight: inherit !important; font-family: inherit; line-height: inherit; letter-spacing: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+@media (hover: hover) { .plk:hover { text-decoration: underline dotted; text-decoration-color: color-mix(in oklab, currentColor 45%, transparent); text-underline-offset: 3px; } }
+.plk:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 3px; }

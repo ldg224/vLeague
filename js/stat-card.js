@@ -13,6 +13,7 @@
 // leads, and every player is shown in their club's kit with the club crest on the corner.
 import { onColour, isHex, accentFor } from './club-colour.js';
 import { format, matchesOf, POSITIONS, POSITION_WORD } from './season-stats.js';
+import { plink } from './player-link.js';
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ESC[c]);
@@ -48,7 +49,7 @@ function row({ row: r, value, rank }, card, ctx, kind, lead, big) {
       + `<span class="sc-who"><b class="sc-name">${esc(club?.name || r.code)}</b></span></a>${val}</li>`;
   }
   return `<li class="sc-row${lead ? ' is-lead' : ''}" style="${clubStyle(club)}">${face(r, ctx, kind, 36)}`
-    + `<span class="sc-who"><b class="sc-name">${esc(r.name)}</b><a class="cl sc-club" href="team.html?c=${esc(r.team)}">${esc(clubName(club))}</a></span>${val}</li>`;
+    + `<span class="sc-who"><b class="sc-name">${plink(r.id, esc(r.name))}</b><a class="cl sc-club" href="team.html?c=${esc(r.team)}">${esc(clubName(club))}</a></span>${val}</li>`;
 }
 
 const empty = (card, line, head = 'No matches played yet') => `<div class="sc-empty"><b>${esc(head)}</b><span>${esc(line || card.note || 'Fills in as the season is played.')}</span></div>`;
@@ -98,14 +99,15 @@ function banner(card, ranked, ctx, kind, position = 'all') {
   const lead = ranked[0], tied = ranked.filter(x => x.rank === 1), club = ctx.club(clubOf(lead.row, kind));
   const value = format(lead.value, card), name = x => (kind === 'team' ? ctx.club(x.row.code)?.name || x.row.code : x.row.name);
   const word = kind === 'player' ? POSITION_WORD[position] : null;   // [singular, plural] or null for everyone
-  const shown = tied.slice(0, 3).map(x => `<b>${esc(name(x))}</b>`);
+  const named = x => (kind === 'team' ? esc(name(x)) : plink(x.row.id, esc(name(x))));
+  const shown = tied.slice(0, 3).map(x => `<b>${named(x)}</b>`);
   let sentence;
   if (tied.length > 1) {
     const names = list(tied.length > 3 ? [...shown.slice(0, 2), `${tied.length - 2} others`] : shown);
     sentence = tieSentence(card, names, esc(value), word?.[1] || '');
   } else {
     const say = card.say ? card.say(value, card.sayPos ? word?.[0] || '' : '') : `leads with ${value}`;
-    sentence = `${word && !card.sayPos ? `Among ${word[1]}, ` : ''}<b>${esc(name(lead))}</b> ${esc(say)}`;
+    sentence = `${word && !card.sayPos ? `Among ${word[1]}, ` : ''}<b>${named(lead)}</b> ${esc(say)}`;
   }
   return `<div class="sp-banner" style="${clubStyle(club)}">${face(lead.row, ctx, kind, 56)}`
     + `<div class="sp-says"><p>${sentence}</p><span>${esc(playedLine(tied))}</span></div></div>`;
@@ -129,7 +131,7 @@ export function statPage(card, ranked, ctx, { kind = 'player', title = 'Stats', 
     ? `<ol class="sc-rows is-full">${ranked.map(x => {
       const club = ctx.club(clubOf(x.row, kind)), sub = card.sub ? card.sub(x.row) : matchesOf(x.row), team = kind === 'team' ? '' : `<span class="sc-club">${esc(clubName(club))}</span>`;
       return `<li class="sc-row" data-rank="${x.rank}" style="${clubStyle(club)}"><span class="sp-rank">${x.rank}</span>${face(x.row, ctx, kind, 40)}`
-        + `<span class="sc-who"><b class="sc-name">${esc(kind === 'team' ? club?.name || x.row.code : x.row.name)}</b><span class="sc-sub">${team}${team && sub ? ' · ' : ''}${esc(sub)}</span></span>`
+        + `<span class="sc-who"><b class="sc-name">${kind === 'team' ? esc(club?.name || x.row.code) : plink(x.row.id, esc(x.row.name))}</b><span class="sc-sub">${team}${team && sub ? ' · ' : ''}${esc(sub)}</span></span>`
         + `<span class="sc-val">${esc(format(x.value, card))}</span></li>`;
     }).join('')}</ol>`
     : (position !== 'all' ? empty(card, 'Nobody in this position qualifies yet.', 'No players to show') : empty(card));

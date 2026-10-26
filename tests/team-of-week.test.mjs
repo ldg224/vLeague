@@ -71,6 +71,6 @@ test('empty and hidden states', () => {
 
 test('shirt numbers show before the name when the page knows them', () => {
   const html = teamOfWeekCard(fixtures, { ...ctx, number: id => (id === teamOfWeek(fixtures, 2).lines.GK[0].id ? 1 : undefined) });
-  assert.match(html, /<span class="tw-n"><i>1<\/i> Player \d+<\/span>/);
+  assert.match(html, /<span class="tw-n"><i>1<\/i> <span class="plk"[^>]*>Player \d+<\/span><\/span>/);
   assert.equal((html.match(/<i>\d+<\/i> /g) || []).length, 1);   // only the player with a number
 });

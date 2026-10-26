@@ -14,6 +14,7 @@ import { icon } from './icons.js';
 import { goalMark, cardMark, redBallMark } from './match-marks.js';
 import { onColour } from './club-colour.js';
 import { portrait } from './portrait.js';
+import { plink } from './player-link.js';
 
 const W = 640, H = 170, MID = 85;   // the chart's own coordinates
 
@@ -114,7 +115,7 @@ function events(fx, file, ctx) {
   const face = it => { const p = byPlayer.get(String(it.pid)); return p ? `<span class="ev-face">${portrait(p, ctx.club(p.team), undefined, true)}</span>` : ''; };
   const row = it => it.divider
     ? `<li class="ev-div${it.strong ? ' is-strong' : ''}"><span>${esc(it.divider)}</span></li>`
-    : `<li class="ev-row is-${it.side}${it.goal ? ' is-goal' : ''}"><div class="ev-text">${face(it)}<span class="ev-tx">${it.who ? `<b>${esc(it.who)}</b>` : ''}${it.sub ? `<small>${esc(it.sub)}</small>` : ''}</span></div>`
+    : `<li class="ev-row is-${it.side}${it.goal ? ' is-goal' : ''}"><div class="ev-text">${face(it)}<span class="ev-tx">${it.who ? `<b>${plink(it.pid, esc(it.who))}</b>` : ''}${it.sub ? `<small>${esc(it.sub)}</small>` : ''}</span></div>`
       + `<span class="ev-badge">${esc(it.minute)}′</span><span class="ev-ic">${ic[it.icon]}</span></li>`;
   return list.length ? `<ol class="ev-list" aria-label="Match events">${list.map(row).join('')}</ol>` : '<p class="ev-none">No goals, cards or other events yet.</p>';
 }

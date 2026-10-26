@@ -1,4 +1,5 @@
 // Shared by the signed-in pages (home.html, setup.html, editor.html): who is signed in, their club, and crest links.
+import { wirePlayerLinks } from './player-link.js';
 import { currentUser, myProfile, landingPage, signOut, db } from './auth.js';
 import { SUPABASE_URL } from './config.js';
 import { VERSION } from './version.js';
@@ -39,6 +40,7 @@ export function chrome() {
   const v = document.getElementById('version');
   if (v) v.textContent = `v${VERSION}`;
   mountSuggest();
+  wirePlayerLinks();
   document.getElementById('signout')?.addEventListener('click', async () => {
     await signOut();
     location.replace('index.html?signin');

@@ -21,7 +21,8 @@ import { tableRows, tableCard } from './league-table.js';
 import { countedFixtures, totals, rank, PLAYER_CARDS } from './season-stats.js';
 import { hasPreseason, scopeNow, pickScope, scopePills } from './preseason.js';
 import { suspensions } from './simulate.js';
-import { statCard } from './stat-card.js';import { portrait } from './portrait.js';
+import { statCard } from './stat-card.js';
+import { plink } from './player-link.js';import { portrait } from './portrait.js';
 
 
 chrome();
@@ -201,7 +202,7 @@ function suspendedCard(club, season, ctx, squad) {
   const bans = next ? suspensions(seen).get(next.id) || [] : [];
   const who = b => squad.find(p => String(p.id) === String(b.player));
   const row = b => { const p = who(b); return `<li class="sus-row"><span class="sus-pic">${p ? portrait(p, club, undefined, true) : ''}</span>`
-    + `<span class="sus-who"><b>${esc(b.name)}</b>${p ? `<small>${p.number != null ? `${esc(p.number)} · ` : ''}${esc(p.position || '')}</small>` : ''}</span>`
+    + `<span class="sus-who"><b>${plink(b.player, esc(b.name))}</b>${p ? `<small>${p.number != null ? `${esc(p.number)} · ` : ''}${esc(p.position || '')}</small>` : ''}</span>`
     + `<span class="sus-why"><i class="sus-card" aria-hidden="true"></i>${esc(b.reason)}</span></li>`; };
   return `<section class="lg-card tm-sus${bans.length ? ' has-bans' : ''}" aria-labelledby="tm-sus-h"><div class="lg-card-head"><h2 id="tm-sus-h">Suspended</h2>${bans.length ? `<span class="sus-count">${bans.length}</span>` : ''}</div>
       ${bans.length ? `<ul class="sus-list"><li class="sus-head" aria-hidden="true"><span>Player</span><span>Reason</span></li>${bans.map(row).join('')}</ul>` : '<p class="empty">Nobody is suspended.</p>'}</section>`;
@@ -217,7 +218,7 @@ function squadHtml(squad, club) {
     <ul class="tm-list"><li class="tm-cols-head" aria-hidden="true"><span></span><span>Name</span><span>Att</span><span>Def</span><span>Value</span></li>${POS_ORDER.filter(pos => squad.some(p => p.position === pos)).map(pos => {
       const list = squad.filter(p => p.position === pos);
       return `<li class="tm-strip pos-${esc(pos)}"><h3>${POS_NAME[pos] || esc(pos)}</h3><span>${list.length}</span></li>
-        ${list.map(p => `<li class="tm-pl pos-${esc(p.position)}"><span class="tm-no">${esc(p.number ?? '')}</span><span class="tm-who"><span class="tm-pic">${portrait(p, club, undefined, true)}</span><b>${esc(p.name)}</b></span>
+        ${list.map(p => `<li class="tm-pl pos-${esc(p.position)}"><span class="tm-no">${esc(p.number ?? '')}</span><span class="tm-who"><span class="tm-pic">${portrait(p, club, undefined, true)}</span><b>${plink(p.id, esc(p.name))}</b></span>
           <span class="rt rt-${Number(p.offense) || 5}" title="Attack">${esc(p.offense)}</span><span class="rt rt-${Number(p.defense) || 5}" title="Defence">${esc(p.defense)}</span>
           <span class="tm-val">${p.value != null ? money(p.value) : '–'}</span></li>`).join('')}`;
     }).join('')}</ul></section>`;

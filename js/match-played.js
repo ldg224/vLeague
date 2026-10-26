@@ -11,6 +11,7 @@ import { onColour } from './club-colour.js';
 import { esc } from './member.js';
 import { goalMark, redBallMark, assistMark, cardMark, captainMark } from './match-marks.js';
 import { ratingsAt } from './live-rating.js';
+import { plink } from './player-link.js';
 import { suspensions } from './simulate.js';
 import { VIEWS, money, surname, initials, STAR, PITCH_H, PITCH_V, coach, faceOf, nameTag } from './match-lineup.js';
 
@@ -92,7 +93,7 @@ function bench(which, S, ctx, fx, out = new Map()) {
   if (!rows.length) return `<ul class="pl-bench is-${which}"><li class="pl-none">No one on the bench.</li></ul>`;
   return `<ul class="pl-bench is-${which}">${rows.map(p => { const ban = out.get(String(p.id));
     return `<li${ban ? ' class="is-susp"' : ''}><i class="ml-disc" style="--c:${esc(colour)};--on:${esc(onColour(colour))}">${esc(p.number ?? initials(p.name))}</i>`
-    + `<span class="pl-nm"><b>${esc(p.name)}</b><small>${esc(ban ? `Suspended · ${ban.reason}` : p.position || '')}</small></span></li>`; }).join('')}</ul>`;
+    + `<span class="pl-nm"><b>${plink(p.id, esc(p.name))}</b><small>${esc(ban ? `Suspended · ${ban.reason}` : p.position || '')}</small></span></li>`; }).join('')}</ul>`;
 }
 
 export function playedCard(fx, L, ctx) {

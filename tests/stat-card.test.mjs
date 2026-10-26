@@ -1,13 +1,15 @@
 // Run with:  node --test "tests/*.test.mjs"
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { statCard, statPage, listAddress, initialsCrest } from '../js/stat-card.js';
+import { statCard, statPage as linkedPage, listAddress, initialsCrest } from '../js/stat-card.js';
 import { rank, PLAYER_CARDS, TEAM_CARDS, lineOf } from '../js/season-stats.js';
 
 const scorers = PLAYER_CARDS.find(c => c.id === 'scorers'), clean = TEAM_CARDS.find(c => c.id === 'tcs');
 const clubs = { RED: { code: 'RED', name: 'Redfield Lions', short_name: 'Redfield', colour: '#c8102e' }, WHT: { code: 'WHT', name: 'Whitehill Wolves', colour: '#f2f2f2' } };
 const ctx = { club: code => clubs[code], crest: (code, px) => `<crest ${code} ${px}>` };
 const player = (name, g, team = 'RED', apps = 5) => ({ name, team, g, id: name, apps });
+// A player's name is a link to his page (js/player-link.js); these tests read the page's words, so the link wrapper is taken off.
+const statPage = (...a) => linkedPage(...a).replace(/<span class="plk"[^>]*>(.*?)<\/span>/g, '$1');
 const count = (html, re) => (html.match(re) || []).length;
 
 test('three entries: three rows, the leader gets the pill in their club colour, and a link to the full list', () => {
@@ -145,4 +147,11 @@ test('a tie reads as a sentence about the stat, with some variety, and the same 
   const seen = new Set();
   for (const c of PLAYER_CARDS) { const r = rank([player('Ana', 4), player('Bea', 4)], c); if (r.length > 1 && r[0].rank === r[1].rank) seen.add(say(c, [player('Ana', 4), player('Bea', 4)]).replace(/<[^>]+>/g, '').replace(/\d+(\.\d+)?/g, '#').split(' ').slice(2, 4).join(' ')); }
   assert.ok(seen.size >= 1);
+});
+
+test('a player name opens his page; a club name does not', () => {
+  const html = linkedPage(scorers, rank([player('Ana', 5)], scorers), ctx, pageOpts);
+  assert.ok(html.includes('<span class="plk" role="link" tabindex="0" data-pid="Ana">Ana</span>'));
+  const tc = TEAM_CARDS.find(c => c.id === 'tgoals');
+  assert.ok(!linkedPage(tc, rank([{ code: 'RED', p: 2, gf: 4 }], tc), ctx, { kind: 'team', title: 'Team stats', cards: TEAM_CARDS }).includes('plk'));
 });

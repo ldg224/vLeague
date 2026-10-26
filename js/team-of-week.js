@@ -12,6 +12,7 @@
 //         face?(playerId, club code, px) -> the player's portrait html ('' until the players have loaded) }
 // opts = { week (default: the latest round with a match), labelOf(week) -> 'Round 7', hiddenCount (results left out, with a "Show all" line) }
 import { lineOf } from './season-stats.js';
+import { plink } from './player-link.js';
 
 export const SHAPE = [['FWD', 3], ['MID', 3], ['DEF', 4], ['GK', 1]];   // top of the pitch first
 
@@ -58,7 +59,7 @@ function player(p, isStar, ctx) {
   const num = ctx.number?.(p.id), pic = ctx.face?.(p.id, p.team, 52);
   return `<li class="tw-p${ctx.mine === p.team ? ' is-mine' : ''}">`
     + `<span class="tw-av${pic ? ' has-face' : ''}">${pic ? `${pic}<span class="tw-cr">${ctx.crest(p.team, 18)}</span>` : ctx.crest(p.team, 44)}<b class="tw-r is-${isStar ? 'star' : tone(p.rating)}" aria-label="Rating ${p.rating.toFixed(1)}${isStar ? ', player of the week' : ''}">${p.rating.toFixed(1)}${isStar ? STAR : ''}</b></span>`
-    + `<span class="tw-n">${num != null && num !== '' ? `<i>${esc(num)}</i> ` : ''}${esc(p.name)}</span></li>`;
+    + `<span class="tw-n">${num != null && num !== '' ? `<i>${esc(num)}</i> ` : ''}${plink(p.id, esc(p.name))}</span></li>`;
 }
 
 const PITCH = '<svg class="tw-lines" viewBox="0 0 300 360" preserveAspectRatio="none" aria-hidden="true" focusable="false">'

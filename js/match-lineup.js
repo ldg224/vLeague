@@ -18,6 +18,7 @@ import { esc } from './member.js';
 import { icon } from './icons.js';
 import { goalMark, assistMark, captainMark } from './match-marks.js';
 import { portrait } from './portrait.js';
+import { plink } from './player-link.js';
 
 const image = url => new Promise(res => { if (!url) return res(null); const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
 const filled = row => Boolean(row && row.lineup && Object.keys(row.lineup).length);
@@ -108,7 +109,7 @@ function players(side, L, ctx, cls, star) {
     }
     const worth = ctx.view === 'value' ? `<b class="ml-v" aria-label="Value ${esc(money(p.value))}">${esc(money(p.value))}</b>` : '';
     return `<li class="ml-p ${cls}" style="--x:${slots[slot].x.toFixed(1)};--y:${slots[slot].y.toFixed(1)}" data-id="${esc(id)}"><span class="ml-av">${face}${mark}${worth}</span>`
-      + `<span class="ml-n">${nameTag(cap, p.number, p.name)}</span></li>`;
+      + `<span class="ml-n">${plink(id, nameTag(cap, p.number, p.name))}</span></li>`;
   }).join('');
 }
 
