@@ -88,6 +88,7 @@ begin
   perform set_config('role', 'postgres', true);
   select count(*) into cnt from public.stakes_lines l join public.fixtures f5 on f5.id = l.fixture where f5.week = fx.week;
   insert into t_log(name, ok, detail) values ('a round has at most 3 stakes', cnt between 1 and 3, cnt::text);
+  insert into t_log(name, ok, detail) select 'a card says where its average comes from (own only with 2+ matches)', count(*) filter (where kind = 'player' and (usual_src is null or (usual_src = 'own') <> (usual_n >= 2))) = 0, count(*)::text from public.stakes_slate();
   insert into t_log(name, ok, detail) select 'at most 1 from a match', coalesce(max(c3), 0) <= 1, coalesce(max(c3), 0)::text from (select count(*) c3 from public.stakes_lines l join public.fixtures f6 on f6.id = l.fixture where f6.week = fx.week group by l.fixture) z;
 end $$;
 select name, ok, detail from t_log order by n;

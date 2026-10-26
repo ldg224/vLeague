@@ -60,6 +60,16 @@ export function bestCols(n, max = 4) {
   }
   return best;
 }
+// What the small line under the big number says. A player's own average only once he has two full matches; before that the number is his position's average
+// (or a fixed start), and the card says so instead of calling it his.
+const POS_PLURAL = { GK: 'Keepers', DEF: 'Defenders', MID: 'Midfielders', FWD: 'Forwards' };
+export function averageText(l) {
+  if (l.usual == null) return '';
+  const x = Number(l.usual).toFixed(1);
+  if (l.usual_src === 'position') return `${POS_PLURAL[l.pos] || 'Players'} average ${x} a match`;
+  if (l.usual_src === 'default') return 'Starting line, no matches yet';
+  return `Averages ${x} a match`;
+}
 const colourOf = (o, code) => { const c = o.club?.(code)?.colour; return /^#[0-9a-f]{6}$/i.test(c || '') ? c : '#4a6fa5'; };
 
 function stakeCard(l, st, o) {
@@ -68,7 +78,7 @@ function stakeCard(l, st, o) {
   const opp = l.team === l.home ? l.away : l.home;
   const foot = mine
     ? `<p class="st-pickline"><b class="is-${mine}">${mine === 'over' ? 'Over' : 'Under'} ${l.line}</b> · ${coins(l.my_stake)} Coins · pays <b>${coins(payout(l.my_stake, l.my_mult))}</b> <button type="button" class="st-link" data-st="take" data-line="${l.line_id}">Take back</button></p>`
-    : l.usual != null ? `<p class="st-avg">Averages ${Number(l.usual).toFixed(1)} a match</p>` : '';
+    : l.usual != null ? `<p class="st-avg">${esc(averageText(l))}</p>` : '';
   return `<article class="lg-card st-stake${mine ? ' has-pick' : ''}${open ? ' is-open' : ''}" data-line-card="${l.line_id}" style="--cc:${colourOf(o, l.team)}">
     <div class="st-top"><span class="st-pos">${POS[l.pos] || ''}</span><div class="st-photo">${face}</div>
       <em class="st-close" data-closes="${esc(l.locks_at || l.starts_at)}">${closesIn(l.locks_at || l.starts_at)}</em></div>

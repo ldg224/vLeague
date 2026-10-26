@@ -2,7 +2,7 @@
 // The Stakes tab's pure parts (MU-1): payout, the closing clock and the page's html for a few states.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { payout, closesIn, stakesView, statName, STEPS, stepsFor, stakeChips, DEFAULTS, stepGoals, defaultStakeFor, bestCols } from '../js/stakes.js';
+import { payout, closesIn, stakesView, statName, STEPS, stepsFor, stakeChips, DEFAULTS, stepGoals, defaultStakeFor, bestCols, averageText } from '../js/stakes.js';
 import { readSettings } from '../js/editor-stakes.js';
 
 const o = { crest: () => '<i class="c"></i>', name: c => c };
@@ -180,4 +180,14 @@ test('the Editor form carries the predictor payouts and the switch, and no longe
   const o3 = readSettings(f);
   assert.equal(o3.score_exact_mult, 10); assert.equal(o3.score_result_mult, 2.5); assert.equal(o3.score_all, true);
   assert.ok(!('score_per_week' in o3));
+});
+
+test('a card only calls the number the player\'s average when it is his own', () => {
+  assert.equal(averageText({ usual: 33.84, usual_src: 'own', pos: 'MID' }), 'Averages 33.8 a match');
+  assert.equal(averageText({ usual: 3.5, usual_src: 'position', pos: 'GK' }), 'Keepers average 3.5 a match');
+  assert.equal(averageText({ usual: 1.69, usual_src: 'position', pos: 'FWD' }), 'Forwards average 1.7 a match');
+  assert.equal(averageText({ usual: 32.5, usual_src: 'default', pos: 'MID' }), 'Starting line, no matches yet');
+  assert.equal(averageText({ usual: null }), '');
+  const html = stakesView(state({ slate: [{ ...line(1), usual: 3.5, usual_src: 'position', pos: 'GK' }] }), o);
+  assert.match(html, /Keepers average 3\.5 a match/); assert.doesNotMatch(html, /Averages 3\.5/);
 });
