@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.16.1 (2026-10-27)
+
+Headlines: Stakes only in the real season | Cleaner pages
+
+**Changed:** Stakes now runs only for real-season rounds. Preseason rounds get no stakes, show none and refuse picks.
+
+**Removed:** the explanatory filler lines under the Stakes wallet and in its tour, and on the match, line-up, home, suggest, draft and kit pages. Keys and interaction hints stay.
+
+Database change: 0070, already applied.
+
 ## 1.16.0 (2026-10-26)
 
 Headlines: Stakes game predictors are win, draw or win
