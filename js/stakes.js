@@ -179,7 +179,7 @@ export function stakesView(st, o) {
   return `<div class="st">
     <section class="lg-card st-wallet" data-tour="wallet">
       <div class="st-wl"><span class="st-eyebrow">${icon('coins')} Your Coins</span><b class="st-coins">${coins(st.wallet.coins)}</b>
-        <span class="st-sub">${open.length ? `${open.length} pick${open.length === 1 ? '' : 's'} riding · ${coins(riding)} Coins` : 'Nothing riding'} · Coins are for fun and bragging rights only</span></div>
+        ${open.length ? `<span class="st-sub">${open.length} pick${open.length === 1 ? '' : 's'} riding · ${coins(riding)} Coins</span>` : ''}</div>
       <button type="button" class="st-btn" data-st="help">${icon('circle-help')}<span>How it works</span></button>
     </section>
     ${note}
@@ -193,7 +193,7 @@ export function stakesView(st, o) {
 
 // ---------- the tour ----------
 export const stepsFor = (cfg, hasScore = false) => [
-  { target: '[data-tour="wallet"]', title: 'Your Coins', text: `Stakes is a game of calls on real players. You start with ${Number(cfg.start_coins).toLocaleString('en-AU')} Coins${cfg.daily_topup > 0 ? ` and get ${Number(cfg.daily_topup).toLocaleString('en-AU')} more each day` : ''}. They are for fun only: nothing to buy, nothing to lose.` },
+  { target: '[data-tour="wallet"]', title: 'Your Coins', text: `You start with ${Number(cfg.start_coins).toLocaleString('en-AU')} Coins${cfg.daily_topup > 0 ? ` and get ${Number(cfg.daily_topup).toLocaleString('en-AU')} more each day` : ''}.` },
   { target: '.st-stake', title: 'A stake', text: 'Each card is one player in one match, and the big number is the league’s line for his stat: a keeper’s saves, a midfielder’s passes, a forward’s shots on target. There are only a few each round.' },
   { target: '.st-stake .st-sides', title: 'Over or under', text: 'Think he’ll do more than the line? Tap blue OVER. Fewer? Tap red UNDER. Lines end in .5, so there is always a winner.', pick: true },
   ...(hasScore ? [{ target: '.st-predict', title: 'Game predictors', text: `Below the cards, every game has a predictor: who wins? Tap Team A win, Draw or Team B win, tap the Stake pill to change your stake, then Lock in. A right win pays ${Number(cfg.result_win_mult)} times your stake and a right draw pays ${Number(cfg.result_draw_mult)} times.` }] : []),
