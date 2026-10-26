@@ -3,6 +3,20 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.14.0 (2026-10-26)
+
+Headlines: Stakes redesigned | Guess the score
+
+**Changed (MU-1):** Stakes is now a set of cards, at most 8 a round (set in Editor > Stakes). Each is its own card: the player's portrait on his club's colour, his match, the line in big type and how much he usually does, then a big red UNDER on the left and a blue OVER on the right. The stakes are the most valuable starters across the whole round, with at most 2 from one match. Every card is the same height and the grid fills every row, so nothing sits alone underneath; the stake chooser slides over the card instead of making it grow.
+
+**Added (MU-1):** guess-the-score stakes. Some of a round's stakes (2 by default) are a match drawn at random where you predict the final score, with a + and a - under each team's score (hold to run). The exact score pays 8 times your stake and the right result with the wrong score pays 2 times; both are settings.
+
+**Changed (MU-1):** the Stakes intro no longer shows a tagline.
+
+**Fixed (MU-1):** a stake smaller than 10 Coins was refused even when the smallest stake was set lower.
+
+Database changes: 0064 (stakes per round) and 0065 (score predictions), already applied.
+
 ## 1.13.2 (2026-10-26)
 
 Headlines: Stakes intro fix
