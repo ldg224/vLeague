@@ -81,7 +81,7 @@ export function voteHtml(d) {
     + `<div class="gv-screen"></div><div class="gv-now" aria-live="polite"></div></section></div>`
     + `<aside class="lg-side"><section class="lg-card gv-ballot" aria-label="Ballot"><div class="lg-card-head"><h2>The ${list.length} goals</h2></div>`
     + `${hid ? `<p class="tb-hidden">${hid} of these goals ${hid === 1 ? 'is' : 'are'} from a hidden result. <button type="button" data-reveal-all>Show all</button></p>` : ''}`
-    + `<ul class="gv-list">${rows}</ul><p class="gwc-note gv-note">${mine ? 'Tap a goal to watch its 5 seconds. You can’t vote for your own club’s goal. The tally shows when voting ends.' : 'Tap a goal to watch its 5 seconds.'}</p></section></aside></div>`;
+    + `<ul class="gv-list">${rows}</ul></section></aside></div>`;
 }
 
 export const nowLine = (m, esc, name) => `<b>${esc(m.scorerName)}</b><span>${fixtureLine(m, esc, name)}</span><small>${esc(describe(m))}</small>`;

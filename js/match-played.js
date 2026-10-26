@@ -108,7 +108,7 @@ export function playedCard(fx, L, ctx) {
     ${pills}
     <div class="ml-pitch" role="group" aria-label="Line-ups as played, on a pitch">${PITCH_H}${PITCH_V}<ul class="ml-xi">${S.home.html}${S.away.html}</ul></div>
     <div class="ml-coaches">${coach('home', ctx)}<b>Coach</b>${coach('away', ctx)}</div>
-    <div class="pl-subs"><h3>Substitutes</h3><p class="pl-note">Nobody is substituted in this league, so the bench stays unused.</p>
+    <div class="pl-subs"><h3>Substitutes</h3>
       <div class="pl-cols">${bench('home', S, ctx, fx, out)}${bench('away', S, ctx, fx, out)}</div></div>
   </section>`;
 }

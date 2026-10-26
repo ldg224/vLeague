@@ -43,7 +43,6 @@ async function pop(code) {
   d.innerHTML = `<div class="lu-silk" aria-hidden="true"></div>
     <h2 id="lu-t">Line-ups due shortly</h2>
     <p class="lu-time">Locks in <b>${left(lock - Date.now())}</b></p>
-    <p class="lu-note">Pick your XI before the deadline, or the engine picks for you.</p>
     <div class="lu-acts"><a class="lu-go" href="club.html">Pick your XI</a><button type="button" class="lu-later">Later</button></div>`;
   document.body.append(d);
   d.addEventListener('close', () => d.remove());

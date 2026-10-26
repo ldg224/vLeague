@@ -95,6 +95,5 @@ export function heatMap(m) {
   const third = [0, 1, 2].map(k => m.grid.reduce((a, v, i) => a + ((i % GW) * cw + cw / 2 >= (k * PW) / 3 && (i % GW) * cw + cw / 2 < ((k + 1) * PW) / 3 ? v : 0), 0) / tot);
   const mark = `<circle cx="${ax.toFixed(1)}" cy="${ay.toFixed(1)}" r="2.2" class="pm-avgpos" data-tip="Average position"/>`;
   return `${pitchSvg({ under: blobs, body: tips + mark, label: 'Where he spent his time on the pitch' })}
-    <div class="pm-key pm-scale"><span>Less time</span><i class="pm-heat" style="background:${SCALE}"></i><span>More time</span><span><i class="pm-avgpos"></i>Average position</span></div>
-    <p class="pp-note">Average position ${Math.round(ax)} m from his own goal, ${Math.round(ay)} m across. Time by third: ${Math.round(third[0] * 100)}% in his own, ${Math.round(third[1] * 100)}% in the middle, ${Math.round(third[2] * 100)}% in the attacking third. From his position five times a second over ${m.minutes} minutes.</p>`;
+    <div class="pm-key pm-scale"><span>Less time</span><i class="pm-heat" style="background:${SCALE}"></i><span>More time</span><span><i class="pm-avgpos"></i>Average position</span></div>`;
 }

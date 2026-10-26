@@ -90,7 +90,7 @@ export function renderPlayerInto(root, { season, rows }, id) {
   const why = row && row.apps < MIN_MATCHES ? `${esc(p.name)} needs ${MIN_MATCHES} matches (has ${row.apps})` : `${MIN_PEERS} ${esc(compare.word)} need ${MIN_MATCHES}+ matches (${compare.seasoned} so far)`;
   const how = !compare.eligible
     ? `<p class="pp-note">${compare.provisional ? `<b>Provisional.</b> Classes (dashed) are a first guess from ${row.apps} match${row.apps === 1 ? '' : 'es'}, against ${compare.n} ${esc(compare.word)} with ${v.minMinutes}+ minutes. They settle once ${why}.` : `The bars show the league average for ${esc(compare.word)} (${compare.n} with ${v.minMinutes}+ minutes). Classes appear once ${why}.`}</p>`
-    : `<p class="pp-note">Compared with ${compare.seasoned} ${esc(compare.word)} who have played ${MIN_MATCHES}+ matches, per 90. Elite is the top 10%, Great the next 20%, Average the middle 40%, Below average the next 20%, Poor the last 10%. Where less is better (conceded, fouls, cards) it is turned round.</p>`;
+    : '';
   const statRow = r => {
     const bar = r.fill != null ? `<span class="pp-bar${r.low ? ' is-low' : ''}" role="img" aria-label="${esc(r.label)}: ${esc(r.per90 ?? r.total)}, league average ${esc(r.avg)}"><i style="width:${r.fill}%"></i><u style="left:${r.tick}%"></u></span>` : '<span class="pp-bar none"></span>';
     return `<li class="pp-stat${r.cls ? ` has-cls is-${r.cls}` : ''}"><span class="pp-sl">${esc(r.label)}</span>
@@ -125,9 +125,9 @@ export function renderPlayerInto(root, { season, rows }, id) {
     if (mp.status === 'loading') return `<p class="pp-note" role="status">Reading match files… ${mp.done} of ${mp.total}. Each is about 2 MB, so this takes a moment the first time.</p>`;
     if (mp.status === 'none') return '<p class="pp-note">Maps are drawn from the saved match files, and none are available for these matches.</p>';
     if (mp.status === 'error') return '<p class="pp-note">The match files could not be read. Check your connection and scroll away and back to try again.</p>';
-    if (!mp.data) return '<p class="pp-note">The maps load as you scroll to them.</p>';
+    if (!mp.data) return '';
     const pills = `<nav class="sc-toggle pc-pills" aria-label="Map">${MAPS.map(([k, label]) => `<button type="button" class="pc-pill" data-pcmap="${k}" aria-pressed="${k === mp.pick}">${label}</button>`).join('')}</nav>`;
-    return `${pills}${MAPS.find(x => x[0] === mp.pick)[2](mp.data)}<p class="pp-note">${mp.data.matches === 1 ? 'One match' : `All ${mp.data.matches} matches`} added up, in a shared direction of play.</p>`;
+    return `${pills}${MAPS.find(x => x[0] === mp.pick)[2](mp.data)}`;
   };
   const drawPanel = () => { const el = root.querySelector('#pc-panel'); if (el) el.innerHTML = mapsHtml(); };
   const loadMaps = async () => {

@@ -226,8 +226,7 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
       return `<section class="lg-card dr-autobox">${head}<form id="auto" class="dr-auto" novalidate>
           <fieldset><legend>What to pick</legend>${radios('how', HOW, how)}</fieldset>
           <fieldset><legend>When</legend>${radios('mode', MODES, mode)}</fieldset>
-          <label class="dr-min"${mode === 'after_minutes' ? '' : ' hidden'}><span>Minutes into my turn${max ? ` (1 to ${max})` : ''}</span><input type="number" name="minutes" min="1"${max ? ` max="${max}"` : ''} value="${esc(minutes ?? '')}"></label>
-          <p class="dr-note">Saves as you change it. The office can change it too.</p></form></section>`;
+          <label class="dr-min"${mode === 'after_minutes' ? '' : ' hidden'}><span>Minutes into my turn${max ? ` (1 to ${max})` : ''}</span><input type="number" name="minutes" min="1"${max ? ` max="${max}"` : ''} value="${esc(minutes ?? '')}"></label></form></section>`;
     }
     function playersTab(autoOpen) {
       const q = new Set(st.queue);

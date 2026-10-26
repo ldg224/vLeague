@@ -104,7 +104,7 @@ function reveal(s, code, now) {
   const side = c => {
     const row = sheetOf(c);
     return `<figure class="hm-xi${c === code ? ' us' : ''}" data-club="${esc(c)}"><figcaption>${crest(c, 'hm-mini')}<b>${esc(nameOf(c))}</b></figcaption>
-      ${row ? '<div class="hm-pitch"></div>' : '<p class="hm-sub">No team sheet. The engine picks the team.</p>'}</figure>`;
+      ${row ? '<div class="hm-pitch"></div>' : ''}</figure>`;
   };
   return `<section class="hm-card hm-reveal"><h2>Team sheets <span>${esc(fx.round || `Week ${fx.week}`)}</span></h2>
       <div class="hm-xis">${side(fx.home)}${side(fx.away)}</div></section>`;

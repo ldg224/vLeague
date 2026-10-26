@@ -285,8 +285,7 @@ async function run(init) {
       <div class="kt-row"><button type="button" class="kt-btn" data-template="guide">Download template</button><button type="button" class="kt-btn quiet" data-template="kit">Download this kit as a start</button></div>
       ${has ? `${artBlob ? '<p class="kt-pill wait">New design. Save to put it live.</p>' : st ? `<p class="kt-pill ${st[0]}">${esc(st[1])}</p>` : ''}
         <div class="kt-row"><label class="kt-btn kt-file">Replace design<input type="file" accept="image/png,image/jpeg,image/webp" data-art hidden></label>${k.design.pattern !== 'custom' ? '<button type="button" class="kt-btn" data-pattern="custom">Wear my design</button>' : ''}<button type="button" class="kt-btn quiet" data-art-clear>Remove design</button></div>`
-      : '<label class="kt-drop" data-drop="art"><input type="file" accept="image/png,image/jpeg,image/webp" data-art hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V5m0 0-4 4m4-4 4 4M5 19h14"/></svg><b>Upload your design</b><span>Tap to choose it, or drop it here.</span></label>'}
-      <p class="kt-note">The crest, logo and print are still added on top (turn them off in Logo and Text). It goes live for everyone when you save.</p></section>`;
+      : '<label class="kt-drop" data-drop="art"><input type="file" accept="image/png,image/jpeg,image/webp" data-art hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V5m0 0-4 4m4-4 4 4M5 19h14"/></svg><b>Upload your design</b><span>Tap to choose it, or drop it here.</span></label>'}</section>`;
   }
 
   function panelHtml() {
@@ -300,7 +299,6 @@ async function run(init) {
       const clubCols = [club.colour, club.colour2].filter(isHex).map(h => h.toLowerCase());
       return `<h2 class="kt-h">Colours</h2>
         <div class="kt-roles" role="radiogroup" aria-label="Which colour to change">${COLOUR_ROLES.map(([n, hint], i) => `<button type="button" role="radio" class="kt-role${i === colourSlot ? ' on' : ''}${i === 1 && d.pattern === 'plain' ? ' idle' : ''}" data-role="${i}" aria-checked="${i === colourSlot}" style="--c:${d.colours[i]}"><i></i><span><b>${n}</b><small>${esc(i === 1 && d.pattern === 'plain' ? 'Not used by Plain' : d.colours[i].toUpperCase())}</small></span></button>`).join('')}</div>
-        ${used ? '' : '<p class="kt-note">Plain doesn’t use a second colour. Pick a pattern in Style to see it.</p>'}
         <p class="kt-sub">${esc(COLOUR_ROLES[colourSlot][0])} colour <span>${esc(COLOUR_ROLES[colourSlot][1])}</span></p>
         <div class="kt-palette">${clubCols.map(h => swatch(h, 'Club colour ' + h, h === cur, `data-colour="${h}"`)).join('')}${clubCols.length ? '<i class="kt-sep"></i>' : ''}${PALETTE.map(([h, n]) => swatch(h, n, h === cur, `data-colour="${h}"`)).join('')}</div>
         <div class="kt-custom"><label class="kt-pick"><span>Any colour</span><input type="color" data-colour-input value="${esc(cur)}"></label><label class="kt-hex"><span>Hex</span><input type="text" data-hex value="${esc(cur.toUpperCase())}" maxlength="7" spellcheck="false" autocapitalize="off" autocomplete="off"></label><button type="button" class="kt-btn" data-swap>Swap Main and Second</button></div>
@@ -311,8 +309,7 @@ async function run(init) {
       <label class="kt-field"><span>Kit name</span><input type="text" data-kitname maxlength="24" value="${esc(d.name)}" placeholder="${esc(kitName(slot, null))}" autocomplete="off"><small>How this kit is listed when your team picks what to wear.</small></label>
       <div class="kt-two"><label class="kt-field"><span>Back name</span><input type="text" data-text="name" maxlength="14" value="${esc(d.text.name)}" placeholder="Optional" autocomplete="off" autocapitalize="characters"></label>
       <label class="kt-field"><span>Number</span><input type="text" inputmode="numeric" pattern="[0-9]*" data-text="number" maxlength="2" value="${esc(d.text.number)}" placeholder="Optional" autocomplete="off"></label></div>
-      <p class="kt-sub">Print colour</p><div class="kt-ink">${INK.map(([h, n]) => `<button type="button" class="kt-chipbtn${(d.text.colour || '') === h ? ' on' : ''}" data-ink="${h}" aria-pressed="${(d.text.colour || '') === h}">${h ? `<i style="background:${h}"></i>` : ''}${n}</button>`).join('')}</div>
-      <p class="kt-note">Turn the player round with Back to see the print. In matches each player’s own shirt number is used, in this print colour.</p>`;
+      <p class="kt-sub">Print colour</p><div class="kt-ink">${INK.map(([h, n]) => `<button type="button" class="kt-chipbtn${(d.text.colour || '') === h ? ' on' : ''}" data-ink="${h}" aria-pressed="${(d.text.colour || '') === h}">${h ? `<i style="background:${h}"></i>` : ''}${n}</button>`).join('')}</div>`;
     // logo
     const st = STATUS[k.logo_status], has = !!(k.logo_path || logoPreview);
     return `<h2 class="kt-h">Logo and crest</h2>

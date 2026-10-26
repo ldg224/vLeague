@@ -12,7 +12,6 @@ import { status, liveState, liveMinute } from './dashboard-data.js';
 import { esc } from './member.js';
 import { icon } from './icons.js';
 
-const BASIS = { 'line-ups': 'From the locked line-ups', squads: 'From the squads', results: 'From the season’s results' };
 
 export function chanceCard(season, fx, ctx) {
   const st = ctx.st ?? status(fx, season, ctx.now), name = code => ctx.club(code)?.short_name || ctx.club(code)?.name || ctx.team(code).name;
@@ -51,8 +50,7 @@ export function chanceCard(season, fx, ctx) {
       <div class="mw-cell mw-draw${!fav ? ' is-fav' : ''}"><i>X</i><b>${d}%</b></div>
       <div class="mw-cell${fav === 'away' ? ' is-fav' : ''}" ${tone(fx.away)}>${crest(fx.away)}<b>${a}%</b></div>
     </div>
-    <span class="mw-bar" aria-hidden="true"><i style="width:${h}%;background:${esc(ctx.accent(fx.home) || 'var(--blue-500)')}"></i><i class="is-d" style="width:${d}%"></i><i style="width:${a}%;background:${esc(ctx.accent(fx.away) || 'var(--blue-500)')}"></i></span>
-    <p class="mw-note">${esc(BASIS[p.basis] || BASIS.results)}${live ? ', moving with the score' : ''}</p></section>`;
+    <span class="mw-bar" aria-hidden="true"><i style="width:${h}%;background:${esc(ctx.accent(fx.home) || 'var(--blue-500)')}"></i><i class="is-d" style="width:${d}%"></i><i style="width:${a}%;background:${esc(ctx.accent(fx.away) || 'var(--blue-500)')}"></i></span></section>`;
 }
 
 export function venueCard(fx, ctx) {

@@ -5,7 +5,6 @@ import { myProfile, db } from './auth.js';
 
 const FORM = `<form method="dialog" class="sg-form" novalidate>
   <h2>Suggest changes</h2>
-  <p class="sg-sub">Found something wrong, or have an idea? It goes straight to the league's to-do board.</p>
   <fieldset class="sg-kind"><legend class="sg-lbl">What is it?</legend>
     <label><input type="radio" name="kind" value="issue" checked><span>Issue</span></label>
     <label><input type="radio" name="kind" value="suggestion"><span>Suggestion</span></label>
