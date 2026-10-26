@@ -1,14 +1,5 @@
 /* Charts on the player page (js/player-charts.js): the colour-coded profile bars and two simple maps, him in vLeague blue. */
-.pc-tabs, .pc-pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
-.pc-pills { margin: 4px 0 10px; }
-.pc-tabs button, .pc-pill {
-  min-height: 36px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--text);
-  font: 600 var(--fs-s) var(--font); cursor: pointer;
-}
-.pc-pill { min-height: 32px; padding: 0 12px; }
-.pc-tabs button[aria-pressed="true"], .pc-pill[aria-pressed="true"] { background: var(--text-strong); border-color: var(--text-strong); color: var(--bg); font-weight: 700; }
-@media (hover: hover) { .pc-tabs button:not([aria-pressed="true"]):hover, .pc-pill:not([aria-pressed="true"]):hover { background: var(--surface-hover); } }
-.pc-tabs button:focus-visible, .pc-pill:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pc-tabs, .pc-pills { margin: 0 0 14px; flex-wrap: wrap; }   /* the buttons are the shared .sc-toggle (css/stat-card.css) */
 .pc-panel > * + * { margin-top: 10px; }
 
 /* percentile profile */
@@ -19,13 +10,12 @@
 .pc-prow { min-height: 34px; font: 400 var(--fs-s) var(--font); }
 .pc-prow:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .pc-pl { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pc-track { position: relative; height: 10px; border-radius: 999px; background: var(--surface-sunk); border: 1px solid var(--line); }
-.pc-track i { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--muted); }
-.pc-track u { position: absolute; top: -3px; bottom: -3px; left: 50%; width: 1px; background: var(--faint); }
-.pc-prow.is-elite .pc-track i { background: var(--brand-grad); }
-.pc-prow.is-great .pc-track i { background: var(--res-w); }
-.pc-prow.is-below .pc-track i { background: var(--amber); }
-.pc-prow.is-poor .pc-track i { background: var(--res-l); }
+.pc-prow { --k: var(--k-avg, #7f96b2); }
+.pc-prow.is-elite { --k: var(--k-elite, #42a5f5); } .pc-prow.is-great { --k: var(--k-great, #2fc08f); } .pc-prow.is-below { --k: var(--k-below, #f3ad45); } .pc-prow.is-poor { --k: var(--k-poor, #f06f67); }
+.pc-track { position: relative; height: 10px; border-radius: 999px; background: color-mix(in oklab, var(--text) 9%, transparent); }
+.pc-track i { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: linear-gradient(90deg, color-mix(in oklab, var(--k) 45%, transparent), var(--k)); }
+.pc-track u { position: absolute; top: -3px; bottom: -3px; left: 50%; width: 1px; background: color-mix(in oklab, var(--text) 35%, transparent); }
+.pc-prow.is-elite .pc-pv::before { content: "★"; margin-right: 4px; color: var(--k); }
 .pc-pv { text-align: right; font: 700 var(--fs-s) var(--font); color: var(--text-strong); font-variant-numeric: tabular-nums; }
 .pc-pp { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
 .pc-prov { margin: 0 0 10px; color: var(--amber-text); }
@@ -50,8 +40,8 @@
 /* ---- maps (js/player-maps.js): shots and where he plays ---- */
 .pm-svg { display: block; width: 100%; max-width: 760px; height: auto; border-radius: var(--r-sm); }
 .pm-svg.is-half { max-width: 440px; }
-.pm-turf { fill: var(--surface-sunk); }
-.pm-line { fill: none; stroke: var(--faint); stroke-width: .35; }
+.pm-turf { fill: color-mix(in oklab, var(--surface-sunk) 82%, #2f9d62); }
+.pm-line { fill: none; stroke: color-mix(in oklab, var(--text) 38%, transparent); stroke-width: .35; }
 .pm-goal { fill: var(--faint); }
 .pm-spot { fill: var(--faint); }
 .pm-shot { stroke-width: .5; cursor: default; }
@@ -71,5 +61,5 @@ i.pm-heat { display: inline-block; width: 38px; height: 10px; border-radius: 3px
 
 .pc-leg { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0 0 10px; font: 400 var(--fs-s) var(--font); color: var(--muted); }
 .pc-leg span { display: inline-flex; align-items: center; gap: 6px; }
-.pc-leg i { width: 14px; height: 8px; border-radius: 999px; background: var(--muted); }
-.pc-leg .is-elite i { background: var(--brand-grad); } .pc-leg .is-great i { background: var(--res-w); } .pc-leg .is-below i { background: var(--amber); } .pc-leg .is-poor i { background: var(--res-l); }
+.pc-leg i { width: 16px; height: 8px; border-radius: 999px; background: var(--k-avg, #7f96b2); }
+.pc-leg .is-elite i { background: var(--k-elite, #42a5f5); } .pc-leg .is-great i { background: var(--k-great, #2fc08f); } .pc-leg .is-below i { background: var(--k-below, #f3ad45); } .pc-leg .is-poor i { background: var(--k-poor, #f06f67); }

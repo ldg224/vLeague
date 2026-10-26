@@ -5,7 +5,7 @@
 // The numbers come from js/player-stats.js, which reads the season's saved results; results the viewer has not opened stay out (spoiler-free).
 import { chrome, esc, clubs, safeColour, crestUrl } from './member.js';
 import { currentUser, myProfile } from './auth.js';
-import { paintClub, startSilk } from './shell.js';
+import { paintClub, startSilk, styleCards } from './shell.js';
 import { mountSubFrame } from './frame.js';
 import { loadSeason, matchUrl, kickoff } from './dashboard-data.js';
 import { crest, teamOf, useClubs, rating } from './places.js';
@@ -75,15 +75,21 @@ function render(season, rows, mine) {
   document.title = `${p.name} | vLeague`;
   const avg = averageRating(row);
 
+  const sur = p.name.trim().split(/\s+/).slice(-1)[0];
   const head = `<header class="lg-card pp-head">
-    <div class="pp-pic">${portrait(p, club, 112, true)}</div>
+    <span class="pp-ghost" aria-hidden="true">${esc(sur)}</span>
     <div class="pp-id">
-      <h1 class="pp-name" tabindex="-1">${esc(p.name)}</h1>
-      <p class="pp-sub">${club ? `<a class="pp-club" href="team.html?c=${esc(club.code)}">${crest(club, 20)}<span>${esc(club.name)}</span></a>` : '<span>Free agent</span>'}
-        <span class="pp-dot">·</span><span>${POS_WORD[p.position] || esc(p.position)}</span>${p.number != null && p.number !== '' ? `<span class="pp-dot">·</span><span>No. ${esc(p.number)}</span>` : ''}</p>
+      <div class="pp-pic">${portrait(p, club, 112, true)}</div>
+      <div class="pp-titles">
+        <h1 class="pp-name" tabindex="-1">${esc(p.name)}</h1>
+        <p class="pp-sub">${club ? `<a class="pp-club" href="team.html?c=${esc(club.code)}">${crest(club, 20)}<span>${esc(club.name)}</span></a>` : '<span>Free agent</span>'}</p>
+        <p class="pp-facts"><span>${POS_WORD[p.position] || esc(p.position)}</span>${p.number != null && p.number !== '' ? `<span>No. ${esc(p.number)}</span>` : ''}${p.value != null ? `<span>${money(p.value)}</span>` : ''}</p>
+      </div>
+      <div class="pp-now">
+        ${avg != null ? `<p class="pp-avg"><span>Average rating</span>${rating(avg)}</p>` : ''}
+        ${log.length > 1 ? `<div class="pp-form"><span>Form</span><div>${log.slice(-5).map(l => (l.rating != null ? rating(l.rating) : '')).join('')}</div></div>` : ''}
+      </div>
     </div>
-    ${avg != null ? `<div class="pp-avg"><span>Average rating</span>${rating(avg)}</div>` : ''}
-    ${log.length > 1 ? `<div class="pp-form"><span>Form</span><div>${log.slice(-5).map(l => (l.rating != null ? rating(l.rating) : '')).join('')}</div></div>` : ''}
   </header>`;
 
   const CLS = Object.fromEntries(CLASSES.map(([k, label]) => [k, label]));
@@ -117,7 +123,7 @@ function render(season, rows, mine) {
       return `<li><a class="pp-m" href="${esc(matchUrl(l.fx))}">
         <span class="pp-when">${k ? dayFmt.format(k) : ''}<small>${esc(l.fx.round || '')}</small></span>
         <span class="pp-opp">${crest(opp, 20)}<b>${esc(l.home ? '' : 'at ')}${esc(opp.short_name || opp.name)}</b><small>${bits.join(' · ') || `${s.min || 0} min`}</small></span>
-        <span class="pp-res ${l.res}"><b>${l.res}</b> ${l.gf}–${l.ga}</span>
+        <span class="pp-res"><b class="pp-chip ${l.res}">${l.res}</b><i>${l.gf}–${l.ga}</i></span>
         ${l.rating != null ? rating(l.rating) : '<span></span>'}</a></li>`;
     }).join('')}</ul></section>` : '';
 
@@ -155,7 +161,7 @@ function render(season, rows, mine) {
     if (mp.status === 'none') return '<p class="pp-note">Maps are drawn from the saved match files, and none are available for these matches.</p>';
     if (mp.status === 'error') return '<p class="pp-note">The match files could not be read. Check your connection and open this tab again.</p>';
     if (!mp.data) return '';
-    const pills = `<div class="pc-pills" role="group" aria-label="Map">${MAPS.map(([k, label]) => `<button type="button" class="pc-pill" data-pcmap="${k}" aria-pressed="${k === mp.pick}">${label}</button>`).join('')}</div>`;
+    const pills = `<nav class="sc-toggle pc-pills" aria-label="Map">${MAPS.map(([k, label]) => `<button type="button" class="pc-pill" data-pcmap="${k}" aria-pressed="${k === mp.pick}">${label}</button>`).join('')}</nav>`;
     return `${pills}${MAPS.find(x => x[0] === mp.pick)[2](mp.data)}<p class="pp-note">${mp.data.matches === 1 ? 'One match' : `All ${mp.data.matches} matches`} added up, in a shared direction of play.</p>`;
   };
   // The newest 12 matches with a saved file, read one at a time (the files are big) the first time the tab opens.
@@ -177,7 +183,7 @@ function render(season, rows, mine) {
     ['maps', 'Maps', mapsHtml],
   ];
   const chartsCard = row ? `<section class="lg-card pp-charts"><div class="lg-card-head"><h2>Charts</h2></div>
-    <nav class="pc-tabs" aria-label="Charts">${PANELS.map(([k, label]) => `<button type="button" data-pctab="${k}" aria-pressed="${k === st.tab}">${esc(label)}</button>`).join('')}</nav>
+    <nav class="sc-toggle pc-tabs" aria-label="Charts">${PANELS.map(([k, label]) => `<button type="button" data-pctab="${k}" aria-pressed="${k === st.tab}">${esc(label)}</button>`).join('')}</nav>
     <div class="pc-panel" id="pc-panel">${PANELS.find(x => x[0] === st.tab)[2]()}</div></section>` : '';
 
   main.innerHTML = `<article class="pp" style="--club:${c1};--club-accent-dark:${accentFor(c1, 'dark')};--club-accent-light:${accentFor(c1, 'light')};--on-club:${onColour(c1)}">
@@ -200,6 +206,7 @@ function render(season, rows, mine) {
     main.querySelector(`[data-pcmap="${mp.pick}"][aria-pressed="true"]`)?.focus({ preventScroll: true });
   });
   wireTips(main);
+  styleCards();
   if (st.tab === 'maps') loadMaps();
 }
 
