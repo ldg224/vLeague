@@ -9,10 +9,11 @@
 .pm-line { fill: none; stroke: color-mix(in oklab, var(--text) 38%, transparent); stroke-width: .35; }
 .pm-goal { fill: var(--faint); }
 .pm-spot { fill: var(--faint); }
-.pm-cell { fill: var(--brand); fill-opacity: var(--a); }
 .pm-avgpos { fill: var(--surface); stroke: var(--text-strong); stroke-width: .8; }
 i.pm-avgpos { display: inline-block; width: 11px; height: 11px; border-radius: 50%; box-sizing: border-box; border: 2px solid var(--text-strong); background: var(--surface); margin-right: 6px; vertical-align: -1px; }
-i.pm-heat { display: inline-block; width: 38px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: linear-gradient(90deg, color-mix(in oklab, var(--brand) 12%, transparent), var(--brand)); }
+i.pm-heat { display: inline-block; width: 150px; height: 10px; border-radius: 999px; margin: 0 8px; }
+.pm-hit { fill: transparent; }
+.pm-scale { align-items: center; }
 .pm-key { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 0; font: 400 var(--fs-s) var(--font); color: var(--muted); }
 .pm-key span { display: inline-flex; align-items: center; }
 .pm-svg g:focus-visible, .pm-svg circle:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
