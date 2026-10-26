@@ -3,8 +3,10 @@ grant all on t_log to authenticated; grant usage on sequence t_log_n_seq to auth
 do $$
 declare u uuid; fx record; w int; lines int; pk bigint; bal int; r record;
 begin
+  update public.stakes_settings set visible = true;
   select id into u from public.profiles where role='manager' limit 1;
   select * into fx from public.fixtures where starts_at > now() and not postponed and starts_at < now()+interval '60 days' order by starts_at limit 1;
+  delete from public.stakes_lines where fixture = fx.id;   -- live lines may already exist for this match
   -- fake submitted sheets for both clubs: first 11 players of each club
   insert into public.submitted_sheets (club, week, sheet)
   select c, fx.week, jsonb_build_object('formation','4-4-2','lineup',

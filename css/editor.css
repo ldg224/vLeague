@@ -575,3 +575,12 @@
 .fx-plan-in input { width: 5em; }
 .fx-plan-q { margin: 12px 0 4px; font-size: var(--fs-l); }
 .fx-plan ul { margin: 0 0 10px; padding-left: 18px; color: var(--muted); font-size: var(--fs-s); }
+
+/* Editor > Stakes (js/editor-stakes.js) */
+.sk-form { display: grid; gap: 16px; margin-top: 16px; }
+.sk-form .ed-invite h2, .sk-danger h2 { margin: 0 0 8px; }
+.sk-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; margin: 8px 0; }
+.sk-danger { margin-top: 16px; }
+.sk-reset { align-items: end; grid-template-columns: minmax(180px, 1fr) auto; }
+.sk-form .ed-fields { align-items: end; }
+.sk-form + .sk-danger, .dr-vis + .dr-vis { margin-top: 12px; }

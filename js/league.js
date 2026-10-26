@@ -426,7 +426,7 @@ if (ctx) {
   wireStatPage(main, { go });
   const draftNow = await openDraft().catch(() => null);
   frameApi = mountFrame(document.getElementById('frame'), {
-    office, stakes: Boolean(ctx.me?.user && !preview),
+    office, stakes: false,   // switched on below once the office's setting is read
     draft: Boolean(draftNow), draftLive: Boolean(draftNow) && draftPhase(draftNow) === 'live',
     crest: preview ? params.get('crest') || '' : ctx.club?.crest_path ? crestUrl(ctx.club.crest_path) : '',
     // Each view gets the season picked in the header (WR-05); they all show the current one until a past season exists.
@@ -440,5 +440,7 @@ if (ctx) {
       main.querySelector('.sp-back')?.addEventListener('click', e => { if (moved) { e.preventDefault(); history.back(); } });
     },
   });
+  // The Stakes tab: shown when the office has made it visible (Editor > Stakes); the office itself always sees it.
+  if (!preview && ctx.me?.user) db().then(c => c.from('stakes_settings').select('visible').eq('id', 1).maybeSingle()).then(r => { if (office || r.data?.visible) frameApi.setStakes(true); }).catch(() => {});
   if (!preview) watchLineupDue(ctx.club?.code);
 }

@@ -4,10 +4,10 @@
 //   mountFrame(el, { office, draft, crest, onTab }) -> draws the frame into el and calls onTab(id, season, sub) now, on every tab
 //                                                 change and when another season is picked (WR-05). A tab address can carry
 //                                                 a part after a slash, league.html#stats/scorers: that is `sub` (WR-10)
-//   stakes: the Stakes tab (MU-1) shows for signed-in managers, filled in so it stands out (css/stakes.css);
+//   stakes: the Stakes tab (MU-1) shows when true (the page reads the office's switch, stakes_settings.visible, then calls setStakes), filled in so it stands out (css/stakes.css);
 //   draft / draftLive: the Draft tab shows only while a draft is visible (draft), with a Live marker while picks are being made (draftLive);
 //   vote / voteDue: the Vote tab shows only while voting is open (vote), its dot flashing while this manager has not voted (voteDue);
-//   mountFrame returns { setDraft({ visible, live }), setVote({ visible, due }), setBadge(tabId, n) }: a small count on a tab (the News tab's unread posts); 0 or less removes it
+//   mountFrame returns { setDraft({ visible, live }), setVote({ visible, due }), setStakes(visible), setBadge(tabId, n) }: a small count on a tab (the News tab's unread posts); 0 or less removes it
 //   mountSubFrame(el, { office, crest, here, title }) -> the same header card for the pages behind the header buttons (My club, Settings, Kits):
 //                                                 the Club or Settings button is the current one (here: 'club' | 'settings'), and a row with a way back to
 //                                                 the league replaces the tabs
@@ -203,7 +203,13 @@ export function mountFrame(el, { office = false, draft = false, draftLive = fals
     }
     relayout();
   };
-  return { setBadge, setDraft, setVote };
+  // The Stakes tab is there while the office has switched it on (Editor > Stakes); the office always sees it.
+  const setStakes = visible => {
+    if (on.stakes === visible) return;
+    on = { ...on, stakes: visible };
+    rebuild();
+  };
+  return { setBadge, setDraft, setVote, setStakes };
 }
 
 // The pages behind the header buttons (WR-26): the same header card as the league page, with the page's name where the season pill sits and a back link to

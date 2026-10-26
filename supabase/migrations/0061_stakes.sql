@@ -167,7 +167,8 @@ end $$;
 revoke all on function public.stakes_make_lines(text) from public, anon, authenticated;
 
 -- Everything the Stakes tab shows: the open lines for matches starting in the next 7 days (made on demand), each with the caller's pick.
-create or replace function public.stakes_slate() returns table (
+drop function if exists public.stakes_slate();   -- (0062 gives it another column, so a re-run of this file has to start clean)
+create function public.stakes_slate() returns table (
   line_id bigint, fixture text, week int, home text, away text, starts_at timestamptz,
   player_id text, player_name text, team text, pos text, stat text, line numeric,
   my_side text, my_stake int, my_status text)
