@@ -121,14 +121,51 @@ export const stepsFor = cfg => [
 ];
 export const STEPS = stepsFor(DEFAULTS);
 
+// ---------- the intro ----------
+// A short moment when the tab opens: a coin drops in and spins, STAKES rises letter by letter, a line fades in, then the page's cards slide up. A tap, a key or
+// Escape skips it; nothing plays for anyone who asked for reduced motion. It covers the tab while the numbers load, so it never delays them.
+export const WORD = 'STAKES';
+export const introHtml = () => `<div class="st-intro" aria-hidden="true"><div class="st-introin">
+  <svg class="st-coin" viewBox="0 0 64 64"><defs><linearGradient id="st-cg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--blue-300)"/><stop offset="1" stop-color="var(--blue-700)"/></linearGradient></defs>
+    <circle cx="32" cy="32" r="29" fill="url(#st-cg)"/><circle cx="32" cy="32" r="22.5" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2" stroke-dasharray="3 3"/><text x="32" y="42" text-anchor="middle" class="st-coinmark">S</text><path class="st-glint" d="M10 52L52 8" /></svg>
+  <div class="st-word">${[...WORD].map((ch, i) => `<span style="--i:${i}">${ch}</span>`).join('')}</div>
+  <p class="st-tag">Call it. Stake it. Win Coins.</p></div></div>`;
+const reducedMotion = () => document.documentElement.classList.contains('reduce-motion') || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+// Plays the intro over `root`; resolves when it is gone. `app` then gets the staggered rise of its cards for a moment.
+function playIntro(root, app) {
+  if (reducedMotion()) return Promise.resolve();
+  return new Promise(done => {
+    root.classList.add('st-playing');
+    root.insertAdjacentHTML('beforeend', introHtml());
+    const el = root.querySelector('.st-intro');
+    let over = false;
+    const end = () => {
+      if (over) return; over = true;
+      removeEventListener('keydown', end, true);
+      el.classList.add('is-out');
+      app.querySelectorAll('.lg-card').forEach((c, i) => c.style.setProperty('--k', Math.min(i, 8)));
+      app.classList.add('st-reveal');
+      setTimeout(() => { el.remove(); root.classList.remove('st-playing'); done(); }, 420);
+      setTimeout(() => app.classList.remove('st-reveal'), 1700);
+    };
+    el.addEventListener('pointerdown', end);
+    addEventListener('keydown', end, true);
+    setTimeout(end, 2100);
+  });
+}
+
+// ---------- the page ----------
 export function mountStakes(root, o) {
   const st = { cfg: null, wallet: null, slate: [], board: [], history: [], picked: null, busy: false, msg: null, loading: true, error: '' };
   let gone = false, timer = 0, tick = 0, toured = false;
+  root.innerHTML = '<div class="st-app"></div>';
+  const app = root.querySelector('.st-app');
+  const intro = playIntro(root, app);
   const draw = () => {
     if (gone) return;
     const y = scrollY, a = document.activeElement, was = a?.closest?.('.st') ? a.dataset : null;
-    root.innerHTML = stakesView(st, o);
-    if (was?.st) root.querySelector(`[data-st="${was.st}"]${was.line ? `[data-line="${was.line}"]` : ''}${was.side ? `[data-side="${was.side}"]` : ''}${was.n ? `[data-n="${was.n}"]` : ''}`)?.focus({ preventScroll: true });
+    app.innerHTML = stakesView(st, o);
+    if (was?.st) app.querySelector(`[data-st="${was.st}"]${was.line ? `[data-line="${was.line}"]` : ''}${was.side ? `[data-side="${was.side}"]` : ''}${was.n ? `[data-n="${was.n}"]` : ''}`)?.focus({ preventScroll: true });
     scrollTo(0, y);
   };
   const defaultStake = () => { const cfg = st.cfg || DEFAULTS, c = stakeChips(cfg, st.wallet?.coins ?? 0); return c.includes(cfg.min_stake * 5) ? cfg.min_stake * 5 : c[0] ?? cfg.min_stake; };
@@ -144,7 +181,7 @@ export function mountStakes(root, o) {
       if (first && w?.bonus > 0) say(st.cfg && w.bonus === st.cfg.daily_topup ? `Daily top-up: +${w.bonus} Coins.` : `Topped up to ${coins(st.wallet.coins)} Coins so you can keep playing.`);
     } catch (e) { st.error = /not open yet/.test(e?.message || '') ? 'Stakes isn’t open yet. The league will switch it on soon.' : 'Stakes could not load. Check your connection and refresh.'; }
     st.loading = false; draw();
-    if (first && !toured && st.wallet && !tourSeen('stakes')) { toured = true; setTimeout(() => !gone && tour(), 600); }
+    if (first && !toured && st.wallet && !tourSeen('stakes')) { toured = true; intro.then(() => setTimeout(() => !gone && tour(), 600)); }
   };
   const tour = () => startTour(stepsFor(st.cfg || DEFAULTS), {
     key: 'stakes',
