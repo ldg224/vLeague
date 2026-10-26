@@ -122,15 +122,14 @@ export const stepsFor = cfg => [
 export const STEPS = stepsFor(DEFAULTS);
 
 // ---------- the intro ----------
-// A short moment when the tab opens: a coin drops in and spins, STAKES rises letter by letter, a line fades in, then the page's cards slide up. It fills the visible
+// A short moment when the tab opens: a coin drops in and spins, STAKES rises letter by letter, then the page's cards slide up. It fills the visible
 // screen (not the whole page, which may be taller) while the numbers load behind it, so it never delays them. A tap, a key or Escape skips it; nothing plays for
 // anyone who asked for reduced motion.
 export const WORD = 'STAKES';
 export const introHtml = () => `<div class="st-intro" aria-hidden="true"><div class="st-introin">
   <svg class="st-coin" viewBox="0 0 64 64"><defs><linearGradient id="st-cg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--blue-300)"/><stop offset="1" stop-color="var(--blue-700)"/></linearGradient></defs>
     <circle cx="32" cy="32" r="29" fill="url(#st-cg)"/><circle cx="32" cy="32" r="22.5" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2" stroke-dasharray="3 3"/><text x="32" y="42" text-anchor="middle" class="st-coinmark">S</text><path class="st-glint" d="M10 52L52 8" /></svg>
-  <div class="st-word">${[...WORD].map((ch, i) => `<span style="--i:${i}">${ch}</span>`).join('')}</div>
-  <p class="st-tag">Call it. Stake it. Win Coins.</p></div></div>`;
+  <div class="st-word">${[...WORD].map((ch, i) => `<span style="--i:${i}">${ch}</span>`).join('')}</div></div></div>`;
 const reducedMotion = () => document.documentElement.classList.contains('reduce-motion') || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
 // Plays the intro over `root`; resolves when it is gone. `app` then gets the staggered rise of its cards for a moment.
 function playIntro(root, app) {
