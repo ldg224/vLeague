@@ -1,0 +1,45 @@
+/* Maps on the player page (js/player-maps.js): where he plays and his shots. The pills are the shared .sc-toggle (css/stat-card.css). */
+.pc-pills { margin: 0 0 14px; flex-wrap: wrap; }
+.pc-panel > * + * { margin-top: 10px; }
+
+/* ---- maps (js/player-maps.js): shots and where he plays ---- */
+.pm-svg { display: block; width: 100%; max-width: 760px; height: auto; border-radius: var(--r-sm); }
+.pm-svg.is-half { max-width: 540px; }
+.pm-turf { fill: color-mix(in oklab, var(--surface-sunk) 82%, #2f9d62); }
+.pm-line { fill: none; stroke: color-mix(in oklab, var(--text) 38%, transparent); stroke-width: .35; }
+.pm-goal { fill: var(--faint); }
+.pm-spot { fill: var(--faint); }
+.pm-cell { fill: var(--brand); fill-opacity: var(--a); }
+.pm-avgpos { fill: var(--surface); stroke: var(--text-strong); stroke-width: .8; }
+i.pm-avgpos { display: inline-block; width: 11px; height: 11px; border-radius: 50%; box-sizing: border-box; border: 2px solid var(--text-strong); background: var(--surface); margin-right: 6px; vertical-align: -1px; }
+i.pm-heat { display: inline-block; width: 38px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: linear-gradient(90deg, color-mix(in oklab, var(--brand) 12%, transparent), var(--brand)); }
+.pm-key { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 0; font: 400 var(--fs-s) var(--font); color: var(--muted); }
+.pm-key span { display: inline-flex; align-items: center; }
+.pm-svg g:focus-visible, .pm-svg circle:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+
+/* the shot map: colour says what happened, size says how good the chance was */
+.pm-shot { --k: var(--muted); fill: var(--k); fill-opacity: .9; stroke: var(--surface); stroke-width: .5; }
+.pm-shot.is-goal { --k: var(--res-w); stroke: #fff; stroke-width: .9; fill-opacity: 1; }
+.pm-shot.is-saved { --k: var(--blue-400); }
+.pm-shot.is-woodwork { --k: var(--amber); }
+.pm-shot.is-blocked { fill: none; stroke: var(--muted); stroke-width: .7; }
+.pm-shot.is-off_target { fill: none; stroke: var(--res-l); stroke-width: .8; }
+.pm-path { stroke: var(--muted); stroke-width: .3; stroke-dasharray: 1.2 1; stroke-opacity: .7; }
+.pm-path.is-goal { stroke: var(--res-w); stroke-width: .5; stroke-dasharray: none; stroke-opacity: .9; }
+.pm-path.is-saved { stroke: var(--blue-400); } .pm-path.is-woodwork { stroke: var(--amber); } .pm-path.is-off_target { stroke: var(--res-l); stroke-opacity: .55; }
+i.pm-shot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; box-sizing: border-box; vertical-align: -2px; margin-right: 6px; background: var(--k); border: 1.5px solid var(--k); }
+i.pm-shot.is-goal { box-shadow: 0 0 0 1.5px var(--surface), 0 0 0 2.5px var(--res-w); }
+i.pm-shot.is-blocked { background: none; border-color: var(--muted); } i.pm-shot.is-off_target { background: none; border-color: var(--res-l); }
+.pm-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+.pm-chips span { display: inline-flex; align-items: baseline; gap: 6px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.pm-chips b { color: var(--text-strong); font: 700 var(--fs-m) var(--font); font-variant-numeric: tabular-nums; }
+.pm-dirline { fill: none; stroke: color-mix(in oklab, var(--text) 45%, transparent); stroke-width: .5; stroke-linecap: round; stroke-linejoin: round; }
+.pm-dirtext { fill: color-mix(in oklab, var(--text) 55%, transparent); font: 700 2.6px var(--font); letter-spacing: .12em; text-transform: uppercase; }
+.pm-spot { fill: color-mix(in oklab, var(--text) 38%, transparent); }
+.pm-goal { fill: color-mix(in oklab, var(--text) 38%, transparent); }
+
+/* the one tooltip: floats, so it may have a shadow */
+.pc-tip { position: fixed; z-index: 60; max-width: 280px; padding: 8px 10px; border-radius: var(--r-sm); background: var(--text-strong); color: var(--bg); font: 600 var(--fs-s)/1.35 var(--font); box-shadow: 0 6px 20px rgba(0, 0, 0, .35); pointer-events: none; }
+.pc-tip[hidden] { display: none; }
+

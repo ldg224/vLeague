@@ -47,12 +47,6 @@ test('a match the viewer has not opened is left out of everything', () => {
   const v = playerView(season, 'a1', { hidden: new Set(['f2']) });
   assert.equal(v.row.g, 2); assert.equal(v.log.length, 1);
 });
-test('league places list only the top ten', () => {
-  const v = playerView(season, 'a1');
-  assert.ok(v.ranks.length > 0 && v.ranks.length <= 5);
-  assert.ok(v.ranks.every(r => r.rank <= 10));
-  assert.equal(v.ranks.find(r => r.title === 'Top scorers')?.rank, 1);
-});
 test('a player link wraps the name, escapes the id and leaves it alone with no id', () => {
   assert.equal(playerUrl('0428'), 'player.html?id=0428');
   assert.match(plink('a"1', 'Ana'), /data-pid="a&quot;1"[^>]*>Ana<\/span>/);

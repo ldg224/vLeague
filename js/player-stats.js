@@ -1,13 +1,12 @@
 // Player pages (player.html): everything a page needs about one player, worked out from the season's saved results. Pure functions, no page code,
 // so tests/player-stats.test.mjs can run them without a browser.
 //
-//   playerView(season, id, { hidden, scope }) -> { player, row, log, groups, ranks, compare } | null
+//   playerView(season, id, { hidden, scope }) -> { player, row, log, groups, compare } | null
 //     player   the league's player ({ id, name, team, position, number, offense, defense, value, ... }), or null when there is no such player
 //     row      the player's season totals (js/season-stats.js totals(): apps, min, g, a, ... ratingSum), or null before a match
 //     log      one entry per match played, oldest first: { fx, home (was his club at home), opp (club code), gf, ga, res 'W'|'D'|'L', s (his numbers), rating }
 //     groups   the detailed stats: [{ title, rows: [{ label, total, per90?, avg?, cls?, fill?, tick?, low? }] }], the keeper's own set for a goalkeeper.
 //              avg is the league average for his position, cls his class for that stat (CLASSES), fill and tick place his figure and the average on a 0-100 bar
-//     ranks    up to five places in the league's lists (top 10 only): [{ title, rank, of, text }]
 //     compare  { eligible, n, word } how the classes were worked out: eligible is false until the player has MIN_MINUTES and enough peers have too
 // A result the viewer has not opened (spoiler-free) is left out of all of it, as on the league page.
 //
@@ -16,7 +15,7 @@
 // the last 10% Poor. For stats where less is better (goals conceded, fouls, cards, offsides) the order is turned round. Classes only show once
 // MIN_PEERS players of his position have played MIN_MATCHES matches and so has he: one game's numbers are luck, so nobody gets a star for one
 // match. The league average beside each stat is shown from the first match.
-import { countedFixtures, totals, rank, per90, PLAYER_CARDS, MIN_MINUTES, format } from './season-stats.js';
+import { countedFixtures, totals, per90, MIN_MINUTES } from './season-stats.js';
 
 export const MIN_PEERS = 6;
 export const MIN_MATCHES = 3;
@@ -46,14 +45,6 @@ const KEEPER = [
   ['Passing', [L('Passes', 'pas', { rate: 1, dp: 1 }), L('Passes completed', 'pc', { rate: 1, dp: 1 }), ACC, L('Touches', 'tch', { rate: 1, dp: 1 })]],
   ['Discipline', [L('Yellow cards', 'yc', { rate: 1, dp: 2, low: 1 }), L('Red cards', 'rc')]],
 ];
-
-// Which league lists a player may be placed in, most telling first for his position.
-const FAVOURITES = {
-  GK: ['rating', 'savepct', 'cs', 'sv90', 'gc90', 'minutes'],
-  DEF: ['rating', 'tk90', 'int90', 'clr90', 'blk90', 'ga', 'minutes'],
-  MID: ['rating', 'ga', 'assists', 'kp', 'pc90', 'dr', 'xg', 'scorers', 'minutes'],
-  FWD: ['rating', 'scorers', 'ga', 'g90', 'xg', 'sot90', 'assists', 'minutes'],
-};
 
 // The class for a figure among its peers' figures (his own included): where he stands from 0 (worst) to 100 (best), ties sharing the middle.
 export function classOf(values, v, low = false) {
@@ -110,7 +101,6 @@ export function playerView(season, id, { hidden = new Set(), scope = 'season' } 
             line.fill = Math.round((mine / top) * 100);
             line.tick = Math.round((avg / top) * 100);
             if (l.low) line.low = true;
-            line.place = Math.round(classOf(vals, mine, Boolean(l.low)).place);   // percentile among all his peers, for the profile chart (provisional until classes unlock)
             if (compare.eligible) { const c = classOf(sv, mine, Boolean(l.low)); line.cls = c.cls; }
           }
         }
@@ -126,18 +116,7 @@ export function playerView(season, id, { hidden = new Set(), scope = 'season' } 
     ] });
   }
 
-  const ranks = [];
-  if (row) {
-    for (const cid of FAVOURITES[player.position] || FAVOURITES.MID) {
-      const card = PLAYER_CARDS.find(c => c.id === cid);
-      if (!card) continue;
-      const list = rank(players, card), at = list.find(x => String(x.row.id) === String(id));
-      if (at && at.rank <= 10) ranks.push({ title: card.title, rank: at.rank, of: list.length, text: format(at.value, card) });
-    }
-    ranks.sort((a, b) => a.rank - b.rank);
-    ranks.length = Math.min(ranks.length, 5);
-  }
-  return { player, row, log, groups, ranks, compare, scope, minMinutes: MIN_MINUTES };
+  return { player, row, log, groups, compare, scope, minMinutes: MIN_MINUTES };
 }
 
 // The average rating over his matches (one decimal), or null.

@@ -16,7 +16,6 @@ import { portrait } from './portrait.js';
 import { hasPreseason, scopeNow } from './preseason.js';
 import { playerView, averageRating, CLASSES, MIN_PEERS, MIN_MATCHES } from './player-stats.js';
 import { icon } from './icons.js';
-import { profileChart } from './player-charts.js';
 import { extractMaps, mergeMaps, shotMap, heatMap } from './player-maps.js';
 import { loadMatchFile } from './match-file.js';
 import { demoSeason } from './demo-season.js';
@@ -69,7 +68,7 @@ function render(season, rows, mine) {
     main.innerHTML = '<div class="pp"><section class="lg-card"><h1 class="pp-name" tabindex="-1">Player not found</h1><p class="empty">There’s no player with that number. <a href="league.html#stats">See the stats</a></p></section></div>';
     return;
   }
-  const { player: p, row, log, groups, ranks } = v;
+  const { player: p, row, log, groups } = v;
   const clubFor = c => { const t = season ? teamOf(season, c) : { code: c, name: c }, r = byCode.get(c); return { ...t, ...(r ? { name: r.name, short_name: r.short_name, colour: r.colour, crest_path: r.crest_path } : {}) }; };
   const club = p.team ? clubFor(p.team) : null, c1 = safeColour(club?.colour);
   document.title = `${p.name} | vLeague`;
@@ -83,11 +82,10 @@ function render(season, rows, mine) {
       <div class="pp-titles">
         <h1 class="pp-name" tabindex="-1">${esc(p.name)}</h1>
         <p class="pp-sub">${club ? `<a class="pp-club" href="team.html?c=${esc(club.code)}">${crest(club, 20)}<span>${esc(club.name)}</span></a>` : '<span>Free agent</span>'}</p>
-        <p class="pp-facts"><span>${POS_WORD[p.position] || esc(p.position)}</span>${p.number != null && p.number !== '' ? `<span>No. ${esc(p.number)}</span>` : ''}${p.value != null ? `<span>${money(p.value)}</span>` : ''}</p>
+        <p class="pp-facts"><span>${POS_WORD[p.position] || esc(p.position)}</span>${p.number != null && p.number !== '' ? `<span>No. ${esc(p.number)}</span>` : ''}${p.offense != null ? `<span>Attack ${esc(p.offense)}</span><span>Defence ${esc(p.defense)}</span>` : ''}${p.value != null ? `<span>${money(p.value)}</span>` : ''}</p>
       </div>
       <div class="pp-now">
         ${avg != null ? `<p class="pp-avg"><span>Average rating</span>${rating(avg)}</p>` : ''}
-        ${log.length > 1 ? `<div class="pp-form"><span>Form</span><div>${log.slice(-5).map(l => (l.rating != null ? rating(l.rating) : '')).join('')}</div></div>` : ''}
       </div>
     </div>
   </header>`;
@@ -127,32 +125,6 @@ function render(season, rows, mine) {
         ${l.rating != null ? rating(l.rating) : '<span></span>'}</a></li>`;
     }).join('')}</ul></section>` : '';
 
-  // Rating by match: a small line, oldest to newest, with his average dotted. Needs two matches.
-  const trendCard = (() => {
-    const pts = log.filter(l => l.rating != null);
-    if (pts.length < 2) return '';
-    const W = 300, H = 96, pad = 14, lo = Math.floor(Math.min(...pts.map(l => l.rating)) - 0.5), hi = Math.ceil(Math.max(...pts.map(l => l.rating)) + 0.5);
-    const x = i => pad + (i * (W - 2 * pad)) / (pts.length - 1), y = r => H - pad - ((r - lo) / (hi - lo)) * (H - 2 * pad);
-    const line = pts.map((l, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(l.rating).toFixed(1)}`).join(' ');
-    return `<section class="lg-card"><div class="lg-card-head"><h2>Rating by match</h2></div>
-      <svg class="pp-trend" viewBox="0 0 ${W} ${H}" role="img" aria-label="Match ratings, oldest to newest: ${pts.map(l => l.rating.toFixed(1)).join(', ')}">
-        <line x1="${pad}" x2="${W - pad}" y1="${y(avg).toFixed(1)}" y2="${y(avg).toFixed(1)}" class="pp-avgline"/>
-        <path d="${line}" class="pp-trendline"/>
-        ${pts.map((l, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(l.rating).toFixed(1)}" r="${i === pts.length - 1 ? 5 : 3.5}" class="pp-dotpt${i === pts.length - 1 ? ' is-last' : ''}"/>`).join('')}
-      </svg>
-      <p class="pp-note">Oldest to newest. The dotted line is his average, ${avg.toFixed(1)}.</p></section>`;
-  })();
-
-  const ranksCard = ranks.length ? `<section class="lg-card"><div class="lg-card-head"><h2>In the league</h2></div>
-    <ul class="pp-rows pp-ranks">${ranks.map(r => `<li><span>${esc(r.title)}</span><b>${esc(r.text)}</b><i>${ordinal(r.rank)}</i></li>`).join('')}</ul>
-    <p class="pp-note">Places among players with at least 90 minutes where a list needs it. Top 10 only.</p></section>` : '';
-
-  const profile = `<section class="lg-card"><div class="lg-card-head"><h2>Profile</h2></div><ul class="pp-rows pp-two">
-    <li><span>Position</span><b>${POS_WORD[p.position] || esc(p.position)}</b></li>
-    ${p.offense != null ? `<li><span>Attack</span><b>${esc(p.offense)} / 10</b></li><li><span>Defence</span><b>${esc(p.defense)} / 10</b></li>` : ''}
-    ${p.value != null ? `<li><span>Value</span><b>${money(p.value)}</b></li>` : ''}
-    ${club ? `<li><span>Club</span><b>${esc(club.name)}</b></li>` : ''}</ul></section>`;
-
   // ---- charts (js/player-charts.js): tabs for the profile, match by match, and the league; one panel is drawn at a time ----
   const MAPS = [['heat', 'Where he plays', heatMap], ['shots', 'Shots', shotMap]];
   const mp = { status: 'idle', done: 0, total: 0, data: null, pick: MAPS.some(x => x[0] === q.get('map')) ? q.get('map') : 'heat' };
@@ -160,7 +132,7 @@ function render(season, rows, mine) {
     if (mp.status === 'loading') return `<p class="pp-note" role="status">Reading match files… ${mp.done} of ${mp.total}. Each is about 2 MB, so this takes a moment the first time.</p>`;
     if (mp.status === 'none') return '<p class="pp-note">Maps are drawn from the saved match files, and none are available for these matches.</p>';
     if (mp.status === 'error') return '<p class="pp-note">The match files could not be read. Check your connection and open this tab again.</p>';
-    if (!mp.data) return '';
+    if (!mp.data) return '<p class="pp-note">The maps load as you scroll to them.</p>';
     const pills = `<nav class="sc-toggle pc-pills" aria-label="Map">${MAPS.map(([k, label]) => `<button type="button" class="pc-pill" data-pcmap="${k}" aria-pressed="${k === mp.pick}">${label}</button>`).join('')}</nav>`;
     return `${pills}${MAPS.find(x => x[0] === mp.pick)[2](mp.data)}<p class="pp-note">${mp.data.matches === 1 ? 'One match' : `All ${mp.data.matches} matches`} added up, in a shared direction of play.</p>`;
   };
@@ -177,37 +149,26 @@ function render(season, rows, mine) {
     } catch { mp.status = 'error'; }
     drawPanel();
   };
-  const st = { tab: ['profile', 'maps'].includes(q.get('tab')) ? q.get('tab') : 'profile' };   // ?tab=maps&map=shots opens a chart directly (also for screenshots)
-  const PANELS = [
-    ['profile', 'Profile', () => profileChart(groups, compare)],
-    ['maps', 'Maps', mapsHtml],
-  ];
-  const chartsCard = row ? `<section class="lg-card pp-charts"><div class="lg-card-head"><h2>Charts</h2></div>
-    <nav class="sc-toggle pc-tabs" aria-label="Charts">${PANELS.map(([k, label]) => `<button type="button" data-pctab="${k}" aria-pressed="${k === st.tab}">${esc(label)}</button>`).join('')}</nav>
-    <div class="pc-panel" id="pc-panel">${PANELS.find(x => x[0] === st.tab)[2]()}</div></section>` : '';
+  // The maps load when their card comes into view (the match files are big), not on every visit.
+  const mapsCard = row ? `<section class="lg-card pp-maps"><div class="lg-card-head"><h2>Maps</h2></div><div class="pc-panel" id="pc-panel">${mapsHtml()}</div></section>` : '';
 
   main.innerHTML = `<article class="pp" style="--club:${c1};--club-accent-dark:${accentFor(c1, 'dark')};--club-accent-light:${accentFor(c1, 'light')};--on-club:${onColour(c1)}">
     ${head}
-    <div class="lg-cols"><div class="lg-main">${chartsCard}${statsCard}${logCard}</div><aside class="lg-side">${trendCard}${ranksCard}${profile}</aside></div>
+    <div class="lg-cols"><div class="lg-main">${mapsCard}${statsCard}</div><aside class="lg-side">${logCard}</aside></div>
   </article>`;
 
-  const drawPanel = () => {
-    const el = main.querySelector('#pc-panel'); if (!el) return;
-    el.innerHTML = PANELS.find(x => x[0] === st.tab)[2]();
-    main.querySelectorAll('[data-pctab]').forEach(b => b.setAttribute('aria-pressed', b.dataset.pctab === st.tab));
-  };
+  const drawPanel = () => { const el = main.querySelector('#pc-panel'); if (el) el.innerHTML = mapsHtml(); };
   main.addEventListener('click', e => {
-    const t = e.target.closest('[data-pctab],[data-pcmap]');
+    const t = e.target.closest('[data-pcmap]');
     if (!t) return;
-    if (t.dataset.pctab) st.tab = t.dataset.pctab;
-    if (t.dataset.pcmap) mp.pick = t.dataset.pcmap;
+    mp.pick = t.dataset.pcmap;
     drawPanel();
-    if (st.tab === 'maps') loadMaps();
     main.querySelector(`[data-pcmap="${mp.pick}"][aria-pressed="true"]`)?.focus({ preventScroll: true });
   });
+  const box = main.querySelector('#pc-panel');
+  if (box && 'IntersectionObserver' in window) { const io = new IntersectionObserver(es => { if (es.some(x => x.isIntersecting)) { io.disconnect(); loadMaps(); } }); io.observe(box); } else if (box) loadMaps();
   wireTips(main);
   styleCards();
-  if (st.tab === 'maps') loadMaps();
 }
 
 // One tooltip for every chart mark with a data-tip: follows the mouse, shows on keyboard focus, and a tap on a phone shows it until the next tap.

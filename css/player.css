@@ -100,15 +100,6 @@
 .pp-chip { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 6px; color: #fff; font: 700 var(--fs-xs) var(--font); }
 .pp-chip.W { background: var(--res-w); } .pp-chip.D { background: var(--res-d); } .pp-chip.L { background: var(--res-l); }
 
-/* ---------- the rating line ---------- */
-.pp-trend { display: block; width: 100%; height: auto; }
-.pp-trendline { fill: none; stroke: var(--blue-300); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
-.pp-avgline { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 4; }
-.pp-dotpt { fill: var(--surface); stroke: var(--blue-300); stroke-width: 2; }
-.pp-dotpt.is-last { fill: var(--blue-300); }
-:root[data-theme="light"] .pp-trendline, :root[data-theme="light"] .pp-dotpt { stroke: var(--blue-700); }
-:root[data-theme="light"] .pp-dotpt.is-last { fill: var(--blue-700); }
-
 @media (max-width: 991px) { .pp-ghost { font-size: 64px; } }
 @media (max-width: 640px) {
   .lg-sub .pp .pp-head { padding: 16px; }
