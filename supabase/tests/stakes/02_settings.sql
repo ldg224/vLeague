@@ -5,6 +5,8 @@ do $$
 declare mgr uuid; off uuid; fx record; pk bigint; bal int; r text; cnt int; v_mult numeric; l bigint;
   as_user text := 'x';
 begin
+  update public.stakes_settings set visible = default, betting_open = default, start_coins = default, daily_topup = default, bailout_below = default, bailout_to = default, multiplier = default, min_stake = default, max_stake = default, lines_per_week = default, lines_per_match = default, score_per_week = default, score_exact_mult = default, score_result_mult = default, stats = default, line_adjust = default, lock_minutes = default, lines_days = default, show_board = default;   -- a known starting point, whatever the office has set live
+  update public.stakes_settings set lines_days = 28;
   select id into mgr from public.profiles where role = 'manager' limit 1;
   select id into off from public.profiles where role = 'office' limit 1;
   select * into fx from public.fixtures where starts_at > now() and not postponed and starts_at < now() + interval '60 days' order by starts_at limit 1;
@@ -27,7 +29,7 @@ begin
   perform set_config('role', 'postgres', true);
   perform set_config('request.jwt.claims', json_build_object('sub', off, 'role', 'authenticated')::text, true);
   perform set_config('role', 'authenticated', true);
-  perform public.stakes_save_settings('{"visible": true, "multiplier": 2.0, "start_coins": 500, "daily_topup": 0, "min_stake": 20, "max_stake": 100, "stats": ["sv"], "lines_per_week": 24, "lines_per_match": 2}');
+  perform public.stakes_save_settings('{"visible": true, "multiplier": 2.0, "start_coins": 500, "daily_topup": 0, "min_stake": 20, "max_stake": 100, "stats": ["sv"], "lines_per_week": 24, "lines_per_match": 2, "score_per_week": 0}');
   begin perform public.stakes_save_settings('{"multiplier": 0.5}'); insert into t_log values (default, 'bad value refused', false, ''); exception when others then insert into t_log values (default, 'bad value refused', sqlerrm like '%out of range%', sqlerrm); end;
   begin perform public.stakes_save_settings('{"nonsense": 1}'); insert into t_log values (default, 'unknown setting refused', false, ''); exception when others then insert into t_log values (default, 'unknown setting refused', sqlerrm like '%unknown setting%', sqlerrm); end;
   begin perform public.stakes_save_settings('{"min_stake": 200}'); insert into t_log values (default, 'min above max refused', false, ''); exception when others then insert into t_log values (default, 'min above max refused', sqlerrm like '%out of range%', sqlerrm); end;
@@ -79,7 +81,7 @@ begin
   -- the weekly cap: 3 stakes a round, 1 from a match
   perform set_config('role', 'postgres', true);
   delete from public.stakes_lines where fixture in (select id from public.fixtures where week = fx.week);
-  update public.stakes_settings set lines_per_week = 3, lines_per_match = 1, stats = array['sv', 'pas', 'sot', 'tk'];
+  update public.stakes_settings set lines_per_week = 3, lines_per_match = 1, score_per_week = 0, stats = array['sv', 'pas', 'sot', 'tk'];
   perform set_config('request.jwt.claims', json_build_object('sub', mgr, 'role', 'authenticated')::text, true);
   perform set_config('role', 'authenticated', true);
   perform public.stakes_slate();

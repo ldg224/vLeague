@@ -12,7 +12,7 @@ const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ESC[c]);
 
 // The game's numbers come from the office's settings (stakes_settings, Editor > Stakes). These are what a page shows until they have loaded.
-export const DEFAULTS = { multiplier: 1.9, min_stake: 10, max_stake: 0, betting_open: true, show_board: true, start_coins: 1000, daily_topup: 200, lock_minutes: 0 };
+export const DEFAULTS = { score_exact_mult: 8, score_result_mult: 2, multiplier: 1.9, min_stake: 10, max_stake: 0, betting_open: true, show_board: true, start_coins: 1000, daily_topup: 200, lock_minutes: 0 };
 const STAT = { sv: ['Saves', 'saves'], pas: ['Passes', 'passes'], sot: ['Shots on target', 'shots on target'], tk: ['Tackles won', 'tackles won'] };
 const POS = { GK: 'GK', DEF: 'DEF', MID: 'MID', FWD: 'FWD' };
 export const payout = (stake, mult = DEFAULTS.multiplier) => Math.floor(stake * Number(mult));
@@ -44,9 +44,14 @@ const sideBtn = (l, side, mine, picked, closed) => {
   const on = mine ? mine === side : picked?.line === l.line_id && picked.side === side;
   return `<button type="button" class="st-side ${side}${on ? ' on' : ''}${mine && !on ? ' off' : ''}" data-st="side" data-line="${l.line_id}" data-side="${side}" aria-pressed="${on}"${mine || closed ? ' disabled' : ''}>${icon(SIDE_ICON[side])}<span>${side === 'over' ? 'Over' : 'Under'}</span></button>`;
 };
+// The starting stake on a card: five times the smallest if you can, else the first button.
+export function defaultStakeFor(cfg, bal) { const c = stakeChips(cfg, bal); return c.includes(cfg.min_stake * 5) ? cfg.min_stake * 5 : c[0] ?? cfg.min_stake; }
+// A goal count one step up or down, held between 0 and 9.
+export const stepGoals = (n, d) => Math.max(0, Math.min(9, n + d));
 const colourOf = (o, code) => { const c = o.club?.(code)?.colour; return /^#[0-9a-f]{6}$/i.test(c || '') ? c : '#4a6fa5'; };
 
 function stakeCard(l, st, o) {
+  if (l.kind === 'score') return scoreCard(l, st, o);
   const mine = l.my_side, open = st.picked?.line === l.line_id, closed = st.cfg ? !st.cfg.betting_open : false;
   const face = o.face?.(l.player_id, l.team, 132) || o.crest(l.team, 96);
   const opp = l.team === l.home ? l.away : l.home;
@@ -63,6 +68,27 @@ function stakeCard(l, st, o) {
     <div class="st-sides" role="group" aria-label="${esc(l.player_name)} ${esc(statName(l.stat))}, line ${l.line}">${sideBtn(l, 'under', mine, st.picked, closed)}${sideBtn(l, 'over', mine, st.picked, closed)}</div>
     ${mine ? `<div class="st-mine"><span><b class="is-${mine}">${mine === 'over' ? 'Over' : 'Under'} ${l.line}</b> · ${coins(l.my_stake)} Coins · pays <b>${coins(payout(l.my_stake, l.my_mult))}</b></span><button type="button" class="st-link" data-st="take" data-line="${l.line_id}">Take back</button></div>` : ''}
     ${open ? stakePanel(l, st) : ''}
+  </article>`;
+}
+
+// A score prediction: both clubs, the two scores with a + and a - under each (hold to run), the stake buttons and one confirm button.
+function scoreCard(l, st, o) {
+  const cfg = st.cfg || DEFAULTS, bal = st.wallet?.coins ?? 0, mine = l.my_status != null && l.my_home != null;
+  const sc = st.sc?.[l.line_id] || { h: 1, a: 1, stake: defaultStakeFor(cfg, bal) };
+  const closed = st.cfg ? !st.cfg.betting_open : false, chips = stakeChips(cfg, bal);
+  const h = mine ? l.my_home : sc.h, a = mine ? l.my_away : sc.a, exact = Number(mine ? l.my_mult : cfg.score_exact_mult ?? DEFAULTS.score_exact_mult), res = Number(mine ? l.my_mult2 : cfg.score_result_mult ?? DEFAULTS.score_result_mult);
+  const col = (code, side) => `<div class="st-sc-col"><span class="st-sc-club">${o.crest(code, 40)}<b>${esc(o.name(code))}</b></span>
+      <b class="st-sc-num" data-score="${side}" aria-live="polite">${side === 'h' ? h : a}</b>
+      ${mine ? '' : `<div class="st-stepper" role="group" aria-label="${esc(o.name(code))} goals"><button type="button" class="st-step" data-st="step" data-line="${l.line_id}" data-which="${side}" data-d="-1" aria-label="One fewer goal for ${esc(o.name(code))}"${(side === 'h' ? h : a) <= 0 || closed ? ' disabled' : ''}>${icon('minus')}</button><button type="button" class="st-step" data-st="step" data-line="${l.line_id}" data-which="${side}" data-d="1" aria-label="One more goal for ${esc(o.name(code))}"${(side === 'h' ? h : a) >= 9 || closed ? ' disabled' : ''}>${icon('plus')}</button></div>`}</div>`;
+  return `<article class="lg-card st-stake st-scorecard${mine ? ' has-pick' : ''}" data-line-card="${l.line_id}" style="--cc:${colourOf(o, l.home)};--ca:${colourOf(o, l.away)}">
+    <div class="st-top st-scoretop"><span class="st-pos">SCORE</span><em class="st-close" data-closes="${esc(l.locks_at || l.starts_at)}">${closesIn(l.locks_at || l.starts_at)}</em>
+      <p class="st-scoreask">Guess the score</p></div>
+    <div class="st-scorebox">${col(l.home, 'h')}<i class="st-dash">–</i>${col(l.away, 'a')}</div>
+    <p class="st-when st-scorewhen">${esc(kick(l.starts_at))}</p>
+    ${mine ? `<div class="st-mine"><span><b class="is-over">${h}–${a}</b> · ${coins(l.my_stake)} Coins · exact pays <b>${coins(payout(l.my_stake, exact))}</b>, right result pays <b>${coins(payout(l.my_stake, res))}</b></span><button type="button" class="st-link" data-st="take" data-line="${l.line_id}">Take back</button></div>`
+      : `<div class="st-stakebox is-over"><div class="st-chips" role="group" aria-label="Stake">${chips.map(c => `<button type="button" class="st-chip${sc.stake === c ? ' on' : ''}" data-st="sstake" data-line="${l.line_id}" data-n="${c}" aria-pressed="${sc.stake === c}">${coins(c)}</button>`).join('')}</div>
+        <p class="st-pays">Exact score pays <b>${coins(payout(sc.stake, exact))}</b>, the right result <b>${coins(payout(sc.stake, res))}</b> (home win, draw or away win)</p>
+        <div class="st-go"><button type="button" class="st-btn primary is-over" data-st="placescore" data-line="${l.line_id}"${st.busy || closed || sc.stake < cfg.min_stake || (cfg.max_stake > 0 && sc.stake > cfg.max_stake) || sc.stake > bal ? ' disabled' : ''}>${st.busy ? 'Placing…' : `Stake ${coins(sc.stake)} on ${h}–${a}`}</button></div></div>`}
   </article>`;
 }
 
@@ -87,7 +113,8 @@ function historyCard(h) {
   return `<section class="lg-card st-card" data-tour="history"><div class="lg-card-head"><h2>Your picks</h2></div>
     <ul class="st-list">${h.slice(0, 10).map(p => {
       const net = p.status === 'won' ? p.payout - p.stake : p.status === 'lost' ? -p.stake : 0;
-      return `<li><div class="st-hl"><b>${esc(p.player_name)}</b><span>${p.side === 'over' ? 'Over' : 'Under'} ${p.line} ${esc(STAT[p.stat]?.[1] || p.stat)}${p.actual != null ? ` · got ${Number(p.actual)}` : ''}</span></div>
+      const title = p.kind === 'score' ? 'Score prediction' : p.player_name, what = p.kind === 'score' ? `${p.pred_home}–${p.pred_away}${p.act_home != null ? ` · it finished ${p.act_home}–${p.act_away}` : ''}` : `${p.side === 'over' ? 'Over' : 'Under'} ${p.line} ${STAT[p.stat]?.[1] || p.stat}${p.actual != null ? ` · got ${Number(p.actual)}` : ''}`;
+      return `<li><div class="st-hl"><b>${esc(title)}</b><span>${esc(what)}</span></div>
         <div class="st-hr ${p.status}"><b>${RESULT[p.status]}</b><span>${p.status === 'open' ? `${coins(p.stake)} riding` : p.status === 'void' ? 'Stake back' : `${net > 0 ? '+' : net < 0 ? '−' : ''}${coins(Math.abs(net))}`}</span></div></li>`;
     }).join('')}</ul></section>`;
 }
@@ -121,10 +148,11 @@ export function stakesView(st, o) {
 }
 
 // ---------- the tour ----------
-export const stepsFor = cfg => [
+export const stepsFor = (cfg, hasScore = false) => [
   { target: '[data-tour="wallet"]', title: 'Your Coins', text: `Stakes is a game of calls on real players. You start with ${Number(cfg.start_coins).toLocaleString('en-AU')} Coins${cfg.daily_topup > 0 ? ` and get ${Number(cfg.daily_topup).toLocaleString('en-AU')} more each day` : ''}. They are for fun only: nothing to buy, nothing to lose.` },
   { target: '.st-stake', title: 'A stake', text: 'Each card is one player in one match, and the big number is the league’s line for his stat: a keeper’s saves, a midfielder’s passes, a forward’s shots on target. There are only a few each round.' },
   { target: '.st-stake .st-sides', title: 'Over or under', text: 'Think he’ll do more than the line? Tap blue OVER. Fewer? Tap red UNDER. Lines end in .5, so there is always a winner.', pick: true },
+  ...(hasScore ? [{ target: '.st-scorecard', title: 'Guess the score', text: `Some stakes ask for the final score of a match. Use + and − under each team (hold to run), then stake. The exact score pays ${Number(cfg.score_exact_mult)} times your stake; the right result with the wrong score pays ${Number(cfg.score_result_mult)} times.` }] : []),
   { target: '.st-stakebox', title: 'Stake some Coins', text: `Choose how many Coins to put on it. Get it right and you get ${Number(cfg.multiplier)} times your stake back; get it wrong and the stake is gone. You can take a pick back until picks close${cfg.lock_minutes > 0 ? ` (${cfg.lock_minutes} minutes before kick-off)` : ' (kick-off)'}.` },
   { target: '[data-tour="board"]', title: 'The leaderboard', text: 'Picks settle by themselves once the match is played. The richest managers sit at the top.' },
 ];
@@ -168,7 +196,7 @@ export function mountStakes(root, o0) {
   const o = { ...o0 }, faces = new Map();
   // The players' portraits (js/portrait.js), read once; the cards show the club's crest until they are in.
   o.face = (id, code, px) => { const p = faces.get(String(id)); return p ? portrait(p, { code, ...(o0.club?.(code) || {}) }, px, true) : ''; };
-  const st = { cfg: null, wallet: null, slate: [], board: [], history: [], picked: null, busy: false, msg: null, loading: true, error: '' };
+  const st = { cfg: null, sc: {}, wallet: null, slate: [], board: [], history: [], picked: null, busy: false, msg: null, loading: true, error: '' };
   let gone = false, timer = 0, tick = 0, toured = false;
   root.innerHTML = '<div class="st-app"></div>';
   const app = root.querySelector('.st-app');
@@ -180,7 +208,8 @@ export function mountStakes(root, o0) {
     if (was?.st) app.querySelector(`[data-st="${was.st}"]${was.line ? `[data-line="${was.line}"]` : ''}${was.side ? `[data-side="${was.side}"]` : ''}${was.n ? `[data-n="${was.n}"]` : ''}`)?.focus({ preventScroll: true });
     scrollTo(0, y);
   };
-  const defaultStake = () => { const cfg = st.cfg || DEFAULTS, c = stakeChips(cfg, st.wallet?.coins ?? 0); return c.includes(cfg.min_stake * 5) ? cfg.min_stake * 5 : c[0] ?? cfg.min_stake; };
+  const defaultStake = () => defaultStakeFor(st.cfg || DEFAULTS, st.wallet?.coins ?? 0);
+  const scoreOf = id => (st.sc[id] ||= { h: 1, a: 1, stake: defaultStake() });
   const rpc = async (name, args) => { const { db } = await import('./auth.js');   // loaded when first used, so the pure builders above run in node
     const { data, error } = await (await db()).rpc(name, args); if (error) throw error; return data; };
   const say = (text, bad = false) => { st.msg = { text, bad }; };
@@ -196,16 +225,36 @@ export function mountStakes(root, o0) {
     if (first && !faces.size) import('./players-data.js').then(m => m.loadPlayers()).then(list => { list.forEach(p => faces.set(String(p.id), p)); draw(); }).catch(() => {});
     if (first && !toured && st.wallet && !tourSeen('stakes')) { toured = true; intro.then(() => setTimeout(() => !gone && tour(), 600)); }
   };
-  const tour = () => startTour(stepsFor(st.cfg || DEFAULTS), {
+  const tour = () => startTour(stepsFor(st.cfg || DEFAULTS, st.slate.some(x => x.kind === 'score')), {
     key: 'stakes',
     before: step => { if (step.pick) { const l = st.slate.find(x => !x.my_side); if (l) { st.picked = { line: l.line_id, side: 'over', stake: defaultStake() }; draw(); } } else if (!step.target.includes('st-stakebox') && !step.target.includes('sides')) { if (st.picked) { st.picked = null; draw(); } } },
   });
 
+  // The + and - under a score: a press steps once, holding runs on (the page redraws each step, so the repeat belongs to the page, not the button).
+  let hold = 0, holdAfter = 0;
+  const stepNow = b => { const sc = scoreOf(Number(b.dataset.line)); sc[b.dataset.which] = stepGoals(sc[b.dataset.which], Number(b.dataset.d)); st.msg = null; draw(); };
+  const stopHold = () => { clearTimeout(holdAfter); clearInterval(hold); };
+  root.addEventListener('pointerdown', e => {
+    const b = e.target.closest('[data-st="step"]');
+    if (!b || b.disabled || e.button > 0) return;
+    stepNow(b);
+    const d = b.dataset.d, line = b.dataset.line, which = b.dataset.which;
+    holdAfter = setTimeout(() => { hold = setInterval(() => { const nb = root.querySelector(`[data-st="step"][data-line="${line}"][data-which="${which}"][data-d="${d}"]`); if (!nb || nb.disabled) stopHold(); else stepNow(nb); }, 120); }, 420);
+  });
+  for (const t of ['pointerup', 'pointerleave', 'pointercancel']) root.addEventListener(t, stopHold);
   root.addEventListener('click', async e => {
     const b = e.target.closest('[data-st]');
     if (!b || b.disabled) return;
     const act = b.dataset.st, line = Number(b.dataset.line);
+    if (act === 'step') { if (e.detail === 0) stepNow(b); return; }   // a mouse or finger already stepped on pointerdown; Enter or Space come here
     st.msg = null;
+    if (act === 'sstake') { scoreOf(line).stake = Number(b.dataset.n); draw(); return; }
+    if (act === 'placescore') {
+      const sc = scoreOf(line); st.busy = true; draw();
+      try { await rpc('stakes_place_score', { p_line: line, p_home: sc.h, p_away: sc.a, p_stake: sc.stake }); delete st.sc[line]; say(`Staked ${coins(sc.stake)} Coins on ${sc.h}–${sc.a}.`); }
+      catch (err) { say(err.message || 'That stake did not go through.', true); }
+      st.busy = false; await load(); return;
+    }
     if (act === 'help') { st.picked = null; draw(); tour(); return; }
     if (act === 'side') {
       const same = st.picked?.line === line && st.picked.side === b.dataset.side;

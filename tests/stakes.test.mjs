@@ -2,11 +2,11 @@
 // The Stakes tab's pure parts (MU-1): payout, the closing clock and the page's html for a few states.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { payout, closesIn, stakesView, statName, STEPS, stepsFor, stakeChips, DEFAULTS } from '../js/stakes.js';
+import { payout, closesIn, stakesView, statName, STEPS, stepsFor, stakeChips, DEFAULTS, stepGoals, defaultStakeFor } from '../js/stakes.js';
 import { readSettings } from '../js/editor-stakes.js';
 
 const o = { crest: () => '<i class="c"></i>', name: c => c };
-const line = (id, my) => ({ line_id: id, fixture: 'f1', week: 1, home: 'AAA', away: 'BBB', starts_at: '2026-11-01T08:00:00Z', player_id: 'p' + id, player_name: 'Hudson <Allen>', team: 'AAA', pos: 'GK', stat: 'sv', line: 3.5, my_side: my ? 'over' : null, my_stake: my ? 100 : null, my_status: my ? 'open' : null });
+const line = (id, my) => ({ kind: 'player', line_id: id, fixture: 'f1', week: 1, home: 'AAA', away: 'BBB', starts_at: '2026-11-01T08:00:00Z', player_id: 'p' + id, player_name: 'Hudson <Allen>', team: 'AAA', pos: 'GK', stat: 'sv', line: 3.5, my_side: my ? 'over' : null, my_stake: my ? 100 : null, my_status: my ? 'open' : null });
 const state = (x = {}) => ({ wallet: { coins: 1000 }, slate: [line(1), line(2, true)], board: [], history: [], picked: null, busy: false, msg: null, ...x });
 
 test('the payout is 1.9 times the stake, rounded down', () => {
@@ -82,4 +82,54 @@ test('the Editor form becomes the object the database takes', () => {
   assert.ok(!('daily_topup' in o2));             // blank is left alone
   assert.equal(o2.show_board, true); assert.deepEqual(o2.stats, ['sv', 'tk']);
   assert.equal(readSettings(new FormData()).show_board, false);   // an unticked box is off
+});
+
+// ---- guess the score ----
+const scoreLine = (id, my) => ({ line_id: id, kind: 'score', fixture: 'f9', week: 1, home: 'AAA', away: 'BBB', starts_at: '2026-11-01T08:00:00Z', locks_at: '2026-11-01T08:00:00Z', player_id: null, player_name: null, team: null, pos: null, stat: null, line: null, usual: null,
+  my_side: null, my_home: my ? 2 : null, my_away: my ? 1 : null, my_stake: my ? 100 : null, my_status: my ? 'open' : null, my_mult: my ? 8 : null, my_mult2: my ? 2 : null });
+
+test('the score steps stay between 0 and 9', () => {
+  assert.equal(stepGoals(0, -1), 0); assert.equal(stepGoals(9, 1), 9); assert.equal(stepGoals(3, 1), 4); assert.equal(stepGoals(3, -1), 2);
+});
+test('the starting stake is five times the smallest when you can afford it', () => {
+  assert.equal(defaultStakeFor(DEFAULTS, 1000), 50);
+  assert.equal(defaultStakeFor(DEFAULTS, 30), 10);
+  assert.equal(defaultStakeFor({ ...DEFAULTS, min_stake: 20 }, 1000), 100);
+});
+test('a score card has a + and a - under each team, both clubs, and says what each result pays', () => {
+  const html = stakesView(state({ slate: [scoreLine(7)], sc: { 7: { h: 2, a: 0, stake: 100 } } }), o);
+  assert.match(html, /st-scorecard/);
+  assert.equal((html.match(/data-st="step"/g) || []).length, 4);          // minus and plus for each side
+  assert.equal((html.match(/data-which="h"/g) || []).length, 2); assert.equal((html.match(/data-which="a"/g) || []).length, 2);
+  assert.match(html, /data-score="h"[^>]*>2</); assert.match(html, /data-score="a"[^>]*>0</);
+  assert.match(html, /Exact score pays <b>800<\/b>, the right result <b>200<\/b>/);
+  assert.match(html, /Stake 100 on 2–0/);
+  assert.match(html, /data-st="placescore"/);
+});
+test('the minus is off at 0 and the plus at 9', () => {
+  const html = stakesView(state({ slate: [scoreLine(7)], sc: { 7: { h: 0, a: 9, stake: 50 } } }), o);
+  assert.match(html, /data-which="h" data-d="-1"[^>]*disabled/); assert.doesNotMatch(html, /data-which="h" data-d="1"[^>]*disabled/);
+  assert.match(html, /data-which="a" data-d="1"[^>]*disabled/);
+});
+test('a placed score prediction is locked and shows what it pays at the multipliers it was placed at', () => {
+  const html = stakesView(state({ slate: [scoreLine(7, true)] }), o);
+  assert.doesNotMatch(html, /data-st="step"/); assert.doesNotMatch(html, /placescore/);
+  assert.match(html, /2–1<\/b> · 100 Coins · exact pays <b>800<\/b>, right result pays <b>200<\/b>/);
+  assert.match(html, /Take back/);
+});
+test('a score card and a player card sit in the same round', () => {
+  const html = stakesView(state({ slate: [line(1), scoreLine(7)] }), o);
+  assert.equal((html.match(/class="lg-card st-stake/g) || []).length, 2);
+  assert.equal((html.match(/Round 1 stakes/g) || []).length, 1);
+});
+test('the tour has a score step only when there is a score card', () => {
+  assert.ok(!stepsFor(DEFAULTS, false).some(s => /score/i.test(s.title)));
+  const s = stepsFor({ ...DEFAULTS, score_exact_mult: 10, score_result_mult: 2.5 }, true).find(x => /score/i.test(x.title));
+  assert.match(s.text, /10 times/); assert.match(s.text, /2\.5 times/);
+});
+test('the Editor form carries the score settings', () => {
+  const f = new FormData();
+  for (const [k, v] of [['score_per_week', '3'], ['score_exact_mult', '10'], ['score_result_mult', '2.5']]) f.append(k, v);
+  const o3 = readSettings(f);
+  assert.equal(o3.score_per_week, 3); assert.equal(o3.score_exact_mult, 10); assert.equal(o3.score_result_mult, 2.5);
 });

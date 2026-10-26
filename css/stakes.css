@@ -142,3 +142,24 @@ html.st-intro-open { overflow: hidden; }
 @keyframes st-rise { from { opacity: 0; transform: translateY(18px); } }
 @media (prefers-reduced-motion: reduce) { .st-intro, .st-reveal .lg-card { display: none; animation: none; } }
 .reduce-motion .st-intro { display: none; }
+
+/* ---- the score prediction card: both clubs, the two scores with a + and a - under each ---- */
+.st-scoretop { padding: 16px 16px 14px; min-height: 76px; align-content: end;
+  background: linear-gradient(100deg, color-mix(in oklab, var(--cc) 60%, transparent) 0 49%, color-mix(in oklab, var(--ca) 60%, transparent) 51% 100%); }
+.st-scoreask { margin: 0; align-self: end; font: 900 var(--fs-l)/1.1 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: #fff; text-shadow: 0 1px 8px rgba(0, 0, 0, .45); }
+.st-scorebox { display: grid; grid-template-columns: 1fr auto 1fr; align-items: start; gap: 8px; padding: 16px 12px 4px; }
+.st-sc-col { display: grid; justify-items: center; gap: 8px; min-width: 0; }
+.st-sc-club { display: grid; justify-items: center; gap: 4px; min-width: 0; font: 600 var(--fs-s) var(--font); color: var(--text); text-align: center; }
+.st-sc-club b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.st-sc-num { font: 900 56px/1 var(--font-display); font-stretch: 125%; color: var(--text-strong); font-variant-numeric: tabular-nums; min-width: 1ch; text-align: center; }
+.st-dash { padding-top: 62px; font: 900 28px/1 var(--font-display); font-style: normal; color: var(--faint); }
+.st-stepper { display: flex; gap: 10px; }
+.st-step { display: grid; place-items: center; width: 48px; height: 48px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--surface-sunk); color: var(--text-strong); cursor: pointer; touch-action: manipulation; transition: transform .1s, background-color .15s; }
+.st-step .ic { width: 22px; height: 22px; stroke-width: 3; }
+.st-step:not([disabled]):active { transform: scale(.9); background: var(--blue-500); border-color: var(--blue-500); color: #fff; }
+.st-step[disabled] { opacity: .35; cursor: default; }
+@media (hover: hover) { .st-step:not([disabled]):hover { background: var(--surface-hover); } }
+.st-step:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.st-scorewhen { text-align: center; padding: 6px 16px 12px; }
+.st-scorecard .st-stakebox { border-top: 1px solid var(--line); }
+@media (prefers-reduced-motion: reduce) { .st-step { transition: none; } }
