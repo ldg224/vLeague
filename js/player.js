@@ -16,6 +16,7 @@ import { portrait } from './portrait.js';
 import { hasPreseason, scopeNow } from './preseason.js';
 import { playerView, averageRating, CLASSES, MIN_PEERS, MIN_MATCHES } from './player-stats.js';
 import { icon } from './icons.js';
+import { profileChart, cumulativeChart, matchBarsChart, scatterChart } from './player-charts.js';
 import { demoSeason } from './demo-season.js';
 import { lineOf } from './season-stats.js';
 
@@ -144,8 +145,57 @@ function render(season, rows, mine) {
     ${p.value != null ? `<li><span>Value</span><b>${money(p.value)}</b></li>` : ''}
     ${club ? `<li><span>Club</span><b>${esc(club.name)}</b></li>` : ''}</ul></section>`;
 
+  // ---- charts (js/player-charts.js): tabs for the profile, match by match, and the league; one panel is drawn at a time ----
+  const cname = c => { const t = clubFor(c); return t.short_name || t.name || c; };
+  const cctx = { name: cname, pos: row?.pos || p.position, word: compare.word };
+  const st = { tab: ['profile', 'matches', 'league'].includes(q.get('tab')) ? q.get('tab') : 'profile', bar: q.get('bar') || 'r', sc: q.get('sc') || '' };   // ?tab=league&sc=sh|sot opens a chart (also for screenshots)
+  const PANELS = [
+    ['profile', 'Profile', () => profileChart(groups, compare)],
+    ['matches', 'Match by match', () => `${cumulativeChart(log)}${matchBarsChart(v.matchStats, log, st.bar, cctx)}` || '<p class="pp-note">Needs a match.</p>'],
+    ['league', 'The league', () => scatterChart(v.peerTable, p.id, st.sc, cctx) || '<p class="pp-note">Appears once three players of his position have played 90 minutes.</p>'],
+  ];
+  const chartsCard = row ? `<section class="lg-card pp-charts"><div class="lg-card-head"><h2>Charts</h2></div>
+    <nav class="pc-tabs" aria-label="Charts">${PANELS.map(([k, label]) => `<button type="button" data-pctab="${k}" aria-pressed="${k === st.tab}">${esc(label)}</button>`).join('')}</nav>
+    <div class="pc-panel" id="pc-panel">${PANELS.find(x => x[0] === st.tab)[2]()}</div></section>` : '';
+
   main.innerHTML = `<article class="pp" style="--club:${c1};--club-accent-dark:${accentFor(c1, 'dark')};--club-accent-light:${accentFor(c1, 'light')};--on-club:${onColour(c1)}">
     ${head}
-    <div class="lg-cols"><div class="lg-main">${statsCard}${logCard}</div><aside class="lg-side">${trendCard}${ranksCard}${profile}</aside></div>
+    <div class="lg-cols"><div class="lg-main">${chartsCard}${statsCard}${logCard}</div><aside class="lg-side">${trendCard}${ranksCard}${profile}</aside></div>
   </article>`;
+
+  const drawPanel = () => {
+    const el = main.querySelector('#pc-panel'); if (!el) return;
+    el.innerHTML = PANELS.find(x => x[0] === st.tab)[2]();
+    main.querySelectorAll('[data-pctab]').forEach(b => b.setAttribute('aria-pressed', b.dataset.pctab === st.tab));
+  };
+  main.addEventListener('click', e => {
+    const t = e.target.closest('[data-pctab],[data-pcbar],[data-pcsc]');
+    if (!t) return;
+    if (t.dataset.pctab) st.tab = t.dataset.pctab;
+    if (t.dataset.pcbar) st.bar = t.dataset.pcbar;
+    if (t.dataset.pcsc) st.sc = t.dataset.pcsc;
+    drawPanel();
+    main.querySelector(`[data-pcbar="${st.bar}"][aria-pressed="true"],[data-pcsc="${st.sc}"][aria-pressed="true"]`)?.focus({ preventScroll: true });
+  });
+  wireTips(main);
+}
+
+// One tooltip for every chart mark with a data-tip: follows the mouse, shows on keyboard focus, and a tap on a phone shows it until the next tap.
+function wireTips(root) {
+  let tip = document.querySelector('.pc-tip');
+  if (!tip) { tip = document.createElement('div'); tip.className = 'pc-tip'; tip.setAttribute('role', 'tooltip'); tip.hidden = true; document.body.append(tip); }
+  const show = (el, x, y) => {
+    tip.textContent = el.dataset.tip; tip.hidden = false;
+    const r = tip.getBoundingClientRect();
+    tip.style.left = `${Math.max(8, Math.min(innerWidth - r.width - 8, x - r.width / 2))}px`;
+    tip.style.top = `${y - r.height - 12 < 8 ? y + 18 : y - r.height - 12}px`;
+  };
+  const at = el => { const b = el.getBoundingClientRect(); return [b.left + b.width / 2, b.top]; };
+  root.addEventListener('pointermove', e => { if (e.pointerType !== 'mouse') return; const el = e.target.closest?.('[data-tip]'); if (el) show(el, e.clientX, e.clientY); else tip.hidden = true; });
+  root.addEventListener('pointerleave', () => { tip.hidden = true; });
+  root.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse') return; const el = e.target.closest?.('[data-tip]'); if (el) show(el, ...at(el)); else tip.hidden = true; });
+  root.addEventListener('focusin', e => { const el = e.target.closest?.('[data-tip]'); if (el) show(el, ...at(el)); });
+  root.addEventListener('focusout', () => { tip.hidden = true; });
+  addEventListener('scroll', () => { tip.hidden = true; }, { passive: true });
+  addEventListener('keydown', e => { if (e.key === 'Escape') tip.hidden = true; });
 }

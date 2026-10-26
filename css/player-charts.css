@@ -1,0 +1,66 @@
+/* Charts on the player page (js/player-charts.js): him in vLeague blue, everyone else grey. One axis per chart, thin marks, a dashed line for the average. */
+.pc-tabs, .pc-pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+.pc-pills { margin: 4px 0 10px; }
+.pc-tabs button, .pc-pill {
+  min-height: 36px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--text);
+  font: 600 var(--fs-s) var(--font); cursor: pointer;
+}
+.pc-pill { min-height: 32px; padding: 0 12px; }
+.pc-tabs button[aria-pressed="true"], .pc-pill[aria-pressed="true"] { background: var(--text-strong); border-color: var(--text-strong); color: var(--bg); font-weight: 700; }
+@media (hover: hover) { .pc-tabs button:not([aria-pressed="true"]):hover, .pc-pill:not([aria-pressed="true"]):hover { background: var(--surface-hover); } }
+.pc-tabs button:focus-visible, .pc-pill:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pc-panel > * + * { margin-top: 10px; }
+.pc-svg { display: block; width: 100%; max-width: 720px; height: auto; overflow: visible; }
+.pc-grid { stroke: var(--line); stroke-width: 1; }
+.pc-ax { fill: var(--muted); font: 400 11px var(--font); font-variant-numeric: tabular-nums; }
+.pc-ax.is-soft { fill: var(--faint); font-size: 10px; }
+.pc-axt { fill: var(--muted); font: 600 11px var(--font); }
+.pc-val { fill: var(--text); font: 600 11px var(--font); font-variant-numeric: tabular-nums; }
+.pc-lab { font: 700 11px var(--font); fill: var(--muted); }
+.pc-lab.is-me { fill: var(--text-strong); }
+.pc-line { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.pc-line.is-me { stroke: var(--brand); }
+.pc-line.is-ref { stroke: var(--muted); stroke-dasharray: 5 4; stroke-width: 2; }
+.pc-dot { fill: var(--surface); stroke-width: 2.5; stroke: var(--brand); }
+.pc-bar { fill: var(--brand); }
+.pc-avg { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.pc-sdot { fill: var(--muted); fill-opacity: .55; stroke: var(--surface); stroke-width: 1.5; cursor: pointer; }
+.pc-sdot.is-me { fill: var(--brand); fill-opacity: 1; stroke: var(--surface); stroke-width: 2.5; }
+@media (hover: hover) { .pc-sdot:hover, .pc-bar:hover { opacity: .8; } }
+.pc-sdot:focus-visible, .pc-bar:focus-visible, .pc-dot:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* percentile profile */
+.pc-phead, .pc-prow { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(90px, 1.6fr) 56px 34px; align-items: center; gap: 0 10px; }
+.pc-phead { font: 600 var(--fs-xs) var(--font); color: var(--muted); padding-bottom: 4px; }
+.pc-phead span:nth-child(3), .pc-phead span:nth-child(4) { text-align: right; }
+.pc-strip { margin: 10px 0 0; padding: 6px 0; font: 600 var(--fs-s) var(--font); color: var(--text-soft); border-bottom: 1px solid var(--line); }
+.pc-prow { min-height: 34px; font: 400 var(--fs-s) var(--font); }
+.pc-prow:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pc-pl { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pc-track { position: relative; height: 10px; border-radius: 999px; background: var(--surface-sunk); border: 1px solid var(--line); }
+.pc-track i { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--muted); }
+.pc-track u { position: absolute; top: -3px; bottom: -3px; left: 50%; width: 1px; background: var(--faint); }
+.pc-prow.is-elite .pc-track i { background: var(--brand-grad); }
+.pc-prow.is-great .pc-track i { background: var(--res-w); }
+.pc-prow.is-below .pc-track i { background: var(--amber); }
+.pc-prow.is-poor .pc-track i { background: var(--res-l); }
+.pc-pv { text-align: right; font: 700 var(--fs-s) var(--font); color: var(--text-strong); font-variant-numeric: tabular-nums; }
+.pc-pp { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pc-prov { margin: 0 0 10px; color: var(--amber-text); }
+
+/* the table behind each chart */
+.pc-table { margin-top: 12px; font: 400 var(--fs-s) var(--font); }
+.pc-table summary { cursor: pointer; color: var(--brand); font-weight: 600; padding: 6px 0; }
+.pc-scroll { overflow-x: auto; max-height: 320px; }
+.pc-table table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.pc-table th, .pc-table td { padding: 6px 10px; text-align: right; border-top: 1px solid var(--line); white-space: nowrap; }
+.pc-table th:first-child { text-align: left; font-weight: 600; }
+.pc-table thead th { color: var(--muted); font-weight: 600; border-top: 0; }
+
+/* the one tooltip: floats, so it may have a shadow */
+.pc-tip { position: fixed; z-index: 60; max-width: 280px; padding: 8px 10px; border-radius: var(--r-sm); background: var(--text-strong); color: var(--bg); font: 600 var(--fs-s)/1.35 var(--font); box-shadow: 0 6px 20px rgba(0, 0, 0, .35); pointer-events: none; }
+.pc-tip[hidden] { display: none; }
+
+@media (max-width: 640px) {
+  .pc-phead, .pc-prow { grid-template-columns: minmax(0, 1fr) minmax(70px, 1fr) 46px 26px; gap: 0 8px; }
+}
