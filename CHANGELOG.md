@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.16.0 (2026-10-26)
+
+Headlines: Stakes game predictors are win, draw or win
+
+**Changed (MU-1):** the game predictors below the Stakes cards are now simply Team A win, Draw or Team B win, like FotMob's Predict. Every game of the round has three big choices, each showing what it pays; tap one (it lights up in that club's colour), set your stake and Lock in. A right win pays 2.2 times your stake and a right draw pays 3 times; both are settings in Editor > Stakes. This replaces the exact-score predictor. A pick keeps the payout it was placed at, and your pick history names the result and the final score.
+
+Database change: 0069, already applied.
+
 ## 1.15.1 (2026-10-26)
 
 Headlines: Stakes averages made honest
