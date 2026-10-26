@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.11.3 (2026-10-26)
+
+Headlines: Suggest changes is back, dates on the team fixtures
+
+**Fixed:** the "Suggest changes" link was missing from the footer of the league-style pages (league, team, club, match, editor, kits, settings). Managers and the office see it there again.
+
+**Changed:** Fixtures sorted by team now show each match's date above its time or score.
+
+No database change.
+
 ## 1.11.2 (2026-10-25)
 
 **Fixed, Fixtures planning:** preseason rounds no longer count as games in the Who plays who table, the season planner or the Add the next round pairing (who has met, home and away, and the round count it suggests). Test matches were already left out.

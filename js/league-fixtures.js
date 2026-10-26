@@ -114,6 +114,7 @@ export function rowHtml(fx, season, ctx, opts = {}) {
   } else {
     mid = `<strong class="fx-ko">${k ? esc(ctx.time(k)) : st === 'postponed' ? '–' : 'TBA'}</strong>${st !== 'postponed' ? chanceBar(ctx.chance?.(fx)) : ''}`;
   }
+  if (opts.forTeam && fx.date) mid = `<span class="fx-date">${esc(noon(fx.date).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' }))}</span>${mid}`;   // by team, rows aren't under a day heading, so each shows its own date
   let res = '';
   if (opts.forTeam) {
     res = st === 'ft' && !hid ? `<abbr class="fx-res res-${outcome(fx, opts.forTeam)}" title="${{ W: 'Won', D: 'Drew', L: 'Lost' }[outcome(fx, opts.forTeam)]}">${outcome(fx, opts.forTeam)}</abbr>` : '<span class="fx-res"></span>';

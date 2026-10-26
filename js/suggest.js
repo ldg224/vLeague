@@ -48,7 +48,7 @@ function open() {
 
 // Add the link to the page's footer, for a signed-in manager or the office only.
 export async function mountSuggest() {
-  const foot = document.querySelector('.member-foot');
+  const foot = document.querySelector('.member-foot, .lg-foot');
   if (!foot || foot.querySelector('.sg-link')) return;
   const profile = await myProfile().catch(() => null);
   if (!profile || !['manager', 'office'].includes(profile.role)) return;
@@ -57,5 +57,6 @@ export async function mountSuggest() {
   link.className = 'sg-link';
   link.textContent = 'Suggest changes';
   link.addEventListener('click', e => { e.preventDefault(); open(); });
+  if (!document.querySelector('link[href="css/suggest.css"]')) document.head.append(Object.assign(document.createElement('link'), { rel: 'stylesheet', href: 'css/suggest.css' }));
   foot.prepend(link);
 }
