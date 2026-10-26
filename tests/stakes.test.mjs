@@ -2,7 +2,7 @@
 // The Stakes tab's pure parts (MU-1): payout, the closing clock and the page's html for a few states.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { payout, closesIn, stakesView, statName, STEPS, stepsFor, stakeChips, DEFAULTS, stepGoals, defaultStakeFor } from '../js/stakes.js';
+import { payout, closesIn, stakesView, statName, STEPS, stepsFor, stakeChips, DEFAULTS, stepGoals, defaultStakeFor, bestCols } from '../js/stakes.js';
 import { readSettings } from '../js/editor-stakes.js';
 
 const o = { crest: () => '<i class="c"></i>', name: c => c };
@@ -38,7 +38,7 @@ test('a line with a pick is locked and says what it pays; one without offers bot
 test('choosing a side opens the stake picker, and a stake above the balance is not offered', () => {
   const html = stakesView(state({ wallet: { coins: 60 }, picked: { line: 1, side: 'over', stake: 50 } }), o);
   assert.match(html, /data-st="place"/);
-  assert.match(html, /wins <b>95<\/b> Coins back/);
+  assert.match(html, /Wins <b>95<\/b> Coins back/);
   assert.doesNotMatch(html, /data-n="100"/);
   assert.match(html, /All in · 60/);
 });
@@ -97,7 +97,7 @@ test('the starting stake is five times the smallest when you can afford it', () 
   assert.equal(defaultStakeFor({ ...DEFAULTS, min_stake: 20 }, 1000), 100);
 });
 test('a score card has a + and a - under each team, both clubs, and says what each result pays', () => {
-  const html = stakesView(state({ slate: [scoreLine(7)], sc: { 7: { h: 2, a: 0, stake: 100 } } }), o);
+  const html = stakesView(state({ slate: [scoreLine(7)], sc: { 7: { h: 2, a: 0, stake: 100, open: true } } }), o);
   assert.match(html, /st-scorecard/);
   assert.equal((html.match(/data-st="step"/g) || []).length, 4);          // minus and plus for each side
   assert.equal((html.match(/data-which="h"/g) || []).length, 2); assert.equal((html.match(/data-which="a"/g) || []).length, 2);
@@ -114,7 +114,7 @@ test('the minus is off at 0 and the plus at 9', () => {
 test('a placed score prediction is locked and shows what it pays at the multipliers it was placed at', () => {
   const html = stakesView(state({ slate: [scoreLine(7, true)] }), o);
   assert.doesNotMatch(html, /data-st="step"/); assert.doesNotMatch(html, /placescore/);
-  assert.match(html, /2–1<\/b> · 100 Coins · exact pays <b>800<\/b>, right result pays <b>200<\/b>/);
+  assert.match(html, /2–1<\/b> · 100 Coins<br>exact pays <b>800<\/b>, result <b>200<\/b>/);
   assert.match(html, /Take back/);
 });
 test('a score card and a player card sit in the same round', () => {
@@ -132,4 +132,23 @@ test('the Editor form carries the score settings', () => {
   for (const [k, v] of [['score_per_week', '3'], ['score_exact_mult', '10'], ['score_result_mult', '2.5']]) f.append(k, v);
   const o3 = readSettings(f);
   assert.equal(o3.score_per_week, 3); assert.equal(o3.score_exact_mult, 10); assert.equal(o3.score_result_mult, 2.5);
+});
+
+test('the grid picks columns that fill every row, never one card alone underneath', () => {
+  assert.equal(bestCols(8, 4), 4);    // two full rows
+  assert.equal(bestCols(9, 4), 3);    // three full rows
+  assert.equal(bestCols(6, 4), 3);
+  assert.equal(bestCols(10, 5), 5);   // two full rows
+  assert.equal(bestCols(10, 4), 2);   // five rows of two beats 4+4+2
+  assert.equal(bestCols(7, 4), 4);    // 4 + 3, the last row nearly full
+  assert.equal(bestCols(5, 3), 3);    // 3 + 2, not 4 + 1
+  assert.equal(bestCols(1, 4), 1); assert.equal(bestCols(2, 4), 2);
+  for (const max of [2, 3, 4, 5]) for (let n = 2; n <= 12; n++) { const c = bestCols(n, max), rem = n % c; assert.ok(c <= max && (rem === 0 || rem >= 2 || n <= c), `${n} cards in ${max}: ${c}`); }
+});
+test('every round writes its column counts onto its grid, and a card never grows to hold the chooser', () => {
+  const slate = Array.from({ length: 8 }, (_, i) => ({ ...line(i + 1), week: 2 }));
+  const html = stakesView(state({ slate, picked: { line: 3, side: 'over', stake: 50 } }), o);
+  assert.match(html, /class="st-grid" style="--c-lg:4;--c-md:2;--c-sm:2"/);
+  assert.equal((html.match(/class="st-sheet is-over"/g) || []).length, 1);   // one chooser open, over its own card
+  assert.doesNotMatch(html, /st-stakebox/);
 });
