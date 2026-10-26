@@ -96,44 +96,10 @@ test('the starting stake is five times the smallest when you can afford it', () 
   assert.equal(defaultStakeFor(DEFAULTS, 30), 10);
   assert.equal(defaultStakeFor({ ...DEFAULTS, min_stake: 20 }, 1000), 100);
 });
-test('a score card has a + and a - under each team, both clubs, and says what each result pays', () => {
-  const html = stakesView(state({ slate: [scoreLine(7)], sc: { 7: { h: 2, a: 0, stake: 100, open: true } } }), o);
-  assert.match(html, /st-scorecard/);
-  const card = html.match(/<article class="lg-card st-stake st-scorecard[\s\S]*?<\/article>/)[0];
-  assert.equal((card.match(/data-st="step"/g) || []).length, 4);          // minus and plus for each side
-  assert.equal((card.match(/data-which="h"/g) || []).length, 2); assert.equal((card.match(/data-which="a"/g) || []).length, 2);
-  assert.match(html, /data-score="h"[^>]*>2</); assert.match(html, /data-score="a"[^>]*>0</);
-  assert.match(html, /Exact score pays <b>800<\/b>, the right result <b>200<\/b>/);
-  assert.match(html, /Stake 100 on 2–0/);
-  assert.match(html, /data-st="placescore"/);
-});
 test('the minus is off at 0 and the plus at 9', () => {
   const html = stakesView(state({ slate: [scoreLine(7)], sc: { 7: { h: 0, a: 9, stake: 50 } } }), o);
   assert.match(html, /data-which="h" data-d="-1"[^>]*disabled/); assert.doesNotMatch(html, /data-which="h" data-d="1"[^>]*disabled/);
   assert.match(html, /data-which="a" data-d="1"[^>]*disabled/);
-});
-test('a placed score prediction is locked and shows what it pays at the multipliers it was placed at', () => {
-  const html = stakesView(state({ slate: [scoreLine(7, true)] }), o);
-  const card = html.match(/<article class="lg-card st-stake st-scorecard[\s\S]*?<\/article>/)[0];
-  assert.doesNotMatch(card, /data-st="step"/); assert.doesNotMatch(card, /placescore/);
-  assert.match(html, /2–1<\/b> · 100 Coins<br>exact pays <b>800<\/b>, result <b>200<\/b>/);
-  assert.match(html, /Take back/);
-});
-test('a score card and a player card sit in the same round', () => {
-  const html = stakesView(state({ slate: [line(1), scoreLine(7)] }), o);
-  assert.equal((html.match(/class="lg-card st-stake/g) || []).length, 2);
-  assert.equal((html.match(/Round 1 stakes/g) || []).length, 1);
-});
-test('the tour has a score step only when there is a score card', () => {
-  assert.ok(!stepsFor(DEFAULTS, false).some(s => /score/i.test(s.title)));
-  const s = stepsFor({ ...DEFAULTS, score_exact_mult: 10, score_result_mult: 2.5 }, true).find(x => /score/i.test(x.title));
-  assert.match(s.text, /10 times/); assert.match(s.text, /2\.5 times/);
-});
-test('the Editor form carries the score settings', () => {
-  const f = new FormData();
-  for (const [k, v] of [['score_per_week', '3'], ['score_exact_mult', '10'], ['score_result_mult', '2.5']]) f.append(k, v);
-  const o3 = readSettings(f);
-  assert.equal(o3.score_per_week, 3); assert.equal(o3.score_exact_mult, 10); assert.equal(o3.score_result_mult, 2.5);
 });
 
 test('the grid picks columns that fill every row, never one card alone underneath', () => {
@@ -155,22 +121,6 @@ test('every round writes its column counts onto its grid, and a card never grows
   assert.doesNotMatch(html, /st-stakebox/);
 });
 
-test('the lineup at the bottom has a narrow row for every game, with the predictor, the stake and one button', () => {
-  const html = stakesView(state({ slate: [line(1), scoreLine(7, false, true), { ...scoreLine(8, false, false), fixture: 'f10' }], sc: { 8: { h: 3, a: 0, stake: 50 } } }), o);
-  assert.match(html, /Call every game/);
-  assert.equal((html.match(/class="st-lurow/g) || []).length, 2);               // every score line, featured or not
-  assert.equal((html.match(/class="lg-card st-stake st-scorecard/g) || []).length, 1);   // but only the featured one is also a card
-  const row = html.match(/<li class="st-lurow[\s\S]*?<\/li>/g).pop();            // the one that is only in the lineup
-  assert.equal((row.match(/data-st="step"/g) || []).length, 4);
-  assert.match(row, /<b class="st-lunum">3<\/b>/); assert.match(row, /Stake 3–0/);
-  assert.match(row, /data-st="lucycle"/); assert.match(row, /data-st="placescore"/);
-});
-test('a placed row in the lineup is locked and shows what it pays', () => {
-  const html = stakesView(state({ slate: [scoreLine(7, true)] }), o);
-  const row = html.match(/<li class="st-lurow[\s\S]*?<\/li>/)[0];
-  assert.match(row, /has-pick/); assert.doesNotMatch(row, /data-st="step"/);
-  assert.match(row, /exact <b>800<\/b> · result <b>200<\/b>/); assert.match(row, /Take back/);
-});
 test('the leaderboard is along the top, above the cards, and hidden when switched off', () => {
   const board = [1, 2, 3, 4, 5, 6, 7].map(i => ({ rank: i, club: 'AAA', name: 'M' + i, coins: 2000 - i, won: 1, settled: 2, mine: i === 7 }));
   const html = stakesView(state({ board, slate: [line(1)] }), o);
@@ -183,4 +133,51 @@ test('the Editor can switch the lineup off', () => {
   const f = new FormData(); f.append('score_all', 'on');
   assert.equal(readSettings(f).score_all, true);
   assert.equal(readSettings(new FormData()).score_all, false);
+});
+
+// ---- the game predictors ----
+const ROW = /<li class="st-pr[\s\S]*?<\/li>/g;
+test('every game has its own predictor row, and none of them is a big card', () => {
+  const html = stakesView(state({ slate: [line(1), scoreLine(7), { ...scoreLine(8), fixture: 'f10' }] }), o);
+  assert.match(html, /Game predictors/);
+  assert.equal((html.match(ROW) || []).length, 2);
+  assert.equal((html.match(/class="lg-card st-stake/g) || []).length, 1);          // only the player stake is a card
+  assert.match(html, /Round 1 · 2 games/);
+  assert.match(html, /Round 1 stakes/); assert.match(html, /1 stake</);              // the heading counts the player cards only
+});
+test('a row has a red minus and a blue plus on each side, and says what to do until you touch it', () => {
+  const row = stakesView(state({ slate: [scoreLine(7)] }), o).match(ROW)[0];
+  assert.equal((row.match(/class="st-pr-dn"/g) || []).length, 2); assert.equal((row.match(/class="st-pr-up"/g) || []).length, 2);
+  assert.equal((row.match(/data-st="step"/g) || []).length, 4);
+  assert.equal((row.match(/data-which="h"/g) || []).length, 2); assert.equal((row.match(/data-which="a"/g) || []).length, 2);
+  assert.match(row, /Tap − and \+ to set your score/);
+  assert.doesNotMatch(row, /is-set/);
+  assert.match(row, /Lock in 1–1/); assert.match(row, /data-st="placescore"/); assert.match(row, /data-st="stakecycle"/);
+});
+test('once you touch a score the tiles light up and the button follows the score and the stake', () => {
+  const row = stakesView(state({ slate: [scoreLine(7)], sc: { 7: { h: 2, a: 0, stake: 100, touched: true } } }), o).match(ROW)[0];
+  assert.match(row, /st-pr-tile is-set/); assert.match(row, /st-pr-hint is-set">Your guess</);
+  assert.match(row, /data-score|st-pr-num">2</); assert.match(row, /Lock in 2–0/); assert.match(row, /<b>100<\/b>/);
+});
+test('the minus is off at 0 and the plus at 9', () => {
+  const row = stakesView(state({ slate: [scoreLine(7)], sc: { 7: { h: 0, a: 9, stake: 50, touched: true } } }), o).match(ROW)[0];
+  assert.match(row, /data-which="h" data-d="-1"[^>]*disabled/); assert.doesNotMatch(row, /data-which="h" data-d="1"[^>]*disabled/);
+  assert.match(row, /data-which="a" data-d="1"[^>]*disabled/);
+});
+test('a placed prediction is locked and shows what it pays at the multipliers it was placed at', () => {
+  const row = stakesView(state({ slate: [scoreLine(7, true)] }), o).match(ROW)[0];
+  assert.match(row, /has-pick/); assert.doesNotMatch(row, /data-st="step"/); assert.doesNotMatch(row, /placescore/);
+  assert.match(row, /Locked in 2–1/); assert.match(row, /Exact pays <b>800<\/b> · right result <b>200<\/b>/); assert.match(row, /Take back/);
+});
+test('the tour has a predictor step only when there are predictors, quoting the payouts', () => {
+  assert.ok(!stepsFor(DEFAULTS, false).some(s => /predictor/i.test(s.title)));
+  const s = stepsFor({ ...DEFAULTS, score_exact_mult: 10, score_result_mult: 2.5 }, true).find(x => /predictor/i.test(x.title));
+  assert.match(s.text, /10 times/); assert.match(s.text, /2\.5 times/); assert.match(s.text, /red −/);
+});
+test('the Editor form carries the predictor payouts and the switch, and no longer a count of cards', () => {
+  const f = new FormData();
+  for (const [k, v] of [['score_exact_mult', '10'], ['score_result_mult', '2.5'], ['score_all', 'on']]) f.append(k, v);
+  const o3 = readSettings(f);
+  assert.equal(o3.score_exact_mult, 10); assert.equal(o3.score_result_mult, 2.5); assert.equal(o3.score_all, true);
+  assert.ok(!('score_per_week' in o3));
 });
