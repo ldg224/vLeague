@@ -194,7 +194,7 @@ async function run() {
           <tr><th>Defence rating</th><td>${rate(R.home.def)}</td><td>${rate(R.away.def)}</td></tr></tbody></table>
         ${meets.length ? `<p class="gc-note">Met this season: ${meets.map(f => `${esc(f.home)} ${f.result.home}–${f.result.away} ${esc(f.away)}`).join(', ')}</p>` : ''}</section>
       <section class="gc-sec"><h2>Line-ups</h2>${hx.items.length && ax.items.length
-        ? `${pitchHtml(hx, ax, pitchKit)}`
+        ? `${pitchHtml(hx, ax, pitchKit)}<p class="gc-note">The number under each name is that player’s average match rating this season, and N/A means they haven’t played yet. The gold C is the captain.</p>`
         : `<div class="gc-two"><div><h3>${esc(nameOf(home()))}</h3>${lu(hx)}</div><div><h3>${esc(nameOf(away()))}</h3>${lu(ax)}</div></div>`}</section>`;
   }
 

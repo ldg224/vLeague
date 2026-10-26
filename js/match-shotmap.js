@@ -127,5 +127,6 @@ export function playerShotMap(list, st, o) {
     <div class="sm-pick"><span class="sm-who">${o.label(sel)}</span><span class="sm-step">${arrowBtn(-1, idx <= 0, 'm15 6-6 6 6 6')}<b>${esc(sel.minute)}′</b>${arrowBtn(1, idx >= list.length - 1, 'm9 6 6 6-6 6')}</span></div>
     <div class="sm-detail"><dl class="sm-facts"><div><dt>Shot type</dt><dd>${esc(sel.type)}</dd></div><div><dt>Situation</dt><dd>${esc(sel.situation)}</dd></div><div><dt>Result</dt><dd>${esc(RESULT[sel.result] || sel.result)}</dd></div></dl>
     <div class="sm-xg">${mouth(sel)}<div><b>${f2(sel.xg)}</b><span>xG</span></div><div><b>${f2(sel.xgot)}</b><span>xGOT</span></div></div></div>
-    <svg class="sm-pitch" viewBox="40 -3 68.5 74" role="group" aria-label="Shot map, attacking the right-hand goal">${PITCH}${ring}${dots}</svg>`;
+    <svg class="sm-pitch" viewBox="40 -3 68.5 74" role="group" aria-label="Shot map, attacking the right-hand goal">${PITCH}${ring}${dots}</svg>
+    <p class="pp-note">Click a shot to see where it went. Every shot is shown attacking the same goal, whichever way his team was kicking.</p>`;
 }
