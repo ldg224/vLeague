@@ -1,31 +1,48 @@
 // Player pages (player.html): everything a page needs about one player, worked out from the season's saved results. Pure functions, no page code,
 // so tests/player-stats.test.mjs can run them without a browser.
 //
-//   playerView(season, id, { hidden, scope }) -> { player, row, log, groups, ranks } | null
-//     player  the league's player ({ id, name, team, position, number, offense, defense, value, ... }), or null when there is no such player
-//     row     the player's season totals (js/season-stats.js totals(): apps, min, g, a, ... ratingSum), or null before a match
-//     log     one entry per match played, oldest first: { fx, home (was his club at home), opp (club code), gf, ga, res 'W'|'D'|'L', s (his numbers), rating }
-//     groups  the detailed stats for the page: [{ title, rows: [{ label, total, per90?, note? }] }], the keeper's own set for a goalkeeper
-//     ranks   up to four places in the league's lists (top 10 only): [{ title, rank, of, text }]
+//   playerView(season, id, { hidden, scope }) -> { player, row, log, groups, ranks, compare } | null
+//     player   the league's player ({ id, name, team, position, number, offense, defense, value, ... }), or null when there is no such player
+//     row      the player's season totals (js/season-stats.js totals(): apps, min, g, a, ... ratingSum), or null before a match
+//     log      one entry per match played, oldest first: { fx, home (was his club at home), opp (club code), gf, ga, res 'W'|'D'|'L', s (his numbers), rating }
+//     groups   the detailed stats: [{ title, rows: [{ label, total, per90?, avg?, cls?, fill?, tick?, low? }] }], the keeper's own set for a goalkeeper.
+//              avg is the league average for his position, cls his class for that stat (CLASSES), fill and tick place his figure and the average on a 0-100 bar
+//     ranks    up to five places in the league's lists (top 10 only): [{ title, rank, of, text }]
+//     compare  { eligible, n, word } how the classes were worked out: eligible is false until the player has MIN_MINUTES and enough peers have too
 // A result the viewer has not opened (spoiler-free) is left out of all of it, as on the league page.
+//
+// Classes (like the AFL's player ratings): each stat is compared with the other players of his position who have played at least MIN_MINUTES, using the
+// per-90 figure (or the percentage for accuracy). Top 10% is Elite (the blue star), the next 20% Great, the middle 40% Average, the next 20% Below average,
+// the last 10% Poor. For stats where less is better (goals conceded, fouls, cards, offsides) the order is turned round. Classes only show once
+// MIN_PEERS players of his position qualify, so a first-week list does not hand out stars on three players' numbers.
 import { countedFixtures, totals, rank, per90, PLAYER_CARDS, MIN_MINUTES, format } from './season-stats.js';
 
-const pct = (a, b) => (b ? Math.round((100 * a) / b) : null);
+export const MIN_PEERS = 6;
+export const CLASSES = [['elite', 'Elite', 90], ['great', 'Great', 70], ['avg', 'Average', 30], ['below', 'Below average', 10], ['poor', 'Poor', 0]];
+const POS_WORD = { GK: 'goalkeepers', DEF: 'defenders', MID: 'midfielders', FWD: 'forwards' };
 const n1 = v => (Number.isFinite(v) ? Math.round(v * 10) / 10 : 0);
+const KEYS = { sv: 'saves', gc: 'conceded' };   // the totals keep a keeper's saves and goals conceded under longer names
+const cell = (r, key) => r[KEYS[key] || key] || 0;
 
-// One line of the stats list. `key` is summed from the matches; `p90` shows the per-90 figure next to the total.
-const R = (label, key, o = {}) => ({ label, key, ...o });
+// One line of the list. rate: show and class the per-90 figure; pct: a percentage worked out from the totals; low: less is better;
+// dp: decimals of the per-90 figure (and of the total when `tdp` is not given); plain lines (no rate, no pct) show a total only.
+const L = (label, key, o = {}) => ({ label, key, ...o });
+const ACC = { label: 'Pass accuracy', pct: r => (r.pas ? (100 * r.pc) / r.pas : null) };
 const OUTFIELD = [
-  ['Attacking', [R('Goals', 'g', { p90: 2 }), R('Assists', 'a', { p90: 2 }), R('Expected goals (xG)', 'xg', { dp: 2, p90: 2 }), R('Shots', 'sh', { p90: 1 }), R('Shots on target', 'sot', { p90: 1 }),
-    R('Chances created', 'kp', { p90: 1 }), R('Dribbles', 'dr', { p90: 1 }), R('Crosses', 'cr', { p90: 1 }), R('Offsides', 'off')]],
-  ['Passing', [R('Passes', 'pas', { p90: 1 }), R('Passes completed', 'pc', { p90: 1 }), { label: 'Pass accuracy', calc: t => (t.pas ? `${pct(t.pc, t.pas)}%` : '–') }, R('Touches', 'tch', { p90: 1 })]],
-  ['Defending', [R('Tackles won', 'tk', { p90: 1 }), R('Interceptions', 'int', { p90: 1 }), R('Clearances', 'clr', { p90: 1 }), R('Blocks', 'blk', { p90: 1 }), R('Aerial duels won', 'aw', { p90: 1 })]],
-  ['Discipline', [R('Fouls committed', 'fl', { p90: 1 }), R('Fouled', 'fd', { p90: 1 }), R('Yellow cards', 'yc'), R('Red cards', 'rc'), R('Penalties won', 'pw'), R('Penalties conceded', 'pcn'), R('Penalties missed', 'pm')]],
+  ['Attacking', [L('Goals', 'g', { rate: 1, dp: 2 }), L('Assists', 'a', { rate: 1, dp: 2 }), L('Expected goals (xG)', 'xg', { rate: 1, dp: 2, tdp: 2 }), L('Shots', 'sh', { rate: 1, dp: 1 }),
+    L('Shots on target', 'sot', { rate: 1, dp: 1 }), L('Chances created', 'kp', { rate: 1, dp: 1 }), L('Dribbles', 'dr', { rate: 1, dp: 1 }), L('Crosses', 'cr', { rate: 1, dp: 1 }),
+    L('Offsides', 'off', { rate: 1, dp: 1, low: 1 })]],
+  ['Passing', [L('Passes', 'pas', { rate: 1, dp: 1 }), L('Passes completed', 'pc', { rate: 1, dp: 1 }), ACC, L('Touches', 'tch', { rate: 1, dp: 1 })]],
+  ['Defending', [L('Tackles won', 'tk', { rate: 1, dp: 1 }), L('Interceptions', 'int', { rate: 1, dp: 1 }), L('Clearances', 'clr', { rate: 1, dp: 1 }), L('Blocks', 'blk', { rate: 1, dp: 1 }),
+    L('Aerial duels won', 'aw', { rate: 1, dp: 1 })]],
+  ['Discipline', [L('Fouls committed', 'fl', { rate: 1, dp: 1, low: 1 }), L('Fouled', 'fd', { rate: 1, dp: 1 }), L('Yellow cards', 'yc', { rate: 1, dp: 2, low: 1 }), L('Red cards', 'rc'),
+    L('Penalties won', 'pw'), L('Penalties conceded', 'pcn'), L('Penalties missed', 'pm')]],
 ];
 const KEEPER = [
-  ['Goalkeeping', [R('Saves', 'sv', { p90: 1 }), R('Goals conceded', 'gc', { p90: 1 }), { label: 'Save percentage', calc: t => (t.sv + t.gc ? `${pct(t.sv, t.sv + t.gc)}%` : '–') }, R('Clean sheets', 'cs'), R('Clearances', 'clr', { p90: 1 }), R('Penalties conceded', 'pcn')]],
-  ['Passing', [R('Passes', 'pas', { p90: 1 }), R('Passes completed', 'pc', { p90: 1 }), { label: 'Pass accuracy', calc: t => (t.pas ? `${pct(t.pc, t.pas)}%` : '–') }, R('Touches', 'tch', { p90: 1 })]],
-  ['Discipline', [R('Yellow cards', 'yc'), R('Red cards', 'rc')]],
+  ['Goalkeeping', [L('Saves', 'sv', { rate: 1, dp: 1 }), L('Goals conceded', 'gc', { rate: 1, dp: 1, low: 1 }),
+    { label: 'Save percentage', pct: r => (r.saves + r.conceded ? (100 * r.saves) / (r.saves + r.conceded) : null) }, L('Clean sheets', 'cs'), L('Clearances', 'clr', { rate: 1, dp: 1 }), L('Penalties conceded', 'pcn')]],
+  ['Passing', [L('Passes', 'pas', { rate: 1, dp: 1 }), L('Passes completed', 'pc', { rate: 1, dp: 1 }), ACC, L('Touches', 'tch', { rate: 1, dp: 1 })]],
+  ['Discipline', [L('Yellow cards', 'yc', { rate: 1, dp: 2, low: 1 }), L('Red cards', 'rc')]],
 ];
 
 // Which league lists a player may be placed in, most telling first for his position.
@@ -35,6 +52,13 @@ const FAVOURITES = {
   MID: ['rating', 'ga', 'assists', 'kp', 'pc90', 'dr', 'xg', 'scorers', 'minutes'],
   FWD: ['rating', 'scorers', 'ga', 'g90', 'xg', 'sot90', 'assists', 'minutes'],
 };
+
+// The class for a figure among its peers' figures (his own included): where he stands from 0 (worst) to 100 (best), ties sharing the middle.
+export function classOf(values, v, low = false) {
+  const worse = values.filter(x => (low ? x > v : x < v)).length, same = values.filter(x => x === v).length;
+  const place = ((worse + same / 2) / values.length) * 100;
+  return { place, cls: CLASSES.find(([, , from]) => place >= from)[0] };
+}
 
 export function playerView(season, id, { hidden = new Set(), scope = 'season' } = {}) {
   const player = (season?.players || []).find(p => String(p.id) === String(id));
@@ -55,24 +79,45 @@ export function playerView(season, id, { hidden = new Set(), scope = 'season' } 
   log.sort((a, b) => String(a.fx.starts_at || a.fx.date || '').localeCompare(String(b.fx.starts_at || b.fx.date || '')) || a.fx.week - b.fx.week);
 
   const groups = [];
+  let compare = { eligible: false, n: 0, word: POS_WORD[player.position] || 'players' };
   if (row) {
-    const sums = { ...row };
-    // Numbers the totals do not keep (penalties missed, distance) come straight from his matches.
-    sums.sv = row.saves; sums.gc = row.conceded;   // the totals keep a keeper's saves and goals conceded under longer names
-    sums.pm = log.reduce((n, l) => n + (l.s.pm || 0), 0);
-    sums.km = log.reduce((n, l) => n + (l.s.km || 0), 0);
-    const isKeeper = player.position === 'GK';
+    const sums = { ...row, pm: log.reduce((n, l) => n + (l.s.pm || 0), 0) };
+    const km = log.reduce((n, l) => n + (l.s.km || 0), 0);
+    // His peers: players of the position he played, with enough minutes. A keeper's minutes are his minutes in goal.
+    const minutes = r => (r.pos === 'GK' ? r.gkMin : r.min);
+    const peers = players.filter(r => r.pos === row.pos && minutes(r) >= MIN_MINUTES);
+    compare = { eligible: minutes(row) >= MIN_MINUTES && peers.length >= MIN_PEERS, n: peers.length, word: POS_WORD[row.pos] || 'players' };
+    const valueOf = (l, r) => (l.pct ? l.pct(r) : l.rate && r.min ? per90({ min: r.min, [l.key]: cell(r, l.key) }, l.key) : null);
+    const show = (v, l) => (v == null ? '–' : l.pct ? `${Math.round(v)}%` : v.toFixed(l.dp ?? 1));
+    const isKeeper = row.pos === 'GK';
+
     for (const [title, lines] of isKeeper ? KEEPER : OUTFIELD) {
-      const rows = lines.map(l => {
-        if (l.calc) return { label: l.label, total: l.calc(sums) };
-        const total = sums[l.key] || 0;
-        return { label: l.label, total: l.dp ? total.toFixed(l.dp) : String(total), ...(l.p90 != null && row.min ? { per90: per90(sums, l.key).toFixed(l.p90) } : {}) };
-      }).filter(r => !(r.total === '0' && !r.per90) || /goals|assists|cards/i.test(r.label));
-      if (rows.length) groups.push({ title, rows });
+      const out = [];
+      for (const l of lines) {
+        const total = l.pct ? null : cell(sums, l.key);
+        const mine = valueOf(l, row);
+        const line = { label: l.label, total: l.pct ? show(mine, l) : l.tdp ? total.toFixed(l.tdp) : String(total) };
+        if (l.rate && mine != null) line.per90 = show(mine, l);
+        if ((l.rate || l.pct) && mine != null) {
+          const vals = peers.map(r => valueOf(l, r)).filter(x => x != null);
+          if (vals.length) {
+            const avg = vals.reduce((a, b) => a + b, 0) / vals.length, top = Math.max(...vals, mine, 1e-9);
+            line.avg = show(avg, l);
+            line.fill = Math.round((mine / top) * 100);
+            line.tick = Math.round((avg / top) * 100);
+            if (l.low) line.low = true;
+            if (compare.eligible) { const c = classOf(vals, mine, Boolean(l.low)); line.cls = c.cls; }
+          }
+        }
+        // A stat nobody has any of stays off the list, except the ones people look for even at nought.
+        if (line.total === '0' && !line.per90 && !/goals|assists|cards|penalt/i.test(l.label)) continue;
+        out.push(line);
+      }
+      if (out.length) groups.push({ title, rows: out });
     }
     groups.push({ title: 'Playing time', rows: [
       { label: 'Matches', total: String(row.apps) }, { label: 'Minutes', total: String(row.min) },
-      ...(sums.km ? [{ label: 'Distance covered', total: `${n1(sums.km)} km`, per90: row.min ? `${n1((sums.km * 90) / row.min)} km` : undefined }] : []),
+      ...(km ? [{ label: 'Distance covered', total: `${n1(km)} km`, per90: row.min ? `${n1((km * 90) / row.min)} km` : undefined }] : []),
     ] });
   }
 
@@ -87,7 +132,7 @@ export function playerView(season, id, { hidden = new Set(), scope = 'season' } 
     ranks.sort((a, b) => a.rank - b.rank);
     ranks.length = Math.min(ranks.length, 5);
   }
-  return { player, row, log, groups, ranks, minMinutes: MIN_MINUTES };
+  return { player, row, log, groups, ranks, compare, minMinutes: MIN_MINUTES };
 }
 
 // The average rating over his matches (one decimal), or null.

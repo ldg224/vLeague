@@ -13,7 +13,8 @@ import { accentFor, onColour } from './club-colour.js';
 import { loadPlayers } from './players-data.js';
 import { portrait } from './portrait.js';
 import { hasPreseason, scopeNow } from './preseason.js';
-import { playerView, averageRating } from './player-stats.js';
+import { playerView, averageRating, CLASSES, MIN_PEERS } from './player-stats.js';
+import { icon } from './icons.js';
 
 chrome();
 const main = document.getElementById('main');
@@ -70,11 +71,26 @@ function render(season, rows, mine) {
     ${avg != null ? `<div class="pp-avg"><span>Average rating</span>${rating(avg)}</div>` : ''}
   </header>`;
 
+  const CLS = Object.fromEntries(CLASSES.map(([k, label]) => [k, label]));
+  const pill = k => `<span class="pp-cls is-${k}">${k === 'elite' ? icon('star') : ''}${CLS[k]}</span>`;
+  const { compare } = v;
+  const key = `<div class="pp-key" aria-label="Classes">${CLASSES.map(([k]) => pill(k)).join('')}</div>`;
+  const how = !compare.eligible
+    ? `<p class="pp-note">Classes show once ${MIN_PEERS} ${esc(compare.word)} have played ${v.minMinutes}+ minutes${row && (row.pos === 'GK' ? row.gkMin : row.min) < v.minMinutes ? ` and ${esc(p.name)} has too` : ''} (${compare.n} so far).</p>`
+    : `<p class="pp-note">Compared with ${compare.n} ${esc(compare.word)} who have played ${v.minMinutes}+ minutes, on a per 90 basis. Elite is the top 10%, Great the next 20%, Average the middle 40%, Below average the next 20%, Poor the last 10%. Where less is better (conceded, fouls, cards) it is turned round.</p>`;
+  const statRow = r => {
+    const bar = r.fill != null ? `<span class="pp-bar${r.low ? ' is-low' : ''}" role="img" aria-label="${esc(r.label)}: ${esc(r.per90 ?? r.total)}, league average ${esc(r.avg)}"><i style="width:${r.fill}%"></i><u style="left:${r.tick}%"></u></span>` : '<span class="pp-bar none"></span>';
+    return `<li class="pp-stat${r.cls ? ` has-cls is-${r.cls}` : ''}"><span class="pp-sl">${esc(r.label)}</span>
+      <b class="pp-v">${esc(r.per90 ?? r.total)}</b><span class="pp-t">${r.per90 != null ? esc(r.total) : ''}</span><span class="pp-a">${r.avg != null ? esc(r.avg) : ''}</span>${bar}
+      <span class="pp-c">${r.cls ? pill(r.cls) : ''}</span>
+      <span class="pp-mx">${r.per90 != null ? `<b>${esc(r.per90)}</b> per 90 · ${esc(r.total)} total${r.avg != null ? ` · league avg ${esc(r.avg)}` : ''}` : `<b>${esc(r.total)}</b>`}</span></li>`;
+  };
   const statsCard = !row
     ? `<section class="lg-card"><div class="lg-card-head"><h2>Season stats</h2></div><p class="empty">${esc(p.name)} hasn’t played a match yet.</p></section>`
     : `<section class="lg-card pp-stats"><div class="lg-card-head"><h2>Season stats</h2></div>
-        <div class="pp-cols"><span></span><span>Total</span><span>Per 90</span></div>
-        ${groups.map(g => `<h3 class="pp-strip">${esc(g.title)}</h3><ul class="pp-rows">${g.rows.map(r => `<li><span>${esc(r.label)}</span><b>${esc(r.total)}</b><i>${r.per90 != null ? esc(r.per90) : ''}</i></li>`).join('')}</ul>`).join('')}
+        ${compare.eligible ? key : ''}${how}
+        <div class="pp-hd"><span></span><span>Per 90</span><span>Total</span><span>League avg</span><span></span><span>Class</span></div>
+        ${groups.map(g => `<h3 class="pp-strip">${esc(g.title)}</h3><ul class="pp-statlist">${g.rows.map(statRow).join('')}</ul>`).join('')}
       </section>`;
 
   const logCard = log.length ? `<section class="lg-card pp-log"><div class="lg-card-head"><h2>Matches</h2></div>

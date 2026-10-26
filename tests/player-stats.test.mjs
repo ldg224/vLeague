@@ -2,7 +2,7 @@
 // Player pages (js/player-stats.js): totals, the match log, spoiler-free, the keeper's set and the league places, on two made-up matches.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { playerView, averageRating } from '../js/player-stats.js';
+import { playerView, averageRating, classOf, MIN_PEERS } from '../js/player-stats.js';
 import { plink, playerUrl } from '../js/player-link.js';
 
 const P = (name, team, slot, o = {}) => ({ name, team, slot, min: 90, g: 0, a: 0, sh: 0, sot: 0, xg: 0, kp: 0, pas: 20, pc: 15, tk: 0, int: 0, clr: 0, blk: 0, sv: 0, gc: 0, yc: 0, rc: 0, fl: 0, fd: 0, dr: 0, aw: 0, off: 0, cr: 0, tch: 40, km: 5, pw: 0, pcn: 0, r: 6.5, ...o });
@@ -28,7 +28,9 @@ test('totals, per 90 and the log for a forward', () => {
   const v = playerView(season, 'a1');
   assert.equal(v.row.g, 3); assert.equal(v.row.apps, 2);
   const attack = v.groups.find(g => g.title === 'Attacking').rows;
-  assert.deepEqual(attack.find(r => r.label === 'Goals'), { label: 'Goals', total: '3', per90: '1.50' });
+  const goals = attack.find(r => r.label === 'Goals');
+  assert.equal(goals.total, '3'); assert.equal(goals.per90, '1.50');
+  assert.equal(goals.cls, undefined);   // too few forwards for classes yet
   assert.equal(attack.find(r => r.label === 'Shots').total, '6');
   assert.equal(v.log.length, 2);
   assert.deepEqual(v.log.map(l => [l.fx.id, l.home, l.opp, l.res, l.gf, l.ga]), [['f1', true, 'BBB', 'W', 2, 0], ['f2', false, 'BBB', 'D', 1, 1]]);
@@ -55,4 +57,28 @@ test('a player link wraps the name, escapes the id and leaves it alone with no i
   assert.equal(playerUrl('0428'), 'player.html?id=0428');
   assert.match(plink('a"1', 'Ana'), /data-pid="a&quot;1"[^>]*>Ana<\/span>/);
   assert.equal(plink(null, 'Ana'), 'Ana');
+});
+
+test('classOf: top 10% elite, then great, average, below, poor; turned round where less is better', () => {
+  const v = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  assert.equal(classOf(v, 10).cls, 'elite');
+  assert.equal(classOf(v, 8).cls, 'great');
+  assert.equal(classOf(v, 5).cls, 'avg');
+  assert.equal(classOf(v, 2).cls, 'below');
+  assert.equal(classOf(v, 1).cls, 'poor');
+  assert.equal(classOf(v, 1, true).cls, 'elite');     // conceding least is the best
+  assert.equal(classOf([0, 0, 0, 0, 0, 0, 0, 3], 0).cls, 'avg');   // ties share the middle, so a nought among noughts is average
+});
+test('classes and league averages show once enough players of his position have played', () => {
+  const fwds = Array.from({ length: 8 }, (_, i) => ({ id: 'f' + i, name: 'F' + i, team: 'AAA', position: 'FWD', number: i, offense: 5, defense: 5, value: 1000 }));
+  const res = { home: 1, away: 0, players: Object.fromEntries(fwds.map((p, i) => [p.id, P(p.name, 'AAA', 'ST', { g: i, sh: i + 1, r: 6 })])) };
+  const s = { players: fwds, fixtures: [fx('x1', 1, 'AAA', 'BBB', res)] };
+  const top = playerView(s, 'f7'), bottom = playerView(s, 'f0');
+  assert.ok(top.compare.eligible && top.compare.n === 8 && MIN_PEERS <= 8);
+  const g = v => v.groups.find(x => x.title === 'Attacking').rows.find(r => r.label === 'Goals');
+  assert.equal(g(top).cls, 'elite'); assert.equal(g(bottom).cls, 'poor');
+  assert.equal(g(top).avg, '3.50');   // (0+1+...+7)/8 goals in the one match each
+  assert.ok(g(top).fill === 100 && g(top).tick === 50);
+  const fouls = v => v.groups.find(x => x.title === 'Discipline').rows.find(r => r.label === 'Fouls committed');
+  assert.equal(fouls(top)?.cls ?? 'avg', 'avg');
 });
