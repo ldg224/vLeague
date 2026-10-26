@@ -16,7 +16,7 @@
 // the last 10% Poor. For stats where less is better (goals conceded, fouls, cards, offsides) the order is turned round. Classes only show once
 // MIN_PEERS players of his position have played MIN_MATCHES matches and so has he: one game's numbers are luck, so nobody gets a star for one
 // match. The league average beside each stat is shown from the first match.
-import { countedFixtures, totals, rank, per90, lineOf, PLAYER_CARDS, MIN_MINUTES, format } from './season-stats.js';
+import { countedFixtures, totals, rank, per90, PLAYER_CARDS, MIN_MINUTES, format } from './season-stats.js';
 
 export const MIN_PEERS = 6;
 export const MIN_MATCHES = 3;
@@ -54,25 +54,6 @@ const FAVOURITES = {
   MID: ['rating', 'ga', 'assists', 'kp', 'pc90', 'dr', 'xg', 'scorers', 'minutes'],
   FWD: ['rating', 'scorers', 'ga', 'g90', 'xg', 'sot90', 'assists', 'minutes'],
 };
-
-// ---- chart data ----
-// What the per-match chart can show: key, label, how to read it from one match of his (the saved per-player numbers), decimals, and who it is for.
-export const MATCH_STATS = [
-  ['r', 'Rating', s => s.r, 1], ['g', 'Goals', s => s.g, 0, 'out'], ['a', 'Assists', s => s.a, 0, 'out'], ['xg', 'xG', s => s.xg, 2, 'out'], ['sh', 'Shots', s => s.sh, 0, 'out'],
-  ['sot', 'Shots on target', s => s.sot, 0, 'out'], ['kp', 'Chances created', s => s.kp, 0, 'out'], ['dr', 'Dribbles', s => s.dr, 0, 'out'], ['cr', 'Crosses', s => s.cr, 0, 'out'],
-  ['pas', 'Passes', s => s.pas, 0], ['pc', 'Passes completed', s => s.pc, 0], ['pcp', 'Pass accuracy %', s => (s.pas ? (100 * s.pc) / s.pas : null), 0],
-  ['tch', 'Touches', s => s.tch, 0], ['tk', 'Tackles won', s => s.tk, 0, 'out'], ['int', 'Interceptions', s => s.int, 0, 'out'], ['clr', 'Clearances', s => s.clr, 0],
-  ['blk', 'Blocks', s => s.blk, 0, 'out'], ['aw', 'Aerial duels won', s => s.aw, 0, 'out'], ['sv', 'Saves', s => s.sv, 0, 'gk'], ['gc', 'Goals conceded', s => s.gc, 0, 'gk'],
-  ['km', 'Distance (km)', s => s.km, 1],
-].map(([key, label, get, dp, only]) => ({ key, label, get, dp, only }));
-// The league scatter's axes (per 90, or the percentage for accuracy).
-export const AXES = [
-  ['g', 'Goals per 90', 'g'], ['a', 'Assists per 90', 'a'], ['xg', 'xG per 90', 'xg'], ['sh', 'Shots per 90', 'sh'], ['sot', 'Shots on target per 90', 'sot'], ['kp', 'Chances created per 90', 'kp'],
-  ['dr', 'Dribbles per 90', 'dr'], ['cr', 'Crosses per 90', 'cr'], ['pas', 'Passes per 90', 'pas'], ['pc', 'Passes completed per 90', 'pc'], ['pcp', 'Pass accuracy %', null], ['tch', 'Touches per 90', 'tch'],
-  ['tk', 'Tackles won per 90', 'tk'], ['int', 'Interceptions per 90', 'int'], ['clr', 'Clearances per 90', 'clr'], ['blk', 'Blocks per 90', 'blk'], ['aw', 'Aerial duels won per 90', 'aw'],
-  ['fl', 'Fouls per 90', 'fl'], ['fd', 'Fouled per 90', 'fd'], ['sv', 'Saves per 90', 'sv'], ['gc', 'Goals conceded per 90', 'gc'],
-].map(([key, label, from]) => ({ key, label, from }));
-const axisValue = (a, r) => (a.key === 'pcp' ? (r.pas ? (100 * r.pc) / r.pas : null) : r.min ? per90({ min: r.min, [a.from]: cell(r, a.from) }, a.from) : null);
 
 // The class for a figure among its peers' figures (his own included): where he stands from 0 (worst) to 100 (best), ties sharing the middle.
 export function classOf(values, v, low = false) {
@@ -145,22 +126,6 @@ export function playerView(season, id, { hidden = new Set(), scope = 'season' } 
     ] });
   }
 
-  // Chart data: his matches stat by stat with his position's average per appearance, and every peer's per-90 figures for the scatter.
-  let matchStats = [], peerTable = [];
-  if (row) {
-    const isGk = row.pos === 'GK';
-    const pos = String(row.pos);
-    const apps = [];   // every appearance of a player of his position who played most of the match
-    for (const f of counted) for (const x of Object.values(f.result.players)) if (lineOf(x.slot) === pos && (x.min || 0) >= 60) apps.push(x);
-    matchStats = MATCH_STATS.filter(m => !m.only || (m.only === 'gk') === isGk).map(m => {
-      const values = log.map(l => { const v = m.get(l.s); return Number.isFinite(v) ? v : null; });
-      const league = apps.map(x => m.get(x)).filter(Number.isFinite);
-      return { key: m.key, label: m.label, dp: m.dp, values, avg: league.length ? league.reduce((a, b) => a + b, 0) / league.length : null, n: league.length };
-    }).filter(m => m.values.some(v => v != null && v !== 0) || m.avg > 0);
-    const peersAll = players.filter(r => r.pos === row.pos && (r.pos === 'GK' ? r.gkMin : r.min) >= MIN_MINUTES);
-    peerTable = peersAll.map(r => ({ id: r.id, name: r.name, team: r.team, apps: r.apps, v: Object.fromEntries(AXES.map(a => [a.key, axisValue(a, r)])) }));
-  }
-
   const ranks = [];
   if (row) {
     for (const cid of FAVOURITES[player.position] || FAVOURITES.MID) {
@@ -172,7 +137,7 @@ export function playerView(season, id, { hidden = new Set(), scope = 'season' } 
     ranks.sort((a, b) => a.rank - b.rank);
     ranks.length = Math.min(ranks.length, 5);
   }
-  return { player, row, log, groups, ranks, compare, scope, matchStats, peerTable, minMinutes: MIN_MINUTES };
+  return { player, row, log, groups, ranks, compare, scope, minMinutes: MIN_MINUTES };
 }
 
 // The average rating over his matches (one decimal), or null.

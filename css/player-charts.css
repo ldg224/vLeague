@@ -1,4 +1,4 @@
-/* Charts on the player page (js/player-charts.js): him in vLeague blue, everyone else grey. One axis per chart, thin marks, a dashed line for the average. */
+/* Charts on the player page (js/player-charts.js): the colour-coded profile bars and two simple maps, him in vLeague blue. */
 .pc-tabs, .pc-pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
 .pc-pills { margin: 4px 0 10px; }
 .pc-tabs button, .pc-pill {
@@ -10,24 +10,6 @@
 @media (hover: hover) { .pc-tabs button:not([aria-pressed="true"]):hover, .pc-pill:not([aria-pressed="true"]):hover { background: var(--surface-hover); } }
 .pc-tabs button:focus-visible, .pc-pill:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .pc-panel > * + * { margin-top: 10px; }
-.pc-svg { display: block; width: 100%; max-width: 720px; height: auto; overflow: visible; }
-.pc-grid { stroke: var(--line); stroke-width: 1; }
-.pc-ax { fill: var(--muted); font: 400 11px var(--font); font-variant-numeric: tabular-nums; }
-.pc-ax.is-soft { fill: var(--faint); font-size: 10px; }
-.pc-axt { fill: var(--muted); font: 600 11px var(--font); }
-.pc-val { fill: var(--text); font: 600 11px var(--font); font-variant-numeric: tabular-nums; }
-.pc-lab { font: 700 11px var(--font); fill: var(--muted); }
-.pc-lab.is-me { fill: var(--text-strong); }
-.pc-line { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
-.pc-line.is-me { stroke: var(--brand); }
-.pc-line.is-ref { stroke: var(--muted); stroke-dasharray: 5 4; stroke-width: 2; }
-.pc-dot { fill: var(--surface); stroke-width: 2.5; stroke: var(--brand); }
-.pc-bar { fill: var(--brand); }
-.pc-avg { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 4 4; }
-.pc-sdot { fill: var(--muted); fill-opacity: .55; stroke: var(--surface); stroke-width: 1.5; cursor: pointer; }
-.pc-sdot.is-me { fill: var(--brand); fill-opacity: 1; stroke: var(--surface); stroke-width: 2.5; }
-@media (hover: hover) { .pc-sdot:hover, .pc-bar:hover { opacity: .8; } }
-.pc-sdot:focus-visible, .pc-bar:focus-visible, .pc-dot:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 /* percentile profile */
 .pc-phead, .pc-prow { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(90px, 1.6fr) 56px 34px; align-items: center; gap: 0 10px; }
@@ -65,7 +47,7 @@
   .pc-phead, .pc-prow { grid-template-columns: minmax(0, 1fr) minmax(70px, 1fr) 46px 26px; gap: 0 8px; }
 }
 
-/* ---- maps (js/player-maps.js) ---- */
+/* ---- maps (js/player-maps.js): shots and where he plays ---- */
 .pm-svg { display: block; width: 100%; max-width: 760px; height: auto; border-radius: var(--r-sm); }
 .pm-svg.is-half { max-width: 440px; }
 .pm-turf { fill: var(--surface-sunk); }
@@ -78,20 +60,16 @@
 .pm-shot.is-off { fill: none; stroke: var(--muted); stroke-width: .7; }
 i.pm-shot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; box-sizing: border-box; vertical-align: -2px; margin-right: 6px; border: 1.5px solid; }
 i.pm-shot.is-goal { background: var(--brand); border-color: var(--text-strong); } i.pm-shot.is-on { background: color-mix(in oklab, var(--brand) 55%, transparent); border-color: var(--brand); } i.pm-shot.is-off { background: none; border-color: var(--muted); }
-.pm-pass { stroke-width: .35; stroke-linecap: round; }
-.pm-pass.is-ok { stroke: var(--brand); stroke-opacity: .55; } .pm-pass.is-miss { stroke: var(--res-l); stroke-opacity: .85; stroke-width: .45; }
-.pm-end { fill: var(--brand); fill-opacity: .8; }
-i.pm-ln { display: inline-block; width: 18px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: 3px; }
-i.pm-ln.is-ok { background: var(--brand); opacity: .7; } i.pm-ln.is-miss { background: var(--res-l); }
 .pm-cell { fill: var(--brand); fill-opacity: var(--a); }
 .pm-avgpos { fill: var(--surface); stroke: var(--text-strong); stroke-width: .8; }
 i.pm-avgpos { display: inline-block; width: 11px; height: 11px; border-radius: 50%; box-sizing: border-box; border: 2px solid var(--text-strong); background: var(--surface); margin-right: 6px; vertical-align: -1px; }
 i.pm-heat { display: inline-block; width: 38px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: linear-gradient(90deg, color-mix(in oklab, var(--brand) 12%, transparent), var(--brand)); }
-.pm-def { stroke-width: .5; }
-.pm-def.is-won { fill: var(--brand); stroke: var(--brand); } .pm-def.is-lost { fill: none; stroke: var(--muted); stroke-width: .7; }
-.pm-def.is-line { fill: none; stroke: var(--brand); stroke-width: .8; stroke-linecap: round; } .pm-def.is-line.is-lost { stroke: var(--muted); }
-.pm-sym { width: 14px; height: 14px; margin-right: 6px; vertical-align: -3px; overflow: visible; } .pm-sym .pm-def { stroke-width: .6; }
 .pm-key { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 0; font: 400 var(--fs-s) var(--font); color: var(--muted); }
 .pm-key span { display: inline-flex; align-items: center; }
 .pm-arrow { color: var(--faint); white-space: nowrap; }
 .pm-svg g:focus-visible, .pm-svg circle:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+.pc-leg { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0 0 10px; font: 400 var(--fs-s) var(--font); color: var(--muted); }
+.pc-leg span { display: inline-flex; align-items: center; gap: 6px; }
+.pc-leg i { width: 14px; height: 8px; border-radius: 999px; background: var(--muted); }
+.pc-leg .is-elite i { background: var(--brand-grad); } .pc-leg .is-great i { background: var(--res-w); } .pc-leg .is-below i { background: var(--amber); } .pc-leg .is-poor i { background: var(--res-l); }
