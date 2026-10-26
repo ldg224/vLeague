@@ -82,6 +82,7 @@ test('classes and league averages show once enough players of his position have 
   assert.equal(g(top).cls, 'elite'); assert.equal(g(bottom).cls, 'poor');
   assert.equal(g(top).avg, '3.50');   // (0+1+...+7)/8 goals a match
   assert.ok(g(top).fill === 100 && g(top).tick === 50);
-  const fouls = v => v.groups.find(x => x.title === 'Discipline').rows.find(r => r.label === 'Fouls committed');
-  assert.equal(fouls(top)?.cls ?? 'avg', 'avg');
+  // nobody in this league had a foul, a card or a clearance, so those lists stay off the page
+  assert.ok(!top.groups.some(x => x.title === 'Discipline' || x.title === 'Defending'));
+  assert.ok(top.groups.find(x => x.title === 'Attacking').rows.some(r => r.label === 'Assists'));   // goals and assists always show
 });

@@ -113,8 +113,8 @@ export function playerView(season, id, { hidden = new Set(), scope = 'season' } 
             if (compare.eligible) { const c = classOf(sv, mine, Boolean(l.low)); line.cls = c.cls; }
           }
         }
-        // A stat nobody has any of stays off the list, except the ones people look for even at nought.
-        if (line.total === '0' && !line.per90 && !/goals|assists|cards|penalt/i.test(l.label)) continue;
+        // A stat he has none of, and that the league's average also rounds to nothing, stays off the list (a forward's clearances); goals and assists always show.
+        if (Number(line.total) === 0 && !/^(goals|assists)$/i.test(l.label) && !(parseFloat(line.avg) >= 0.05)) continue;
         out.push(line);
       }
       if (out.length) groups.push({ title, rows: out });

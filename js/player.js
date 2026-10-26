@@ -1,6 +1,7 @@
 // Player pages: one page per player (player.html?id=ID), signed-in only. Opened from any player name on the site (js/player-link.js).
 // A header card (portrait in his club's kit, name, club, position, shirt number), then two columns: the detailed season stats as a list
 // (totals and per 90, grouped), his match log (each match opens the match), his places in the league's lists, and his profile.
+// player.html?id=RED9&preview&demo=6 shows a player of the made-up demo season (localhost, or the office), to see the classes before real matches exist.
 // The numbers come from js/player-stats.js, which reads the season's saved results; results the viewer has not opened stay out (spoiler-free).
 import { chrome, esc, clubs, safeColour, crestUrl } from './member.js';
 import { currentUser, myProfile } from './auth.js';
@@ -15,6 +16,8 @@ import { portrait } from './portrait.js';
 import { hasPreseason, scopeNow } from './preseason.js';
 import { playerView, averageRating, CLASSES, MIN_PEERS, MIN_MATCHES } from './player-stats.js';
 import { icon } from './icons.js';
+import { demoSeason } from './demo-season.js';
+import { lineOf } from './season-stats.js';
 
 chrome();
 const main = document.getElementById('main');
@@ -30,7 +33,7 @@ try {
   const user = preview ? { id: 'preview' } : await currentUser().catch(() => null);
   if (!user) { location.replace('index.html?signin'); await new Promise(() => {}); }
   if (preview && q.get('theme')) document.documentElement.dataset.theme = q.get('theme');
-  const [rows, season, list] = await Promise.all([clubs().catch(() => []), loadSeason().catch(() => null), loadPlayers().catch(() => [])]);
+  let [rows, season, list] = await Promise.all([clubs().catch(() => []), loadSeason().catch(() => null), loadPlayers().catch(() => [])]);
   useClubs(rows);
   if (!preview) await prefs().catch(() => null);
   const prof = preview ? { role: q.has('office') ? 'office' : 'manager', club: q.get('mine') } : await myProfile().catch(() => null);
@@ -39,7 +42,15 @@ try {
   startSilk();
   document.body.classList.toggle('has-club', Boolean(mine));
   mountSubFrame(document.getElementById('frame'), { office: prof?.role === 'office', crest: mine?.crest_path ? crestUrl(mine.crest_path) : '', here: '', title: '' });
-  if (season && !season.players?.length) season.players = list;
+  const demo = q.has('demo') && (preview || prof?.role === 'office');
+  if (demo) {
+    season = demoSeason({ rounds: Number(q.get('demo') || 6) });
+    // The demo season has no player list, only the players inside its results.
+    const seen = new Map();
+    for (const f of season.fixtures) for (const [pid, pl] of Object.entries(f.result?.players || {})) if (!seen.has(pid)) seen.set(pid, { id: pid, name: pl.name, team: pl.team, position: lineOf(pl.slot), number: seen.size % 11 + 1, offense: 6, defense: 5, value: 3000 });
+    season.players = [...seen.values()];
+  }
+  else if (season && !season.players?.length) season.players = list;
   render(season, rows, mine);
 } catch (e) {
   main.innerHTML = `<p class="empty">This player page didn’t load. ${esc(e.message || '')} <a href="player.html?id=${esc(id)}">Try again</a></p>`;
@@ -69,6 +80,7 @@ function render(season, rows, mine) {
         <span class="pp-dot">·</span><span>${POS_WORD[p.position] || esc(p.position)}</span>${p.number != null && p.number !== '' ? `<span class="pp-dot">·</span><span>No. ${esc(p.number)}</span>` : ''}</p>
     </div>
     ${avg != null ? `<div class="pp-avg"><span>Average rating</span>${rating(avg)}</div>` : ''}
+    ${log.length > 1 ? `<div class="pp-form"><span>Form</span><div>${log.slice(-5).map(l => (l.rating != null ? rating(l.rating) : '')).join('')}</div></div>` : ''}
   </header>`;
 
   const CLS = Object.fromEntries(CLASSES.map(([k, label]) => [k, label]));
@@ -106,6 +118,22 @@ function render(season, rows, mine) {
         ${l.rating != null ? rating(l.rating) : '<span></span>'}</a></li>`;
     }).join('')}</ul></section>` : '';
 
+  // Rating by match: a small line, oldest to newest, with his average dotted. Needs two matches.
+  const trendCard = (() => {
+    const pts = log.filter(l => l.rating != null);
+    if (pts.length < 2) return '';
+    const W = 300, H = 96, pad = 14, lo = Math.floor(Math.min(...pts.map(l => l.rating)) - 0.5), hi = Math.ceil(Math.max(...pts.map(l => l.rating)) + 0.5);
+    const x = i => pad + (i * (W - 2 * pad)) / (pts.length - 1), y = r => H - pad - ((r - lo) / (hi - lo)) * (H - 2 * pad);
+    const line = pts.map((l, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(l.rating).toFixed(1)}`).join(' ');
+    return `<section class="lg-card"><div class="lg-card-head"><h2>Rating by match</h2></div>
+      <svg class="pp-trend" viewBox="0 0 ${W} ${H}" role="img" aria-label="Match ratings, oldest to newest: ${pts.map(l => l.rating.toFixed(1)).join(', ')}">
+        <line x1="${pad}" x2="${W - pad}" y1="${y(avg).toFixed(1)}" y2="${y(avg).toFixed(1)}" class="pp-avgline"/>
+        <path d="${line}" class="pp-trendline"/>
+        ${pts.map((l, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(l.rating).toFixed(1)}" r="${i === pts.length - 1 ? 5 : 3.5}" class="pp-dotpt${i === pts.length - 1 ? ' is-last' : ''}"/>`).join('')}
+      </svg>
+      <p class="pp-note">Oldest to newest. The dotted line is his average, ${avg.toFixed(1)}.</p></section>`;
+  })();
+
   const ranksCard = ranks.length ? `<section class="lg-card"><div class="lg-card-head"><h2>In the league</h2></div>
     <ul class="pp-rows pp-ranks">${ranks.map(r => `<li><span>${esc(r.title)}</span><b>${esc(r.text)}</b><i>${ordinal(r.rank)}</i></li>`).join('')}</ul>
     <p class="pp-note">Places among players with at least 90 minutes where a list needs it. Top 10 only.</p></section>` : '';
@@ -118,6 +146,6 @@ function render(season, rows, mine) {
 
   main.innerHTML = `<article class="pp" style="--club:${c1};--club-accent-dark:${accentFor(c1, 'dark')};--club-accent-light:${accentFor(c1, 'light')};--on-club:${onColour(c1)}">
     ${head}
-    <div class="lg-cols"><div class="lg-main">${statsCard}${logCard}</div><aside class="lg-side">${ranksCard}${profile}</aside></div>
+    <div class="lg-cols"><div class="lg-main">${statsCard}${logCard}</div><aside class="lg-side">${trendCard}${ranksCard}${profile}</aside></div>
   </article>`;
 }

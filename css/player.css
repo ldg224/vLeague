@@ -89,3 +89,13 @@
   .pp-v, .pp-t, .pp-a { display: none; }
 }
 .pp-stats .pp-note { margin: 8px 0 14px; }
+
+/* form chips and the rating line */
+.pp-form { display: grid; justify-items: end; gap: 6px; font: 400 var(--fs-s) var(--font); color: var(--muted); }
+.pp-form div { display: flex; gap: 4px; }
+.pp-trend { display: block; width: 100%; height: auto; }
+.pp-trendline { fill: none; stroke: var(--brand); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.pp-avgline { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 4; }
+.pp-dotpt { fill: var(--surface); stroke: var(--brand); stroke-width: 2; }
+.pp-dotpt.is-last { fill: var(--brand); }
+@media (max-width: 640px) { .pp-form { display: none; } }
