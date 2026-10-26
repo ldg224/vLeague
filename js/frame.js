@@ -4,6 +4,7 @@
 //   mountFrame(el, { office, draft, crest, onTab }) -> draws the frame into el and calls onTab(id, season, sub) now, on every tab
 //                                                 change and when another season is picked (WR-05). A tab address can carry
 //                                                 a part after a slash, league.html#stats/scorers: that is `sub` (WR-10)
+//   stakes: the Stakes tab (MU-1) shows for signed-in managers, filled in so it stands out (css/stakes.css);
 //   draft / draftLive: the Draft tab shows only while a draft is visible (draft), with a Live marker while picks are being made (draftLive);
 //   vote / voteDue: the Vote tab shows only while voting is open (vote), its dot flashing while this manager has not voted (voteDue);
 //   mountFrame returns { setDraft({ visible, live }), setVote({ visible, due }), setBadge(tabId, n) }: a small count on a tab (the News tab's unread posts); 0 or less removes it
@@ -22,6 +23,7 @@ export const TABS = [
   { id: 'stats', label: 'Stats', icon: 'chart-column' },
   { id: 'seasons', label: 'Seasons', icon: 'trophy' },
   { id: 'news', label: 'News', icon: 'newspaper' },
+  { id: 'stakes', label: 'Stakes', icon: 'coins', when: o => o.stakes },
   { id: 'vote', label: 'Vote', icon: 'vote', when: o => o.vote },
   { id: 'draft', label: 'Draft', icon: 'list-ordered', when: o => o.draft },
 ];
@@ -34,8 +36,8 @@ export const SEASONS = [{ id: 1, label: 'Season 1', live: true }];
 const NEED = '<i class="lg-need" role="img" aria-label="You haven’t voted yet" title="You haven’t voted yet"></i>';
 const status = s => s.live ? '<span class="lg-season-live">In progress</span>' : '';
 
-export function mountFrame(el, { office = false, draft = false, draftLive = false, vote = false, voteDue = false, crest = '', onTab } = {}) {
-  let on = { draft, vote }, tabs = TABS.filter(t => !t.when || t.when(on)), live = draftLive, due = voteDue;   // due: this manager has a ballot to fill in
+export function mountFrame(el, { office = false, draft = false, draftLive = false, stakes = false, vote = false, voteDue = false, crest = '', onTab } = {}) {
+  let on = { draft, vote, stakes }, tabs = TABS.filter(t => !t.when || t.when(on)), live = draftLive, due = voteDue;   // due: this manager has a ballot to fill in
   const topLink = t => `<a href="#${t.id}" data-tab="${t.id}">${esc(t.label)}${t.id === 'draft' && live ? ' <i class="lg-live">Live</i>' : ''}${t.id === 'vote' && due ? NEED : ''}</a>`;
   const bottomLink = t => `<a href="#${t.id}" data-tab="${t.id}"><span class="lg-bi">${icon(t.icon)}${t.id === 'draft' && live ? '<i class="lg-live-dot" title="Live"></i>' : ''}${t.id === 'vote' && due ? NEED : ''}</span><span class="lg-bl">${esc(t.label)}</span></a>`;
   el.innerHTML = `<div class="lg-head">

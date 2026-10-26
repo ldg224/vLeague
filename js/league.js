@@ -32,6 +32,7 @@ import { dismissPosts, restorePosts } from './prefs.js';
 import { loadReactions, setReaction } from './news-reactions.js';
 import { loadHistory, trophyUrl } from './history-data.js';
 import { mountDraft } from './draft.js';
+import { mountStakes } from './stakes.js';
 import { accentFor, isHex } from './club-colour.js';
 import { openDraft, phase as draftPhase } from './draft-data.js';
 import { db } from './auth.js';
@@ -237,7 +238,7 @@ if (ctx) {
     return did;
   };
   const showOverview = () => { paint(main, SKELETON); patchOverview(false); };
-  const rerender = (timed = false) => (!current ? false : current[0] === 'overview' ? patchOverview(timed) : draw(VIEWS[current[0]](current[2], current[1]), timed));
+  const rerender = (timed = false) => (!current || ['draft', 'stakes'].includes(current[0]) ? false : current[0] === 'overview' ? patchOverview(timed) : draw(VIEWS[current[0]](current[2], current[1]), timed));
   // The Seasons tab (WR-24): this season's card from the league page, the others from History (read once, a moment after the page).
   let honours = null, clubRows = null;   // (not `history`: that is the browser's)
   const seasonsHtml = (sub, picked) => {
@@ -292,6 +293,12 @@ if (ctx) {
 
   // The Draft tab (WR-27): shown only while the office has made a draft visible, with LIVE while picks can be made. The draft itself (js/draft.js) is mounted into
   // an element of its own when you open the tab and unmounted (clock, poll and live channel stopped) when you leave it.
+  // The Stakes tab (MU-1): mounted into an element of its own when you open the tab and unmounted when you leave it (its refresh timers stop).
+  let stakesApi = null;
+  const showStakes = () => {
+    paint(main, '<div class="lg-stakes"></div>');
+    stakesApi = mountStakes(main.querySelector('.lg-stakes'), { crest: (c, px) => sctx.crest(c, px), name: c => { const t = sctx.club(c); return t.short_name || t.name || c; } });
+  };
   let draftApi = null;
   const showDraft = sub => {
     if (draftApi && main.querySelector('.lg-draft')) { draftApi.setTab(sub); return; }
@@ -410,12 +417,13 @@ if (ctx) {
     seasons: seasonsHtml,
     news: newsHtmlNow,
     draft: () => '',   // mounted by showDraft
+    stakes: () => '',  // mounted by showStakes
   };
 
   wireStatPage(main, { go });
   const draftNow = await openDraft().catch(() => null);
   frameApi = mountFrame(document.getElementById('frame'), {
-    office,
+    office, stakes: Boolean(ctx.me?.user && !preview),
     draft: Boolean(draftNow), draftLive: Boolean(draftNow) && draftPhase(draftNow) === 'live',
     crest: preview ? params.get('crest') || '' : ctx.club?.crest_path ? crestUrl(ctx.club.crest_path) : '',
     // Each view gets the season picked in the header (WR-05); they all show the current one until a past season exists.
@@ -423,7 +431,8 @@ if (ctx) {
       const left = current?.[0];
       current = [id, picked, sub];
       if (left === 'draft' && id !== 'draft') { draftApi?.unmount(); draftApi = null; }
-      if (id === 'overview') showOverview(); else if (id === 'draft') showDraft(sub); else draw(VIEWS[id](sub, picked));
+      if (left === 'stakes' && id !== 'stakes') { stakesApi?.unmount(); stakesApi = null; }
+      if (id === 'overview') showOverview(); else if (id === 'draft') showDraft(sub); else if (id === 'stakes') showStakes(); else draw(VIEWS[id](sub, picked));
       // "Back" on a full list returns to the tab it was opened from (Overview or Stats), else to the Stats tab.
       main.querySelector('.sp-back')?.addEventListener('click', e => { if (moved) { e.preventDefault(); history.back(); } });
     },
