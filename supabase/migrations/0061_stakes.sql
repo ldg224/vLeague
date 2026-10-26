@@ -273,7 +273,8 @@ create trigger results_stakes after insert or update of summary on public.result
 
 -- ---------------------------------------------------------------- history and the board
 
-create or replace function public.stakes_history(p_limit int default 40) returns table (
+drop function if exists public.stakes_history(int);   -- (0065 changes what it returns, so a re-run of this file has to start clean)
+create function public.stakes_history(p_limit int default 40) returns table (
   line_id bigint, fixture text, home text, away text, starts_at timestamptz, player_name text, team text, stat text, line numeric,
   side text, stake int, status text, actual numeric, payout int, settled_at timestamptz)
 language sql stable security definer set search_path = public as $$

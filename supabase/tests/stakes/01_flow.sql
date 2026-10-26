@@ -4,7 +4,7 @@ do $$
 declare u uuid; fx record; w int; lines int; pk bigint; bal int; r record;
 begin
   update public.stakes_settings set visible = default, betting_open = default, start_coins = default, daily_topup = default, bailout_below = default, bailout_to = default, multiplier = default, min_stake = default, max_stake = default, lines_per_week = default, lines_per_match = default, score_per_week = default, score_exact_mult = default, score_result_mult = default, stats = default, line_adjust = default, lock_minutes = default, lines_days = default, show_board = default;   -- a known starting point, whatever the office has set live
-  update public.stakes_settings set visible = true, score_per_week = 0, lines_days = 28;   -- (score predictions have their own test, 03)
+  update public.stakes_settings set visible = true, score_per_week = 0, score_all = false, lines_days = 28;   -- (score predictions have their own test, 03)
   select id into u from public.profiles where role='manager' limit 1;
   select * into fx from public.fixtures where starts_at > now() and not postponed and starts_at < now()+interval '60 days' order by starts_at limit 1;
   delete from public.stakes_lines where fixture in (select id from public.fixtures where week = fx.week);   -- live lines may already exist for this round

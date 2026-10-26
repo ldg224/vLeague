@@ -131,6 +131,41 @@ function scoreSheet(l, st, o, sc, exact, res) {
   </div>`;
 }
 
+// The lineup at the bottom: every game of the round in one narrow row, with the score predictor (a - and a + each side), the stake and one button. It shares its
+// state with the score cards (same line, same score, same stake), so what you set in one shows in the other.
+function lineupRow(l, st, o) {
+  const cfg = st.cfg || DEFAULTS, bal = st.wallet?.coins ?? 0, mine = l.my_status != null && l.my_home != null;
+  const sc = st.sc?.[l.line_id] || { h: 1, a: 1, stake: defaultStakeFor(cfg, bal) };
+  const closed = st.cfg ? !st.cfg.betting_open : false, chips = stakeChips(cfg, bal);
+  const h = mine ? l.my_home : sc.h, a = mine ? l.my_away : sc.a;
+  const exact = Number(mine ? l.my_mult : cfg.score_exact_mult ?? DEFAULTS.score_exact_mult), res = Number(mine ? l.my_mult2 : cfg.score_result_mult ?? DEFAULTS.score_result_mult);
+  const side = (code, which, n) => `<span class="st-lusc" role="group" aria-label="${esc(o.name(code))} goals">${mine ? '' : `<button type="button" class="st-lustep" data-st="step" data-line="${l.line_id}" data-which="${which}" data-d="-1" aria-label="One fewer goal for ${esc(o.name(code))}"${n <= 0 || closed ? ' disabled' : ''}>${icon('minus')}</button>`}<b class="st-lunum">${n}</b>${mine ? '' : `<button type="button" class="st-lustep" data-st="step" data-line="${l.line_id}" data-which="${which}" data-d="1" aria-label="One more goal for ${esc(o.name(code))}"${n >= 9 || closed ? ' disabled' : ''}>${icon('plus')}</button>`}</span>`;
+  const act = mine
+    ? `<span class="st-luact is-mine"><b>${coins(l.my_stake)}</b> Coins · exact <b>${coins(payout(l.my_stake, exact))}</b> · result <b>${coins(payout(l.my_stake, res))}</b> <button type="button" class="st-link" data-st="take" data-line="${l.line_id}">Take back</button></span>`
+    : `<span class="st-luact"><button type="button" class="st-lustake" data-st="lucycle" data-line="${l.line_id}" aria-label="Stake ${sc.stake} Coins, tap to change">${icon('coins')}<b>${coins(sc.stake)}</b></button><button type="button" class="st-lugo" data-st="placescore" data-line="${l.line_id}"${st.busy || closed || !canStake(cfg, bal, sc.stake) ? ' disabled' : ''}>Stake ${h}–${a}</button></span>`;
+  void chips;
+  return `<li class="st-lurow${mine ? ' has-pick' : ''}" data-line-card="${l.line_id}">
+    <span class="st-lutime">${esc(kick(l.starts_at))}</span>
+    <span class="st-luteam is-home">${o.crest(l.home, 22)}<b>${esc(o.name(l.home))}</b></span>
+    <span class="st-lumid">${side(l.home, 'h', h)}<i>–</i>${side(l.away, 'a', a)}</span>
+    <span class="st-luteam is-away"><b>${esc(o.name(l.away))}</b>${o.crest(l.away, 22)}</span>
+    ${act}
+  </li>`;
+}
+function lineupSection(rows, st, o) {
+  const weeks = [...rows.reduce((m, l) => m.set(l.week, [...(m.get(l.week) || []), l]), new Map()).entries()];
+  return weeks.map(([w, list]) => `<section class="lg-card st-lineup" data-tour="lineup"><div class="lg-card-head"><h2>Call every game</h2><span class="st-lucount">Round ${w} · ${list.length} game${list.length === 1 ? '' : 's'}</span></div>
+    <ul class="st-lu">${list.map(l => lineupRow(l, st, o)).join('')}</ul></section>`).join('');
+}
+
+// The leaderboard along the top: the leaders in a row, and you at the end if you are further down.
+function boardStrip(b, o) {
+  const top = b.filter(r => r.rank <= 5), me = b.find(r => r.mine && r.rank > 5), list = me ? [...top, me] : top;
+  return `<section class="lg-card st-boardstrip" data-tour="board"><div class="lg-card-head"><h2>Leaderboard</h2></div>
+    ${list.length ? `<ol class="st-bs">${list.map(r => `<li class="${r.mine ? 'me' : ''}"><i class="st-rank">${r.rank}</i>${r.club ? o.crest(r.club, 28) : ''}<span class="st-bn"><b>${esc(r.name)}</b><em>${r.settled ? `${r.won} of ${r.settled} right` : 'No picks settled yet'}</em></span><b class="st-bc">${coins(r.coins)}</b></li>`).join('')}</ol>`
+      : '<p class="st-empty">Nobody is on the board yet.</p>'}</section>`;
+}
+
 // A round's stakes: a heading, then the cards in a grid whose columns fill every row.
 function roundSection(rows, st, o) {
   const n = rows.length, vars = `--c-lg:${bestCols(n, 5)};--c-md:${bestCols(n, 3)};--c-sm:${bestCols(n, 2)}`;
@@ -150,18 +185,13 @@ function historyCard(h) {
     }).join('')}</ul></section>`;
 }
 
-function boardCard(b, o) {
-  const top = b.filter(r => r.rank <= 10 || r.mine);
-  return `<section class="lg-card st-card" data-tour="board"><div class="lg-card-head"><h2>Leaderboard</h2></div>
-    ${top.length ? `<ol class="st-board">${top.map(r => `<li class="${r.mine ? 'me' : ''}"><i class="st-rank">${r.rank}</i>${r.club ? o.crest(r.club, 18) : ''}<span class="st-bn"><b>${esc(r.name)}</b><em>${r.settled ? `${r.won} of ${r.settled} right` : 'No picks settled yet'}</em></span><b class="st-bc">${coins(r.coins)}</b></li>`).join('')}</ol>`
-      : '<p class="st-empty">Nobody is on the board yet.</p>'}</section>`;
-}
-
 export function stakesView(st, o) {
   if (st.error && !st.wallet) return `<section class="lg-card st-card"><div class="lg-card-head"><h2>Stakes</h2></div><p class="st-empty">${esc(st.error)}</p></section>`;
   if (!st.wallet) return '<section class="lg-card st-card"><div class="lg-card-head"><h2>Stakes</h2></div><p class="st-empty">Opening your wallet…</p></section>';
   const open = st.slate.filter(l => l.my_status === 'open'), riding = open.reduce((s, l) => s + l.my_stake, 0);
-  const rounds = [...st.slate.reduce((m, l) => m.set(l.week, [...(m.get(l.week) || []), l]), new Map()).values()];
+  const cards = st.slate.filter(l => l.kind !== 'score' || l.featured !== false);
+  const rounds = [...cards.reduce((m, l) => m.set(l.week, [...(m.get(l.week) || []), l]), new Map()).values()];
+  const everyGame = st.slate.filter(l => l.kind === 'score');
   const closedNote = st.cfg && !st.cfg.betting_open ? '<p class="st-note" role="status">Stakes is closed for now. You can look, but picks are paused until the league opens it again.</p>' : '';
   const note = closedNote + (st.msg ? `<p class="st-note${st.msg.bad ? ' bad' : ''}" role="status">${esc(st.msg.text)}</p>` : '');
   return `<div class="st">
@@ -171,9 +201,11 @@ export function stakesView(st, o) {
       <button type="button" class="st-btn" data-st="help">${icon('circle-help')}<span>How it works</span></button>
     </section>
     ${note}
+    ${st.cfg && !st.cfg.show_board ? '' : boardStrip(st.board, o)}
     ${rounds.length ? rounds.map(g => roundSection(g, st, o)).join('')
       : `<section class="lg-card st-card"><div class="lg-card-head"><h2>Stakes</h2></div><p class="st-empty">${st.loading ? 'Loading the stakes…' : 'No stakes open yet. A round’s stakes appear once clubs have submitted their team sheets.'}</p></section>`}
-    <div class="st-bottom">${st.cfg && !st.cfg.show_board ? '' : boardCard(st.board, o)}${historyCard(st.history)}</div>
+    ${everyGame.length ? lineupSection(everyGame, st, o) : ''}
+    <div class="st-bottom">${historyCard(st.history)}</div>
   </div>`;
 }
 
@@ -183,6 +215,7 @@ export const stepsFor = (cfg, hasScore = false) => [
   { target: '.st-stake', title: 'A stake', text: 'Each card is one player in one match, and the big number is the league’s line for his stat: a keeper’s saves, a midfielder’s passes, a forward’s shots on target. There are only a few each round.' },
   { target: '.st-stake .st-sides', title: 'Over or under', text: 'Think he’ll do more than the line? Tap blue OVER. Fewer? Tap red UNDER. Lines end in .5, so there is always a winner.', pick: true },
   ...(hasScore ? [{ target: '.st-scorecard', title: 'Guess the score', text: `Some stakes ask for the final score of a match. Use + and − under each team (hold to run), then stake. The exact score pays ${Number(cfg.score_exact_mult)} times your stake; the right result with the wrong score pays ${Number(cfg.score_result_mult)} times.` }] : []),
+  ...(hasScore ? [{ target: '.st-lineup', title: 'Call every game', text: 'The lineup at the bottom has a score predictor for every game of the round in one narrow row. Set a score with - and +, tap the Coins to change your stake, then tap Stake.' }] : []),
   { target: '.st-sheet', title: 'Stake some Coins', text: `Choose how many Coins to put on it. Get it right and you get ${Number(cfg.multiplier)} times your stake back; get it wrong and the stake is gone. You can take a pick back until picks close${cfg.lock_minutes > 0 ? ` (${cfg.lock_minutes} minutes before kick-off)` : ' (kick-off)'}.` },
   { target: '[data-tour="board"]', title: 'The leaderboard', text: 'Picks settle by themselves once the match is played. The richest managers sit at the top.' },
 ];
@@ -280,6 +313,7 @@ export function mountStakes(root, o0) {
     st.msg = null;
     if (act === 'sopen') { st.picked = null; for (const k of Object.keys(st.sc)) st.sc[k].open = false; scoreOf(line).open = true; draw(); return; }
     if (act === 'sclose') { scoreOf(line).open = false; draw(); return; }
+    if (act === 'lucycle') { const sc = scoreOf(line), chips = stakeChips(st.cfg || DEFAULTS, st.wallet?.coins ?? 0); if (chips.length) sc.stake = chips[(chips.indexOf(sc.stake) + 1) % chips.length]; draw(); return; }
     if (act === 'sstake') { scoreOf(line).stake = Number(b.dataset.n); draw(); return; }
     if (act === 'placescore') {
       const sc = scoreOf(line); st.busy = true; draw();

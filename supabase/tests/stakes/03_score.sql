@@ -18,17 +18,19 @@ begin
   perform public.stakes_wallet();
   perform public.stakes_slate();
   perform set_config('role', 'postgres', true);
-  select count(*) into cnt from public.stakes_lines l join public.fixtures f on f.id = l.fixture where f.week = wk and l.kind = 'score';
-  insert into t_log(name, ok, detail) values ('2 score predictions in the round', cnt = 2, cnt::text);
-  select count(*) into cnt from public.stakes_lines l join public.fixtures f on f.id = l.fixture where f.week = wk;
-  insert into t_log(name, ok, detail) values ('the round has at most 8 stakes in all', cnt <= 8, cnt::text);
+  select count(*) into cnt from public.stakes_lines l join public.fixtures f on f.id = l.fixture where f.week = wk and l.kind = 'score' and l.featured;
+  insert into t_log(name, ok, detail) values ('2 featured score predictions in the round', cnt = 2, cnt::text);
+  select count(*) into cnt from public.stakes_lines l join public.fixtures f on f.id = l.fixture where f.week = wk and l.kind = 'score' and not l.featured;
+  insert into t_log(name, ok, detail) values ('every other match has a lineup score line', cnt = (select count(*) from public.fixtures f where f.week = wk and not f.postponed and f.starts_at > now()) - 2, cnt::text);
+  select count(*) into cnt from public.stakes_lines l join public.fixtures f on f.id = l.fixture where f.week = wk and (l.kind = 'player' or l.featured);
+  insert into t_log(name, ok, detail) values ('the round has at most 8 featured stakes (the lineup is extra)', cnt <= 8, cnt::text);
   insert into t_log(name, ok, detail) select 'a score line has no player, stat or line', count(*) = 0, count(*)::text from public.stakes_lines where kind = 'score' and (player_id is not null or stat is not null or line is not null);
   perform set_config('request.jwt.claims', json_build_object('sub', mgr, 'role', 'authenticated')::text, true);
   perform set_config('role', 'authenticated', true);
   perform public.stakes_slate();
   perform set_config('role', 'postgres', true);
   select count(*) into cnt from public.stakes_lines l join public.fixtures f on f.id = l.fixture where f.week = wk and l.kind = 'score';
-  insert into t_log(name, ok, detail) values ('asking again does not draw more', cnt = 2, cnt::text);
+  insert into t_log(name, ok, detail) values ('asking again does not make more', cnt = (select count(*) from public.fixtures f where f.week = wk and not f.postponed and f.starts_at > now()), cnt::text);
 
   -- three score lines to test settling (made by hand on three matches of the round)
   delete from public.stakes_lines where fixture in (select id from public.fixtures where week = wk) and kind = 'score';
@@ -73,6 +75,20 @@ begin
   perform set_config('role', 'authenticated', true);
   select count(*) into cnt from public.stakes_history() h where h.kind = 'score' and h.pred_home is not null;
   insert into t_log(name, ok, detail) values ('history lists score picks', cnt >= 2, cnt::text);
+
+  -- turning the lineup off hides the lineup-only lines; the featured ones stay
+  perform set_config('role', 'postgres', true);
+  update public.stakes_settings set score_all = false;
+  perform set_config('request.jwt.claims', json_build_object('sub', mgr, 'role', 'authenticated')::text, true);
+  perform set_config('role', 'authenticated', true);
+  select count(*) into cnt from public.stakes_slate() s where s.kind = 'score' and not s.featured;
+  insert into t_log(name, ok, detail) values ('score_all off hides the lineup-only lines', cnt = 0, cnt::text);
+  perform set_config('role', 'postgres', true);
+  update public.stakes_settings set score_all = true;
+  perform set_config('request.jwt.claims', json_build_object('sub', mgr, 'role', 'authenticated')::text, true);
+  perform set_config('role', 'authenticated', true);
+  select count(*) into cnt from public.stakes_slate() s where s.kind = 'score' and not s.featured;
+  insert into t_log(name, ok, detail) values ('score_all on shows them again', cnt >= 1, cnt::text);
 
   -- the office's settings take the new numbers, and an exact payout under the result payout is refused
   perform set_config('role', 'postgres', true);
