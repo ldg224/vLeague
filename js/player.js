@@ -127,7 +127,7 @@ function render(season, rows, mine) {
     }).join('')}</ul></section>` : '';
 
   // ---- charts (js/player-charts.js): tabs for the profile, match by match, and the league; one panel is drawn at a time ----
-  const MAPS = [['heat', 'Where he plays', heatMap], ['shots', 'Shots', m => playerShotMap(m.shots, mp.shot, { colour: c1, label: shotLabel })]];
+  const MAPS = [['heat', 'Heatmap', heatMap], ['shots', 'Shots', m => playerShotMap(m.shots, mp.shot, { colour: c1, label: shotLabel })]];
   const shotLabel = sh => `${club ? crest(club, 28) : ''}<b>${esc(sh.label)}</b>`;
   const mp = { status: 'idle', done: 0, total: 0, data: null, shot: { sel: null, ids: [] }, pick: MAPS.some(x => x[0] === q.get('map')) ? q.get('map') : 'heat' };
   const mapsHtml = () => {
