@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.13.1 (2026-10-26)
+
+Headlines: Stakes intro
+
+**Added (MU-1):** a short intro plays when you open the Stakes tab: a coin drops in and spins, STAKES rises letter by letter, then the cards slide in. A tap or any key skips it, and it doesn't play if you have reduced motion on.
+
+No database change.
+
 ## 1.13.0 (2026-10-26)
 
 Headlines: Stakes settings in the Editor
