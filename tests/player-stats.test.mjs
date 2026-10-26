@@ -72,12 +72,15 @@ test('classOf: top 10% elite, then great, average, below, poor; turned round whe
 test('classes and league averages show once enough players of his position have played', () => {
   const fwds = Array.from({ length: 8 }, (_, i) => ({ id: 'f' + i, name: 'F' + i, team: 'AAA', position: 'FWD', number: i, offense: 5, defense: 5, value: 1000 }));
   const res = { home: 1, away: 0, players: Object.fromEntries(fwds.map((p, i) => [p.id, P(p.name, 'AAA', 'ST', { g: i, sh: i + 1, r: 6 })])) };
-  const s = { players: fwds, fixtures: [fx('x1', 1, 'AAA', 'BBB', res)] };
+  const s = { players: fwds, fixtures: [1, 2, 3].map(w => fx('x' + w, w, 'AAA', 'BBB', res)) };
+  const one = playerView({ players: fwds, fixtures: [fx('y1', 1, 'AAA', 'BBB', res)] }, 'f7');
+  assert.ok(!one.compare.eligible);   // one match is too little for a class
+  assert.equal(one.groups[0].rows[0].cls, undefined); assert.ok(one.groups[0].rows[0].avg);   // but the average shows
   const top = playerView(s, 'f7'), bottom = playerView(s, 'f0');
   assert.ok(top.compare.eligible && top.compare.n === 8 && MIN_PEERS <= 8);
   const g = v => v.groups.find(x => x.title === 'Attacking').rows.find(r => r.label === 'Goals');
   assert.equal(g(top).cls, 'elite'); assert.equal(g(bottom).cls, 'poor');
-  assert.equal(g(top).avg, '3.50');   // (0+1+...+7)/8 goals in the one match each
+  assert.equal(g(top).avg, '3.50');   // (0+1+...+7)/8 goals a match
   assert.ok(g(top).fill === 100 && g(top).tick === 50);
   const fouls = v => v.groups.find(x => x.title === 'Discipline').rows.find(r => r.label === 'Fouls committed');
   assert.equal(fouls(top)?.cls ?? 'avg', 'avg');

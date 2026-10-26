@@ -14,10 +14,12 @@
 // Classes (like the AFL's player ratings): each stat is compared with the other players of his position who have played at least MIN_MINUTES, using the
 // per-90 figure (or the percentage for accuracy). Top 10% is Elite (the blue star), the next 20% Great, the middle 40% Average, the next 20% Below average,
 // the last 10% Poor. For stats where less is better (goals conceded, fouls, cards, offsides) the order is turned round. Classes only show once
-// MIN_PEERS players of his position qualify, so a first-week list does not hand out stars on three players' numbers.
+// MIN_PEERS players of his position have played MIN_MATCHES matches and so has he: one game's numbers are luck, so nobody gets a star for one
+// match. The league average beside each stat is shown from the first match.
 import { countedFixtures, totals, rank, per90, PLAYER_CARDS, MIN_MINUTES, format } from './season-stats.js';
 
 export const MIN_PEERS = 6;
+export const MIN_MATCHES = 3;
 export const CLASSES = [['elite', 'Elite', 90], ['great', 'Great', 70], ['avg', 'Average', 30], ['below', 'Below average', 10], ['poor', 'Poor', 0]];
 const POS_WORD = { GK: 'goalkeepers', DEF: 'defenders', MID: 'midfielders', FWD: 'forwards' };
 const n1 = v => (Number.isFinite(v) ? Math.round(v * 10) / 10 : 0);
@@ -86,7 +88,8 @@ export function playerView(season, id, { hidden = new Set(), scope = 'season' } 
     // His peers: players of the position he played, with enough minutes. A keeper's minutes are his minutes in goal.
     const minutes = r => (r.pos === 'GK' ? r.gkMin : r.min);
     const peers = players.filter(r => r.pos === row.pos && minutes(r) >= MIN_MINUTES);
-    compare = { eligible: minutes(row) >= MIN_MINUTES && peers.length >= MIN_PEERS, n: peers.length, word: POS_WORD[row.pos] || 'players' };
+    const seasoned = peers.filter(r => r.apps >= MIN_MATCHES);
+    compare = { eligible: minutes(row) >= MIN_MINUTES && row.apps >= MIN_MATCHES && seasoned.length >= MIN_PEERS, n: peers.length, seasoned: seasoned.length, apps: row.apps, word: POS_WORD[row.pos] || 'players' };
     const valueOf = (l, r) => (l.pct ? l.pct(r) : l.rate && r.min ? per90({ min: r.min, [l.key]: cell(r, l.key) }, l.key) : null);
     const show = (v, l) => (v == null ? '–' : l.pct ? `${Math.round(v)}%` : v.toFixed(l.dp ?? 1));
     const isKeeper = row.pos === 'GK';
@@ -100,13 +103,14 @@ export function playerView(season, id, { hidden = new Set(), scope = 'season' } 
         if (l.rate && mine != null) line.per90 = show(mine, l);
         if ((l.rate || l.pct) && mine != null) {
           const vals = peers.map(r => valueOf(l, r)).filter(x => x != null);
+          const sv = seasoned.map(r => valueOf(l, r)).filter(x => x != null);
           if (vals.length) {
             const avg = vals.reduce((a, b) => a + b, 0) / vals.length, top = Math.max(...vals, mine, 1e-9);
             line.avg = show(avg, l);
             line.fill = Math.round((mine / top) * 100);
             line.tick = Math.round((avg / top) * 100);
             if (l.low) line.low = true;
-            if (compare.eligible) { const c = classOf(vals, mine, Boolean(l.low)); line.cls = c.cls; }
+            if (compare.eligible) { const c = classOf(sv, mine, Boolean(l.low)); line.cls = c.cls; }
           }
         }
         // A stat nobody has any of stays off the list, except the ones people look for even at nought.
@@ -132,7 +136,7 @@ export function playerView(season, id, { hidden = new Set(), scope = 'season' } 
     ranks.sort((a, b) => a.rank - b.rank);
     ranks.length = Math.min(ranks.length, 5);
   }
-  return { player, row, log, groups, ranks, compare, minMinutes: MIN_MINUTES };
+  return { player, row, log, groups, ranks, compare, scope, minMinutes: MIN_MINUTES };
 }
 
 // The average rating over his matches (one decimal), or null.

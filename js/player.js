@@ -13,7 +13,7 @@ import { accentFor, onColour } from './club-colour.js';
 import { loadPlayers } from './players-data.js';
 import { portrait } from './portrait.js';
 import { hasPreseason, scopeNow } from './preseason.js';
-import { playerView, averageRating, CLASSES, MIN_PEERS } from './player-stats.js';
+import { playerView, averageRating, CLASSES, MIN_PEERS, MIN_MATCHES } from './player-stats.js';
 import { icon } from './icons.js';
 
 chrome();
@@ -75,9 +75,11 @@ function render(season, rows, mine) {
   const pill = k => `<span class="pp-cls is-${k}">${k === 'elite' ? icon('star') : ''}${CLS[k]}</span>`;
   const { compare } = v;
   const key = `<div class="pp-key" aria-label="Classes">${CLASSES.map(([k]) => pill(k)).join('')}</div>`;
+  const why = row && row.apps < MIN_MATCHES ? `${esc(p.name)} needs ${MIN_MATCHES} matches (has ${row.apps})`
+    : `${MIN_PEERS} ${esc(compare.word)} need ${MIN_MATCHES}+ matches (${compare.seasoned} so far)`;
   const how = !compare.eligible
-    ? `<p class="pp-note">Classes show once ${MIN_PEERS} ${esc(compare.word)} have played ${v.minMinutes}+ minutes${row && (row.pos === 'GK' ? row.gkMin : row.min) < v.minMinutes ? ` and ${esc(p.name)} has too` : ''} (${compare.n} so far).</p>`
-    : `<p class="pp-note">Compared with ${compare.n} ${esc(compare.word)} who have played ${v.minMinutes}+ minutes, on a per 90 basis. Elite is the top 10%, Great the next 20%, Average the middle 40%, Below average the next 20%, Poor the last 10%. Where less is better (conceded, fouls, cards) it is turned round.</p>`;
+    ? `<p class="pp-note">The bars show the league average for ${esc(compare.word)} (${compare.n} with ${v.minMinutes}+ minutes). Classes appear once ${why}, because one match is too little to judge.</p>`
+    : `<p class="pp-note">Compared with ${compare.seasoned} ${esc(compare.word)} who have played ${MIN_MATCHES}+ matches, per 90. Elite is the top 10%, Great the next 20%, Average the middle 40%, Below average the next 20%, Poor the last 10%. Where less is better (conceded, fouls, cards) it is turned round.</p>`;
   const statRow = r => {
     const bar = r.fill != null ? `<span class="pp-bar${r.low ? ' is-low' : ''}" role="img" aria-label="${esc(r.label)}: ${esc(r.per90 ?? r.total)}, league average ${esc(r.avg)}"><i style="width:${r.fill}%"></i><u style="left:${r.tick}%"></u></span>` : '<span class="pp-bar none"></span>';
     return `<li class="pp-stat${r.cls ? ` has-cls is-${r.cls}` : ''}"><span class="pp-sl">${esc(r.label)}</span>
@@ -87,7 +89,7 @@ function render(season, rows, mine) {
   };
   const statsCard = !row
     ? `<section class="lg-card"><div class="lg-card-head"><h2>Season stats</h2></div><p class="empty">${esc(p.name)} hasn’t played a match yet.</p></section>`
-    : `<section class="lg-card pp-stats"><div class="lg-card-head"><h2>Season stats</h2></div>
+    : `<section class="lg-card pp-stats"><div class="lg-card-head"><h2>${v.scope === 'preseason' ? 'Preseason stats' : 'Season stats'}</h2></div>
         ${compare.eligible ? key : ''}${how}
         <div class="pp-hd"><span></span><span>Per 90</span><span>Total</span><span>League avg</span><span></span><span>Class</span></div>
         ${groups.map(g => `<h3 class="pp-strip">${esc(g.title)}</h3><ul class="pp-statlist">${g.rows.map(statRow).join('')}</ul>`).join('')}
