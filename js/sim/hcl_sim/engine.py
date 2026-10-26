@@ -1222,6 +1222,7 @@ class Match:
             gk = next((q for q in self.other(r['team']).active() if q.is_gk), None)
             if gk:
                 gk.stunned_until = 0
+                gk.x, gk.y = self.restart_targets.get(gk, (gk.x, gk.y))   # he starts on the goal line, centred
 
     # ---------- off-ball movement ----------
 

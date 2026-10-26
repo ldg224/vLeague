@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.11.4 (2026-10-26)
+
+Headlines: Penalties: keepers in the right places
+
+**Fixed (B-27):** at a penalty the taker's own goalkeeper no longer stands in the line of outfield players outside the box; he stays back by his own goal. The keeper facing the penalty now starts exactly on his goal line, in the centre, instead of up to a metre off it. Applies to matches played from now on; matches already played are unchanged.
+
+No database change.
+
 ## 1.11.3 (2026-10-26)
 
 Headlines: Suggest changes is back, dates on the team fixtures
