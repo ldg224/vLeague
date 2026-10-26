@@ -13,7 +13,7 @@ export function readSettings(f) {
   const out = {
     start_coins: n('start_coins'), daily_topup: n('daily_topup'), bailout_below: n('bailout_below'), bailout_to: n('bailout_to'),
     multiplier: n('multiplier'), min_stake: n('min_stake'), max_stake: n('max_stake') ?? 0,
-    lines_per_week: n('lines_per_week'), lines_per_match: n('lines_per_match'), score_exact_mult: n('score_exact_mult'), score_result_mult: n('score_result_mult'), line_adjust: n('line_adjust'), lock_minutes: n('lock_minutes'), lines_days: n('lines_days'),
+    lines_per_week: n('lines_per_week'), lines_per_match: n('lines_per_match'), result_win_mult: n('result_win_mult'), result_draw_mult: n('result_draw_mult'), line_adjust: n('line_adjust'), lock_minutes: n('lock_minutes'), lines_days: n('lines_days'),
     show_board: f.get('show_board') === 'on', score_all: f.get('score_all') === 'on', stats: f.getAll('stats'),
   };
   for (const k of Object.keys(out)) if (out[k] === undefined || (typeof out[k] === 'number' && !Number.isFinite(out[k]))) delete out[k];
@@ -62,8 +62,8 @@ export async function mountStakes({ db, esc, explain }) {
           <div class="sk-stats">${['sv', 'pas', 'sot', 'tk'].map(stat).join('')}</div>
           <p class="ed-hint">Each stake is a card with the player’s photo; the line is set near his average and always ends in .5, so there is a winner. Stakes already made keep their number.</p></section>
         <section class="ed-invite"><h2>Game predictors</h2>
-          <div class="ed-fields">${field('Exact score pays', 'score_exact_mult', S.score_exact_mult, { min: 1.01, max: 100, step: 0.5, hint: 'times the stake' })}${field('Right result pays', 'score_result_mult', S.score_result_mult, { min: 1.01, max: 10, step: 0.25, hint: 'home win, draw or away win, wrong score; below the exact payout' })}</div>
-          <label class="dr-check"><input type="checkbox" name="score_all"${S.score_all ? ' checked' : ''}> Show the game predictors: a score predictor for every match, below the stake cards</label></section>
+          <div class="ed-fields">${field('Right win pays', 'result_win_mult', S.result_win_mult, { min: 1.01, max: 20, step: 0.1, hint: 'times the stake, home or away' })}${field('Right draw pays', 'result_draw_mult', S.result_draw_mult, { min: 1.01, max: 20, step: 0.1, hint: 'times the stake' })}</div>
+          <label class="dr-check"><input type="checkbox" name="score_all"${S.score_all ? ' checked' : ''}> Show the game predictors: Team A win, Draw or Team B win for every match, below the stake cards</label></section>
         <section class="ed-invite"><h2>Leaderboard</h2>
           <label class="dr-check"><input type="checkbox" name="show_board"${S.show_board ? ' checked' : ''}> Show the leaderboard to managers</label></section>
         <div class="ed-actions"><button class="btn" type="submit">Save settings</button></div>

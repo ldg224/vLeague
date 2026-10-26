@@ -12,7 +12,7 @@ const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ESC[c]);
 
 // The game's numbers come from the office's settings (stakes_settings, Editor > Stakes). These are what a page shows until they have loaded.
-export const DEFAULTS = { score_exact_mult: 8, score_result_mult: 2, multiplier: 1.9, min_stake: 10, max_stake: 0, betting_open: true, show_board: true, start_coins: 1000, daily_topup: 200, lock_minutes: 0 };
+export const DEFAULTS = { result_win_mult: 2.2, result_draw_mult: 3, multiplier: 1.9, min_stake: 10, max_stake: 0, betting_open: true, show_board: true, start_coins: 1000, daily_topup: 200, lock_minutes: 0 };
 const STAT = { sv: ['Saves', 'saves'], pas: ['Passes', 'passes'], sot: ['Shots on target', 'shots on target'], tk: ['Tackles won', 'tackles won'] };
 const POS = { GK: 'GK', DEF: 'DEF', MID: 'MID', FWD: 'FWD' };
 export const payout = (stake, mult = DEFAULTS.multiplier) => Math.floor(stake * Number(mult));
@@ -47,8 +47,6 @@ const sideBtn = (l, side, mine, picked, closed) => {
 };
 // The starting stake on a card: five times the smallest if you can, else the first button.
 export function defaultStakeFor(cfg, bal) { const c = stakeChips(cfg, bal); return c.includes(cfg.min_stake * 5) ? cfg.min_stake * 5 : c[0] ?? cfg.min_stake; }
-// A goal count one step up or down, held between 0 and 9.
-export const stepGoals = (n, d) => Math.max(0, Math.min(9, n + d));
 // How many columns fill every row for n cards, at most `max` across: an exact fit if there is one (8 in 4s, 9 in 3s, 10 in 5s), else the one whose last row is fullest
 // (7 in 4+3); nearer to 4 wins a tie. Never one card alone on the last row unless there is only one row.
 export function bestCols(n, max = 4) {
@@ -107,38 +105,38 @@ function stakePanel(l, st) {
   </div>`;
 }
 
-// The game predictors (FotMob's Predict and Stadium Live, in vLeague's look): every game of the round as its own row. What you change is obvious: the two score tiles
-// have a red - and a blue + (the same colours as UNDER and OVER), the tile lights up once you have touched it, and the stake is a pill you tap. The row and the line
-// share one state in the page, so nothing is ever set in two places.
+// The game predictors (FotMob's Predict and Stadium Live, in vLeague's look): every game of the round is a row with three big choices, Team A win, Draw or Team B win,
+// each showing what it pays. Tap one to pick it (it lights up in that club's colour), set the stake with the pill, then Lock in. A placed pick locks the row.
+export const RESULTS = ['home', 'draw', 'away'];
+const resultMult = (cfg, which) => Number(which === 'draw' ? cfg.result_draw_mult ?? DEFAULTS.result_draw_mult : cfg.result_win_mult ?? DEFAULTS.result_win_mult);
+export const resultLabel = (which, home, away) => (which === 'home' ? `${home} win` : which === 'away' ? `${away} win` : 'Draw');
 function predictRow(l, st, o) {
-  const cfg = st.cfg || DEFAULTS, bal = st.wallet?.coins ?? 0, mine = l.my_status != null && l.my_home != null;
-  const sc = st.sc?.[l.line_id] || { h: 1, a: 1, stake: defaultStakeFor(cfg, bal) };
-  const closed = st.cfg ? !st.cfg.betting_open : false;
-  const h = mine ? l.my_home : sc.h, a = mine ? l.my_away : sc.a;
-  const exact = Number(mine ? l.my_mult : cfg.score_exact_mult ?? DEFAULTS.score_exact_mult), res = Number(mine ? l.my_mult2 : cfg.score_result_mult ?? DEFAULTS.score_result_mult);
-  const tile = (code, which, n) => `<div class="st-pr-tile${sc.touched && !mine ? ' is-set' : ''}${mine ? ' is-locked' : ''}" role="group" aria-label="${esc(o.name(code))} goals">
-      ${mine ? '' : `<button type="button" class="st-pr-dn" data-st="step" data-line="${l.line_id}" data-which="${which}" data-d="-1" aria-label="One fewer goal for ${esc(o.name(code))}"${n <= 0 || closed ? ' disabled' : ''}>${icon('minus')}</button>`}
-      <b class="st-pr-num">${n}</b>
-      ${mine ? '' : `<button type="button" class="st-pr-up" data-st="step" data-line="${l.line_id}" data-which="${which}" data-d="1" aria-label="One more goal for ${esc(o.name(code))}"${n >= 9 || closed ? ' disabled' : ''}>${icon('plus')}</button>`}</div>`;
+  const cfg = st.cfg || DEFAULTS, bal = st.wallet?.coins ?? 0, mine = l.my_status != null && l.my_result != null;
+  const rs = st.rs?.[l.line_id] || { pick: null, stake: defaultStakeFor(cfg, bal) };
+  const closed = st.cfg ? !st.cfg.betting_open : false, chosen = mine ? l.my_result : rs.pick;
+  const hn = o.name(l.home), an = o.name(l.away);
+  const choice = which => {
+    const on = chosen === which, mult = mine ? Number(l.my_mult) : resultMult(cfg, which);
+    const crest = which === 'home' ? o.crest(l.home, 40) : which === 'away' ? o.crest(l.away, 40) : `<span class="st-rr-draw" aria-hidden="true">=</span>`;
+    return `<button type="button" class="st-rr is-${which}${on ? ' on' : ''}${chosen && !on ? ' off' : ''}" data-st="rpick" data-line="${l.line_id}" data-which="${which}" aria-pressed="${on}"${mine || closed ? ' disabled' : ''}>
+      ${crest}<b>${esc(resultLabel(which, hn, an))}</b><span>${mine ? (on ? `pays ${Number(mult)}×` : '') : `pays ${Number(mult)}×`}</span></button>`;
+  };
   const act = mine
-    ? `<div class="st-pr-act is-mine"><p><b>Locked in ${h}–${a}</b> · ${coins(l.my_stake)} Coins<br>Exact pays <b>${coins(payout(l.my_stake, exact))}</b> · right result <b>${coins(payout(l.my_stake, res))}</b></p><button type="button" class="st-link" data-st="take" data-line="${l.line_id}">Take back</button></div>`
-    : `<div class="st-pr-act"><button type="button" class="st-pr-stake" data-st="stakecycle" data-line="${l.line_id}" aria-label="Stake ${sc.stake} Coins, tap to change">${icon('coins')}<span>Stake</span><b>${coins(sc.stake)}</b></button>
-        <button type="button" class="st-pr-go" data-st="placescore" data-line="${l.line_id}"${st.busy || closed || !canStake(cfg, bal, sc.stake) ? ' disabled' : ''}>${st.busy ? 'Placing…' : `Lock in ${h}–${a}`}</button></div>`;
-  return `<li class="st-pr${mine ? ' has-pick' : ''}" data-line-card="${l.line_id}" style="--cc:${colourOf(o, l.home)};--ca:${colourOf(o, l.away)}">
+    ? `<div class="st-pr-act is-mine"><p><b>Locked in: ${esc(resultLabel(l.my_result, hn, an))}</b> · ${coins(l.my_stake)} Coins<br>Pays <b>${coins(payout(l.my_stake, l.my_mult))}</b> if you are right</p><button type="button" class="st-link" data-st="take" data-line="${l.line_id}">Take back</button></div>`
+    : `<div class="st-pr-act"><button type="button" class="st-pr-stake" data-st="stakecycle" data-line="${l.line_id}" aria-label="Stake ${rs.stake} Coins, tap to change">${icon('coins')}<span>Stake</span><b>${coins(rs.stake)}</b></button>
+        <button type="button" class="st-pr-go" data-st="placeresult" data-line="${l.line_id}"${st.busy || closed || !rs.pick || !canStake(cfg, bal, rs.stake) ? ' disabled' : ''}>${st.busy ? 'Placing…' : rs.pick ? `Lock in: ${esc(resultLabel(rs.pick, hn, an))}` : 'Pick a result'}</button></div>`;
+  return `<li class="st-pr st-rrow${mine ? ' has-pick' : ''}" data-line-card="${l.line_id}" style="--cc:${colourOf(o, l.home)};--ca:${colourOf(o, l.away)}">
     <div class="st-pr-when"><b>${esc(kick(l.starts_at))}</b><em class="st-close" data-closes="${esc(l.locks_at || l.starts_at)}">${closesIn(l.locks_at || l.starts_at)}</em></div>
-    <div class="st-pr-match">
-      <div class="st-pr-team is-home">${o.crest(l.home, 36)}<b>${esc(o.name(l.home))}</b></div>
-      <div class="st-pr-score">${mine ? '<span class="st-pr-hint">Your guess</span>' : `<span class="st-pr-hint${sc.touched ? ' is-set' : ''}">${sc.touched ? 'Your guess' : 'Tap − and + to set your score'}</span>`}
-        <div class="st-pr-tiles">${tile(l.home, 'h', h)}<i>–</i>${tile(l.away, 'a', a)}</div></div>
-      <div class="st-pr-team is-away">${o.crest(l.away, 36)}<b>${esc(o.name(l.away))}</b></div>
-    </div>
+    <div class="st-rr-wrap"><span class="st-pr-hint${chosen ? ' is-set' : ''}">${chosen ? (mine ? 'Your pick' : 'You picked') : 'Tap a result to pick it'}</span>
+      <div class="st-rrs" role="group" aria-label="${esc(hn)} v ${esc(an)}, result">${RESULTS.map(choice).join('')}</div></div>
     ${act}
   </li>`;
 }
 function predictSection(rows, st, o) {
   const weeks = [...rows.reduce((m, l) => m.set(l.week, [...(m.get(l.week) || []), l]), new Map()).entries()];
+  const cfg = st.cfg || DEFAULTS;
   return weeks.map(([w, list]) => `<section class="lg-card st-predict" data-tour="lineup"><div class="lg-card-head"><h2>Game predictors</h2><span class="st-lucount">Round ${w} · ${list.length} game${list.length === 1 ? '' : 's'}</span></div>
-    <p class="st-predict-lead">Call the final score of every game. Exact score pays <b>${Number(st.cfg?.score_exact_mult ?? DEFAULTS.score_exact_mult)}×</b>, the right result <b>${Number(st.cfg?.score_result_mult ?? DEFAULTS.score_result_mult)}×</b>.</p>
+    <p class="st-predict-lead">Who wins? Call every game. A right win pays <b>${resultMult(cfg, 'home')}×</b> your stake, a right draw <b>${resultMult(cfg, 'draw')}×</b>.</p>
     <ul class="st-prs">${list.map(l => predictRow(l, st, o)).join('')}</ul></section>`).join('');
 }
 
@@ -158,12 +156,12 @@ function roundSection(rows, st, o) {
 }
 
 const RESULT = { won: 'Won', lost: 'Lost', void: 'Refunded', open: 'Open' };
-function historyCard(h) {
+function historyCard(h, o) {
   if (!h.length) return '';
   return `<section class="lg-card st-card" data-tour="history"><div class="lg-card-head"><h2>Your picks</h2></div>
     <ul class="st-list">${h.slice(0, 10).map(p => {
       const net = p.status === 'won' ? p.payout - p.stake : p.status === 'lost' ? -p.stake : 0;
-      const title = p.kind === 'score' ? 'Score prediction' : p.player_name, what = p.kind === 'score' ? `${p.pred_home}–${p.pred_away}${p.act_home != null ? ` · it finished ${p.act_home}–${p.act_away}` : ''}` : `${p.side === 'over' ? 'Over' : 'Under'} ${p.line} ${STAT[p.stat]?.[1] || p.stat}${p.actual != null ? ` · got ${Number(p.actual)}` : ''}`;
+      const title = p.kind === 'result' ? `${o.name(p.home)} v ${o.name(p.away)}` : p.kind === 'score' ? 'Score prediction' : p.player_name, what = p.kind === 'result' ? `${resultLabel(p.result, o.name(p.home), o.name(p.away))}${p.act_home != null ? ` · it finished ${p.act_home}–${p.act_away}` : ''}` : p.kind === 'score' ? `${p.pred_home}–${p.pred_away}${p.act_home != null ? ` · it finished ${p.act_home}–${p.act_away}` : ''}` : `${p.side === 'over' ? 'Over' : 'Under'} ${p.line} ${STAT[p.stat]?.[1] || p.stat}${p.actual != null ? ` · got ${Number(p.actual)}` : ''}`;
       return `<li><div class="st-hl"><b>${esc(title)}</b><span>${esc(what)}</span></div>
         <div class="st-hr ${p.status}"><b>${RESULT[p.status]}</b><span>${p.status === 'open' ? `${coins(p.stake)} riding` : p.status === 'void' ? 'Stake back' : `${net > 0 ? '+' : net < 0 ? '−' : ''}${coins(Math.abs(net))}`}</span></div></li>`;
     }).join('')}</ul></section>`;
@@ -173,9 +171,9 @@ export function stakesView(st, o) {
   if (st.error && !st.wallet) return `<section class="lg-card st-card"><div class="lg-card-head"><h2>Stakes</h2></div><p class="st-empty">${esc(st.error)}</p></section>`;
   if (!st.wallet) return '<section class="lg-card st-card"><div class="lg-card-head"><h2>Stakes</h2></div><p class="st-empty">Opening your wallet…</p></section>';
   const open = st.slate.filter(l => l.my_status === 'open'), riding = open.reduce((s, l) => s + l.my_stake, 0);
-  const cards = st.slate.filter(l => l.kind !== 'score');
+  const cards = st.slate.filter(l => l.kind === 'player' || l.kind == null);
   const rounds = [...cards.reduce((m, l) => m.set(l.week, [...(m.get(l.week) || []), l]), new Map()).values()];
-  const everyGame = st.slate.filter(l => l.kind === 'score');
+  const everyGame = st.slate.filter(l => l.kind === 'result');
   const closedNote = st.cfg && !st.cfg.betting_open ? '<p class="st-note" role="status">Stakes is closed for now. You can look, but picks are paused until the league opens it again.</p>' : '';
   const note = closedNote + (st.msg ? `<p class="st-note${st.msg.bad ? ' bad' : ''}" role="status">${esc(st.msg.text)}</p>` : '');
   return `<div class="st">
@@ -189,7 +187,7 @@ export function stakesView(st, o) {
     ${rounds.length ? rounds.map(g => roundSection(g, st, o)).join('')
       : `<section class="lg-card st-card"><div class="lg-card-head"><h2>Stakes</h2></div><p class="st-empty">${st.loading ? 'Loading the stakes…' : 'No stakes open yet. A round’s stakes appear once clubs have submitted their team sheets.'}</p></section>`}
     ${everyGame.length ? predictSection(everyGame, st, o) : ''}
-    <div class="st-bottom">${historyCard(st.history)}</div>
+    <div class="st-bottom">${historyCard(st.history, o)}</div>
   </div>`;
 }
 
@@ -198,7 +196,7 @@ export const stepsFor = (cfg, hasScore = false) => [
   { target: '[data-tour="wallet"]', title: 'Your Coins', text: `Stakes is a game of calls on real players. You start with ${Number(cfg.start_coins).toLocaleString('en-AU')} Coins${cfg.daily_topup > 0 ? ` and get ${Number(cfg.daily_topup).toLocaleString('en-AU')} more each day` : ''}. They are for fun only: nothing to buy, nothing to lose.` },
   { target: '.st-stake', title: 'A stake', text: 'Each card is one player in one match, and the big number is the league’s line for his stat: a keeper’s saves, a midfielder’s passes, a forward’s shots on target. There are only a few each round.' },
   { target: '.st-stake .st-sides', title: 'Over or under', text: 'Think he’ll do more than the line? Tap blue OVER. Fewer? Tap red UNDER. Lines end in .5, so there is always a winner.', pick: true },
-  ...(hasScore ? [{ target: '.st-predict', title: 'Game predictors', text: `Below the cards, every game has a score predictor. Tap the red − and the blue + to set the score you expect, tap the Stake pill to change your stake, then Lock in. The exact score pays ${Number(cfg.score_exact_mult)} times your stake; the right result with the wrong score pays ${Number(cfg.score_result_mult)} times.` }] : []),
+  ...(hasScore ? [{ target: '.st-predict', title: 'Game predictors', text: `Below the cards, every game has a predictor: who wins? Tap Team A win, Draw or Team B win, tap the Stake pill to change your stake, then Lock in. A right win pays ${Number(cfg.result_win_mult)} times your stake and a right draw pays ${Number(cfg.result_draw_mult)} times.` }] : []),
   { target: '.st-sheet', title: 'Stake some Coins', text: `Choose how many Coins to put on it. Get it right and you get ${Number(cfg.multiplier)} times your stake back; get it wrong and the stake is gone. You can take a pick back until picks close${cfg.lock_minutes > 0 ? ` (${cfg.lock_minutes} minutes before kick-off)` : ' (kick-off)'}.` },
   { target: '[data-tour="board"]', title: 'The leaderboard', text: 'Picks settle by themselves once the match is played. The richest managers sit at the top.' },
 ];
@@ -242,7 +240,7 @@ export function mountStakes(root, o0) {
   const o = { ...o0 }, faces = new Map();
   // The players' portraits (js/portrait.js), read once; the cards show the club's crest until they are in.
   o.face = (id, code, px) => { const p = faces.get(String(id)); return p ? portrait(p, { code, ...(o0.club?.(code) || {}) }, px, true) : ''; };
-  const st = { cfg: null, sc: {}, wallet: null, slate: [], board: [], history: [], picked: null, busy: false, msg: null, loading: true, error: '' };
+  const st = { cfg: null, rs: {}, wallet: null, slate: [], board: [], history: [], picked: null, busy: false, msg: null, loading: true, error: '' };
   let gone = false, timer = 0, tick = 0, toured = false;
   root.innerHTML = '<div class="st-app"></div>';
   const app = root.querySelector('.st-app');
@@ -255,7 +253,7 @@ export function mountStakes(root, o0) {
     scrollTo(0, y);
   };
   const defaultStake = () => defaultStakeFor(st.cfg || DEFAULTS, st.wallet?.coins ?? 0);
-  const scoreOf = id => (st.sc[id] ||= { h: 1, a: 1, stake: defaultStake() });
+  const resultOf = id => (st.rs[id] ||= { pick: null, stake: defaultStake() });
   const rpc = async (name, args) => { const { db } = await import('./auth.js');   // loaded when first used, so the pure builders above run in node
     const { data, error } = await (await db()).rpc(name, args); if (error) throw error; return data; };
   const say = (text, bad = false) => { st.msg = { text, bad }; };
@@ -271,37 +269,24 @@ export function mountStakes(root, o0) {
     if (first && !faces.size) import('./players-data.js').then(m => m.loadPlayers()).then(list => { list.forEach(p => faces.set(String(p.id), p)); draw(); }).catch(() => {});
     if (first && !toured && st.wallet && !tourSeen('stakes')) { toured = true; intro.then(() => setTimeout(() => !gone && tour(), 600)); }
   };
-  const tour = () => startTour(stepsFor(st.cfg || DEFAULTS, st.slate.some(x => x.kind === 'score')), {
+  const tour = () => startTour(stepsFor(st.cfg || DEFAULTS, st.slate.some(x => x.kind === 'result')), {
     key: 'stakes',
     before: step => { if (step.pick) { const l = st.slate.find(x => !x.my_side); if (l) { st.picked = { line: l.line_id, side: 'over', stake: defaultStake() }; draw(); } } else if (!step.target.includes('st-sheet') && !step.target.includes('sides')) { if (st.picked) { st.picked = null; draw(); } } },
   });
 
-  // The + and - under a score: a press steps once, holding runs on (the page redraws each step, so the repeat belongs to the page, not the button).
-  let hold = 0, holdAfter = 0;
-  const stepNow = b => { const sc = scoreOf(Number(b.dataset.line)); sc[b.dataset.which] = stepGoals(sc[b.dataset.which], Number(b.dataset.d)); sc.touched = true; st.msg = null; draw(); };
-  const stopHold = () => { clearTimeout(holdAfter); clearInterval(hold); };
-  root.addEventListener('pointerdown', e => {
-    const b = e.target.closest('[data-st="step"]');
-    if (!b || b.disabled || e.button > 0) return;
-    stepNow(b);
-    const d = b.dataset.d, line = b.dataset.line, which = b.dataset.which;
-    holdAfter = setTimeout(() => { hold = setInterval(() => { const nb = root.querySelector(`[data-st="step"][data-line="${line}"][data-which="${which}"][data-d="${d}"]`); if (!nb || nb.disabled) stopHold(); else stepNow(nb); }, 120); }, 420);
-  });
-  for (const t of ['pointerup', 'pointerleave', 'pointercancel']) root.addEventListener(t, stopHold);
   root.addEventListener('click', async e => {
     const b = e.target.closest('[data-st]');
     if (!b || b.disabled) return;
     const act = b.dataset.st, line = Number(b.dataset.line);
-    if (act === 'step') { if (e.detail === 0) stepNow(b); return; }   // a mouse or finger already stepped on pointerdown; Enter or Space come here
     st.msg = null;
-    if (act === 'stakecycle') { const sc = scoreOf(line), chips = stakeChips(st.cfg || DEFAULTS, st.wallet?.coins ?? 0); if (chips.length) sc.stake = chips[(chips.indexOf(sc.stake) + 1) % chips.length]; draw(); return; }
-    if (act === 'placescore') {
-      const sc = scoreOf(line); st.busy = true; draw();
-      try { await rpc('stakes_place_score', { p_line: line, p_home: sc.h, p_away: sc.a, p_stake: sc.stake }); delete st.sc[line]; say(`Staked ${coins(sc.stake)} Coins on ${sc.h}–${sc.a}.`); }
+    if (act === 'stakecycle') { const rs = resultOf(line), chips = stakeChips(st.cfg || DEFAULTS, st.wallet?.coins ?? 0); if (chips.length) rs.stake = chips[(chips.indexOf(rs.stake) + 1) % chips.length]; draw(); return; }
+    if (act === 'rpick') { const rs = resultOf(line); rs.pick = rs.pick === b.dataset.which ? null : b.dataset.which; draw(); return; }
+    if (act === 'placeresult') {
+      const rs = resultOf(line); if (!rs.pick) return; st.busy = true; draw();
+      try { await rpc('stakes_place_result', { p_line: line, p_result: rs.pick, p_stake: rs.stake }); delete st.rs[line]; say(`Staked ${coins(rs.stake)} Coins.`); }
       catch (err) { say(err.message || 'That stake did not go through.', true); }
       st.busy = false; await load(); return;
     }
-    if (act === 'help') { st.picked = null; draw(); tour(); return; }
     if (act === 'side') {
       const same = st.picked?.line === line && st.picked.side === b.dataset.side;
       st.picked = same ? null : { line, side: b.dataset.side, stake: defaultStake() };
