@@ -3,6 +3,28 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.12.0 (2026-10-26)
+
+Headlines: Stakes tab | Click any player name
+
+**Added (MU-1):** a Stakes tab on the dashboard: over/under bets on key players' stats, using fake Coins. New database tables (0061).
+
+**Added:** every player name opens a player card with detailed stats, a match log, league places, and shot and position maps.
+
+**Added (S-34):** assistant referees. Two run the touchlines in lime tops, level with the second-last defender (the offside line). The flag goes straight up for an offside and waves for a foul near the touchline that led to a card or a penalty. Shows in the match viewer and the highlights, for every match.
+
+**Added (S-35):** a club can make up to three special kits. Once the Special kit is made, an "Add a special kit" button adds Special 2 and Special 3. They can be picked for a match like the first one, and the automatic away-shirt rule tries each in turn. Small database change (0062, widens the allowed kit names).
+
+**Added (S-33):** a missed or saved penalty now has the red ball on the Lineup pitch and a "Penalty saved / missed" tag with a red dot in the Highlights (the Events list already had the red ball). The Lineup icon shows for matches played from now on and for live ones.
+
+**Fixed (B-28):** two moments close together in the same stoppage (a save then the rebound goal) now play as one continuous replay, with no wipe between them.
+
+**Fixed (B-27):** at a penalty the referee now stands beside the box, clear of the line of players, until just after the kick.
+
+**Fixed (B-29):** when a foul earns a card, the referee goes to the player who earned it and shows it to him, not to where the foul happened.
+
+Database changes 0061 (Stakes) and 0062 (kit names) are already applied.
+
 ## 1.11.4 (2026-10-26)
 
 Headlines: Penalties: keepers in the right places
