@@ -1,10 +1,11 @@
 // The Stakes tab (MU-1): a fake-money over/under game on key players' match stats. Logged-in managers only; Coins have no value outside the league.
 // The database does the money (supabase/migrations/0061_stakes.sql: wallet, lines, picks, settling); this file draws the tab and handles its clicks.
 //
-//   mountStakes(root, { crest(code, px) -> html, name(code) -> text, onFirstLoad? }) -> { unmount() }
+//   mountStakes(root, { crest(code, px) -> html, name(code) -> text, club(code) -> { colour, colour2 } }) -> { unmount() }   (the portraits are loaded here)
 //   stakesView(state, o) / helpers below are plain string builders so the tests can run them without a browser.
 // One state object, one click handler on the root (data-st="side|stake|place|cancel|take|help"). The tab draws itself (it is not redrawn by the league page).
 import { icon } from './icons.js';
+import { portrait } from './portrait.js';
 import { startTour, tourSeen } from './tour.js';
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -36,40 +37,48 @@ export function closesIn(iso, now = Date.now()) {
 const coins = n => Number(n).toLocaleString('en-AU');
 
 // ---------- html ----------
+// One card per stake, in the way Stadium Live does it: the player's portrait on his club's colour, his name and match, the line in big type, then two big buttons,
+// UNDER on the left (red) and OVER on the right (blue). Tapping one opens the stake chooser inside the card.
+const SIDE_ICON = { under: 'chevron-down', over: 'chevron-up' };
 const sideBtn = (l, side, mine, picked, closed) => {
   const on = mine ? mine === side : picked?.line === l.line_id && picked.side === side;
-  return `<button type="button" class="st-side ${side}${on ? ' on' : ''}" data-st="side" data-line="${l.line_id}" data-side="${side}" aria-pressed="${on}"${mine || closed ? ' disabled' : ''}>${icon(side === 'over' ? 'chevron-up' : 'chevron-down')}<span>${side === 'over' ? 'Over' : 'Under'}</span></button>`;
+  return `<button type="button" class="st-side ${side}${on ? ' on' : ''}${mine && !on ? ' off' : ''}" data-st="side" data-line="${l.line_id}" data-side="${side}" aria-pressed="${on}"${mine || closed ? ' disabled' : ''}>${icon(SIDE_ICON[side])}<span>${side === 'over' ? 'Over' : 'Under'}</span></button>`;
 };
+const colourOf = (o, code) => { const c = o.club?.(code)?.colour; return /^#[0-9a-f]{6}$/i.test(c || '') ? c : '#4a6fa5'; };
 
-function lineRow(l, st, o) {
+function stakeCard(l, st, o) {
   const mine = l.my_side, open = st.picked?.line === l.line_id, closed = st.cfg ? !st.cfg.betting_open : false;
-  return `<div class="st-line${mine ? ' has-pick' : ''}${open ? ' is-open' : ''}" data-line-row="${l.line_id}">
-    <div class="st-who"><b>${esc(l.player_name)}</b><span>${o.crest(l.team, 14)}<i>${POS[l.pos] || ''}</i> ${esc(o.name(l.team))}</span></div>
-    <div class="st-num"><b>${l.line}</b><span>${esc(statName(l.stat))}</span></div>
+  const face = o.face?.(l.player_id, l.team, 132) || o.crest(l.team, 96);
+  const opp = l.team === l.home ? l.away : l.home;
+  return `<article class="lg-card st-stake${mine ? ' has-pick' : ''}${open ? ' is-open' : ''}" data-line-card="${l.line_id}" style="--cc:${colourOf(o, l.team)}">
+    <div class="st-top"><span class="st-pos">${POS[l.pos] || ''}</span><div class="st-photo">${face}</div>
+      <em class="st-close" data-closes="${esc(l.locks_at || l.starts_at)}">${closesIn(l.locks_at || l.starts_at)}</em></div>
+    <div class="st-info">
+      <h3 class="st-pname">${esc(l.player_name)}</h3>
+      <p class="st-vs">${o.crest(l.team, 18)}<b>${esc(o.name(l.team))}</b><i>v</i><span>${esc(o.name(opp))}</span></p>
+      <p class="st-when">${esc(kick(l.starts_at))}</p>
+      <div class="st-lineblock"><b class="st-linenum">${l.line}</b><span class="st-statname">${esc(statName(l.stat))}</span></div>
+      ${l.usual != null ? `<p class="st-avg">Averages ${Number(l.usual).toFixed(1)} a match</p>` : ''}
+    </div>
     <div class="st-sides" role="group" aria-label="${esc(l.player_name)} ${esc(statName(l.stat))}, line ${l.line}">${sideBtn(l, 'under', mine, st.picked, closed)}${sideBtn(l, 'over', mine, st.picked, closed)}</div>
-    ${mine ? `<div class="st-mine"><span>${mine === 'over' ? 'Over' : 'Under'} ${l.line} · <b>${coins(l.my_stake)}</b> Coins · pays <b>${coins(payout(l.my_stake, l.my_mult))}</b></span><button type="button" class="st-link" data-st="take" data-line="${l.line_id}">Take back</button></div>` : ''}
+    ${mine ? `<div class="st-mine"><span><b class="is-${mine}">${mine === 'over' ? 'Over' : 'Under'} ${l.line}</b> · ${coins(l.my_stake)} Coins · pays <b>${coins(payout(l.my_stake, l.my_mult))}</b></span><button type="button" class="st-link" data-st="take" data-line="${l.line_id}">Take back</button></div>` : ''}
     ${open ? stakePanel(l, st) : ''}
-  </div>`;
+  </article>`;
 }
 
 function stakePanel(l, st) {
   const cfg = st.cfg || DEFAULTS, bal = st.wallet?.coins ?? 0, p = st.picked, chips = stakeChips(cfg, bal);
-  return `<div class="st-stake">
+  return `<div class="st-stakebox is-${p.side}">
     <div class="st-chips" role="group" aria-label="Stake">${chips.map(c => `<button type="button" class="st-chip${p.stake === c ? ' on' : ''}" data-st="stake" data-n="${c}" aria-pressed="${p.stake === c}">${c === chips.at(-1) && c !== cfg.min_stake && c !== cfg.min_stake * 5 && c !== cfg.min_stake * 10 ? (c === bal ? 'All in · ' : 'Biggest · ') : ''}${coins(c)}</button>`).join('')}</div>
     <p class="st-pays">${p.side === 'over' ? 'Over' : 'Under'} ${l.line} ${esc(STAT[l.stat]?.[1] || l.stat)} wins <b>${coins(payout(p.stake, cfg.multiplier))}</b> Coins back</p>
-    <div class="st-go"><button type="button" class="st-btn primary" data-st="place"${st.busy || p.stake < cfg.min_stake || (cfg.max_stake > 0 && p.stake > cfg.max_stake) || p.stake > bal ? ' disabled' : ''}>${st.busy ? 'Placing…' : `Stake ${coins(p.stake)}`}</button><button type="button" class="st-btn" data-st="cancel">Cancel</button></div>
+    <div class="st-go"><button type="button" class="st-btn primary is-${p.side}" data-st="place"${st.busy || p.stake < cfg.min_stake || (cfg.max_stake > 0 && p.stake > cfg.max_stake) || p.stake > bal ? ' disabled' : ''}>${st.busy ? 'Placing…' : `Stake ${coins(p.stake)}`}</button><button type="button" class="st-btn" data-st="cancel">Cancel</button></div>
   </div>`;
 }
 
-function matchCard(rows, st, o) {
-  const f = rows[0];
-  return `<section class="lg-card st-match" data-fixture="${esc(f.fixture)}">
-    <div class="st-mhead">
-      <div class="st-teams">${o.crest(f.home, 20)}<b>${esc(o.name(f.home))}</b><i>v</i>${o.crest(f.away, 20)}<b>${esc(o.name(f.away))}</b></div>
-      <div class="st-when"><span>${esc(kick(f.starts_at))}</span><em class="st-close" data-closes="${esc(f.locks_at || f.starts_at)}">${closesIn(f.locks_at || f.starts_at)}</em></div>
-    </div>
-    ${rows.map(l => lineRow(l, st, o)).join('')}
-  </section>`;
+// A round's stakes: a heading, then the cards in a grid.
+function roundSection(rows, st, o) {
+  return `<section class="st-round"><div class="st-roundhead"><h2>Round ${rows[0].week} stakes</h2><span>${rows.length} stake${rows.length === 1 ? '' : 's'}</span></div>
+    <div class="st-grid">${rows.map(l => stakeCard(l, st, o)).join('')}</div></section>`;
 }
 
 const RESULT = { won: 'Won', lost: 'Lost', void: 'Refunded', open: 'Open' };
@@ -94,7 +103,7 @@ export function stakesView(st, o) {
   if (st.error && !st.wallet) return `<section class="lg-card st-card"><div class="lg-card-head"><h2>Stakes</h2></div><p class="st-empty">${esc(st.error)}</p></section>`;
   if (!st.wallet) return '<section class="lg-card st-card"><div class="lg-card-head"><h2>Stakes</h2></div><p class="st-empty">Opening your wallet…</p></section>';
   const open = st.slate.filter(l => l.my_status === 'open'), riding = open.reduce((s, l) => s + l.my_stake, 0);
-  const groups = [...st.slate.reduce((m, l) => m.set(l.fixture, [...(m.get(l.fixture) || []), l]), new Map()).values()];
+  const rounds = [...st.slate.reduce((m, l) => m.set(l.week, [...(m.get(l.week) || []), l]), new Map()).values()];
   const closedNote = st.cfg && !st.cfg.betting_open ? '<p class="st-note" role="status">Stakes is closed for now. You can look, but picks are paused until the league opens it again.</p>' : '';
   const note = closedNote + (st.msg ? `<p class="st-note${st.msg.bad ? ' bad' : ''}" role="status">${esc(st.msg.text)}</p>` : '');
   return `<div class="st">
@@ -105,8 +114,8 @@ export function stakesView(st, o) {
     </section>
     ${note}
     <div class="lg-cols"><div class="lg-main">
-      ${groups.length ? groups.map(g => matchCard(g, st, o)).join('')
-        : `<section class="lg-card st-card"><div class="lg-card-head"><h2>Lines</h2></div><p class="st-empty">${st.loading ? 'Loading the lines…' : 'No lines open yet. Lines appear for a match once a club has submitted its team sheet, up to a week before kick-off.'}</p></section>`}
+      ${rounds.length ? rounds.map(g => roundSection(g, st, o)).join('')
+        : `<section class="lg-card st-card"><div class="lg-card-head"><h2>Lines</h2></div><p class="st-empty">${st.loading ? 'Loading the lines…' : 'No stakes open yet. A round’s stakes appear once clubs have submitted their team sheets.'}</p></section>`}
     </div><aside class="lg-side">${st.cfg && !st.cfg.show_board ? '' : boardCard(st.board, o)}${historyCard(st.history)}</aside></div>
   </div>`;
 }
@@ -114,9 +123,9 @@ export function stakesView(st, o) {
 // ---------- the tour ----------
 export const stepsFor = cfg => [
   { target: '[data-tour="wallet"]', title: 'Your Coins', text: `Stakes is a game of calls on real players. You start with ${Number(cfg.start_coins).toLocaleString('en-AU')} Coins${cfg.daily_topup > 0 ? ` and get ${Number(cfg.daily_topup).toLocaleString('en-AU')} more each day` : ''}. They are for fun only: nothing to buy, nothing to lose.` },
-  { target: '.st-line', title: 'A line', text: 'Each match has lines on its key players: the number is what the league has set as that player’s stat for the match. For example a keeper’s saves, or a midfielder’s passes.' },
-  { target: '.st-line .st-sides', title: 'Over or under', text: 'Think the player will do more than the line? Pick Over. Fewer? Pick Under. Lines end in .5, so there is always a winner.', pick: true },
-  { target: '.st-stake', title: 'Stake some Coins', text: `Choose how many Coins to put on it. Get it right and you get ${Number(cfg.multiplier)} times your stake back; get it wrong and the stake is gone. You can take a pick back until picks close${cfg.lock_minutes > 0 ? ` (${cfg.lock_minutes} minutes before kick-off)` : ' (kick-off)'}.` },
+  { target: '.st-stake', title: 'A stake', text: 'Each card is one player in one match, and the big number is the league’s line for his stat: a keeper’s saves, a midfielder’s passes, a forward’s shots on target. There are only a few each round.' },
+  { target: '.st-stake .st-sides', title: 'Over or under', text: 'Think he’ll do more than the line? Tap blue OVER. Fewer? Tap red UNDER. Lines end in .5, so there is always a winner.', pick: true },
+  { target: '.st-stakebox', title: 'Stake some Coins', text: `Choose how many Coins to put on it. Get it right and you get ${Number(cfg.multiplier)} times your stake back; get it wrong and the stake is gone. You can take a pick back until picks close${cfg.lock_minutes > 0 ? ` (${cfg.lock_minutes} minutes before kick-off)` : ' (kick-off)'}.` },
   { target: '[data-tour="board"]', title: 'The leaderboard', text: 'Picks settle by themselves once the match is played. The richest managers sit at the top.' },
 ];
 export const STEPS = stepsFor(DEFAULTS);
@@ -155,7 +164,10 @@ function playIntro(root, app) {
 }
 
 // ---------- the page ----------
-export function mountStakes(root, o) {
+export function mountStakes(root, o0) {
+  const o = { ...o0 }, faces = new Map();
+  // The players' portraits (js/portrait.js), read once; the cards show the club's crest until they are in.
+  o.face = (id, code, px) => { const p = faces.get(String(id)); return p ? portrait(p, { code, ...(o0.club?.(code) || {}) }, px, true) : ''; };
   const st = { cfg: null, wallet: null, slate: [], board: [], history: [], picked: null, busy: false, msg: null, loading: true, error: '' };
   let gone = false, timer = 0, tick = 0, toured = false;
   root.innerHTML = '<div class="st-app"></div>';
@@ -181,11 +193,12 @@ export function mountStakes(root, o) {
       if (first && w?.bonus > 0) say(st.cfg && w.bonus === st.cfg.daily_topup ? `Daily top-up: +${w.bonus} Coins.` : `Topped up to ${coins(st.wallet.coins)} Coins so you can keep playing.`);
     } catch (e) { st.error = /not open yet/.test(e?.message || '') ? 'Stakes isn’t open yet. The league will switch it on soon.' : 'Stakes could not load. Check your connection and refresh.'; }
     st.loading = false; draw();
+    if (first && !faces.size) import('./players-data.js').then(m => m.loadPlayers()).then(list => { list.forEach(p => faces.set(String(p.id), p)); draw(); }).catch(() => {});
     if (first && !toured && st.wallet && !tourSeen('stakes')) { toured = true; intro.then(() => setTimeout(() => !gone && tour(), 600)); }
   };
   const tour = () => startTour(stepsFor(st.cfg || DEFAULTS), {
     key: 'stakes',
-    before: step => { if (step.pick) { const l = st.slate.find(x => !x.my_side); if (l) { st.picked = { line: l.line_id, side: 'over', stake: defaultStake() }; draw(); } } else if (!step.target.includes('st-stake') && !step.target.includes('sides')) { if (st.picked) { st.picked = null; draw(); } } },
+    before: step => { if (step.pick) { const l = st.slate.find(x => !x.my_side); if (l) { st.picked = { line: l.line_id, side: 'over', stake: defaultStake() }; draw(); } } else if (!step.target.includes('st-stakebox') && !step.target.includes('sides')) { if (st.picked) { st.picked = null; draw(); } } },
   });
 
   root.addEventListener('click', async e => {

@@ -44,41 +44,49 @@
 @media (hover: hover) { .st-btn:not([disabled]):hover { background: var(--surface-hover); } .st-btn.primary:not([disabled]):hover { filter: brightness(1.08); background: var(--brand-grad); } .st-link:hover { text-decoration: underline; } }
 .st button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
-/* a match */
-.st-match { padding: 0; overflow: hidden; }
-.st-mhead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 12px 16px; background: var(--surface-sunk); border-bottom: 1px solid var(--line); }
-.st-teams { display: flex; align-items: center; gap: 8px; min-width: 0; font: 700 var(--fs-m) var(--font); color: var(--text-strong); }
-.st-teams i { font: 400 var(--fs-s) var(--font); font-style: normal; color: var(--muted); }
-.st-when { display: grid; justify-items: end; font: 400 var(--fs-s) var(--font); color: var(--muted); }
-.st-when em { font-style: normal; font-weight: 600; color: var(--brand); }
+/* the stakes: one card each, as Stadium Live does it (portrait on the club's colour, details under, UNDER red and OVER blue) */
+.st-round { display: grid; gap: 12px; }
+.st-roundhead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.st-roundhead h2 { margin: 0; font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: var(--text-strong); }
+.st-roundhead span { color: var(--muted); font: 600 var(--fs-s) var(--font); }
+.st-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; align-items: start; }
+.lg-card.st-stake { padding: 0; overflow: hidden; display: grid; align-content: start; }
+.st-top { position: relative; display: grid; place-items: center; padding: 18px 16px 8px;
+  background: radial-gradient(75% 90% at 50% 38%, color-mix(in oklab, var(--cc) 62%, transparent), color-mix(in oklab, var(--cc) 14%, transparent) 70%, transparent); }
+.st-photo { width: 132px; height: 132px; display: grid; place-items: end center; overflow: hidden; border-radius: 0 0 50% 50% / 0 0 18% 18%; }
+.st-photo svg { display: block; width: 132px; height: 132px; }
+.st-photo .crest { max-width: 100%; max-height: 100%; }
+.st-pos { position: absolute; top: 12px; left: 12px; display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; background: rgba(0, 0, 0, .38); color: #fff; font: 700 var(--fs-xs) var(--font); letter-spacing: .04em; }
+.st-close { position: absolute; top: 14px; right: 12px; font: 700 var(--fs-xs) var(--font); font-style: normal; color: var(--text-strong); padding: 4px 10px; border-radius: 999px; background: rgba(0, 0, 0, .38); color: #fff; }
+.st-info { display: grid; gap: 6px; justify-items: center; text-align: center; padding: 14px 16px 14px; }
+.st-pname { margin: 0; font: 900 var(--fs-l)/1.15 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: var(--text-strong); }
+.st-vs { margin: 0; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px; font: 400 var(--fs-s) var(--font); color: var(--muted); }
+.st-vs b { color: var(--text); font-weight: 600; } .st-vs i { font-style: normal; color: var(--faint); } .st-vs .crest { flex: none; }
+.st-when { margin: 0; font: 400 var(--fs-s) var(--font); color: var(--muted); }
+.st-lineblock { display: grid; justify-items: center; gap: 0; margin-top: 6px; }
+.st-linenum { font: 900 44px/1 var(--font-display); font-stretch: 125%; color: var(--text-strong); font-variant-numeric: tabular-nums; }
+.st-statname { font: 700 var(--fs-s) var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.st-avg { margin: 0; font: 400 var(--fs-xs) var(--font); color: var(--faint); }
 
-/* a line */
-.st-line { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px 16px; padding: 12px 16px; }
-.st-line + .st-line { border-top: 1px solid var(--line); }
-.st-who { display: grid; gap: 2px; min-width: 0; }
-.st-who b { font: 600 var(--fs-m) var(--font); color: var(--text-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.st-who span { display: flex; align-items: center; gap: 6px; font: 400 var(--fs-s) var(--font); color: var(--muted); min-width: 0; }
-.st-who i { font-style: normal; font-weight: 600; padding: 0 6px; border: 1px solid var(--line); border-radius: 999px; font-size: var(--fs-xs); }
-.st-num { display: grid; justify-items: center; min-width: 76px; }
-.st-num b { font: 900 20px/1.1 var(--font-display); font-stretch: 125%; color: var(--text-strong); font-variant-numeric: tabular-nums; }
-.st-num span { font: 400 var(--fs-xs) var(--font); color: var(--muted); text-align: center; }
-.st-sides { display: inline-grid; grid-auto-flow: column; padding: 3px; gap: 3px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-sunk); }
-.st-side {
-  display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 84px; min-height: 40px; padding: 0 14px;
-  border: 0; border-radius: 999px; background: transparent; color: var(--text); font: 600 var(--fs-m) var(--font); cursor: pointer;
-}
-.st-side .ic { width: 16px; height: 16px; }
-.st-side.on { background: var(--brand-grad); color: var(--white); font-weight: 700; }
-.st-side[disabled]:not(.on) { opacity: .4; cursor: default; }
-.st-side[disabled].on { opacity: 1; }
-@media (hover: hover) { .st-side:not(.on):not([disabled]):hover { background: var(--surface-hover); } }
-.st-line.has-pick { background: color-mix(in oklab, var(--blue-500) 6%, transparent); }
-.st-mine, .st-stake { grid-column: 1 / -1; }
-.st-mine { display: flex; align-items: center; justify-content: space-between; gap: 8px; font: 400 var(--fs-s) var(--font); color: var(--muted); }
-.st-mine b { color: var(--text-strong); font-weight: 700; }
+/* UNDER left in red, OVER right in blue: big, filling the width of the card */
+.st-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-top: 1px solid var(--line); }
+.st-side { display: grid; justify-items: center; align-content: center; gap: 2px; min-height: 72px; padding: 8px; border: 0; color: #fff; cursor: pointer; font: 900 var(--fs-l) var(--font-display); font-stretch: 125%; letter-spacing: .04em; text-transform: uppercase; transition: filter .15s, transform .12s; }
+.st-side .ic { width: 22px; height: 22px; stroke-width: 3; }
+.st-side.under { background: linear-gradient(160deg, #f0595e, #c0282d); }
+.st-side.over { background: var(--brand-grad); }
+.st-side:not([disabled]):active { transform: scale(.97); }
+.st-side.on { box-shadow: inset 0 0 0 3px rgba(255, 255, 255, .9); }
+.st-side.off, .st-side[disabled]:not(.on) { filter: saturate(.25) brightness(.7); cursor: default; }
+.st-side[disabled].on { filter: none; cursor: default; }
+@media (hover: hover) { .st-side:not([disabled]):not(.on):hover { filter: brightness(1.12); } }
+.st-side:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+.st-mine { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; padding: 10px 16px; border-top: 1px solid var(--line); font: 400 var(--fs-s) var(--font); color: var(--muted); }
+.st-mine b { color: var(--text-strong); font-weight: 700; } .st-mine b.is-under { color: var(--res-l); } .st-mine b.is-over { color: var(--blue-300); }
+:root[data-theme="light"] .st-mine b.is-over { color: var(--blue-700); }
+.st-stake.has-pick { box-shadow: 0 0 0 2px color-mix(in oklab, var(--blue-400) 55%, transparent); }
 
-/* the stake picker */
-.st-stake { display: grid; gap: 10px; padding-top: 12px; border-top: 1px dashed var(--line); }
+/* the stake chooser, inside the card */
+.st-stakebox { display: grid; gap: 10px; padding: 12px 16px 16px; border-top: 1px solid var(--line); background: color-mix(in oklab, var(--text) 4%, transparent); }
 .st-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .st-chip { min-height: 40px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); font: 600 var(--fs-m) var(--font); font-variant-numeric: tabular-nums; cursor: pointer; }
 .st-chip.on { background: var(--text-strong); border-color: var(--text-strong); color: var(--bg); font-weight: 700; }
@@ -86,6 +94,7 @@
 .st-pays { margin: 0; font: 400 var(--fs-s) var(--font); color: var(--muted); }
 .st-pays b { color: var(--text-strong); font-weight: 700; }
 .st-go { display: flex; flex-wrap: wrap; gap: 8px; }
+.st-btn.primary.is-under { background: linear-gradient(160deg, #f0595e, #c0282d); }
 
 /* the side cards */
 .st-list, .st-board { margin: 0; padding: 0; list-style: none; }
@@ -105,16 +114,11 @@
 .st-bn em { font: 400 var(--fs-s) var(--font); font-style: normal; color: var(--muted); }
 .st-bc { font: 700 var(--fs-m) var(--font); color: var(--text-strong); font-variant-numeric: tabular-nums; }
 
-/* phones: the line stacks, the buttons fill the row */
+/* phones: one card per row, the wallet button full width */
 @media (max-width: 560px) {
   .st-wallet { flex-wrap: wrap; }
   .st-wallet .st-btn { width: 100%; }
-  .st-line { grid-template-columns: minmax(0, 1fr) auto; }
-  .st-sides { grid-column: 1 / -1; grid-auto-columns: 1fr; }
-  .st-side { min-width: 0; min-height: 44px; }
-  .st-when { justify-items: start; }
-  .st-mhead { padding: 12px; }
-  .st-line { padding: 12px; }
+  .st-grid { grid-template-columns: 1fr; }
 }
 
 /* ---- the intro when the tab opens (js/stakes.js playIntro) ---- */

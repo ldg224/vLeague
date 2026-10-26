@@ -13,7 +13,7 @@ export function readSettings(f) {
   const out = {
     start_coins: n('start_coins'), daily_topup: n('daily_topup'), bailout_below: n('bailout_below'), bailout_to: n('bailout_to'),
     multiplier: n('multiplier'), min_stake: n('min_stake'), max_stake: n('max_stake') ?? 0,
-    lines_per_club: n('lines_per_club'), line_adjust: n('line_adjust'), lock_minutes: n('lock_minutes'), lines_days: n('lines_days'),
+    lines_per_week: n('lines_per_week'), lines_per_match: n('lines_per_match'), line_adjust: n('line_adjust'), lock_minutes: n('lock_minutes'), lines_days: n('lines_days'),
     show_board: f.get('show_board') === 'on', stats: f.getAll('stats'),
   };
   for (const k of Object.keys(out)) if (out[k] === undefined || (typeof out[k] === 'number' && !Number.isFinite(out[k]))) delete out[k];
@@ -55,12 +55,12 @@ export async function mountStakes({ db, esc, explain }) {
           <div class="ed-fields">${field('Bail-out when under', 'bailout_below', S.bailout_below, { hint: 'and nothing riding' })}${field('Bail-out tops up to', 'bailout_to', S.bailout_to, { hint: '0 = no bail-out' })}</div></section>
         <section class="ed-invite"><h2>Payout and stakes</h2>
           <div class="ed-fields">${field('Payout multiplier', 'multiplier', S.multiplier, { min: 1.01, max: 10, step: 0.01, hint: '1.90 = 100 wins 190 back' })}${field('Smallest stake', 'min_stake', S.min_stake, { min: 1 })}${field('Biggest stake', 'max_stake', S.max_stake, { hint: '0 = no limit' })}</div></section>
-        <section class="ed-invite"><h2>Lines</h2>
-          <div class="ed-fields">${field('Lines per club per match', 'lines_per_club', S.lines_per_club, { min: 1, max: 6, hint: 'keeper first, then the most valuable starters' })}${field('Harder or easier lines (%)', 'line_adjust', S.line_adjust, { min: -30, max: 30, hint: '+ raises every line, − lowers it' })}</div>
+        <section class="ed-invite"><h2>Stakes</h2>
+          <div class="ed-fields">${field('Stakes per round', 'lines_per_week', S.lines_per_week, { min: 1, max: 24, hint: 'the most valuable starters across the round' })}${field('Most from one match', 'lines_per_match', S.lines_per_match, { min: 1, max: 6, hint: 'spreads them across the round' })}${field('Harder or easier lines (%)', 'line_adjust', S.line_adjust, { min: -30, max: 30, hint: '+ raises every line, − lowers it' })}</div>
           <div class="ed-fields">${field('Picks close before kick-off (minutes)', 'lock_minutes', S.lock_minutes, { max: 1440, hint: '0 = at kick-off' })}${field('Lines open this many days ahead', 'lines_days', S.lines_days, { min: 1, max: 28 })}</div>
-          <p class="ed-hint">Which stats are offered (lines are made for a player only when his stat is ticked):</p>
+          <p class="ed-hint">Which stats are offered (a player only gets a stake when his stat is ticked):</p>
           <div class="sk-stats">${['sv', 'pas', 'sot', 'tk'].map(stat).join('')}</div>
-          <p class="ed-hint">Lines are set near each player’s average and always end in .5, so there is a winner. Lines already made keep their number.</p></section>
+          <p class="ed-hint">Each stake is a card with the player’s photo; the line is set near his average and always ends in .5, so there is a winner. Stakes already made keep their number.</p></section>
         <section class="ed-invite"><h2>Leaderboard</h2>
           <label class="dr-check"><input type="checkbox" name="show_board"${S.show_board ? ' checked' : ''}> Show the leaderboard to managers</label></section>
         <div class="ed-actions"><button class="btn" type="submit">Save settings</button></div>

@@ -6,7 +6,7 @@ begin
   update public.stakes_settings set visible = true;
   select id into u from public.profiles where role='manager' limit 1;
   select * into fx from public.fixtures where starts_at > now() and not postponed and starts_at < now()+interval '60 days' order by starts_at limit 1;
-  delete from public.stakes_lines where fixture = fx.id;   -- live lines may already exist for this match
+  delete from public.stakes_lines where fixture in (select id from public.fixtures where week = fx.week);   -- live lines may already exist for this round
   -- fake submitted sheets for both clubs: first 11 players of each club
   insert into public.submitted_sheets (club, week, sheet)
   select c, fx.week, jsonb_build_object('formation','4-4-2','lineup',
@@ -17,7 +17,7 @@ begin
   perform public.stakes_wallet();
   insert into t_log(name,ok,detail) select 'wallet 1000', coins=1000, coins::text from public.stakes_wallets where user_id=u;
   select count(*) into lines from public.stakes_slate() s where s.fixture=fx.id;
-  insert into t_log(name,ok,detail) values ('6 lines made',lines=6,lines::text);
+  insert into t_log(name,ok,detail) values ('2 lines made for the match (the per-match limit)',lines=2,lines::text);
   select line_id into pk from public.stakes_slate() s where s.fixture=fx.id limit 1;
   select public.stakes_place(pk,'over',100) into bal;
   insert into t_log(name,ok,detail) values ('stake deducted',bal=900,bal::text);

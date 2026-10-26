@@ -27,7 +27,7 @@ test('the page shows coins, lines and escapes names', () => {
   assert.match(html, /1,000/);
   assert.match(html, /Hudson &lt;Allen&gt;/);
   assert.doesNotMatch(html, /Hudson <Allen>/);
-  assert.equal((html.match(/class="st-line/g) || []).length, 2);
+  assert.equal((html.match(/class="lg-card st-stake/g) || []).length, 2);
 });
 test('a line with a pick is locked and says what it pays; one without offers both sides', () => {
   const html = stakesView(state(), o);
@@ -43,7 +43,7 @@ test('choosing a side opens the stake picker, and a stake above the balance is n
   assert.match(html, /All in · 60/);
 });
 test('with no lines the page says how they appear; with no wallet it waits', () => {
-  assert.match(stakesView(state({ slate: [] }), o), /submitted its team sheet/);
+  assert.match(stakesView(state({ slate: [] }), o), /submitted their team sheets/);
   assert.match(stakesView({ ...state(), wallet: null, slate: [] }, o), /Opening your wallet/);
 });
 test('the tour has a step for the wallet, a line, the sides, the stake and the board', () => {
@@ -75,9 +75,9 @@ test('the tour quotes the real numbers', () => {
 });
 test('the Editor form becomes the object the database takes', () => {
   const f = new FormData();
-  for (const [k, v] of [['start_coins', '500'], ['daily_topup', ''], ['multiplier', '2.5'], ['min_stake', '20'], ['max_stake', ''], ['show_board', 'on'], ['stats', 'sv'], ['stats', 'tk']]) f.append(k, v);
+  for (const [k, v] of [['lines_per_week', '6'], ['lines_per_match', '2'], ['start_coins', '500'], ['daily_topup', ''], ['multiplier', '2.5'], ['min_stake', '20'], ['max_stake', ''], ['show_board', 'on'], ['stats', 'sv'], ['stats', 'tk']]) f.append(k, v);
   const o2 = readSettings(f);
-  assert.equal(o2.start_coins, 500); assert.equal(o2.multiplier, 2.5); assert.equal(o2.min_stake, 20);
+  assert.equal(o2.lines_per_week, 6); assert.equal(o2.lines_per_match, 2); assert.equal(o2.start_coins, 500); assert.equal(o2.multiplier, 2.5); assert.equal(o2.min_stake, 20);
   assert.equal(o2.max_stake, 0);                 // blank = no limit
   assert.ok(!('daily_topup' in o2));             // blank is left alone
   assert.equal(o2.show_board, true); assert.deepEqual(o2.stats, ['sv', 'tk']);
