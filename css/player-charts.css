@@ -64,3 +64,34 @@
 @media (max-width: 640px) {
   .pc-phead, .pc-prow { grid-template-columns: minmax(0, 1fr) minmax(70px, 1fr) 46px 26px; gap: 0 8px; }
 }
+
+/* ---- maps (js/player-maps.js) ---- */
+.pm-svg { display: block; width: 100%; max-width: 760px; height: auto; border-radius: var(--r-sm); }
+.pm-svg.is-half { max-width: 440px; }
+.pm-turf { fill: var(--surface-sunk); }
+.pm-line { fill: none; stroke: var(--faint); stroke-width: .35; }
+.pm-goal { fill: var(--faint); }
+.pm-spot { fill: var(--faint); }
+.pm-shot { stroke-width: .5; cursor: default; }
+.pm-shot.is-goal { fill: var(--brand); stroke: var(--text-strong); stroke-width: .8; }
+.pm-shot.is-on { fill: var(--brand); fill-opacity: .55; stroke: var(--brand); }
+.pm-shot.is-off { fill: none; stroke: var(--muted); stroke-width: .7; }
+i.pm-shot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; box-sizing: border-box; vertical-align: -2px; margin-right: 6px; border: 1.5px solid; }
+i.pm-shot.is-goal { background: var(--brand); border-color: var(--text-strong); } i.pm-shot.is-on { background: color-mix(in oklab, var(--brand) 55%, transparent); border-color: var(--brand); } i.pm-shot.is-off { background: none; border-color: var(--muted); }
+.pm-pass { stroke-width: .35; stroke-linecap: round; }
+.pm-pass.is-ok { stroke: var(--brand); stroke-opacity: .55; } .pm-pass.is-miss { stroke: var(--res-l); stroke-opacity: .85; stroke-width: .45; }
+.pm-end { fill: var(--brand); fill-opacity: .8; }
+i.pm-ln { display: inline-block; width: 18px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: 3px; }
+i.pm-ln.is-ok { background: var(--brand); opacity: .7; } i.pm-ln.is-miss { background: var(--res-l); }
+.pm-cell { fill: var(--brand); fill-opacity: var(--a); }
+.pm-avgpos { fill: var(--surface); stroke: var(--text-strong); stroke-width: .8; }
+i.pm-avgpos { display: inline-block; width: 11px; height: 11px; border-radius: 50%; box-sizing: border-box; border: 2px solid var(--text-strong); background: var(--surface); margin-right: 6px; vertical-align: -1px; }
+i.pm-heat { display: inline-block; width: 38px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: linear-gradient(90deg, color-mix(in oklab, var(--brand) 12%, transparent), var(--brand)); }
+.pm-def { stroke-width: .5; }
+.pm-def.is-won { fill: var(--brand); stroke: var(--brand); } .pm-def.is-lost { fill: none; stroke: var(--muted); stroke-width: .7; }
+.pm-def.is-line { fill: none; stroke: var(--brand); stroke-width: .8; stroke-linecap: round; } .pm-def.is-line.is-lost { stroke: var(--muted); }
+.pm-sym { width: 14px; height: 14px; margin-right: 6px; vertical-align: -3px; overflow: visible; } .pm-sym .pm-def { stroke-width: .6; }
+.pm-key { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 0; font: 400 var(--fs-s) var(--font); color: var(--muted); }
+.pm-key span { display: inline-flex; align-items: center; }
+.pm-arrow { color: var(--faint); white-space: nowrap; }
+.pm-svg g:focus-visible, .pm-svg circle:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }

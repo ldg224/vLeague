@@ -17,6 +17,8 @@ import { hasPreseason, scopeNow } from './preseason.js';
 import { playerView, averageRating, CLASSES, MIN_PEERS, MIN_MATCHES } from './player-stats.js';
 import { icon } from './icons.js';
 import { profileChart, cumulativeChart, matchBarsChart, scatterChart } from './player-charts.js';
+import { extractMaps, mergeMaps, shotMap, passMap, heatMap, defMap } from './player-maps.js';
+import { loadMatchFile } from './match-file.js';
 import { demoSeason } from './demo-season.js';
 import { lineOf } from './season-stats.js';
 
@@ -148,10 +150,34 @@ function render(season, rows, mine) {
   // ---- charts (js/player-charts.js): tabs for the profile, match by match, and the league; one panel is drawn at a time ----
   const cname = c => { const t = clubFor(c); return t.short_name || t.name || c; };
   const cctx = { name: cname, pos: row?.pos || p.position, word: compare.word };
-  const st = { tab: ['profile', 'matches', 'league'].includes(q.get('tab')) ? q.get('tab') : 'profile', bar: q.get('bar') || 'r', sc: q.get('sc') || '' };   // ?tab=league&sc=sh|sot opens a chart (also for screenshots)
+  const MAPS = [['shots', 'Shots', shotMap], ['passes', 'Passes', passMap], ['heat', 'Heatmap', heatMap], ['def', 'Defending', defMap]];
+  const mp = { status: 'idle', done: 0, total: 0, data: null, pick: MAPS.some(x => x[0] === q.get('map')) ? q.get('map') : 'shots' };
+  const mapsHtml = () => {
+    if (mp.status === 'loading') return `<p class="pp-note" role="status">Reading match files… ${mp.done} of ${mp.total}. Each is about 2 MB, so this takes a moment the first time.</p>`;
+    if (mp.status === 'none') return '<p class="pp-note">Maps are drawn from the saved match files, and none are available for these matches.</p>';
+    if (mp.status === 'error') return '<p class="pp-note">The match files could not be read. Check your connection and open this tab again.</p>';
+    if (!mp.data) return '';
+    const pills = `<div class="pc-pills" role="group" aria-label="Map">${MAPS.map(([k, label]) => `<button type="button" class="pc-pill" data-pcmap="${k}" aria-pressed="${k === mp.pick}">${label}</button>`).join('')}</div>`;
+    return `${pills}${MAPS.find(x => x[0] === mp.pick)[2](mp.data)}<p class="pp-note">${mp.data.matches === 1 ? 'One match' : `All ${mp.data.matches} matches`} added up, in a shared direction of play.</p>`;
+  };
+  // The newest 12 matches with a saved file, read one at a time (the files are big) the first time the tab opens.
+  const loadMaps = async () => {
+    if (mp.status !== 'idle') return;
+    const todo = log.filter(l => l.fx.result?.file || l.fx.demoFile).slice(-12);
+    if (!todo.length) { mp.status = 'none'; drawPanel(); return; }
+    mp.status = 'loading'; mp.total = todo.length; drawPanel();
+    try {
+      const parts = [];
+      for (const l of todo) { parts.push(extractMaps(await loadMatchFile(l.fx), p.id)); mp.done++; drawPanel(); }
+      mp.data = mergeMaps(parts); mp.status = 'ready';
+    } catch { mp.status = 'error'; }
+    drawPanel();
+  };
+  const st = { tab: ['profile', 'matches', 'maps', 'league'].includes(q.get('tab')) ? q.get('tab') : 'profile', bar: q.get('bar') || 'r', sc: q.get('sc') || '' };   // ?tab=league&sc=sh|sot opens a chart (also for screenshots)
   const PANELS = [
     ['profile', 'Profile', () => profileChart(groups, compare)],
     ['matches', 'Match by match', () => `${cumulativeChart(log)}${matchBarsChart(v.matchStats, log, st.bar, cctx)}` || '<p class="pp-note">Needs a match.</p>'],
+    ['maps', 'Maps', mapsHtml],
     ['league', 'The league', () => scatterChart(v.peerTable, p.id, st.sc, cctx) || '<p class="pp-note">Appears once three players of his position have played 90 minutes.</p>'],
   ];
   const chartsCard = row ? `<section class="lg-card pp-charts"><div class="lg-card-head"><h2>Charts</h2></div>
@@ -169,15 +195,18 @@ function render(season, rows, mine) {
     main.querySelectorAll('[data-pctab]').forEach(b => b.setAttribute('aria-pressed', b.dataset.pctab === st.tab));
   };
   main.addEventListener('click', e => {
-    const t = e.target.closest('[data-pctab],[data-pcbar],[data-pcsc]');
+    const t = e.target.closest('[data-pctab],[data-pcbar],[data-pcsc],[data-pcmap]');
     if (!t) return;
     if (t.dataset.pctab) st.tab = t.dataset.pctab;
     if (t.dataset.pcbar) st.bar = t.dataset.pcbar;
     if (t.dataset.pcsc) st.sc = t.dataset.pcsc;
+    if (t.dataset.pcmap) mp.pick = t.dataset.pcmap;
     drawPanel();
-    main.querySelector(`[data-pcbar="${st.bar}"][aria-pressed="true"],[data-pcsc="${st.sc}"][aria-pressed="true"]`)?.focus({ preventScroll: true });
+    if (st.tab === 'maps') loadMaps();
+    main.querySelector(`[data-pcbar="${st.bar}"][aria-pressed="true"],[data-pcsc="${st.sc}"][aria-pressed="true"],[data-pcmap="${mp.pick}"][aria-pressed="true"]`)?.focus({ preventScroll: true });
   });
   wireTips(main);
+  if (st.tab === 'maps') loadMaps();
 }
 
 // One tooltip for every chart mark with a data-tip: follows the mouse, shows on keyboard focus, and a tap on a phone shows it until the next tap.
