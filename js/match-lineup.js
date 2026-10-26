@@ -118,7 +118,7 @@ function bar(side, L, ctx) {
   const value = sheet ? (ctx.season.players || []).filter(p => Object.values(sheet.lineup).map(String).includes(String(p.id))).reduce((s, p) => s + (Number(p.value) || 0), 0) : null;
   const name = ctx.club(code)?.short_name || ctx.club(code)?.name || team.name;
   const chip = value != null ? `<span class="ml-chip" title="Team value">${esc(money(value))}</span>` : '';
-  const shirt = L.kits[side]?.badge ? `<img class="ml-kit" src="${L.kits[side].badge}" alt="" title="${esc(name)} kit: ${esc({ home: 'home', away: 'away', special: 'special' }[sheet.kit] || 'default')}">` : '';
+  const shirt = L.kits[side]?.badge ? `<img class="ml-kit" src="${L.kits[side].badge}" alt="" title="${esc(name)} kit: ${esc({ home: 'home', away: 'away', special: 'special', special2: 'special 2', special3: 'special 3' }[sheet.kit] || 'default')}">` : '';
   const form = sheet ? `<span class="ml-form">${esc(FORMATIONS[sheet.formation] ? sheet.formation : DEFAULT_FORMATION)}</span>` : '';
   return `<div class="ml-side is-${side}">${side === 'home' ? `${chip}${ctx.crest(team, 32)}<b>${esc(name)}</b>${shirt}${form}` : `${form}${shirt}<b>${esc(name)}</b>${ctx.crest(team, 32)}${chip}`}</div>`;
 }

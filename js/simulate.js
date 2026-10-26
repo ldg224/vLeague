@@ -194,7 +194,7 @@ export async function startTestMatch(c, clubs, { look = 'random', looks = [], ho
     const now = melb(new Date());
     const data = await runEngine(league, home.code, away.code, Math.floor(Math.random() * 2 ** 31), { fixture_id: id, week: TEST_WEEK, date: now.date, time: now.time, stage: null, suspended: [], test: true, script, only_script_goals: !!onlyScriptGoals }, onProgress);
     onStatus('Saving…');
-    // The kit each side was asked to wear ({ CODE: 'home' | 'away' | 'special' }), read back by the match views in place of a locked line-up's pick.
+    // The kit each side was asked to wear ({ CODE: 'home' | 'away' | 'special' | 'special2' | 'special3' }), read back by the match views in place of a locked line-up's pick.
     const worn = {}; if (kits.home) worn[home.code] = kits.home; if (kits.away) worn[away.code] = kits.away;
     if (Object.keys(worn).length) data.test_kits = worn;
     const summary = await saveResult(c, { id }, data);

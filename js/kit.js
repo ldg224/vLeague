@@ -13,8 +13,9 @@
 // a round logo is round on the 3D player and in every flat view. Pure canvas, so every view draws the same shirt.
 import { isHex, onColour } from './club-colour.js';
 
-export const SLOTS = [['home', 'Home'], ['away', 'Away'], ['gk', 'Goalkeeper'], ['special', 'Special']];
-export const FIELD_SLOTS = ['home', 'away', 'special'];   // the kits an outfield team can be picked to wear
+export const SLOTS = [['home', 'Home'], ['away', 'Away'], ['gk', 'Goalkeeper'], ['special', 'Special'], ['special2', 'Special 2'], ['special3', 'Special 3']];
+export const SPECIALS = ['special', 'special2', 'special3'];   // a club can make up to three special kits; the second and third are added on request (S-35)
+export const FIELD_SLOTS = ['home', 'away', ...SPECIALS];   // the kits an outfield team can be picked to wear
 // A kit's name: the one its club gave it, else the slot's plain name.
 export const kitName = (slot, design) => design?.name || SLOTS.find(s => s[0] === slot)?.[1] || slot;
 

@@ -9,7 +9,7 @@ import { db } from './auth.js';
 import { SUPABASE_URL } from './config.js';
 import { contrast, isHex } from './club-colour.js';
 import { startTour, tourSeen } from './tour.js';
-import { SLOTS, PATTERNS, TEX_W, TEX_H, cleanDesign, startDesign, drawKit, drawKitFront, drawTemplate, kitSprite, kitName } from './kit.js';
+import { SLOTS, SPECIALS, PATTERNS, TEX_W, TEX_H, cleanDesign, startDesign, drawKit, drawKitFront, drawTemplate, kitSprite, kitName } from './kit.js';
 
 const THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 const LOGO_MAX = 384, LOGO_BYTES = 240 * 1024, ART_BYTES = 1400 * 1024;
@@ -55,12 +55,14 @@ async function run(init) {
   const { main, office, rows } = init;
   let club = init.club;
   const c = await db();
-  let slot = 'home', tab = 'style', colourSlot = 0, kits = {}, imgs = { crest: null, logo: null, art: null }, logoBlob = null, logoPreview = '', artBlob = null, artPreview = '', saving = false, savedAt = '';
+  let slot = 'home', added = new Set(), tab = 'style', colourSlot = 0, kits = {}, imgs = { crest: null, logo: null, art: null }, logoBlob = null, logoPreview = '', artBlob = null, artPreview = '', saving = false, savedAt = '';
   const hist = {};   // slot -> { past: [json], future: [json], last: json }
 
   // ------------------------------------------------------------ the state of the current kit
   const blank = s => ({ design: startDesign(club, s), logo_path: null, logo_status: 'none', art_path: null, art_status: 'none', art: null, made: false, saved: null });
   const kit = () => (kits[slot] ||= blank(slot));
+  // The first four kits always show; the second and third special kits only once they are made or added.
+  const shown = s => !SPECIALS.slice(1).includes(s) || !!kits[s]?.made || added.has(s) || slot === s;
   const dj = k => JSON.stringify(k.design) + '|' + (k.logo_path || '') + '|' + (k.art_path || '') + '|' + (k === kits[slot] && logoBlob ? 'new' : '') + (k === kits[slot] && artBlob ? 'art' : '');
   const isDirty = k => (k.saved === null ? k.made : dj(k) !== k.saved);
   const dirty = () => isDirty(kit());
@@ -235,12 +237,13 @@ async function run(init) {
   // ------------------------------------------------------------ drawing the page
   function drawChips() {
     const el = main.querySelector('#kt-chips'); if (!el) return;
-    el.innerHTML = SLOTS.map(([s, l]) => {
+    const more = SPECIALS.slice(1).find(s => !shown(s));   // the next extra special kit that could be added (S-35)
+    el.innerHTML = SLOTS.filter(([s]) => shown(s)).map(([s, l]) => {
       const k = kits[s], made = k?.made;
       return `<button type="button" role="tab" class="kt-chip" data-slot="${s}" aria-selected="${s === slot}">
         ${made ? `<img alt="" src="${picture(k)}" width="30" height="52">` : '<span class="kt-chip-empty" aria-hidden="true">+</span>'}
         <span class="kt-chip-t"><b>${esc(made ? kitName(s, k.design) : l)}</b><small>${made ? (isDirty(k) ? 'Unsaved changes' : l) : 'Not made yet'}</small></span></button>`;
-    }).join('');
+    }).join('') + (more && kits.special?.made ? `<button type="button" class="kt-chip kt-chip-add" data-add-special="${more}"><span class="kt-chip-empty" aria-hidden="true">+</span><span class="kt-chip-t"><b>Add a special kit</b><small>Up to ${SPECIALS.length} special kits</small></span></button>` : '');
   }
 
   function drawStart() {
@@ -411,9 +414,10 @@ async function run(init) {
     a.download = what === 'guide' ? 'vleague-kit-template.png' : `${club.code.toLowerCase()}-${slot}-kit.png`;
     document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   }
-  // One picture of all four kits in a 2 x 2 grid, with their names, in the club's colours.
+  // One picture of the kits in a 2-wide grid (four, plus any extra special kits), with their names, in the club's colours.
   async function downloadSheet() {
-    const W = 1600, CELL = 760, TOP = 190, H = TOP + CELL * 2 + 60;
+    const list = SLOTS.filter(([s]) => !SPECIALS.slice(1).includes(s) || kits[s]?.made);
+    const W = 1600, CELL = 760, TOP = 190, H = TOP + CELL * Math.ceil(list.length / 2) + 60;
     const lift = hex => {   // lighten a dark club colour so it reads on the dark sheet
       let [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
       for (let n = 0; n < 8 && 0.2126 * r + 0.7152 * g + 0.0722 * b < 120; n++) { r += (255 - r) * 0.2; g += (255 - g) * 0.2; b += (255 - b) * 0.2; }
@@ -431,7 +435,7 @@ async function run(init) {
     g.fillStyle = accent; g.font = '900 64px Archivo, sans-serif'; g.fillText(club.name.toUpperCase(), x0, 118);
     g.fillStyle = '#a0a0a0'; g.font = '600 28px Archivo, sans-serif'; g.fillText('KIT SHEET', x0, 160);
     g.textAlign = 'right'; g.fillStyle = '#7a7a7a'; g.font = '600 24px Archivo, sans-serif'; g.fillText('vLeague', W - 60, 118); g.textAlign = 'left';
-    for (const [i, [s]] of SLOTS.entries()) {
+    for (const [i, [s]] of list.entries()) {
       const k = kits[s] || blank(s), art = k === kits[slot] ? imgs.art : k.art;
       const x = (i % 2) * (W / 2), y = TOP + Math.floor(i / 2) * CELL;
       g.fillStyle = '#222222'; g.beginPath(); g.roundRect(x + 40, y + 10, W / 2 - 80, CELL - 30, 24); g.fill();
@@ -478,6 +482,8 @@ async function run(init) {
   // ------------------------------------------------------------ events
   main.addEventListener('click', async e => {
     const t = e.target;
+    const ad = t.closest('.kt-chips [data-add-special]');
+    if (ad) { commit(); added.add(ad.dataset.addSpecial); slot = ad.dataset.addSpecial; logoBlob = null; logoPreview = ''; artBlob = null; artPreview = ''; await loadLogo(); refresh(); return; }
     const s = t.closest('.kt-chips [data-slot]');
     if (s) { if (s.dataset.slot === slot) return; commit(); slot = s.dataset.slot; logoBlob = null; logoPreview = ''; artBlob = null; artPreview = ''; await loadLogo(); refresh(); return; }
     const tb = t.closest('[data-tab]'); if (tb) { tab = tb.dataset.tab; drawPanel(); main.querySelector('.kt-hint')?.classList.add('gone'); return; }
@@ -533,7 +539,7 @@ async function run(init) {
     else if (t.matches('[data-art]')) chooseArt(t.files?.[0]);
     else if (t.matches('[data-club]')) {
       if (anyDirty() && !confirm('You have unsaved changes. Switch club and lose them?')) { t.value = club.code; return; }
-      club = rows.find(r => r.code === t.value); slot = 'home'; for (const k of Object.keys(hist)) delete hist[k];
+      club = rows.find(r => r.code === t.value); slot = 'home'; added = new Set(); for (const k of Object.keys(hist)) delete hist[k];
       await load(); await loadLogo(); main.querySelector('.kt-club-name').textContent = club.name; refresh();
     }
     else if (t.matches('[data-hex], [data-kitname], [data-text]')) drawPanel();
@@ -560,7 +566,7 @@ async function run(init) {
   // ------------------------------------------------------------ the first-time tour (js/tour.js)
   const STEPS = () => [
     { title: 'Design your kits', text: 'This is where you make your club’s shirts. It takes about a minute to see everything.', tip: 'Use Next or your arrow keys. Press Esc to leave.' },
-    { target: '#kt-chips', title: 'Four kits', text: 'Every club can have a <b>Home</b>, <b>Away</b>, <b>Goalkeeper</b> and <b>Special</b> kit. Tap one to work on it. The little picture shows how it looks now.' },
+    { target: '#kt-chips', title: 'Your kits', text: 'Every club can have a <b>Home</b>, <b>Away</b>, <b>Goalkeeper</b> and <b>Special</b> kit, and up to two more special kits once the first is made. Tap one to work on it. The little picture shows how it looks now.' },
     { target: '.kt-stage', title: 'Your player', text: 'This is your kit on a player. <b>Drag</b> to turn the player round, <b>pinch</b> or scroll to zoom, or use Front and Back.' },
     { target: '.kt-tabs', tab: 'style', title: 'Four tabs', text: '<b>Style</b> picks the pattern, <b>Colours</b> changes the colours, <b>Text</b> names your kit and sets the back print, and <b>Logo</b> adds a picture. Everything changes the player straight away.' },
     { target: ['.kt-tile:nth-child(1)', '.kt-tile:nth-child(2)', '.kt-tile:nth-child(3)'], tab: 'style', title: 'Pick a look', text: 'Tap any pattern. The little pictures use your colours. Not sure? Press <b>Surprise me</b>.' },
