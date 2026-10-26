@@ -666,6 +666,8 @@ export class HighlightsRenderer {
     const fouls = this.d.events.filter(e => e.type === 'foul' && e.t >= t0 - 1 && e.t <= t0 + s.dur);
     const cards = this.d.events.filter(e => e.type === 'card' && e.t >= t0 - 1 && e.t <= t0 + s.dur);
     const ideal = b => [b[0] + (b[0] > 52.5 ? -11 : 11), b[1] + (b[1] < 34 ? 10 : -10)];
+    const cardFouls = new Set(fouls.filter(f => cards.some(c => c.player === f.player && c.t >= f.t && c.t - f.t < 3)));
+    const carded = f => cardFouls.has(f);
     // At a penalty he stands wide of the box, off the line of players at its edge (B-27); same as the broadcast view.
     const pens = this.d.events.filter(e => e.type === 'shot' && e.subtype === 'penalty' && e.t >= t0 - 1 && e.t <= t0 + s.dur).map(e => {
       const foul = this.d.events.filter(f => f.type === 'foul' && f.penalty && f.t <= e.t).pop(), goalX = (e.x ?? this.fr.at(e.t).ball[0]) > 52.5 ? 105 : 0;
@@ -678,8 +680,12 @@ export class HighlightsRenderer {
     for (let i = 0; i < n; i++) {
       const t = t0 + i / FPS, b = this.fr.at(t).ball;
       let [tx, ty] = ideal(b), vmax = 5.5;
-      const f = fouls.find(f => t >= f.t && t < f.t + 6);
-      if (f) { tx = f.x + 1.6; ty = f.y + (f.y < 34 ? 1.4 : -1.4); vmax = 7.6; }
+      const f = fouls.find(f => t >= f.t && t < f.t + (carded(f) ? 12 : 6));
+      if (f) {
+        // B-29: for a card he goes to the player who earned it (who may have walked away), not to where the foul was.
+        const who = carded(f) ? this.playerAt(f.player, t) : null, [fx, fy] = who || [f.x, f.y];
+        tx = fx + 1.6; ty = fy + (fy < 34 ? 1.4 : -1.4); vmax = 7.6;
+      }
       else { const pn = penAt(t); if (pn) { tx = pn.tx; ty = ry < 34 ? 7 : 61; } }
       const dx = tx - rx, dy = ty - ry, d = Math.hypot(dx, dy);
       const want = Math.min(vmax, Math.sqrt(2 * 4 * Math.max(0, d - 0.4)));
@@ -701,9 +707,39 @@ export class HighlightsRenderer {
     plan.cards = cards.map(c => {
       const f = fouls.find(f => f.player === c.player && c.t - f.t < 3) || { t: c.t, x: c.x, y: c.y };
       let up = f.t + 1.5;
-      for (let t = f.t; t < f.t + 5; t += 0.1) { const r = this.refAt(plan, t); if (Math.hypot(r[0] - f.x, r[1] - f.y) < 3.5) { up = t + 0.6; break; } }
+      for (let t = f.t; t < f.t + 8; t += 0.1) { const r = this.refAt(plan, t), [px, py] = this.playerAt(c.player, t) || [f.x, f.y]; if (Math.hypot(r[0] - px, r[1] - py) < 3.5) { up = t + 0.6; break; } }
       return { t: up, until: up + 3.8 + (c.card === 'second_yellow' ? SECOND_EXTRA : 0), colour: c.card === 'yellow' ? 'yellow' : 'red', second: c.card === 'second_yellow', player: c.player, foulT: f.t, e: c };
     });
+  }
+  // S-34: two assistant referees, one on each touchline, each keeping level with the second-last defender of the goal in his half (the offside
+  // line). The flag goes straight up for an offside, and waves for a foul near him that earned a card or a penalty.
+  assistants(st, t) {
+    if (!this.arEvents) {
+      const ev = this.d.events, near = (e, y) => Math.abs(e.y - y) < 14;
+      this.arEvents = {
+        offside: ev.filter(e => e.type === 'offside'),
+        fouls: ev.filter(e => e.type === 'foul' && (e.penalty || ev.some(c => c.type === 'card' && c.player === e.player && c.t >= e.t && c.t - e.t < 3))),
+        near,
+      };
+    }
+    const { offside, fouls, near } = this.arEvents, out = [];
+    for (const [goalX, y] of [[0, -1.6], [105, 69.6]]) {
+      // the team defending this goal is the one whose keeper is nearer to it
+      const gk = side => { const gi = [...this.gkIdx].find(i => (i < this.nHome) === (side === 0)); return gi == null ? 52.5 : st.players[gi][0]; };
+      const side = Math.abs(gk(0) - goalX) < Math.abs(gk(1) - goalX) ? 0 : 1;
+      const xs = st.players.filter((_, i) => (i < this.nHome) === (side === 0)).map(p => p[0]).sort((a, b) => Math.abs(a - goalX) - Math.abs(b - goalX));
+      const x = clamp(xs[1] ?? xs[0] ?? 52.5, goalX ? 52.5 : 0, goalX ? 105 : 52.5), half = e => (e.x > 52.5) === !!goalX;
+      let flag = null;
+      const o = offside.find(e => t >= e.t + 0.4 && t < e.t + 4 && half(e)); if (o) flag = { kind: 'up', k: seg01(t, o.t + 0.4, o.t + 0.9) };
+      const f = !flag && fouls.find(e => t >= e.t + 0.5 && t < e.t + 3.5 && half(e) && near(e, y < 34 ? 0 : 68)); if (f) flag = { kind: 'wave', k: seg01(t, f.t + 0.5, f.t + 0.9), phase: t * 9 };
+      out.push({ x, y, flag, toward: goalX ? 1 : -1 });
+    }
+    return out;
+  }
+  // Where a player is at time t (null for an id that is not in the match).
+  playerAt(id, t) {
+    if (!this.idxOf) this.idxOf = new Map(this.d.players.map(p => [p.id, p.idx]));
+    const i = this.idxOf.get(id); return i == null ? null : this.fr.at(t).players[i];
   }
   refAt(plan, t) {
     return pathAt(plan.ref.path, (t - plan.ref.t0) * FPS);
@@ -769,6 +805,7 @@ export class HighlightsRenderer {
     const [rx, ry] = this.refAt(plan, tSim);
     const card = plan.cards.find(k => tSim >= k.t && tSim < k.until);
     items.push({ ref: true, x: rx, y: ry, card, d: cam.p(rx, ry)?.[2] ?? 0 });
+    for (const a of this.assistants(st, tSim)) items.push({ ...a, ar: true, d: cam.p(a.x, a.y)?.[2] ?? 0 });
     items.sort((a, b) => a.d - b.d);
     // ball trail (reset on every camera cut)
     const bp = cam.p(st.ball[0], st.ball[1], st.ball[2]);
@@ -779,6 +816,7 @@ export class HighlightsRenderer {
     for (const it of items) {
       if (!ballDrawn && it.d > bd) { this.drawBall(cam, st); ballDrawn = true; }
       if (it.ref) this.drawReferee(cam, it, tSim);
+      else if (it.ar) this.drawAssistant(cam, it);
       else if (it.lying) this.drawLying(cam, it);
       else this.drawPlayer(cam, it, st.holder === it.i);
     }
@@ -840,6 +878,28 @@ export class HighlightsRenderer {
     } else {
       this.text('REF', bx, top - 10, { size: Math.max(10, bw * 0.45), weight: 900, align: 'center', colour: 'rgba(255,255,255,0.75)' });
     }
+  }
+
+  // An assistant referee: the referee's build in a lime top, with a checked flag (down by his side, straight up for an offside, waving for a foul).
+  drawAssistant(cam, it) {
+    const c = this.c, p = cam.p(it.x, it.y); if (!p) return;
+    const head = cam.p(it.x, it.y, 1.85); if (!head) return;
+    const bh = p[1] - head[1], bw = Math.max(12, bh * 0.42), bx = p[0], top = head[1];
+    const r = Math.max(10, p[2] * 0.6);
+    c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(bx + r * 0.4, p[1], r * 1.05, r * 0.42, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = LIME; c.beginPath(); c.roundRect(bx - bw / 2, top + bh * 0.28, bw, bh * 0.5, bw / 2); c.fill();   // top
+    c.fillStyle = DARK; c.fillRect(bx - bw / 2 + 1, top + bh * 0.72, bw - 2, bh * 0.28);                                  // shorts
+    c.fillStyle = '#e8b894'; c.beginPath(); c.arc(bx, top + bh * 0.16, bw * 0.34, 0, Math.PI * 2); c.fill();
+    const f = it.flag, k = f ? easeOut(f.k) : 0, shoulder = [bx + bw * 0.35, top + bh * 0.34], hip = [bx + bw * 0.5, top + bh * 0.66];
+    const tip = [bx + bw * 0.5, top - bh * 0.34 * k];                       // the flag raised straight up
+    const hand = f ? [lerp(hip[0], tip[0], k) + (f.kind === 'wave' ? Math.sin(f.phase) * bw * 0.5 * k : 0), lerp(hip[1], tip[1] + bh * 0.1, k)] : hip;
+    c.strokeStyle = '#1d212a'; c.lineWidth = Math.max(3, bw * 0.28); c.lineCap = 'round';
+    c.beginPath(); c.moveTo(...shoulder); c.lineTo(...hand); c.stroke();
+    const fw = Math.max(10, bw * 0.7), fh = fw * 0.7, fx = hand[0], fy = f ? hand[1] - bh * 0.2 - fh : hand[1];   // the flag sits on top of a short pole when raised, hangs from his hand when down
+    c.strokeStyle = '#d6d3d1'; c.lineWidth = Math.max(1.5, bw * 0.08);
+    c.beginPath(); c.moveTo(hand[0], hand[1]); c.lineTo(hand[0], f ? fy : fy + fh); c.stroke();                               // pole
+    c.fillStyle = '#facc15'; c.fillRect(fx, fy, fw / 2, fh / 2); c.fillRect(fx + fw / 2, fy + fh / 2, fw / 2, fh / 2);
+    c.fillStyle = '#dc2626'; c.fillRect(fx + fw / 2, fy, fw / 2, fh / 2); c.fillRect(fx, fy + fh / 2, fw / 2, fh / 2);
   }
 
   // The kit a player wears in this match (S-23): { main, sprite } or null (then the club colours and the old goalkeeper colours apply).

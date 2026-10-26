@@ -56,15 +56,21 @@ export class BroadcastRenderer extends HighlightsRenderer {
       const foul = [...this.fouls].reverse().find(f => f.penalty && f.t <= e.t), goalX = (e.x ?? this.fr.ball(e.t)[0]) > 52.5 ? 105 : 0;
       return { from: (foul ? foul.t : e.t - 30) + 6, to: e.t + 4, tx: goalX + (goalX ? -13 : 13), kick: e };
     });
+    const cardFouls = new Set(this.d.events.filter(e => e.type === 'card').flatMap(e => this.fouls.filter(f => f.player === e.player && e.t >= f.t && e.t - f.t < 3)));
+    const carded = f => cardFouls.has(f);
     let [rx, ry] = ideal(this.fr.ball(this.t0)), vx = 0, vy = 0, fi = 0;
     const SUB = 2, dt = REF_DT / SUB;
     for (let i = 0; i < n; i++) {
       for (let s = 0; s < SUB; s++) {
         const t = this.t0 + (i - 1) * REF_DT + (s + 1) * dt;
-        while (fi < this.fouls.length && this.fouls[fi].t + 6 <= t) fi++;
+        while (fi < this.fouls.length && this.fouls[fi].t + (carded(this.fouls[fi]) ? 12 : 6) <= t) fi++;
         const f = fi < this.fouls.length && this.fouls[fi].t <= t ? this.fouls[fi] : null;
         let [tx, ty] = ideal(this.fr.ball(t)), vmax = 5.5;
-        if (f) { tx = f.x + 1.6; ty = f.y + (f.y < 34 ? 1.4 : -1.4); vmax = 7.6; }
+        if (f) {
+          // B-29: for a card he goes to the player who earned it (who may have walked away), not to where the foul was.
+          const who = carded(f) ? this.playerAt(f.player, t) : null, [fx, fy] = who || [f.x, f.y];
+          tx = fx + 1.6; ty = fy + (fy < 34 ? 1.4 : -1.4); vmax = 7.6;
+        }
         else { const pn = pens.find(q => t >= q.from && t <= q.to); if (pn) { tx = pn.tx; ty = ry < 34 ? 7 : 61; } }
         const dx = tx - rx, dy = ty - ry, d = Math.hypot(dx, dy);
         const want = Math.min(vmax, Math.sqrt(2 * 4 * Math.max(0, d - 0.4)));
@@ -87,7 +93,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
     this.cards = this.d.events.filter(e => e.type === 'card').map(e => {
       const f = [...this.fouls].reverse().find(f => f.player === e.player && f.t <= e.t + 0.01 && e.t - f.t < 3) || { t: e.t, x: e.x, y: e.y };
       let up = f.t + 1.5;
-      for (let t = f.t; t < f.t + 5; t += 0.1) { const r = this.refPos(t); if (Math.hypot(r[0] - f.x, r[1] - f.y) < 3.5) { up = t + 0.6; break; } }
+      for (let t = f.t; t < f.t + 8; t += 0.1) { const r = this.refPos(t), [px, py] = this.playerAt(e.player, t) || [f.x, f.y]; if (Math.hypot(r[0] - px, r[1] - py) < 3.5) { up = t + 0.6; break; } }
       return { t: Math.max(up, e.t), until: Math.max(up, e.t) + 3.8 + (e.card === 'second_yellow' ? SECOND_EXTRA : 0), colour: e.card === 'yellow' ? 'yellow' : 'red', second: e.card === 'second_yellow', player: e.player, e };
     });
   }
@@ -291,6 +297,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
     });
     const [rx, ry] = this.refPos(t);
     items.push({ ref: true, x: rx, y: ry, card: this.cards.find(k => t >= k.t && t < k.until), d: cam.p(rx, ry)?.[2] ?? 0 });
+    for (const a of this.assistants(st, t)) items.push({ ...a, ar: true, d: cam.p(a.x, a.y)?.[2] ?? 0 });
     items.sort((a, b) => a.d - b.d);
     // Ball trail: where the ball was over the last 0.3s (worked out from t, so it's the same on every call).
     this.trail = [];
@@ -303,6 +310,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
     for (const it of items) {
       if (!ballDrawn && it.d > bd) { this.drawBall(cam, st); ballDrawn = true; }
       if (it.ref) this.drawReferee(cam, it, t);
+      else if (it.ar) this.drawAssistant(cam, it);
       else if (it.lying) this.drawLying(cam, it);
       else this.drawPlayer(cam, it, st.holder === it.i);
     }
