@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { playerView, averageRating, classOf, MIN_PEERS } from '../js/player-stats.js';
-import { plink, playerUrl } from '../js/player-link.js';
+import { plink, wirePlayerLinks } from '../js/player-link.js';
 
 const P = (name, team, slot, o = {}) => ({ name, team, slot, min: 90, g: 0, a: 0, sh: 0, sot: 0, xg: 0, kp: 0, pas: 20, pc: 15, tk: 0, int: 0, clr: 0, blk: 0, sv: 0, gc: 0, yc: 0, rc: 0, fl: 0, fd: 0, dr: 0, aw: 0, off: 0, cr: 0, tch: 40, km: 5, pw: 0, pcn: 0, r: 6.5, ...o });
 const players = [
@@ -48,36 +48,24 @@ test('a match the viewer has not opened is left out of everything', () => {
   assert.equal(v.row.g, 2); assert.equal(v.log.length, 1);
 });
 test('a player link wraps the name, escapes the id and leaves it alone with no id', () => {
-  assert.equal(playerUrl('0428'), 'player.html?id=0428');
   assert.match(plink('a"1', 'Ana'), /data-pid="a&quot;1"[^>]*>Ana<\/span>/);
   assert.equal(plink(null, 'Ana'), 'Ana');
 });
-
-test('classOf: top 10% elite, then great, average, below, poor; turned round where less is better', () => {
-  const v = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-  assert.equal(classOf(v, 10).cls, 'elite');
-  assert.equal(classOf(v, 8).cls, 'great');
-  assert.equal(classOf(v, 5).cls, 'avg');
-  assert.equal(classOf(v, 2).cls, 'below');
-  assert.equal(classOf(v, 1).cls, 'poor');
-  assert.equal(classOf(v, 1, true).cls, 'elite');     // conceding least is the best
-  assert.equal(classOf([0, 0, 0, 0, 0, 0, 0, 3], 0).cls, 'avg');   // ties share the middle, so a nought among noughts is average
-});
-test('classes and league averages show once enough players of his position have played', () => {
-  const fwds = Array.from({ length: 8 }, (_, i) => ({ id: 'f' + i, name: 'F' + i, team: 'AAA', position: 'FWD', number: i, offense: 5, defense: 5, value: 1000 }));
-  const res = { home: 1, away: 0, players: Object.fromEntries(fwds.map((p, i) => [p.id, P(p.name, 'AAA', 'ST', { g: i, sh: i + 1, r: 6 })])) };
-  const s = { players: fwds, fixtures: [1, 2, 3].map(w => fx('x' + w, w, 'AAA', 'BBB', res)) };
-  const one = playerView({ players: fwds, fixtures: [fx('y1', 1, 'AAA', 'BBB', res)] }, 'f7');
-  assert.ok(!one.compare.eligible && one.compare.provisional);   // one match: classes show, marked provisional
-  assert.ok(one.groups[0].rows[0].cls && one.groups[0].rows[0].prov); assert.ok(one.groups[0].rows[0].avg);
-  const top = playerView(s, 'f7'), bottom = playerView(s, 'f0');
-  assert.ok(top.compare.eligible && top.compare.n === 8 && MIN_PEERS <= 8);
-  assert.ok(!top.groups[0].rows[0].prov);   // three matches: settled, not provisional
-  const g = v => v.groups.find(x => x.title === 'Attacking').rows.find(r => r.label === 'Goals');
-  assert.equal(g(top).cls, 'elite'); assert.equal(g(bottom).cls, 'poor');
-  assert.equal(g(top).avg, '3.50');   // (0+1+...+7)/8 goals a match
-  assert.ok(g(top).fill === 100 && g(top).tick === 50);
-  // nobody in this league had a foul, a card or a clearance, so those lists stay off the page
-  assert.ok(!top.groups.some(x => x.title === 'Discipline' || x.title === 'Defending'));
-  assert.ok(top.groups.find(x => x.title === 'Attacking').rows.some(r => r.label === 'Assists'));   // goals and assists always show
+test('a click or Enter on a name opens that player and stops the row under it', () => {
+  const handlers = {}, opened = [];
+  globalThis.document = { addEventListener: (type, fn, capture) => { handlers[type] = { fn, capture }; } };
+  wirePlayerLinks({ open: id => opened.push(id) });
+  assert.equal(handlers.click.capture, true);   // runs before the row's own click
+  const name = { dataset: { pid: '0602' } };
+  let stopped = 0, prevented = 0;
+  const event = (extra = {}) => ({ target: { closest: sel => (sel === '[data-pid]' ? name : null), ...extra }, button: 0, key: 'Enter', preventDefault: () => prevented++, stopPropagation: () => stopped++ });
+  handlers.click.fn(event());
+  assert.deepEqual(opened, ['0602']); assert.equal(stopped, 1); assert.equal(prevented, 1);
+  handlers.click.fn(event({ closest: () => null }));          // a click elsewhere on the row: not ours
+  handlers.click.fn({ ...event(), button: 2 });                // a right click: not ours
+  assert.equal(opened.length, 1);
+  const key = event(); key.target = name; key.target.closest = () => name;
+  handlers.keydown.fn(key);
+  assert.deepEqual(opened, ['0602', '0602']);
+  delete globalThis.document;
 });

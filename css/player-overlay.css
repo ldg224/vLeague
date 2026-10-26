@@ -1,0 +1,29 @@
+/* The player popup (js/player-overlay.js): a nearly full-screen card over the page, X in the top right. The card's own look is css/player.css. */
+html.po-open { overflow: hidden; }
+.po {
+  width: min(1240px, calc(100vw - 32px)); height: calc(100dvh - 32px); max-width: none; max-height: none; margin: auto; padding: 0; overflow: hidden;
+  border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--bg); color: var(--text);
+}
+.po[open] { display: block; animation: po-in .22s ease-out; }
+.po::backdrop { background: rgba(6, 10, 16, .74); backdrop-filter: blur(3px); }
+.po-body { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 16px; outline: none; }
+.po-x {
+  position: absolute; top: 12px; right: 12px; z-index: 5; display: grid; place-items: center; width: 40px; height: 40px; padding: 0;
+  border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--text-strong); cursor: pointer;
+}
+.po-x .ic { width: 20px; height: 20px; }
+@media (hover: hover) { .po-x:hover { background: var(--surface-hover); } }
+.po-x:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.po .pp .pp-head { padding-right: 68px; }
+.pp-loading { margin: 0; padding: 48px 16px; text-align: center; color: var(--muted); font: 400 var(--fs-m) var(--font); }
+@keyframes po-in { from { opacity: 0; transform: translateY(14px) scale(.985); } }
+@media (prefers-reduced-motion: reduce) { .po[open] { animation: none; } }
+.reduce-motion .po[open] { animation: none; }
+@media (max-width: 640px) {
+  .po { width: 100vw; height: 100dvh; border: 0; border-radius: 0; }
+  .po-body { padding: 12px; }
+  .po-x { top: 10px; right: 10px; }
+  .po .pp .pp-head { padding-right: 60px; }
+}
+.po:focus, .po:focus-visible, .po-body:focus { outline: none; }
+.po .pp-ghost { right: 230px; }

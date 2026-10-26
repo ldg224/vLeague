@@ -8,7 +8,7 @@
 import { enterPlace, paintClub } from './shell.js';
 import { mountFrame } from './frame.js';
 import { watchLineupDue } from './lineup-due.js';
-import { esc, crestUrl, clubs } from './member.js';
+import { esc, crestUrl, clubs, chrome } from './member.js';
 import { finished, logoUrl } from './dashboard-data.js';
 import { crest as crestHtml, useClubs } from './places.js';
 import { loadKits } from './kits-data.js';
@@ -50,6 +50,7 @@ Promise.all(['assets/img/topo.png', 'assets/img/fabric.png'].map(src => { const 
 
 let ctx;
 if (preview) {
+  chrome();   // (enterPlace does this for a signed-in visit): the popup links and ?player=
   if (params.get('theme')) document.documentElement.dataset.theme = params.get('theme');
   if (params.get('font') === 'old') document.body.classList.add('font-old');
   const colour = params.get('club');
@@ -241,6 +242,8 @@ if (ctx) {
   const rerender = (timed = false) => (!current || ['draft', 'stakes'].includes(current[0]) ? false : current[0] === 'overview' ? patchOverview(timed) : draw(VIEWS[current[0]](current[2], current[1]), timed));
   // The Seasons tab (WR-24): this season's card from the league page, the others from History (read once, a moment after the page).
   let honours = null, clubRows = null;   // (not `history`: that is the browser's)
+  // The player popup (js/player-overlay.js, loaded only when a name is first clicked) reads the season from here instead of loading it again.
+  globalThis.vlPlayerHost = () => ({ season, rows: clubRows ? [...clubRows.values()] : [], demo: demo != null });
   const seasonsHtml = (sub, picked) => {
     const now = tableNow(), all = season ? season.fixtures : [], hidden = new Set(all.filter(f => f.result && !f.test && spoilerHidden(f, season, now)).map(f => f.id));
     const gf = all.find(f => f.stage === 'GF' && !f.test && f.result);

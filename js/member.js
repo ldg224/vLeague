@@ -41,6 +41,7 @@ export function chrome() {
   if (v) v.textContent = `v${VERSION}`;
   mountSuggest();
   wirePlayerLinks();
+  if (new URLSearchParams(location.search).has('player')) import('./player-overlay.js').then(m => m.openFromUrl());   // ?player=ID opens the popup (a shared link, screenshots)
   document.getElementById('signout')?.addEventListener('click', async () => {
     await signOut();
     location.replace('index.html?signin');
