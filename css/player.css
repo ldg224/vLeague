@@ -73,6 +73,7 @@
   background: color-mix(in oklab, var(--k) 22%, transparent); color: color-mix(in oklab, var(--k) 78%, var(--text-strong)); }
 .pp-cls .ic { width: 13px; height: 13px; fill: currentColor; }
 .pp-cls.is-elite { background: var(--brand-grad); color: var(--white); font-weight: 700; box-shadow: 0 0 14px color-mix(in oklab, var(--blue-400) 40%, transparent); }
+.pp-cls.is-prov { outline: 1px dashed color-mix(in oklab, currentColor 70%, transparent); outline-offset: -2px; }
 .pp-cls.is-great { --k: var(--k-great); } .pp-cls.is-below { --k: var(--k-below); } .pp-cls.is-poor { --k: var(--k-poor); }
 
 @media (max-width: 640px) {

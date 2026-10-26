@@ -91,25 +91,25 @@ function render(season, rows, mine) {
   </header>`;
 
   const CLS = Object.fromEntries(CLASSES.map(([k, label]) => [k, label]));
-  const pill = k => `<span class="pp-cls is-${k}">${k === 'elite' ? icon('star') : ''}${CLS[k]}</span>`;
+  const pill = (k, prov) => `<span class="pp-cls is-${k}${prov ? ' is-prov' : ''}"${prov ? ' title="Provisional: settles after 3 matches"' : ''}>${k === 'elite' ? icon('star') : ''}${CLS[k]}</span>`;
   const { compare } = v;
   const key = `<div class="pp-key" aria-label="Classes">${CLASSES.map(([k]) => pill(k)).join('')}</div>`;
   const why = row && row.apps < MIN_MATCHES ? `${esc(p.name)} needs ${MIN_MATCHES} matches (has ${row.apps})`
     : `${MIN_PEERS} ${esc(compare.word)} need ${MIN_MATCHES}+ matches (${compare.seasoned} so far)`;
   const how = !compare.eligible
-    ? `<p class="pp-note">The bars show the league average for ${esc(compare.word)} (${compare.n} with ${v.minMinutes}+ minutes). Classes appear once ${why}, because one match is too little to judge.</p>`
+    ? `<p class="pp-note">${compare.provisional ? `<b>Provisional.</b> Classes (dashed) are a first guess from ${row.apps} match${row.apps === 1 ? '' : 'es'}, against ${compare.n} ${esc(compare.word)} with ${v.minMinutes}+ minutes. They settle once ${why}.` : `The bars show the league average for ${esc(compare.word)} (${compare.n} with ${v.minMinutes}+ minutes). Classes appear once ${why}.`}</p>`
     : `<p class="pp-note">Compared with ${compare.seasoned} ${esc(compare.word)} who have played ${MIN_MATCHES}+ matches, per 90. Elite is the top 10%, Great the next 20%, Average the middle 40%, Below average the next 20%, Poor the last 10%. Where less is better (conceded, fouls, cards) it is turned round.</p>`;
   const statRow = r => {
     const bar = r.fill != null ? `<span class="pp-bar${r.low ? ' is-low' : ''}" role="img" aria-label="${esc(r.label)}: ${esc(r.per90 ?? r.total)}, league average ${esc(r.avg)}"><i style="width:${r.fill}%"></i><u style="left:${r.tick}%"></u></span>` : '<span class="pp-bar none"></span>';
     return `<li class="pp-stat${r.cls ? ` has-cls is-${r.cls}` : ''}"><span class="pp-sl">${esc(r.label)}</span>
       <b class="pp-v">${esc(r.per90 ?? r.total)}</b><span class="pp-t">${r.per90 != null ? esc(r.total) : ''}</span><span class="pp-a">${r.avg != null ? esc(r.avg) : ''}</span>${bar}
-      <span class="pp-c">${r.cls ? pill(r.cls) : ''}</span>
+      <span class="pp-c">${r.cls ? pill(r.cls, r.prov) : ''}</span>
       <span class="pp-mx">${r.per90 != null ? `<b>${esc(r.per90)}</b> per 90 · ${esc(r.total)} total${r.avg != null ? ` · league avg ${esc(r.avg)}` : ''}` : `<b>${esc(r.total)}</b>`}</span></li>`;
   };
   const statsCard = !row
     ? `<section class="lg-card"><div class="lg-card-head"><h2>Season stats</h2></div><p class="empty">${esc(p.name)} hasn’t played a match yet.</p></section>`
     : `<section class="lg-card pp-stats"><div class="lg-card-head"><h2>${v.scope === 'preseason' ? 'Preseason stats' : 'Season stats'}</h2></div>
-        ${compare.eligible ? key : ''}${how}
+        ${compare.eligible || compare.provisional ? key : ''}${how}
         <div class="pp-hd"><span></span><span>Per 90</span><span>Total</span><span>League avg</span><span></span><span>Class</span></div>
         ${groups.map(g => `<h3 class="pp-strip">${esc(g.title)}</h3><ul class="pp-statlist">${g.rows.map(statRow).join('')}</ul>`).join('')}
       </section>`;

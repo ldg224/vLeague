@@ -7,14 +7,15 @@
 //     log      one entry per match played, oldest first: { fx, home (was his club at home), opp (club code), gf, ga, res 'W'|'D'|'L', s (his numbers), rating }
 //     groups   the detailed stats: [{ title, rows: [{ label, total, per90?, avg?, cls?, fill?, tick?, low? }] }], the keeper's own set for a goalkeeper.
 //              avg is the league average for his position, cls his class for that stat (CLASSES), fill and tick place his figure and the average on a 0-100 bar
-//     compare  { eligible, n, word } how the classes were worked out: eligible is false until the player has MIN_MINUTES and enough peers have too
+//     compare  { eligible, provisional, n, word } how the classes were worked out: eligible once he and MIN_PEERS of his position have MIN_MATCHES; before that, with
+//              MIN_PEERS players of 90+ minutes, the classes still show but are marked provisional (line.prov)
 // A result the viewer has not opened (spoiler-free) is left out of all of it, as on the league page.
 //
 // Classes (like the AFL's player ratings): each stat is compared with the other players of his position who have played at least MIN_MINUTES, using the
 // per-90 figure (or the percentage for accuracy). Top 10% is Elite (the blue star), the next 20% Great, the middle 40% Average, the next 20% Below average,
 // the last 10% Poor. For stats where less is better (goals conceded, fouls, cards, offsides) the order is turned round. Classes only show once
-// MIN_PEERS players of his position have played MIN_MATCHES matches and so has he: one game's numbers are luck, so nobody gets a star for one
-// match. The league average beside each stat is shown from the first match.
+// MIN_PEERS players of his position have played MIN_MATCHES matches and so has he. Before that the classes still show (a first guess from everyone with
+// 90 minutes) but are marked provisional, because one game's numbers can be luck. The league average beside each stat is shown from the first match.
 import { countedFixtures, totals, per90, MIN_MINUTES } from './season-stats.js';
 
 export const MIN_PEERS = 6;
@@ -80,7 +81,8 @@ export function playerView(season, id, { hidden = new Set(), scope = 'season' } 
     const minutes = r => (r.pos === 'GK' ? r.gkMin : r.min);
     const peers = players.filter(r => r.pos === row.pos && minutes(r) >= MIN_MINUTES);
     const seasoned = peers.filter(r => r.apps >= MIN_MATCHES);
-    compare = { eligible: minutes(row) >= MIN_MINUTES && row.apps >= MIN_MATCHES && seasoned.length >= MIN_PEERS, n: peers.length, seasoned: seasoned.length, apps: row.apps, word: POS_WORD[row.pos] || 'players' };
+    const enough = minutes(row) >= MIN_MINUTES && peers.length >= MIN_PEERS;
+    compare = { eligible: enough && row.apps >= MIN_MATCHES && seasoned.length >= MIN_PEERS, provisional: false, n: peers.length, seasoned: seasoned.length, apps: row.apps, word: POS_WORD[row.pos] || 'players' };
     const valueOf = (l, r) => (l.pct ? l.pct(r) : l.rate && r.min ? per90({ min: r.min, [l.key]: cell(r, l.key) }, l.key) : null);
     const show = (v, l) => (v == null ? '–' : l.pct ? `${Math.round(v)}%` : v.toFixed(l.dp ?? 1));
     const isKeeper = row.pos === 'GK';
@@ -101,7 +103,9 @@ export function playerView(season, id, { hidden = new Set(), scope = 'season' } 
             line.fill = Math.round((mine / top) * 100);
             line.tick = Math.round((avg / top) * 100);
             if (l.low) line.low = true;
-            if (compare.eligible) { const c = classOf(sv, mine, Boolean(l.low)); line.cls = c.cls; }
+            // Settled classes compare him with players who have played 3+ matches; before that the class is a first guess from everyone with 90 minutes, marked provisional.
+            if (compare.eligible) line.cls = classOf(sv, mine, Boolean(l.low)).cls;
+            else if (enough) { line.cls = classOf(vals, mine, Boolean(l.low)).cls; line.prov = true; compare.provisional = true; }
           }
         }
         // A stat he has none of, and that the league's average also rounds to nothing, stays off the list (a forward's clearances); goals and assists always show.

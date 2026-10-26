@@ -30,7 +30,7 @@ test('totals, per 90 and the log for a forward', () => {
   const attack = v.groups.find(g => g.title === 'Attacking').rows;
   const goals = attack.find(r => r.label === 'Goals');
   assert.equal(goals.total, '3'); assert.equal(goals.per90, '1.50');
-  assert.equal(goals.cls, undefined);   // too few forwards for classes yet
+  assert.equal(goals.cls, undefined);   // too few forwards for any class yet
   assert.equal(attack.find(r => r.label === 'Shots').total, '6');
   assert.equal(v.log.length, 2);
   assert.deepEqual(v.log.map(l => [l.fx.id, l.home, l.opp, l.res, l.gf, l.ga]), [['f1', true, 'BBB', 'W', 2, 0], ['f2', false, 'BBB', 'D', 1, 1]]);
@@ -68,10 +68,11 @@ test('classes and league averages show once enough players of his position have 
   const res = { home: 1, away: 0, players: Object.fromEntries(fwds.map((p, i) => [p.id, P(p.name, 'AAA', 'ST', { g: i, sh: i + 1, r: 6 })])) };
   const s = { players: fwds, fixtures: [1, 2, 3].map(w => fx('x' + w, w, 'AAA', 'BBB', res)) };
   const one = playerView({ players: fwds, fixtures: [fx('y1', 1, 'AAA', 'BBB', res)] }, 'f7');
-  assert.ok(!one.compare.eligible);   // one match is too little for a class
-  assert.equal(one.groups[0].rows[0].cls, undefined); assert.ok(one.groups[0].rows[0].avg);   // but the average shows
+  assert.ok(!one.compare.eligible && one.compare.provisional);   // one match: classes show, marked provisional
+  assert.ok(one.groups[0].rows[0].cls && one.groups[0].rows[0].prov); assert.ok(one.groups[0].rows[0].avg);
   const top = playerView(s, 'f7'), bottom = playerView(s, 'f0');
   assert.ok(top.compare.eligible && top.compare.n === 8 && MIN_PEERS <= 8);
+  assert.ok(!top.groups[0].rows[0].prov);   // three matches: settled, not provisional
   const g = v => v.groups.find(x => x.title === 'Attacking').rows.find(r => r.label === 'Goals');
   assert.equal(g(top).cls, 'elite'); assert.equal(g(bottom).cls, 'poor');
   assert.equal(g(top).avg, '3.50');   // (0+1+...+7)/8 goals a match
