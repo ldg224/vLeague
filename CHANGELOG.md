@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.15.1 (2026-10-26)
+
+Headlines: Stakes averages made honest
+
+**Fixed (MU-1):** a Stakes card said "Averages 33.8 a match" even when the player had played fewer than two full matches, when the number was really his position's average. It now says "Averages 33.8 a match" only for his own average, "Keepers average 3.5 a match" (or Forwards, Defenders, Midfielders) when he has played fewer than two, and "Starting line, no matches yet" when nobody in his position has played. The lines themselves are made exactly as before.
+
+Database change: 0068, already applied.
+
 ## 1.15.0 (2026-10-26)
 
 Headlines: Game predictors | Leaderboard on top
