@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.15.0 (2026-10-26)
+
+Headlines: Game predictors | Leaderboard on top
+
+**Added (MU-1):** game predictors. Below the stake cards, every game of the round has its own score predictor. A red - and a blue + under each team's score set the score you expect (the tiles light up once you touch them), tap the Stake pill to change your stake, then Lock in. The exact score pays 8 times your stake and the right result with the wrong score pays 2 times (both are settings). A locked-in prediction shows what it pays and can be taken back until picks close.
+
+**Changed (MU-1):** the big cards are player over/under stakes only (at most 8 a round). The leaderboard is now a strip along the top of the Stakes page. Editor > Stakes has a "Show the game predictors" switch and the two payouts.
+
+Database changes: 0066 (a predictor for every game) and 0067 (the round's stakes are all player stakes), already applied.
+
 ## 1.14.0 (2026-10-26)
 
 Headlines: Stakes redesigned | Guess the score
