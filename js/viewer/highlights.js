@@ -666,13 +666,21 @@ export class HighlightsRenderer {
     const fouls = this.d.events.filter(e => e.type === 'foul' && e.t >= t0 - 1 && e.t <= t0 + s.dur);
     const cards = this.d.events.filter(e => e.type === 'card' && e.t >= t0 - 1 && e.t <= t0 + s.dur);
     const ideal = b => [b[0] + (b[0] > 52.5 ? -11 : 11), b[1] + (b[1] < 34 ? 10 : -10)];
+    // At a penalty he stands wide of the box, off the line of players at its edge (B-27); same as the broadcast view.
+    const pens = this.d.events.filter(e => e.type === 'shot' && e.subtype === 'penalty' && e.t >= t0 - 1 && e.t <= t0 + s.dur).map(e => {
+      const foul = this.d.events.filter(f => f.type === 'foul' && f.penalty && f.t <= e.t).pop(), goalX = (e.x ?? this.fr.at(e.t).ball[0]) > 52.5 ? 105 : 0;
+      return { from: foul ? foul.t + 6 : e.t - 30, to: e.t + 4, tx: goalX + (goalX ? -13 : 13) };
+    });
+    const penAt = t => pens.find(q => t >= q.from && t <= q.to);
     let [rx, ry] = ideal(this.fr.at(t0).ball), vx = 0, vy = 0;
+    const p0 = penAt(t0); if (p0) { rx = p0.tx; ry = ry < 34 ? 7 : 61; }
     const path = [];
     for (let i = 0; i < n; i++) {
       const t = t0 + i / FPS, b = this.fr.at(t).ball;
       let [tx, ty] = ideal(b), vmax = 5.5;
       const f = fouls.find(f => t >= f.t && t < f.t + 6);
       if (f) { tx = f.x + 1.6; ty = f.y + (f.y < 34 ? 1.4 : -1.4); vmax = 7.6; }
+      else { const pn = penAt(t); if (pn) { tx = pn.tx; ty = ry < 34 ? 7 : 61; } }
       const dx = tx - rx, dy = ty - ry, d = Math.hypot(dx, dy);
       const want = Math.min(vmax, Math.sqrt(2 * 4 * Math.max(0, d - 0.4)));
       let dvx = (d > 1e-6 ? dx / d * want : 0) - vx, dvy = (d > 1e-6 ? dy / d * want : 0) - vy;

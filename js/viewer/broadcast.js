@@ -51,6 +51,11 @@ export class BroadcastRenderer extends HighlightsRenderer {
   buildReferee() {
     const n = Math.ceil((this.t1 - this.t0) / REF_DT) + 1, xs = new Float32Array(n), ys = new Float32Array(n);
     const ideal = b => [b[0] + (b[0] > 52.5 ? -11 : 11), b[1] + (b[1] < 34 ? 10 : -10)];
+    // At a penalty he stands wide of the box, off the line of players at its edge, and watches from there (B-27).
+    const pens = this.d.events.filter(e => e.type === 'shot' && e.subtype === 'penalty').map(e => {
+      const foul = [...this.fouls].reverse().find(f => f.penalty && f.t <= e.t), goalX = (e.x ?? this.fr.ball(e.t)[0]) > 52.5 ? 105 : 0;
+      return { from: (foul ? foul.t : e.t - 30) + 6, to: e.t + 4, tx: goalX + (goalX ? -13 : 13), kick: e };
+    });
     let [rx, ry] = ideal(this.fr.ball(this.t0)), vx = 0, vy = 0, fi = 0;
     const SUB = 2, dt = REF_DT / SUB;
     for (let i = 0; i < n; i++) {
@@ -60,6 +65,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
         const f = fi < this.fouls.length && this.fouls[fi].t <= t ? this.fouls[fi] : null;
         let [tx, ty] = ideal(this.fr.ball(t)), vmax = 5.5;
         if (f) { tx = f.x + 1.6; ty = f.y + (f.y < 34 ? 1.4 : -1.4); vmax = 7.6; }
+        else { const pn = pens.find(q => t >= q.from && t <= q.to); if (pn) { tx = pn.tx; ty = ry < 34 ? 7 : 61; } }
         const dx = tx - rx, dy = ty - ry, d = Math.hypot(dx, dy);
         const want = Math.min(vmax, Math.sqrt(2 * 4 * Math.max(0, d - 0.4)));
         let dvx = (d > 1e-6 ? dx / d * want : 0) - vx, dvy = (d > 1e-6 ? dy / d * want : 0) - vy;
