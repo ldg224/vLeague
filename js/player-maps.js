@@ -1,9 +1,9 @@
 // Maps for the player page (player.html): where a player shot, passed, spent the match and defended, worked out from the saved match files
 // (the engine's full record: events with pitch positions, and every player's position five times a second; js/sim/docs/OUTPUT_FORMAT.md).
 //
-//   extractMaps(file, playerId) -> { shots, grid, frames, minutes } for one match, every point turned so the player's club always attacks left to right
+//   extractMaps(file, playerId) -> { grid, frames, minutes } for one match, every point turned so the player's club always attacks left to right
 //   mergeMaps(list)             -> the same, added up over several matches
-//   shotMap(m) / heatMap(m)     -> html (inline SVG, the one pitch drawing), with the numbers under it
+//   heatMap(m)                  -> html (inline SVG, the one pitch drawing), with the numbers under it
 //   pitchSvg({ half, body })    the pitch itself: 105 x 68 m, or the attacking half
 // Pure functions, so tests/player-maps.test.mjs can run them on a tiny made-up match. Kept to two simple maps (the user, 26 Oct 2026). Looks: him in vLeague
 // blue on a quiet pitch, one hue for density, a data-tip on every mark.
@@ -15,19 +15,12 @@ const r1 = v => Math.round(v * 10) / 10;
 // ---- reading a match file ----
 export function extractMaps(d, id) {
   const me = (d.players || []).find(p => String(p.id) === String(id));
-  const out = { shots: [], grid: new Array(GW * GH).fill(0), frames: 0, minutes: 0 };
+  const out = { grid: new Array(GW * GH).fill(0), frames: 0, minutes: 0 };
   if (!me) return out;
   const periods = d.periods || [];
   // Which way his club attacks in a period: home_attacks says it for the home club; the away club goes the other way.
   const right = period => { const p = periods.find(x => x.period === period); const homeRight = p ? p.home_attacks === 'right' : true; return me.team === (d.match?.home ?? d.home) ? homeRight : !homeRight; };
   const turn = (x, y, period) => (right(period) ? [x, y] : [PW - x, PH - y]);
-  for (const e of d.events || []) {
-    const mine = String(e.player) === String(id);
-    if (!mine || e.x == null) continue;
-    const [x, y] = turn(e.x, e.y, e.period);
-    const at = { x: r1(x), y: r1(y), minute: e.minute };
-    if (e.type === 'shot') out.shots.push({ ...at, ey: r1(turn(PW, e.end_y ?? PH / 2, e.period)[1]), xg: e.xg || 0, outcome: e.outcome, on: Boolean(e.on_target || e.outcome === 'goal' || e.outcome === 'saved'), body: e.body, kind: e.subtype });
-  }
   // Time on the pitch: his position in every frame, as a grid of 5 m squares.
   const fr = d.frames;
   if (fr?.fields && fr.data) {
@@ -46,9 +39,8 @@ export function extractMaps(d, id) {
   return out;
 }
 export function mergeMaps(list) {
-  const m = { shots: [], grid: new Array(GW * GH).fill(0), frames: 0, minutes: 0, matches: list.length };
+  const m = { grid: new Array(GW * GH).fill(0), frames: 0, minutes: 0, matches: list.length };
   for (const x of list) {
-    m.shots.push(...x.shots);
     x.grid.forEach((v, i) => { m.grid[i] += v; });
     m.frames += x.frames; m.minutes += x.minutes;
   }
@@ -77,23 +69,6 @@ export function pitchSvg({ half = false, body = '', label = '', direction = true
 }
 const count = (a, f) => a.filter(f).length;
 const pctOf = (a, b) => (b ? `${Math.round((100 * a) / b)}%` : '–');
-
-// ---- shots ----
-// Each shot is a dot (bigger = bigger chance, xG) with a thin path to where it was heading on the goal line. Colour says what happened.
-const SHOT = { goal: 'Goal', saved: 'Saved', blocked: 'Blocked', off_target: 'Off target', woodwork: 'Hit the woodwork' };
-export function shotMap(m) {
-  if (!m.shots.length) return '<p class="pp-note">No shots in these matches.</p>';
-  const paths = m.shots.filter(s => s.outcome !== 'blocked').map(s => `<line x1="${s.x}" y1="${s.y}" x2="${PW}" y2="${Math.max(-2, Math.min(PH + 2, s.ey))}" class="pm-path is-${s.outcome}"/>`).join('');
-  const dots = m.shots.map(s => {
-    const r = 1.3 + Math.sqrt(s.xg) * 4.6, tip = `${s.minute}′ ${SHOT[s.outcome] || 'Shot'} · xG ${s.xg.toFixed(2)}${s.kind && s.kind !== 'open' ? ` · ${s.kind.replace('_', ' ')}` : ''}${s.body === 'head' ? ' · header' : ''}`;
-    return `<circle cx="${s.x}" cy="${s.y}" r="${r.toFixed(2)}" class="pm-shot is-${s.outcome}" data-tip="${esc(tip)}" tabindex="0"/>`;
-  }).join('');
-  const goals = count(m.shots, s => s.outcome === 'goal'), xg = m.shots.reduce((a, s) => a + s.xg, 0), on = count(m.shots, s => s.on);
-  const chip = (k, v) => `<span><b>${v}</b>${k}</span>`;
-  return `<div class="pm-chips">${chip('Shots', m.shots.length)}${chip('Goals', goals)}${chip('On target', pctOf(on, m.shots.length))}${chip('xG', xg.toFixed(2))}${chip('xG a shot', (xg / m.shots.length).toFixed(2))}</div>
-    ${pitchSvg({ half: true, body: paths + dots, label: `${m.shots.length} shots, ${goals} goals, ${xg.toFixed(1)} xG` })}
-    <div class="pm-key">${['goal', 'saved', 'blocked', 'off_target', 'woodwork'].filter(k => m.shots.some(s => s.outcome === k)).map(k => `<span><i class="pm-shot is-${k}"></i>${SHOT[k]}</span>`).join('')}<span>Bigger dot = better chance. Line = where it was heading.</span></div>`;
-}
 
 // ---- where he spent the match ----
 export function heatMap(m) {

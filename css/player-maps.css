@@ -18,19 +18,7 @@ i.pm-heat { display: inline-block; width: 38px; height: 10px; border-radius: 3px
 .pm-svg g:focus-visible, .pm-svg circle:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 
 
-/* the shot map: colour says what happened, size says how good the chance was */
-.pm-shot { --k: var(--muted); fill: var(--k); fill-opacity: .9; stroke: var(--surface); stroke-width: .5; }
-.pm-shot.is-goal { --k: var(--res-w); stroke: #fff; stroke-width: .9; fill-opacity: 1; }
-.pm-shot.is-saved { --k: var(--blue-400); }
-.pm-shot.is-woodwork { --k: var(--amber); }
-.pm-shot.is-blocked { fill: none; stroke: var(--muted); stroke-width: .7; }
-.pm-shot.is-off_target { fill: none; stroke: var(--res-l); stroke-width: .8; }
-.pm-path { stroke: var(--muted); stroke-width: .3; stroke-dasharray: 1.2 1; stroke-opacity: .7; }
-.pm-path.is-goal { stroke: var(--res-w); stroke-width: .5; stroke-dasharray: none; stroke-opacity: .9; }
-.pm-path.is-saved { stroke: var(--blue-400); } .pm-path.is-woodwork { stroke: var(--amber); } .pm-path.is-off_target { stroke: var(--res-l); stroke-opacity: .55; }
-i.pm-shot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; box-sizing: border-box; vertical-align: -2px; margin-right: 6px; background: var(--k); border: 1.5px solid var(--k); }
-i.pm-shot.is-goal { box-shadow: 0 0 0 1.5px var(--surface), 0 0 0 2.5px var(--res-w); }
-i.pm-shot.is-blocked { background: none; border-color: var(--muted); } i.pm-shot.is-off_target { background: none; border-color: var(--res-l); }
+
 .pm-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
 .pm-chips span { display: inline-flex; align-items: baseline; gap: 6px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font: 400 var(--fs-s) var(--font); }
 .pm-chips b { color: var(--text-strong); font: 700 var(--fs-m) var(--font); font-variant-numeric: tabular-nums; }
@@ -43,3 +31,5 @@ i.pm-shot.is-blocked { background: none; border-color: var(--muted); } i.pm-shot
 .pc-tip { position: fixed; z-index: 60; max-width: 280px; padding: 8px 10px; border-radius: var(--r-sm); background: var(--text-strong); color: var(--bg); font: 600 var(--fs-s)/1.35 var(--font); box-shadow: 0 6px 20px rgba(0, 0, 0, .35); pointer-events: none; }
 .pc-tip[hidden] { display: none; }
 
+.pp-maps .sm-pitch { max-width: 600px; }
+.pp-maps .sm-pick, .pp-maps .sm-detail { max-width: 600px; }

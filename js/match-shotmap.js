@@ -104,3 +104,29 @@ export function shotMapClick(target, st) {
   }
   return false;
 }
+
+// The same picker for one player's shots over several matches (the player page's Shots map). `list` are shotsOf() results already turned so every shot attacks the right
+// goal (home: false, X, Y and endY as the away club's), with `id` unique across matches. st = { sel, ids } is kept by the page. o = { colour, label(shot) -> html }.
+// Dots are all one size; the picked one gets a ring, a line to where it crossed the goal line, and the little goal showing exactly where (as on the match page).
+export function playerShotMap(list, st, o) {
+  if (!list.length) return '<p class="empty">No shots in these matches.</p>';
+  st.ids = list.map(s => s.id);
+  const sel = list.find(s => s.id === st.sel) || [...list].reverse().find(s => s.result === 'goal') || list[list.length - 1];
+  st.sel = sel.id;
+  const idx = list.indexOf(sel);
+  const dots = list.map(s => {
+    const r = radius(s), common = `class="sm-dot ${kind(s)}${s === sel ? ' is-sel' : ''}" style="--k:${esc(o.colour)}" data-sm-shot="${esc(s.id)}" tabindex="0" role="button" aria-label="${esc(`${s.minute}′, ${RESULT[s.result] || s.result}, ${f2(s.xg)} xG`)}"`;
+    return s.result === 'goal' ? `<g ${common} transform="translate(${s.X.toFixed(2)} ${s.Y.toFixed(2)}) scale(${r.toFixed(2)})"><circle r="1" class="sm-ball"/>${BALL}</g>`
+      : `<circle ${common} cx="${s.X.toFixed(2)}" cy="${s.Y.toFixed(2)}" r="${r.toFixed(2)}"/>`;
+  }).join('');
+  const ring = `${sel.endY != null ? `<line class="sm-trail" x1="${sel.X.toFixed(2)}" y1="${sel.Y.toFixed(2)}" x2="105" y2="${sel.endY.toFixed(2)}"/>` : ''}<circle class="sm-ring${sel.result === 'goal' ? ' is-goal' : ''}" cx="${sel.X.toFixed(2)}" cy="${sel.Y.toFixed(2)}" r="${(radius(sel) + 1.3).toFixed(2)}"/>`;
+  const arrowBtn = (d, dis, path) => `<button type="button" class="sm-arrow" data-sm-step="${d}" aria-label="${d < 0 ? 'Previous' : 'Next'} shot"${dis ? ' disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${path}"/></svg></button>`;
+  const goals = list.filter(s => s.result === 'goal').length, xg = list.reduce((a, s) => a + s.xg, 0), on = list.filter(s => s.result === 'goal' || s.result === 'saved').length;
+  const chip = (k, v) => `<span><b>${v}</b>${k}</span>`;
+  return `<div class="pm-chips">${chip('Shots', list.length)}${chip('Goals', goals)}${chip('On target', `${Math.round((100 * on) / list.length)}%`)}${chip('xG', xg.toFixed(2))}${chip('xG a shot', (xg / list.length).toFixed(2))}</div>
+    <div class="sm-pick"><span class="sm-who">${o.label(sel)}</span><span class="sm-step">${arrowBtn(-1, idx <= 0, 'm15 6-6 6 6 6')}<b>${esc(sel.minute)}′</b>${arrowBtn(1, idx >= list.length - 1, 'm9 6 6 6-6 6')}</span></div>
+    <div class="sm-detail"><dl class="sm-facts"><div><dt>Shot type</dt><dd>${esc(sel.type)}</dd></div><div><dt>Situation</dt><dd>${esc(sel.situation)}</dd></div><div><dt>Result</dt><dd>${esc(RESULT[sel.result] || sel.result)}</dd></div></dl>
+    <div class="sm-xg">${mouth(sel)}<div><b>${f2(sel.xg)}</b><span>xG</span></div><div><b>${f2(sel.xgot)}</b><span>xGOT</span></div></div></div>
+    <svg class="sm-pitch" viewBox="40 -3 68.5 74" role="group" aria-label="Shot map, attacking the right-hand goal">${PITCH}${ring}${dots}</svg>
+    <p class="pp-note">Click a shot to see where it went. Every shot is shown attacking the same goal, whichever way his team was kicking.</p>`;
+}

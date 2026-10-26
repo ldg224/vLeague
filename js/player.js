@@ -16,7 +16,8 @@ import { portrait } from './portrait.js';
 import { hasPreseason, scopeNow } from './preseason.js';
 import { playerView, averageRating, CLASSES, MIN_PEERS, MIN_MATCHES } from './player-stats.js';
 import { icon } from './icons.js';
-import { extractMaps, mergeMaps, shotMap, heatMap } from './player-maps.js';
+import { extractMaps, mergeMaps, heatMap } from './player-maps.js';
+import { shotsOf, playerShotMap, shotMapClick } from './match-shotmap.js';
 import { loadMatchFile } from './match-file.js';
 import { demoSeason } from './demo-season.js';
 import { lineOf } from './season-stats.js';
@@ -126,8 +127,9 @@ function render(season, rows, mine) {
     }).join('')}</ul></section>` : '';
 
   // ---- charts (js/player-charts.js): tabs for the profile, match by match, and the league; one panel is drawn at a time ----
-  const MAPS = [['heat', 'Where he plays', heatMap], ['shots', 'Shots', shotMap]];
-  const mp = { status: 'idle', done: 0, total: 0, data: null, pick: MAPS.some(x => x[0] === q.get('map')) ? q.get('map') : 'heat' };
+  const MAPS = [['heat', 'Where he plays', heatMap], ['shots', 'Shots', m => playerShotMap(m.shots, mp.shot, { colour: c1, label: shotLabel })]];
+  const shotLabel = sh => `${club ? crest(club, 28) : ''}<b>${esc(sh.label)}</b>`;
+  const mp = { status: 'idle', done: 0, total: 0, data: null, shot: { sel: null, ids: [] }, pick: MAPS.some(x => x[0] === q.get('map')) ? q.get('map') : 'heat' };
   const mapsHtml = () => {
     if (mp.status === 'loading') return `<p class="pp-note" role="status">Reading match files… ${mp.done} of ${mp.total}. Each is about 2 MB, so this takes a moment the first time.</p>`;
     if (mp.status === 'none') return '<p class="pp-note">Maps are drawn from the saved match files, and none are available for these matches.</p>';
@@ -144,8 +146,18 @@ function render(season, rows, mine) {
     mp.status = 'loading'; mp.total = todo.length; drawPanel();
     try {
       const parts = [];
-      for (const l of todo) { parts.push(extractMaps(await loadMatchFile(l.fx), p.id)); mp.done++; drawPanel(); }
-      mp.data = mergeMaps(parts); mp.status = 'ready';
+      const shots = [];
+      for (const l of todo) {
+        const file = await loadMatchFile(l.fx);
+        parts.push(extractMaps(file, p.id));
+        // His shots, each turned so it attacks the right-hand goal (shotsOf has the home club attacking left), with the match named.
+        for (const sh of shotsOf(file, l.fx).filter(x => String(x.e.player) === String(p.id))) {
+          shots.push({ ...sh, id: `${l.fx.id}:${sh.id}`, home: false, X: sh.home ? 105 - sh.X : sh.X, Y: sh.home ? 68 - sh.Y : sh.Y, endY: sh.endY == null ? null : sh.home ? 68 - sh.endY : sh.endY,
+            label: `${l.home ? '' : 'at '}${cname(l.opp)} · ${dayFmt.format(kickoff(l.fx) || new Date())}` });
+        }
+        mp.done++; drawPanel();
+      }
+      mp.data = { ...mergeMaps(parts), shots }; mp.status = 'ready';
     } catch { mp.status = 'error'; }
     drawPanel();
   };
@@ -157,13 +169,15 @@ function render(season, rows, mine) {
     <div class="lg-cols"><div class="lg-main">${mapsCard}${statsCard}</div><aside class="lg-side">${logCard}</aside></div>
   </article>`;
 
+  const cname = c => { const t = clubFor(c); return t.short_name || t.name || c; };
   const drawPanel = () => { const el = main.querySelector('#pc-panel'); if (el) el.innerHTML = mapsHtml(); };
   main.addEventListener('click', e => {
-    const t = e.target.closest('[data-pcmap]');
-    if (!t) return;
-    mp.pick = t.dataset.pcmap;
-    drawPanel();
-    main.querySelector(`[data-pcmap="${mp.pick}"][aria-pressed="true"]`)?.focus({ preventScroll: true });
+    const pick = e.target.closest('[data-pcmap]');
+    if (pick) { mp.pick = pick.dataset.pcmap; drawPanel(); main.querySelector(`[data-pcmap="${mp.pick}"][aria-pressed="true"]`)?.focus({ preventScroll: true }); return; }
+    if (e.target.closest('.pp-maps') && mp.status === 'ready' && shotMapClick(e.target, mp.shot)) {
+      const y = scrollY; drawPanel(); scrollTo(0, y);
+      const on = main.querySelector('.sm-dot.is-sel'); on?.focus({ preventScroll: true });
+    }
   });
   const box = main.querySelector('#pc-panel');
   if (box && 'IntersectionObserver' in window) { const io = new IntersectionObserver(es => { if (es.some(x => x.isIntersecting)) { io.disconnect(); loadMaps(); } }); io.observe(box); } else if (box) loadMaps();

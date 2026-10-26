@@ -1,9 +1,8 @@
 // Run with:  node --test "tests/*.test.mjs"        (no packages needed)
-// The player page's maps (js/player-maps.js) on a tiny made-up match file: the away player's points are turned to attack left to right, the heat grid
-// counts his frames, and each map says what it shows.
+// The player page's heatmap (js/player-maps.js) on a tiny made-up match file: the away player's frames are turned to attack left to right and counted.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { extractMaps, mergeMaps, shotMap, heatMap, pitchSvg } from '../js/player-maps.js';
+import { extractMaps, mergeMaps, heatMap, pitchSvg } from '../js/player-maps.js';
 
 // Home attacks right in period 1; the away player (idx 1, id 'b1') therefore attacks left in period 1 and right in period 2.
 const file = {
@@ -22,13 +21,6 @@ const file = {
   ],
 };
 
-test('the away player attacking left in period 1 is turned round, and period 2 is left alone', () => {
-  const m = extractMaps(file, 'b1');
-  assert.deepEqual(m.shots.map(s => [s.x, s.y]), [[85, 38], [90, 40]]);
-  assert.equal(m.shots[0].ey, 34);   // no end_y given: heading for the middle of the goal   // (20,30) -> (105-20, 68-30); (90,40) as it is
-  assert.equal(m.shots.length, 2);                                       // a1's shot is not his
-  assert.equal(m.shots[0].on, true); assert.equal(m.shots[1].on, false);
-});
 test('the heat grid counts his frames and turns them the same way', () => {
   const m = extractMaps(file, 'b1');
   assert.equal(m.frames, 3);
@@ -39,18 +31,13 @@ test('the heat grid counts his frames and turns them the same way', () => {
 });
 test('a player not in the file gives empty maps; merging adds matches up', () => {
   const none = extractMaps(file, 'zzz');
-  assert.equal(none.shots.length + none.frames, 0);
+  assert.equal(none.frames, 0);
   const all = mergeMaps([extractMaps(file, 'b1'), extractMaps(file, 'b1')]);
-  assert.equal(all.matches, 2); assert.equal(all.shots.length, 4); assert.equal(all.frames, 6);
+  assert.equal(all.matches, 2); assert.equal(all.frames, 6);
 });
-test('the two maps draw their marks and says what it shows', () => {
+test('the heatmap draws its cells and says what it shows', () => {
   const m = mergeMaps([extractMaps(file, 'b1')]);
-  const shots = shotMap(m);
-  assert.equal((shots.match(/<circle[^>]*class="pm-shot is-/g) || []).length, 2);
-  assert.equal((shots.match(/class="pm-path is-/g) || []).length, 2);   // a path to where each was heading
-  assert.match(shots, /<b>2<\/b>Shots/); assert.match(shots, /<b>0\.40<\/b>xG</); assert.match(shots, /is-half/); assert.match(shots, /pm-dirtext/);
   assert.match(heatMap(m), /Average position/);
-  assert.match(shotMap(mergeMaps([extractMaps(file, 'zzz')])), /No shots/);
   assert.match(heatMap(mergeMaps([extractMaps(file, 'zzz')])), /No position data/);
 });
 test('the pitch is drawn once, half or whole, and labelled', () => {
