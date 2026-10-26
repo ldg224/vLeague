@@ -122,8 +122,9 @@ export const stepsFor = cfg => [
 export const STEPS = stepsFor(DEFAULTS);
 
 // ---------- the intro ----------
-// A short moment when the tab opens: a coin drops in and spins, STAKES rises letter by letter, a line fades in, then the page's cards slide up. A tap, a key or
-// Escape skips it; nothing plays for anyone who asked for reduced motion. It covers the tab while the numbers load, so it never delays them.
+// A short moment when the tab opens: a coin drops in and spins, STAKES rises letter by letter, a line fades in, then the page's cards slide up. It fills the visible
+// screen (not the whole page, which may be taller) while the numbers load behind it, so it never delays them. A tap, a key or Escape skips it; nothing plays for
+// anyone who asked for reduced motion.
 export const WORD = 'STAKES';
 export const introHtml = () => `<div class="st-intro" aria-hidden="true"><div class="st-introin">
   <svg class="st-coin" viewBox="0 0 64 64"><defs><linearGradient id="st-cg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--blue-300)"/><stop offset="1" stop-color="var(--blue-700)"/></linearGradient></defs>
@@ -135,7 +136,7 @@ const reducedMotion = () => document.documentElement.classList.contains('reduce-
 function playIntro(root, app) {
   if (reducedMotion()) return Promise.resolve();
   return new Promise(done => {
-    root.classList.add('st-playing');
+    document.documentElement.classList.add('st-intro-open');   // the page waits behind, un-scrollable, for the two seconds
     root.insertAdjacentHTML('beforeend', introHtml());
     const el = root.querySelector('.st-intro');
     let over = false;
@@ -145,7 +146,7 @@ function playIntro(root, app) {
       el.classList.add('is-out');
       app.querySelectorAll('.lg-card').forEach((c, i) => c.style.setProperty('--k', Math.min(i, 8)));
       app.classList.add('st-reveal');
-      setTimeout(() => { el.remove(); root.classList.remove('st-playing'); done(); }, 420);
+      setTimeout(() => { el.remove(); document.documentElement.classList.remove('st-intro-open'); done(); }, 420);
       setTimeout(() => app.classList.remove('st-reveal'), 1700);
     };
     el.addEventListener('pointerdown', end);
@@ -220,5 +221,5 @@ export function mountStakes(root, o) {
   timer = setInterval(refresh, 60000);
   tick = setInterval(() => root.querySelectorAll('[data-closes]').forEach(el => { el.textContent = closesIn(el.dataset.closes); }), 30000);
   draw(); load(true);
-  return { unmount() { gone = true; clearInterval(timer); clearInterval(tick); document.querySelector('.tour')?.remove(); root.innerHTML = ''; } };
+  return { unmount() { gone = true; clearInterval(timer); clearInterval(tick); document.querySelector('.tour')?.remove(); document.documentElement.classList.remove('st-intro-open'); root.innerHTML = ''; } };
 }

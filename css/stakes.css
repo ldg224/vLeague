@@ -118,9 +118,8 @@
 }
 
 /* ---- the intro when the tab opens (js/stakes.js playIntro) ---- */
-.lg-stakes { position: relative; }
-.st-playing { min-height: 440px; }
-.st-intro { position: absolute; inset: 0; z-index: 6; display: grid; place-items: center; border-radius: var(--r-lg); overflow: hidden; cursor: pointer;
+html.st-intro-open { overflow: hidden; }
+.st-intro { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; overflow: hidden; cursor: pointer;
   background: radial-gradient(60% 55% at 50% 40%, color-mix(in oklab, var(--blue-500) 28%, var(--bg)), var(--bg) 72%); animation: st-in .25s ease-out both; }
 .st-intro.is-out { animation: st-away .42s cubic-bezier(.4, 0, .6, 1) both; pointer-events: none; }
 .st-introin { display: grid; justify-items: center; gap: 14px; text-align: center; padding: 24px; }
