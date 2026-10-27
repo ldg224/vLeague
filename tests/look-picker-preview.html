@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Look picker preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Oswald:wght@500;700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../css/site.css"><link rel="stylesheet" href="../css/member.css"><link rel="stylesheet" href="../css/league-page.css"><link rel="stylesheet" href="../css/select-menu.css"><link rel="stylesheet" href="../css/editor.css"><link rel="stylesheet" href="../css/look-picker.css"></head>
+<body class="lg lg-sub is-editor"><main class="member-main wide editor-main" id="main" style="max-width:760px"><div id="fx-root"></div></main>
+<script type="module">
+// A developer's check of the Editor's look picker without signing in (see docs/LOOKS.md): ?open=round or ?open=match opens a menu.
+import { lookPicker, mountLookPicker } from '../js/look-picker.js';
+import { PRESET_ROWS } from '../js/looks.js';
+const q = new URLSearchParams(location.search), theme = q.get('theme'); if (theme) document.documentElement.dataset.theme = theme;
+const looks = [{ key: 'classic', name: 'Classic', settings: {} }, { key: 'finals', name: 'Finals', settings: {} }, { key: 'grand_final', name: 'Grand Final', settings: {} }, { key: 'christmas', name: 'Christmas', settings: {} }, { key: 'derby', name: 'Derby', settings: {} }, ...PRESET_ROWS];
+const root = document.getElementById('fx-root'), log = [];
+mountLookPicker(root, { looks, onPick: (...a) => { document.title = a.join('|'); } });
+root.innerHTML = `<details class="fx-round" open><summary><b>Round 12</b> <span>Sat 14 Nov · 0 of 2 played</span>${lookPicker({ scope: 'round', id: 12, looks, value: 'movember' })}</summary>
+  <div class="fx-body"><div class="fx-cards">
+   <div class="fx-row"><div class="fx-rtop"><span class="fx-chip">To simulate</span>${lookPicker({ scope: 'match', id: 'a', looks, value: '', roundLook: 'movember' })}</div><span class="fx-teams">Harbour City FC v Brunswick Albion</span></div>
+   <div class="fx-row"><div class="fx-rtop"><span class="fx-chip">To simulate</span>${lookPicker({ scope: 'match', id: 'b', looks, value: 'festive', roundLook: 'movember' })}</div><span class="fx-teams">Redgum Rovers v Southgate Rangers</span></div>
+  </div></div></details>`;
+const which = q.get('open');
+if (which) addEventListener('resize', e => e.stopImmediatePropagation(), true);   // the screenshot tool resizes the window, which would close the menu
+if (which) setTimeout(() => root.querySelector(`.lk-btn[data-lk="${which}"]`).click(), 600);
+</script></body></html>

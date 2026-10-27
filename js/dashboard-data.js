@@ -44,7 +44,7 @@ export async function loadSeason() {
   const c = await db();
   const [cl, fx, rs, players, rd, lk, wn] = await Promise.all([
     c.from('clubs').select('code, name, short_name, colour, crest_path, manager_name, status').order('name'),
-    c.from('fixtures').select('id, week, home, away, starts_at, stage, postponed, window_id').order('week').order('starts_at').range(0, 1999),
+    c.from('fixtures').select('id, week, home, away, starts_at, stage, postponed, window_id, look').order('week').order('starts_at').range(0, 1999),
     c.from('results').select('fixture, summary, file').range(0, 1999),
     loadPlayers().catch(() => []),
     c.from('rounds').select('*'), c.from('looks').select('key, name, settings'), c.from('match_windows').select('id, look').range(0, 1999),
@@ -56,7 +56,7 @@ export async function loadSeason() {
   const looks = Object.fromEntries((lk.data || []).map(l => [l.key, l]));
   // Round names and numbers (0.20): a week can be named, numbered automatically or by hand, or have no number.
   const labels = roundLabels(weekNumbers(fx.data, rd.data || []), rd.data || []);
-  const lookOf = f => windowLook.get(f.window_id) || rounds.get(f.week)?.look || 'classic';
+  const lookOf = f => f.look || windowLook.get(f.window_id) || rounds.get(f.week)?.look || 'classic';   // the match's own look, else its window's, else its round's (1.17)
   return {
     looks, rounds: Object.fromEntries([...labels].map(([w, l]) => [w, { label: l.label, short: l.short, numbered: l.numbered, no: l.no, name: l.name, ...(rounds.get(w)?.kind === 'preseason' ? { preseason: true } : {}) }])),
     season: 1, league: 'vLeague', live_minutes: 45, points: { win: 3, draw: 1, loss: 0 }, news: [], players,

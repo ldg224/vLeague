@@ -8,6 +8,8 @@ import * as R from './roster.js';
 import { icon } from './icons.js';
 import { loadKits } from './kits-data.js';
 import { FIELD_SLOTS, kitName } from './kit.js';
+import { lookPicker, mountLookPicker } from './look-picker.js';
+import { PRESET_ROWS } from './looks.js';
 const { melbourneToIso, toLocalInput, addDays, addMinutes, dateOf, timeOf, shiftIso, mondayOf, daysBetween, WEEK_MAX } = R;
 
 const ZONE = R.ZONE;
@@ -41,7 +43,7 @@ export async function mountFixtures(ctx) {
 
   // ---------------------------------------------------------------- state
   let fixtures = [], results = new Map(), rounds = [], looks = [], deadlines = new Map(), sheets = [];
-  let busy = false, msg = '', msgKind = '', hasRoster = true, hasLadder = true, hasByes = true;
+  let busy = false, msg = '', msgKind = '', hasRoster = true, hasLadder = true, hasByes = true, hasFxLook = false;
   const open = new Set();   // rounds the office has opened (the next round to play opens on its own)
   const setOpen = new Set(); let moreOpen = false, plan = null;   // which round-settings panels and the More menu are open, so a redraw leaves them as they were
 
@@ -62,12 +64,15 @@ export async function mountFixtures(ctx) {
     const c = await ctx.db();
     const [fx, rd, lk, rs, dl, ws] = await Promise.all([
       c.from('fixtures').select('id, week, home, away, starts_at, stage, postponed, window_id').order('week').order('starts_at').range(0, 1999),
-      c.from('rounds').select('*').order('week'), c.from('looks').select('key, name').order('name'),
+      c.from('rounds').select('*').order('week'), c.from('looks').select('key, name, settings').order('name'),
       c.from('results').select('fixture, summary').range(0, 1999), c.from('deadlines').select('week, locks_at, locked_at'), c.from('week_sheets').select('week, club').range(0, 1999),
     ]);
     if (fx.error) throw new Error(explain(fx.error));
     fixtures = fx.data; results = new Map((rs.data || []).map(r => [r.fixture, r.summary])); rounds = rd.data || [];
     looks = lk.data?.length ? lk.data : [{ key: 'classic', name: 'Classic' }];
+    // The looks that ship with the app (js/looks.js) are added to the table when it doesn't have them yet.
+    const have = new Set(looks.map(l => l.key)), missing = PRESET_ROWS.filter(r => !have.has(r.key));
+    if (missing.length && !(await c.from('looks').insert(missing)).error) looks = [...looks, ...missing].sort((a, b) => a.name.localeCompare(b.name));
     deadlines = new Map((dl.data || []).map(d => [d.week, d])); sheets = ws.data || [];
     hasLadder = !(await c.from('rounds').select('counts_for_ladder').limit(1)).error;   // false until 0025_week_ladder.sql is run
     hasRoster = !(await c.from('rounds').select('numbered').limit(1)).error;   // false until 0021_roster_tools.sql is run
@@ -75,6 +80,9 @@ export async function mountFixtures(ctx) {
     const kp = await c.from('fixtures').select('id, home_kit, away_kit').range(0, 1999);
     if (!kp.error) { hasKitPick = true; const m = new Map(kp.data.map(r => [r.id, r])); for (const f of fixtures) Object.assign(f, { home_kit: m.get(f.id)?.home_kit ?? null, away_kit: m.get(f.id)?.away_kit ?? null }); }
     kits = hasKitPick ? await loadKits() : {};
+    const fl = await c.from('fixtures').select('id, look').range(0, 1999);   // a match's own look (0071_match_looks.sql)
+    hasFxLook = !fl.error;
+    if (hasFxLook) { const m = new Map(fl.data.map(r => [r.id, r.look])); for (const f of fixtures) f.look = m.get(f.id) ?? null; }
     hasByes = !(await c.from('rounds').select('byes').limit(1)).error;   // false until 0028_byes.sql is run
   }
 
@@ -167,7 +175,7 @@ export async function mountFixtures(ctx) {
     if (!list.length) return;
     const dead = played(list);
     if (dead.length) { const sim = await import('./simulate.js'), c = await ctx.db(); for (const f of dead) await sim.removeResult(c, f); }
-    const keep = list.map(f => ({ id: f.id, week: f.week, home: f.home, away: f.away, starts_at: f.starts_at, stage: f.stage, postponed: f.postponed }));
+    const keep = list.map(f => ({ id: f.id, week: f.week, home: f.home, away: f.away, starts_at: f.starts_at, stage: f.stage, postponed: f.postponed, ...(hasFxLook ? { look: f.look ?? null } : {}) }));
     await step(tx, async () => walk(keep, 100, async part => (await ctx.db()).from('fixtures').delete().in('id', part.map(f => f.id))),
       async () => walk(keep, 100, async part => (await ctx.db()).from('fixtures').insert(part)));
   }
@@ -228,7 +236,7 @@ export async function mountFixtures(ctx) {
   function matchRow(f, r) {
     const res = results.get(f.id), done = !!res, [state, label, hint] = matchState(f, done);
     return `<div class="fx-row is-${state}" data-id="${esc(f.id)}">
-      <div class="fx-rtop"><span class="fx-chip">${esc(label)}</span>${hint ? `<span class="fx-hint">${esc(hint)}</span>` : ''}</div>
+      <div class="fx-rtop"><span class="fx-chip">${esc(label)}</span>${hint ? `<span class="fx-hint">${esc(hint)}</span>` : ''}${hasFxLook ? lookPicker({ scope: 'match', id: f.id, looks, value: f.look || '', roundLook: r.look || 'classic' }) : ''}</div>
       <span class="fx-teams"><select data-k="home" aria-label="Home club">${clubOpts(f.home)}</select><span class="fx-v">v</span><select data-k="away" aria-label="Away club">${clubOpts(f.away)}</select></span>
       <label class="fx-ko"><span>Kick-off</span><input type="datetime-local" value="${toLocalInput(f.starts_at)}" aria-label="Kick-off (Melbourne time)"></label>
       ${hasKitPick && (kits[f.home] || kits[f.away]) ? `<span class="fx-kits"><label>${esc(name(f.home))} kit <select data-k="home_kit">${kitOpts(f.home, f.home_kit)}</select></label><label>${esc(name(f.away))} kit <select data-k="away_kit">${kitOpts(f.away, f.away_kit)}</select></label></span>` : ''}
@@ -246,7 +254,7 @@ export async function mountFixtures(ctx) {
     const playing = new Set(list.flatMap(f => [f.home, f.away])), resting = active().filter(c => !playing.has(c.code));
     const warn = warnings(list), isOpen = open.has(w) || (nextUp === w && !open.has(-w));
     return `<details class="fx-round${locked ? ' is-locked' : ''}${r.kind === 'preseason' ? ' is-pre' : ''}" data-week="${w}" ${isOpen ? 'open' : ''}>
-      <summary>${w === TEST_WEEK ? '' : `<span class="fx-grip" role="button" tabindex="${locked ? -1 : 0}" draggable="${!locked}" data-grip="${w}" aria-disabled="${locked}" aria-label="Move ${esc(L.label)}: drag onto another round, or press the up and down arrow keys" title="${locked ? 'Locked: this round can’t be moved' : 'Drag to reorder the rounds'}">${icon('grip-vertical')}</span>`}<b>${esc(L.label)}</b> <span>${esc(span)} · ${list.length ? `${done} of ${list.length} played` : 'no matches'}</span>${locked ? '<span class="ed-pill approved">Locked</span>' : ''}${r.kind === 'preseason' ? '<span class="ed-pill fx-pre">Preseason</span>' : r.counts_for_ladder === false && w !== TEST_WEEK ? '<span class="ed-pill warn">Not on the table</span>' : ''}</summary>
+      <summary>${w === TEST_WEEK ? '' : `<span class="fx-grip" role="button" tabindex="${locked ? -1 : 0}" draggable="${!locked}" data-grip="${w}" aria-disabled="${locked}" aria-label="Move ${esc(L.label)}: drag onto another round, or press the up and down arrow keys" title="${locked ? 'Locked: this round can’t be moved' : 'Drag to reorder the rounds'}">${icon('grip-vertical')}</span>`}<b>${esc(L.label)}</b> <span>${esc(span)} · ${list.length ? `${done} of ${list.length} played` : 'no matches'}</span>${locked ? '<span class="ed-pill approved">Locked</span>' : ''}${r.kind === 'preseason' ? '<span class="ed-pill fx-pre">Preseason</span>' : r.counts_for_ladder === false && w !== TEST_WEEK ? '<span class="ed-pill warn">Not on the table</span>' : ''}${lookPicker({ scope: 'round', id: w, looks, value: r.look || 'classic' })}</summary>
       <div class="fx-body">
         <p class="fx-lock">${esc(lockText(w, list))}${locked ? ' <button class="btn ghost small" type="button" data-act="unlock">Unlock line-ups</button>' : ''}</p>
         <div class="fx-cards">${list.map(f => matchRow(f, r)).join('') || '<p class="quiet">No matches yet. Add one below.</p>'}</div>
@@ -258,7 +266,6 @@ export async function mountFixtures(ctx) {
           <div class="fx-grid">
             <label>Name <input data-r="name" value="${esc(r.name || '')}" placeholder="Optional, for example Derby Day" maxlength="40"></label>
             <label>Type <select data-r="kind">${opts(KINDS, r.kind)}</select></label>
-            <label>Scoreboard look <select data-r="look">${lookOpts(r.look)}</select></label>
             <label>Lock line-ups <select data-r="lock_minutes_before">${opts(LOCKS, r.lock_minutes_before)}</select> before the first match</label>
             <label class="fx-check"><input type="checkbox" data-r="counts_for_ladder" ${r.counts_for_ladder === false || r.kind === 'preseason' ? '' : 'checked'} ${hasLadder && r.kind !== 'preseason' ? '' : 'disabled'}> Counts for the table${r.kind === 'preseason' ? ' (a preseason round has its own table)' : ''}</label>
             <label class="fx-check"><input type="checkbox" data-r="numbered" ${r.numbered ? 'checked' : ''} ${hasRoster ? '' : 'disabled'}> Has a round number</label>
@@ -284,7 +291,13 @@ export async function mountFixtures(ctx) {
       <div class="ed-actions"><button class="btn" ${clubsNow.length < 2 ? 'disabled' : ''}>Create the season</button></div><p class="ed-msg" role="status"></p></form>`;
   }
 
+  // A round's look is for the whole week; a match's own look beats it. Choosing one saves at once.
+  const pickLook = (scope, id, value) => (scope === 'round'
+    ? run('Set the round’s look', async tx => setRound(tx, Number(id), { look: value }))
+    : run('Set the match’s look', async tx => setFx(tx, fixtures.find(f => f.id === id), { look: value || null })));
+
   function draw() {
+    mountLookPicker(root, { looks, onPick: pickLook });
     const y = window.scrollY, m = model(), season = real(), weeks = m.weeks.filter(w => w !== TEST_WEEK);
     const nextUp = weeks.find(w => todo(w).length) ?? null;
     const tests = fixtures.filter(f => f.week === TEST_WEEK).length;

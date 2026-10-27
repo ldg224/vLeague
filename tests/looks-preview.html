@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Looks preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Oswald:wght@500;700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../css/site.css"><link rel="stylesheet" href="../css/scoreboard.css">
+<style>body{padding:16px;display:grid;grid-template-columns:minmax(0,1fr);gap:28px;max-width:760px;margin:auto}h2{font:600 14px Figtree;color:var(--muted);margin:0 0 6px}</style></head>
+<body><div id="out" style="display:contents"></div>
+<script type="module">
+import { scoreboard, lookInfo } from '../js/scoreboard.js';
+import { PRESETS } from '../js/looks.js';
+const q = new URLSearchParams(location.search); if (q.get('w')) document.body.style.maxWidth = q.get('w') + 'px';
+const  keys = (q.get('k') || Object.keys(PRESETS).join(',')).split(','), live = q.has('live');
+const season = { rounds: { 12: { label: 'Round 12', name: 'Opening Week', numbered: true, no: 12 } }, looks: {} };
+const crest = (t, c) => `<span style="display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:${c};font:700 22px Archivo;color:#fff">${t}</span>`;
+document.getElementById('out').innerHTML = keys.map((k, i) => {
+  const fx = { week: 12, look: k };
+  const sb = scoreboard({ fx, season, look: lookInfo(season, fx), h: 'Harbour City FC', a: 'Brunswick Albion', hColour: '#1e88a8', aColour: '#a0522d', crests: [crest('HC', '#1e88a8'), crest('BA', '#a0522d')],
+    score: `<strong class="${live ? 'is-live' : ''}">2<i>–</i>1</strong>`, state: live ? '<span class="live"><span class="dot"></span>67\'</span>' : 'Full time',
+    goals: ["<li>J. Smith <small>23'</small></li><li>J. Smith <small>61'</small></li>", "<li>T. Okafor <small>78'</small></li>"], meta: 'Sat 14 Nov, 3:00 pm · Harbourside Stadium' });
+  return `<section><h2>${k}</h2>${sb}</section>`;
+}).join('');
+</script></body></html>

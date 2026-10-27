@@ -3,6 +3,18 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.17.0 (2026-10-27)
+
+Headlines: Event scoreboards | A look for every round or match
+
+**Added:** four event looks for the scoreboard: **Movember**, **Australia Day**, **New Year** and **Festive**. Each has its own colours and decoration (a small moustache, the Southern Cross, sparkle and confetti, a string of lights with snow), on the Game centre's scoreboard and on the score bug over the match video (broadcast and highlights). The layout stays the same; only the skin changes.
+
+**Added:** a look picker in Editor > Fixtures. Every round has one (the look for the whole week) and every match has one (its own look, or "Same as the round"). Each choice shows a small preview of the design and saves at once. The old Scoreboard look dropdown in round settings is replaced by it.
+
+**Changed:** looks now come from one list (`js/looks.js`), so a new look or effect is a small addition and works on every scoreboard. How: `docs/LOOKS.md`.
+
+Database change: 0071 (a look column on matches and the four new looks), already applied.
+
 ## 1.16.2 (2026-10-27)
 
 Headlines: More realistic shots

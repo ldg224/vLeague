@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>Looks canvas preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Figtree:wght@400;500;600;700&display=swap">
+<style>body{margin:0;background:#2b7a3a;display:grid;gap:0}canvas{display:block}</style></head>
+<body><div id="out"></div>
+<script type="module">
+// Draws the in-game score bug of each look on a pitch-green canvas (a developer's check; see docs/LOOKS.md).
+import { HighlightsRenderer } from '../js/viewer/highlights.js';
+import { PRESETS } from '../js/looks.js';
+const keys = (new URLSearchParams(location.search).get('k') || ['classic', ...Object.keys(PRESETS)].join(',')).split(',');
+await document.fonts.ready;
+for (const k of keys) {
+  const cv = document.createElement('canvas'); cv.width = 700; cv.height = 190; document.getElementById('out').append(cv);
+  const c = cv.getContext('2d'), r = Object.create(HighlightsRenderer.prototype);
+  Object.assign(r, { c, A: { league: null, logos: {} }, fx: { week: 12, look: k }, season: { looks: {}, rounds: { 12: { label: 'Round 12', name: 'Opening Week', numbered: true, no: 12 } } },
+    home: { code: 'HAR', colour: '#1e88a8' }, away: { code: 'BRU', colour: '#a0522d' }, hc: '#1e88a8', ac: '#a0522d', _T: 3.2 });
+  r.scoreBoard(70, 90, [2, 1], '67:12');
+}
+document.title = 'done';
+</script></body></html>

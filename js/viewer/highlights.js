@@ -5,6 +5,8 @@
 //   WebCodecs, and makes a matching thumbnail plus YouTube title and description.
 
 import { safeColour, onColour, logoPath } from './ui.js';
+import { resolveLook } from '../looks.js';
+import { drawLookFx } from './look-canvas.js';
 import { kickoff } from './data.js';
 import { buildEffects } from './effects.js';
 import { kitSprite, cleanDesign, drawPrint, TURNS, turnIndex } from '../kit.js';
@@ -1283,17 +1285,18 @@ export class HighlightsRenderer {
   // banner and ornament, and the round's own name for the plate above the score bug ("Opening Week").
   look() {
     if (this._look) return this._look;
-    const S = this.season || {}, fx = this.fx || {}, row = S.looks?.[fx.look], st = row?.settings || {}, r = S.rounds?.[fx.week] || {};
+    const S = this.season || {}, fx = this.fx || {}, row = S.looks?.[fx.look], r = S.rounds?.[fx.week] || {};
     const stage = fx.stage === 'SF' ? 'Semi-final' : fx.stage === 'GF' ? 'Grand Final' : null;
     const big = stage || r.name || r.label || (fx.week != null ? `Week ${fx.week}` : '');
     const small = stage ? (r.name || r.label || '') : (r.name && r.numbered && r.no ? `Round ${r.no}` : '');
-    return (this._look = { key: row ? fx.look : 'classic', accent: /^#[0-9a-f]{6}$/i.test(st.accent || '') ? st.accent : null, banner: st.banner || '', ornament: st.ornament || '', big, small });
+    const rl = resolveLook(fx.look, row);
+    return (this._look = { key: rl.key, accent: rl.accent, banner: rl.banner || '', ornament: rl.ornament || '', theme: rl.theme, big, small });
   }
 
   // The score bug in the round's design: a plate with the round's name above, then the board. Both the highlights and the
   // broadcast view draw it, so a Grand Final looks like a Grand Final in either.
   scoreBoard(x, y, sc, clock) {
-    const c = this.c, L = this.look(), w = 560, h = 64, key = L.key, acc = L.accent;
+    const c = this.c, L = this.look(), w = 560, h = 64, key = L.key, acc = L.accent, th = L.theme;
     const plateText = [L.ornament, L.big.toUpperCase(), L.banner && L.banner.toLowerCase() !== L.big.toLowerCase() ? `· ${L.banner}` : ''].filter(Boolean).join(' ');
     const pre = !!(this.fx?.preseason || this.season?.rounds?.[this.fx?.week]?.preseason), PRE = '#8522f0';
     const star = key === 'grand_final' ? '★ ' : '';
@@ -1307,6 +1310,7 @@ export class HighlightsRenderer {
     else if (key === 'grand_final') { plateFill = gold('#fff3b0', '#d4a900'); plateInk = '#2a1d00'; }
     else if (key === 'christmas') { plateFill = '#c62828'; }
     else if (key === 'derby') { plateFill = gold('#ff8a50', '#ff7043'); plateInk = '#1b0a00'; }
+    else if (th) { const g = c.createLinearGradient(x, 0, x + pw, 0); g.addColorStop(0, th.plate[0]); g.addColorStop(1, th.plate[1]); plateFill = g; plateInk = th.plateInk; }
     else if (key !== 'classic' && acc) { plateFill = acc; plateInk = onColour(acc); }
     if (pre) { plateFill = PRE; plateInk = '#fff'; }
     c.save(); c.shadowColor = 'rgba(0,0,0,.4)'; c.shadowBlur = 16;
@@ -1318,6 +1322,7 @@ export class HighlightsRenderer {
     let fill = 'rgba(6,26,56,0.92)';
     if (key === 'christmas') fill = 'rgba(15,38,26,0.95)';
     else if (key === 'grand_final') fill = 'rgba(14,20,32,0.96)';
+    else if (th) { const g = c.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]); fill = g; }
     else if (key === 'derby') { const g = c.createLinearGradient(x, 0, x + w, 0); g.addColorStop(0, mixHex(this.hc, '#0b0f17', 0.72)); g.addColorStop(0.49, '#0b0f17'); g.addColorStop(0.51, '#0b0f17'); g.addColorStop(1, mixHex(this.ac, '#0b0f17', 0.72)); fill = g; }
     this.pill(x, y, w, h, fill, [0, 14, 14, 14]);
     c.restore();
@@ -1331,9 +1336,11 @@ export class HighlightsRenderer {
       for (let i = -h, k = 0; i < w + h; i += 16, k++) { c.strokeStyle = cols[k % 3]; c.beginPath(); c.moveTo(x + i, y + h + 4); c.lineTo(x + i + h + 8, y - 4); c.stroke(); }
       c.fillStyle = 'rgba(15,38,26,.97)'; c.beginPath(); c.roundRect(x + 5, y + 5, w - 10, h - 10, 10); c.fill();
     } else if (key === 'derby') { c.fillStyle = '#ff7043'; c.fillRect(x, y + h - 5, w, 5); }
+    else if (th) { c.strokeStyle = th.edge; c.lineWidth = 2; c.beginPath(); c.roundRect(x, y, w, h, [0, 14, 14, 14]); c.stroke(); }
     else if (key !== 'classic' && acc) { c.strokeStyle = acc; c.beginPath(); c.roundRect(x, y, w, h, [0, 14, 14, 14]); c.stroke(); }
     if (pre) { c.strokeStyle = PRE; c.lineWidth = 4; c.beginPath(); c.roundRect(x, y, w, h, [0, 14, 14, 14]); c.stroke(); }
     c.restore();
+    if (th && !pre) drawLookFx(c, x, y, w, h, th, this._T || 0);
     // contents
     if (this.A.league) this.leagueFit((x + 12) + (44) / 2, (y + 10) + (44) / 2, 44, 44);
     c.fillStyle = this.hc; c.fillRect(x + 70, y + 12, 6, 40);
@@ -1342,9 +1349,9 @@ export class HighlightsRenderer {
     this.text(`${sc[0]} - ${sc[1]}`, x + 246, y + 44, { size: 32, weight: 900, align: 'center', colour: DARK });
     this.text(this.away.code, x + 322, y + 44, { size: 32, weight: 900 });
     c.fillStyle = this.ac; c.fillRect(x + 408, y + 12, 6, 40);
-    const clockFill = pre ? PRE : key === 'finals' || key === 'grand_final' ? gold('#ffe08a', '#d4a900') : key === 'christmas' ? '#c62828' : key === 'derby' ? '#ff7043' : this.limeGrad(x + 428, y, x + 548, y);
+    const clockFill = pre ? PRE : th ? th.clock : key === 'finals' || key === 'grand_final' ? gold('#ffe08a', '#d4a900') : key === 'christmas' ? '#c62828' : key === 'derby' ? '#ff7043' : this.limeGrad(x + 428, y, x + 548, y);
     this.pill(x + 428, y + 12, 120, 40, clockFill, 10);
-    this.text(clock, x + 488, y + 42, { size: 26, weight: 900, align: 'center', colour: !pre && (key === 'finals' || key === 'grand_final' || key === 'derby') ? '#1b1400' : '#fff' });
+    this.text(clock, x + 488, y + 42, { size: 26, weight: 900, align: 'center', colour: th && !pre ? th.clockInk : !pre && (key === 'finals' || key === 'grand_final' || key === 'derby') ? '#1b1400' : '#fff' });
     // A test match (made-up players) says so on screen, in the broadcast and the highlights.
     if (this.fx?.test) {
       const tw = 330, tx = W / 2 - tw / 2, ty = 22;
