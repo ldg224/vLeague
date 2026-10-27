@@ -186,11 +186,13 @@ export class MatchPlayer {
   }
   marks() {
     if (this.view === 'highlights') {
-      return this.renderer('highlights').segs.filter(s => s.type === 'clip').map(s => ({ t: s.start, type: s.clip.kind === 'goal' ? 'goal' : ['yellow', 'red'].includes(s.clip.kind) ? 'card' : 'chance', card: s.clip.e.card === 'second_yellow' || s.clip.e.card === 'red' ? s.clip.e.card : undefined,
+      const sent = new Set(this.data.events.filter(e => e.type === 'card' && e.card === 'second_yellow').map(e => e.player));
+      return this.renderer('highlights').segs.filter(s => s.type === 'clip' && !(s.clip.e.card === 'yellow' && sent.has(s.clip.e.player))).map(s => ({ t: s.start, type: s.clip.kind === 'goal' ? 'goal' : ['yellow', 'red'].includes(s.clip.kind) ? 'card' : 'chance', card: s.clip.e.card === 'second_yellow' || s.clip.e.card === 'red' ? s.clip.e.card : undefined,
         label: s.clip.kind === 'goal' ? `Goal: ${this.names[s.clip.e.scorer] || ''}` : s.clip.kind }));
     }
     if (this.view === 'broadcast' && this.renderer('broadcast').markers) return this.renderer('broadcast').markers;
-    return this.data.events.filter(e => e.type === 'goal' || e.type === 'card').map(e => ({ t: e.t, type: e.type, card: e.card === 'second_yellow' ? 'second_yellow' : e.card === 'red' ? 'red' : undefined, label: e.type === 'goal' ? `${e.minute}' ${this.names[e.scorer] || ''}` : `${e.minute}' ${this.names[e.player] || ''}` }));
+    const sent = new Set(this.data.events.filter(e => e.type === 'card' && e.card === 'second_yellow').map(e => e.player));
+    return this.data.events.filter(e => (e.type === 'goal' || e.type === 'card') && !(e.card === 'yellow' && sent.has(e.player))).map(e => ({ t: e.t, type: e.type, card: e.card === 'second_yellow' ? 'second_yellow' : e.card === 'red' ? 'red' : undefined, label: e.type === 'goal' ? `${e.minute}' ${this.names[e.scorer] || ''}` : `${e.minute}' ${this.names[e.player] || ''}` }));
   }
   syncUi() {
     this.drawMarks();

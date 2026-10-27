@@ -39,7 +39,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
     this.buildPossession();
     this.markers = [
       ...this.goals.map(g => ({ t: g.t, type: 'goal', team: g.team, label: `${g.minute}' ${this.names[g.scorer] || ''}${g.own_goal ? ' (OG)' : ''}` })),
-      ...this.cards.map(k => ({ t: k.e.t, type: 'card', team: k.e.team, card: k.second ? 'second_yellow' : k.colour, label: `${k.e.minute}' ${k.second ? 'Second yellow, red' : k.colour === 'yellow' ? 'Yellow' : 'Red'} card: ${this.names[k.e.player] || ''}` })),
+      ...this.cards.filter(k => !(k.colour === 'yellow' && !k.second && this.cards.some(o => o.second && o.e.player === k.e.player))).map(k => ({   // a second yellow is one mark, not the first yellow as well t: k.e.t, type: 'card', team: k.e.team, card: k.second ? 'second_yellow' : k.colour, label: `${k.e.minute}' ${k.second ? 'Second yellow, red' : k.colour === 'yellow' ? 'Yellow' : 'Red'} card: ${this.names[k.e.player] || ''}` })),
       ...(P.length > 1 ? [{ t: P[0].end_t, type: 'ht', label: 'Half-time' }] : []),
       { t: this.t1, type: 'ft', label: 'Full-time' },
     ].sort((a, b) => a.t - b.t);

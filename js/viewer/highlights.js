@@ -843,16 +843,33 @@ export class HighlightsRenderer {
     }
   }
 
-  // Referee: black kit; runs in after a foul and holds the card up, with its colour shown above his head.
+  // The officials' kit for this match: one shirt for the referee and both assistants, picked in the usual order of preference
+  // (black, yellow, green, orange, pink, teal) as the first that clashes with neither team's outfield or goalkeeper shirts.
+  officialsKit() {
+    if (this._offKit) return this._offKit;
+    const rgb = s => { const n = parseInt(String(s).slice(1, 7), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+    const dist = (a, b) => { const x = rgb(a), y = rgb(b), rm = (x[0] + y[0]) / 2; return Math.sqrt((2 + rm / 256) * (x[0] - y[0]) ** 2 + 4 * (x[1] - y[1]) ** 2 + (2 + (255 - rm) / 256) * (x[2] - y[2]) ** 2); };
+    const worn = [this.hc, this.ac, '#a855f7', '#f5b042'];
+    for (const s of ['home', 'away']) for (const k of ['field', 'gk']) { const m = this.kitArt?.[s]?.[k]?.main; if (m) worn.push(m); }
+    const opts = ['#16181d', '#f2d21b', '#39d353', '#f97316', '#ec4899', '#14b8a6'];
+    const score = o => Math.min(...worn.filter(w => /^#[0-9a-f]{6}/i.test(w)).map(w => dist(o, w)));
+    let best = opts[0], bs = -1;
+    for (const o of opts) { const s = score(o); if (s >= 260) { best = o; break; } if (s > bs) { bs = s; best = o; } }
+    const dark = rgb(best).reduce((a, b) => a + b) < 300;
+    return this._offKit = { shirt: best, trim: dark ? '#f2d21b' : '#16181d', shorts: dark ? '#0b0d11' : '#16181d' };
+  }
+
+  // Referee: the officials' kit; runs in after a foul and holds the card up, with its colour shown above his head.
   drawReferee(cam, it, tSim) {
     const c = this.c, p = cam.p(it.x, it.y); if (!p) return;
     const head = cam.p(it.x, it.y, 1.85); if (!head) return;
     const bh = p[1] - head[1], bw = Math.max(12, bh * 0.42), bx = p[0], top = head[1];
     const r = Math.max(10, p[2] * 0.6);
     c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(bx + r * 0.4, p[1], r * 1.05, r * 0.42, 0, 0, Math.PI * 2); c.fill();
-    const g = c.createLinearGradient(bx - bw, 0, bx + bw, 0); g.addColorStop(0, '#2b2f38'); g.addColorStop(1, DARK);
-    c.fillStyle = g; c.beginPath(); c.roundRect(bx - bw / 2, top + bh * 0.28, bw, bh * 0.72, bw / 2); c.fill();
-    c.fillStyle = LIME; c.fillRect(bx - bw / 2, top + bh * 0.3, bw, Math.max(2, bh * 0.04));   // collar trim
+    const K = this.officialsKit();
+    c.fillStyle = K.shirt; c.beginPath(); c.roundRect(bx - bw / 2, top + bh * 0.28, bw, bh * 0.5, bw / 2); c.fill();   // top
+    c.fillStyle = K.shorts; c.fillRect(bx - bw / 2 + 1, top + bh * 0.72, bw - 2, bh * 0.28);                          // shorts
+    c.fillStyle = K.trim; c.fillRect(bx - bw / 2, top + bh * 0.3, bw, Math.max(2, bh * 0.04));                        // collar trim
     c.fillStyle = '#e8b894'; c.beginPath(); c.arc(bx, top + bh * 0.16, bw * 0.34, 0, Math.PI * 2); c.fill();
     if (it.card) {
       const sc = it.card.second ? secondCardPhase(tSim - it.card.t) : null;   // a second yellow: yellow up, hand down, pocket, red up
@@ -880,15 +897,17 @@ export class HighlightsRenderer {
     }
   }
 
-  // An assistant referee: the referee's build in a lime top, with a checked flag (down by his side, straight up for an offside, waving for a foul).
+  // An assistant referee: the referee's build and kit, with a checked flag (down by his side, straight up for an offside, waving for a foul).
   drawAssistant(cam, it) {
     const c = this.c, p = cam.p(it.x, it.y); if (!p) return;
     const head = cam.p(it.x, it.y, 1.85); if (!head) return;
     const bh = p[1] - head[1], bw = Math.max(12, bh * 0.42), bx = p[0], top = head[1];
     const r = Math.max(10, p[2] * 0.6);
     c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(bx + r * 0.4, p[1], r * 1.05, r * 0.42, 0, 0, Math.PI * 2); c.fill();
-    c.fillStyle = LIME; c.beginPath(); c.roundRect(bx - bw / 2, top + bh * 0.28, bw, bh * 0.5, bw / 2); c.fill();   // top
-    c.fillStyle = DARK; c.fillRect(bx - bw / 2 + 1, top + bh * 0.72, bw - 2, bh * 0.28);                                  // shorts
+    const K = this.officialsKit();
+    c.fillStyle = K.shirt; c.beginPath(); c.roundRect(bx - bw / 2, top + bh * 0.28, bw, bh * 0.5, bw / 2); c.fill();   // top, the referee's
+    c.fillStyle = K.shorts; c.fillRect(bx - bw / 2 + 1, top + bh * 0.72, bw - 2, bh * 0.28);                          // shorts
+    c.fillStyle = K.trim; c.fillRect(bx - bw / 2, top + bh * 0.3, bw, Math.max(2, bh * 0.04));                        // collar trim
     c.fillStyle = '#e8b894'; c.beginPath(); c.arc(bx, top + bh * 0.16, bw * 0.34, 0, Math.PI * 2); c.fill();
     const f = it.flag, k = f ? easeOut(f.k) : 0, shoulder = [bx + bw * 0.35, top + bh * 0.34], hip = [bx + bw * 0.5, top + bh * 0.66];
     const tip = [bx + bw * 0.5, top - bh * 0.34 * k];                       // the flag raised straight up
