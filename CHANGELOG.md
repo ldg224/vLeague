@@ -3,6 +3,12 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.17.1 (2026-10-27)
+
+Headlines: Broadcast view is back
+
+**Fixed:** the Broadcast / Full match view had disappeared from the match page. A comment added in 1.17.0 swallowed part of a line in the broadcast view's code, so the view failed to load and the page quietly hid its tab. Highlights, the scoreboard and the tactical view were not affected.
+
 ## 1.17.0 (2026-10-27)
 
 Headlines: Event scoreboards | A look for every round or match
