@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.16.2 (2026-10-27)
+
+Headlines: More realistic shots
+
+**Changed:** shots are now aimed at different heights, so goals go in across the whole frame (including the top corners) instead of almost always low. Better finishers go for the corners more often and miss more when they do, and long shots balloon over the bar more. Results and shot counts stay in the realistic range (about 3.3 goals and 27 shots a match).
+
+
 ## 1.16.1 (2026-10-27)
 
 Headlines: Stakes only in the real season | Cleaner pages

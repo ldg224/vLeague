@@ -44,10 +44,16 @@ TUNING = {
     'loft_error': 0.11,           # landing error as a fraction of distance, 1 sd
 
     # Shooting execution error (degrees, 1 sd)
-    'shot_error_base': 5.0,
+    'shot_error_base': 5.5,
     'shot_error_skill': 12.0,
     'shot_error_pressure': 7.0,
     'header_error_extra': 4.0,
+    'shot_error_height': 0.3,     # vertical error of a shot, as a fraction of its sideways error (it was 0.7, which kept most shots on the ground or over the bar)
+    'shot_error_height_long': 0.5, # added to that fraction for a long shot (ramps in from 12 m to full at 32 m): long shots balloon over the bar far more often than close ones
+    'shot_high_base': 0.10,       # chance a footed shot is aimed high (top corner), for a 0-rated shooter
+    'shot_high_skill': 0.30,      # added for a 100-rated finisher / long-shot taker
+    'shot_high_error': 1.1,       # multiplier on the sideways (and vertical) error of a shot aimed at the top corner
+    'shot_mid_share': 0.45,       # of the rest, the share driven at keeper height rather than along the ground
 
     # Time on the ball: after this many seconds a carrier starts to feel the need to release it, and holding or dribbling
     # scores lower by this much per extra second (threat values run 0.01 to 0.3).

@@ -430,6 +430,23 @@ class Match:
         """Seconds from the strike to the keeper's first move: his reflexes, plus a little longer to read and jump for a ball going high."""
         return TUNING['gk_reaction'] + 0.15 * (1 - gk.a('reflexes')) + (TUNING['gk_high_delay'] if z > 1.5 else 0.0)
 
+    def _shot_height(self, p, header, gk, gx):
+        """Where up the goal this shot is aimed (metres at the line). Headers keep their old spread. A footed shot is a low drive along the
+        ground, a drive at keeper height, or (more often from a good finisher or a good long-range shot) placed high into the top corner.
+        Higher shots are harder to keep on target, so they are only taken where the shooter has the quality for them."""
+        rng = self.rng
+        if header:
+            return rng.choice((rng.uniform(0.15, 0.6), rng.uniform(0.3, 2.1)))
+        quality = 0.5 * p.a('finishing') + 0.5 * p.a('long_shots')
+        high = TUNING['shot_high_base'] + TUNING['shot_high_skill'] * quality
+        mid = TUNING['shot_mid_share']
+        r = rng.random()
+        if r < high:
+            return rng.uniform(1.6, 2.3)
+        if r < high + mid * (1 - high):
+            return rng.uniform(0.6, 1.5)
+        return rng.uniform(0.1, 0.6)
+
     def _unsaveable_aim(self, gk, gx, speed, z0):
         """The corner to aim a scripted goal at: (y, z, margin), the margin being how far (metres) the ball stays out of this keeper's reach at the
         nearest point, given where he stands now, his reaction and his dive speed. A keeper who reads the shot perfectly is assumed."""
@@ -502,7 +519,7 @@ class Match:
         aim_y = side + inset if side == GOAL_Y1 else side - inset
         if penalty and rng.random() < 0.12:
             aim_y = 34 + rng.uniform(-0.8, 0.8)
-        aim_z = rng.choice((rng.uniform(0.15, 0.6), rng.uniform(0.3, 2.1)))
+        aim_z = self._shot_height(p, header, gk, gx)
         keeper_guess = None
         power = 0.55 + 0.45 * rng.random() * (0.5 + 0.5 * finishing)
         speed = (11 + 5 * finishing) if header else (19 + 13 * power * (0.7 + 0.3 * finishing))
@@ -549,6 +566,8 @@ class Match:
             sigma += TUNING['header_error_extra']
         if penalty:
             sigma *= 0.55
+        elif aim_z > 1.5 and not header:
+            sigma *= TUNING['shot_high_error']   # going for the top corner: more shots miss, so it pays off only for the good finisher
         if forced or (self.only_script_goals and not penalty and not header):
             sigma = 0.0
         sigma *= 1 + max(0.0, d - 18) / 40
@@ -556,7 +575,7 @@ class Match:
         ux, uy = rotate(dx / d, dy / d, ang)
         t_flight = d / (speed * 0.93)
         vz = (aim_z - z0 + 0.5 * physics.GRAVITY * t_flight * t_flight) / t_flight
-        vz += rng.gauss(0, speed * math.tan(math.radians(sigma)) * 0.7)
+        vz += rng.gauss(0, speed * math.tan(math.radians(sigma)) * (TUNING['shot_error_height'] + TUNING['shot_error_height_long'] * min(1.0, max(0.0, (d - 12) / 20))))
         h = math.sqrt(max(speed * speed - vz * vz, 1.0))
         b.vx, b.vy, b.vz = ux * h, uy * h, vz
         b.z = z0

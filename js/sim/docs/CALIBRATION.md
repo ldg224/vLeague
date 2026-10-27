@@ -67,6 +67,21 @@ What changed:
 
 All matches still pass the validator (no teleporting, speeds and ball speed within limits).
 
+## Shot height and long shots (vLeague 1.16.2)
+
+96 seeded matches on a synthetic league, footed shots that reach the goal line (the engine's predicted crossing, which includes balls over the bar; the replay frames lose those once the ball goes dead):
+
+| Measure | Result | Real range |
+|---|---|---|
+| Goals per match (both teams) | 3.33 (se 0.18) | 2.2 - 3.3 (upper edge; xG is 3.16, as in the first calibration) |
+| Shots per match | 26.7 | 18 - 32 |
+| On target | 36% | 30 - 40% |
+| Conversion | 10.8% | 8 - 14% |
+| Woodwork per match | 0.68 | 0.5 - 0.7 |
+| Over the bar / in frame / wide | 17% / 34% / 49% | |
+
+What changed: shots are aimed low, at keeper height or at the top corner (better finishers go high more often, and miss more when they do), `shot_error_height` 0.7 to 0.3 with `shot_error_height_long` adding up to 0.5 for shots from 12 to 32 m (long shots balloon over the bar), `shot_error_base` 5.0 to 5.5. Before, goals were almost all low; now they land across the frame. All matches pass the validator and the engine tests.
+
 ## Known gaps / next tuning targets
 
 * **Offsides a little high, corners a little low.** Both are tuned by players' timing and
