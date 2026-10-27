@@ -90,7 +90,10 @@ export function swatch(look) {
 const FX_NAMES = { shine: 'Shine', snow: 'Snow', lights: 'Lights', stars: 'Stars', sparkle: 'Sparkle', confetti: 'Confetti', moustache: 'Moustache' };
 export const fxNames = look => (look.theme?.fx || []).map(n => FX_NAMES[n]).filter(Boolean);
 
-export const themeVars = t => (t ? `--t-bg1:${t.bg[0]};--t-bg2:${t.bg[1]};--t-edge:${t.edge};--t-ink:${t.ink};--t-s1:${t.score[0]};--t-s2:${t.score[1]};--t-p1:${t.plate[0]};--t-p2:${t.plate[1]};--t-pink:${t.plateInk};--t-glow:${t.glow};--t-clock:${t.clock};--t-clockink:${t.clockInk};` : '');
+const MOUSTACHE = 'M36 8C32 3 25 3 19 6C13 9 8 8 4 4C3 3 1 4 2 6C4 13 12 17 20 16C26 15.5 31 13 36 15C41 13 46 15.5 52 16C60 17 68 13 70 6C71 4 69 3 68 4C64 8 59 9 53 6C47 3 40 3 36 8Z';
+// The moustache as a picture for CSS (the dash between the scores); encoded so it can sit inside a style attribute.
+const MOUS_URI = encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 20"><path d="${MOUSTACHE}"/></svg>`).replace(/[!'()*]/g, c => `%${c.charCodeAt(0).toString(16)}`);
+export const themeVars = t => (t ? `${t.fx.includes('moustache') ? `--mous:url(data:image/svg+xml,${MOUS_URI});` : ''}--t-bg1:${t.bg[0]};--t-bg2:${t.bg[1]};--t-edge:${t.edge};--t-ink:${t.ink};--t-s1:${t.score[0]};--t-s2:${t.score[1]};--t-p1:${t.plate[0]};--t-p2:${t.plate[1]};--t-pink:${t.plateInk};--t-glow:${t.glow};--t-clock:${t.clock};--t-clockink:${t.clockInk};` : '');
 
 // ------------------------------------------------------------------ decoration (DOM)
 // Spots are fixed, not random, so a scoreboard looks the same every time it is drawn (and a redraw doesn't make it jump).
@@ -106,7 +109,6 @@ export function starPoints(n, cx, cy, r) {
 }
 // The Southern Cross: four seven-pointed stars and one smaller five-pointed one.
 const CROSS = [[48, 12, 7, 9], [50, 88, 7, 10], [16, 52, 7, 8], [82, 40, 7, 8], [64, 64, 5, 4.5]];
-const MOUSTACHE = 'M2 15C6 4 19 1 27 9c3 3 6 3 9 1 3 2 6 2 9-1C53 1 66 4 70 15c-8-5-17-5-24 1-4 3-7 2-10-1-3 3-6 4-10 1C19 10 10 10 2 15Z';
 
 const FX_HTML = {
   shine: () => '<span class="fx fx-shine"></span>',
@@ -115,7 +117,7 @@ const FX_HTML = {
   stars: () => `<svg class="fx fx-stars" viewBox="0 0 100 100" aria-hidden="true">${CROSS.map(([x, y, n, r]) => `<polygon points="${starPoints(n, x, y, r)}"/>`).join('')}</svg>`,
   sparkle: () => `<span class="fx fx-sparkle">${SPARKLE.map(([x, y, d]) => `<i style="--x:${x}%;--y:${y}%;--d:${d}s"></i>`).join('')}</span>`,
   confetti: () => `<span class="fx fx-confetti">${CONFETTI.map(([x, y, r], i) => `<i style="--x:${x}%;--y:${y}%;--r:${r}deg;--i:${i}"></i>`).join('')}</span>`,
-  moustache: () => `<span class="fx fx-mous"><svg viewBox="0 0 72 22" aria-hidden="true"><path d="${MOUSTACHE}"/></svg></span>`,
+  moustache: () => `<span class="fx fx-mous"><svg viewBox="0 0 72 20" aria-hidden="true"><path d="${MOUSTACHE}"/></svg></span>`,
 };
 export const fxHtml = names => (names || []).filter(n => FX_HTML[n]).map(n => FX_HTML[n]()).join('');
 export const MOUSTACHE_PATH = MOUSTACHE;

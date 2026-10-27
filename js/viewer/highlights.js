@@ -6,7 +6,7 @@
 
 import { safeColour, onColour, logoPath } from './ui.js';
 import { resolveLook } from '../looks.js';
-import { drawLookFx } from './look-canvas.js';
+import { drawLookFx, drawMoustache } from './look-canvas.js';
 import { kickoff } from './data.js';
 import { buildEffects } from './effects.js';
 import { kitSprite, cleanDesign, drawPrint, TURNS, turnIndex } from '../kit.js';
@@ -1346,7 +1346,11 @@ export class HighlightsRenderer {
     c.fillStyle = this.hc; c.fillRect(x + 70, y + 12, 6, 40);
     this.text(this.home.code, x + 88, y + 44, { size: 32, weight: 900 });
     this.pill(x + 184, y + 10, 124, 44, '#ffffff', 10);
-    this.text(`${sc[0]} - ${sc[1]}`, x + 246, y + 44, { size: 32, weight: 900, align: 'center', colour: DARK });
+    if (th?.fx.includes('moustache')) {   // Movember: a moustache for the dash
+      this.text(`${sc[0]}`, x + 246 - 26, y + 44, { size: 32, weight: 900, align: 'right', colour: DARK });
+      this.text(`${sc[1]}`, x + 246 + 26, y + 44, { size: 32, weight: 900, align: 'left', colour: DARK });
+      drawMoustache(c, x + 246, y + 31, 34, th.plate[0]);
+    } else this.text(`${sc[0]} - ${sc[1]}`, x + 246, y + 44, { size: 32, weight: 900, align: 'center', colour: DARK });
     this.text(this.away.code, x + 322, y + 44, { size: 32, weight: 900 });
     c.fillStyle = this.ac; c.fillRect(x + 408, y + 12, 6, 40);
     const clockFill = pre ? PRE : th ? th.clock : key === 'finals' || key === 'grand_final' ? gold('#ffe08a', '#d4a900') : key === 'christmas' ? '#c62828' : key === 'derby' ? '#ff7043' : this.limeGrad(x + 428, y, x + 548, y);

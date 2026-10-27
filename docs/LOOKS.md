@@ -38,7 +38,7 @@ my_look: {
 Every colour is `#rrggbb`; anything else is replaced by the base theme's colour, and unknown effect names are dropped, so a look stored in the database can't put anything else on the page. A `looks` table row with `settings.theme` overlays the preset of the same key (field by field), and a row with no preset at all still works, so a look can be made or tuned in the database without a release.
 
 ## Effects (`FX`)
-`shine` (a slow sweep) · `snow` · `lights` (a string of coloured bulbs along the top) · `stars` (the Southern Cross) · `sparkle` · `confetti` · `moustache` (a small line-art moustache with hairlines).
+`shine` (a slow sweep) · `snow` · `lights` (a string of coloured bulbs along the top) · `stars` (the Southern Cross) · `sparkle` · `confetti` · `moustache` (a big handlebar moustache behind the score, and the dash between the scores becomes a moustache; on the video bug too).
 
 ## Adding a look (the usual job)
 1. Add the entry to `PRESETS` in `js/looks.js`. The key is lowercase letters, digits and `_` (2 to 24).

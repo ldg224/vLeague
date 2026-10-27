@@ -1,3 +1,9 @@
+// A moustache (the Movember dash between the scores), centred on (cx, cy), `w` wide.
+export function drawMoustache(c, cx, cy, w, fill) {
+  const k = w / 72;
+  c.save(); c.translate(cx - w / 2, cy - 10 * k); c.scale(k, k); c.fillStyle = fill; c.fill(new Path2D(MOUSTACHE_PATH)); c.restore();
+}
+
 // A themed look's decoration for the score bug drawn on the canvas (the broadcast view and the highlights): the same effects as the
 // page's scoreboard (js/looks.js FX, css/scoreboard.css), drawn small. The bug is 560 x 64; (x, y) is its top left corner.
 import { MOUSTACHE_PATH } from '../looks.js';
@@ -41,8 +47,8 @@ export function drawLookFx(c, x, y, w, h, th, t = 0) {
         c.fillStyle = [th.score[0], th.score[1], th.ink][i % 3]; c.save(); c.translate(x + w * fx, y + h * fy); c.rotate(a); c.fillRect(-1.5, -4, 3, 8); c.restore();
       });
     } else if (name === 'moustache') {
-      c.translate(x + 246 - 12.2, y + h - 9.4); c.scale(0.34, 0.34);   // in the strip under the score box
-      const p = new Path2D(MOUSTACHE_PATH); c.globalAlpha = 0.7; c.fillStyle = `${th.plate[0]}55`; c.strokeStyle = th.plate[0]; c.lineWidth = 2.4; c.fill(p); c.stroke(p);
+      c.translate(x + 246 - 130, y + h / 2 - 10 * 260 / 72); c.scale(260 / 72, 260 / 72);   // big, behind the score box (drawn before it)
+      const p = new Path2D(MOUSTACHE_PATH); c.globalAlpha = 0.8; c.fillStyle = `${th.plate[0]}aa`; c.strokeStyle = th.plate[0]; c.lineWidth = 0.7; c.fill(p); c.stroke(p);
     } else if (name === 'shine') {
       const k = ((t / 6) % 1) * 1.6 - 0.3, g = c.createLinearGradient(x + w * (k - 0.15), 0, x + w * (k + 0.15), 0);
       g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, 'rgba(255,255,255,.13)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(x, y, w, h);

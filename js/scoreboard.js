@@ -28,7 +28,7 @@ const colourVars = (h, a) => `--h:${HEX.test(h || '') ? h : '#38bdf8'};--a:${HEX
 export function scoreboard(o) {
   const { fx, season, look, crests, score, state, goals, meta, h, a } = o, plate = roundPlate(season, fx);
   const banner = look.banner && look.banner.toLowerCase() !== plate.big.toLowerCase() ? look.banner : '';
-  return `<div class="sb" data-look="${esc(look.key)}"${look.theme ? ' data-themed' : ''} style="${themeVars(look.theme)}${look.accent ? `--look:${esc(look.accent)};--look-ink:${inkOn(look.accent)};` : ''}${colourVars(o.hColour, o.aColour)}">
+  return `<div class="sb" data-look="${esc(look.key)}"${look.theme ? ` data-themed data-fx="${esc(look.theme.fx.join(' '))}"` : ''} style="${themeVars(look.theme)}${look.accent ? `--look:${esc(look.accent)};--look-ink:${inkOn(look.accent)};` : ''}${colourVars(o.hColour, o.aColour)}">
     <div class="sb-plate">${look.ornament ? `<span class="sb-orn" aria-hidden="true">${esc(look.ornament)}</span>` : ''}
       <span class="sb-roundbox"><span class="sb-round">${esc(plate.big)}</span>${plate.small ? `<small class="sb-sub">${esc(plate.small)}</small>` : ''}</span>
       ${banner ? `<span class="sb-banner">${esc(banner)}</span>` : ''}${look.ornament ? `<span class="sb-orn" aria-hidden="true">${esc(look.ornament)}</span>` : ''}</div>
