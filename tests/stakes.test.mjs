@@ -113,7 +113,7 @@ test('the leaderboard is along the top, above the cards, and hidden when switche
   const board = [1, 2, 3, 4, 5, 6, 7].map(i => ({ rank: i, club: 'AAA', name: 'M' + i, coins: 2000 - i, won: 1, settled: 2, mine: i === 7 }));
   const html = stakesView(state({ board, slate: [line(1)] }), o);
   assert.ok(html.indexOf('st-boardstrip') > -1 && html.indexOf('st-boardstrip') < html.indexOf('Round 1 stakes'));
-  assert.equal((html.match(/<li class="[^"]*"><i class="st-rank">/g) || []).length, 6);   // the top five and you
+  assert.equal((html.match(/<li class="[^"]*"><i class="st-rank">/g) || []).length, 7);   // every club
   assert.match(html, /class="me"><i class="st-rank">7/);
   assert.doesNotMatch(stakesView(state({ board, slate: [line(1)], cfg: { ...DEFAULTS, show_board: false } }), o), /st-boardstrip/);
 });

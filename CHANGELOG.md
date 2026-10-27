@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.18.1 (2026-10-28)
+
+Headlines: Every club on the Stakes leaderboard
+
+**Fixed:** the Stakes leaderboard left out clubs whose manager had not opened Stakes yet, and left out accounts with the office role (including the Turtle account), and only showed the top five. It now lists every club, by club name, with each club's Coins (a club that has not played shows the starting Coins).
+
+**Changed:** the leaderboard rows use the club name instead of the manager's name, and the tour says "richest clubs".
+
+Database change: 0072 (the leaderboard lists every club), already applied.
+
 ## 1.18.0 (2026-10-27)
 
 Headlines: Assistant referees in the picture | Throw-ins and corners you can see

@@ -140,10 +140,10 @@ function predictSection(rows, st, o) {
     <ul class="st-prs">${list.map(l => predictRow(l, st, o)).join('')}</ul></section>`).join('');
 }
 
-// The leaderboard along the top: the leaders in a row, and you at the end if you are further down.
+// The leaderboard along the top: every club, by club name, richest first.
 function boardStrip(b, o) {
-  const top = b.filter(r => r.rank <= 5), me = b.find(r => r.mine && r.rank > 5), list = me ? [...top, me] : top;
-  return `<section class="lg-card st-boardstrip" data-tour="board"><div class="lg-card-head"><h2>Leaderboard</h2></div>
+  const list = b;
+  return `<section class="lg-card st-boardstrip" data-tour="board"><div class="lg-card-head"><h2>Leaderboard</h2><span class="st-lucount">${b.length} club${b.length === 1 ? '' : 's'}</span></div>
     ${list.length ? `<ol class="st-bs">${list.map(r => `<li class="${r.mine ? 'me' : ''}"><i class="st-rank">${r.rank}</i>${r.club ? o.crest(r.club, 28) : ''}<span class="st-bn"><b>${esc(r.name)}</b><em>${r.settled ? `${r.won} of ${r.settled} right` : 'No picks settled yet'}</em></span><b class="st-bc">${coins(r.coins)}</b></li>`).join('')}</ol>`
       : '<p class="st-empty">Nobody is on the board yet.</p>'}</section>`;
 }
@@ -198,7 +198,7 @@ export const stepsFor = (cfg, hasScore = false) => [
   { target: '.st-stake .st-sides', title: 'Over or under', text: 'Think he’ll do more than the line? Tap blue OVER. Fewer? Tap red UNDER. Lines end in .5, so there is always a winner.', pick: true },
   ...(hasScore ? [{ target: '.st-predict', title: 'Game predictors', text: `Below the cards, every game has a predictor: who wins? Tap Team A win, Draw or Team B win, tap the Stake pill to change your stake, then Lock in. A right win pays ${Number(cfg.result_win_mult)} times your stake and a right draw pays ${Number(cfg.result_draw_mult)} times.` }] : []),
   { target: '.st-sheet', title: 'Stake some Coins', text: `Choose how many Coins to put on it. Get it right and you get ${Number(cfg.multiplier)} times your stake back; get it wrong and the stake is gone. You can take a pick back until picks close${cfg.lock_minutes > 0 ? ` (${cfg.lock_minutes} minutes before kick-off)` : ' (kick-off)'}.` },
-  { target: '[data-tour="board"]', title: 'The leaderboard', text: 'Picks settle by themselves once the match is played. The richest managers sit at the top.' },
+  { target: '[data-tour="board"]', title: 'The leaderboard', text: 'Picks settle by themselves once the match is played. The richest clubs sit at the top.' },
 ];
 export const STEPS = stepsFor(DEFAULTS);
 
