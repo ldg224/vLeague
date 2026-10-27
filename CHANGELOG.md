@@ -3,7 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
-## 1.17.2 (2026-10-27)
+## 1.18.0 (2026-10-27)
+
+Headlines: Assistant referees in the picture | Throw-ins and corners you can see
+
+**Added:** in the Full match / Broadcast view, an offside now shows the assistant referee on the touchline with the flag held straight up. The camera opens out a little to hold him, the flag and the players on the offside line, then eases back.
+
+**Added:** when the ball goes out, the assistant on that side runs to the spot and shows the restart with the flag, pointing the way the ball is going: a throw-in towards the goal the throwing team is attacking, a goal kick up the pitch, a corner down at the corner flag. The camera now frames the touchline or the corner for these, so throw-ins on the near side, which used to be out of the bottom of the picture, are in view. Nothing is zoomed in on: it is the normal wide shot, a little wider where it needs to be.
+
+**Changed:** the flag is bigger, so it reads in the wide shot.
 
 **Fixed:** the browser console warning "Multiple GoTrueClient instances detected". Two parts of a page asking for the database at the same moment could each build their own sign-in client; they now share one. It was harmless, and signing in and out work as before.
 

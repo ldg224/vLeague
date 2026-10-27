@@ -136,7 +136,45 @@ export class BroadcastRenderer extends HighlightsRenderer {
     keep();
     for (const dir of [1, -1]) { smooth(X, 0.25, dir); smooth(Y, 0.25, dir); }
     keep();
+    // Moments where the assistant referee must be in the picture (a flag up for offside, the sign for a throw-in, goal kick or corner): the camera
+    // opens out and moves to a spot that holds the assistant, his flag and the place the play restarts, then eases back (1.18). Done last, so the smoothing
+    // above can't water it down, and while the ball is dead (so it never fights the keep-the-ball-in-frame rule).
+    for (const w of this.framings()) {
+      for (let i = Math.max(0, Math.floor((w.from - this.t0) / CAM_DT)); i < n && tAt(i) < w.to; i++) {
+        const t = tAt(i), a = easeInOut(seg01(t, w.from, w.from + 1.2)) * (1 - easeInOut(seg01(t, w.to - 1.2, w.to)));
+        X[i] = lerp(X[i], w.x, a); Y[i] = lerp(Y[i], w.y, a); D[i] = lerp(D[i], w.d, a);
+      }
+    }
     this.cam = { X, Y, D };
+  }
+  // The windows that need the assistant referee in shot: { from, to, x, y, d } (the camera's target and distance). Each is the closest view, from
+  // the usual angle, that has every point that matters (the assistant from his boots to the raised flag, and where the play is) inside the picture
+  // and clear of the score box. Nothing is tighter than the normal wide shot, so nobody is zoomed in on.
+  framings() {
+    const ev = this.d.events, out = [];
+    const fit = (pts, tx) => {
+      for (let d = 50; d <= 92; d += 3) {
+        const ok = [];
+        for (let ty = 6; ty <= 70; ty++) {
+          const cam = makeCam(tx, ty, d, 28, 40);
+          if (pts.every(([x, y, z]) => { const p = cam.p(x, y, z); return p && p[1] > 130 && p[1] < H - 70 && p[0] > 90 && p[0] < W - 90; })) ok.push(ty);
+        }
+        if (ok.length) return [tx, ok[Math.floor(ok.length / 2)], d];
+      }
+      return null;
+    };
+    const add = (from, to, t, focus, tx) => {
+      const ar = this.assistants(this.fr.at(t), t).find(a => a.flag);
+      if (!ar) return;
+      const f = fit([[ar.x, ar.y, 0], [ar.x, ar.y, 2.9], ...focus], tx ?? (ar.x + focus[0][0]) / 2);
+      if (f) out.push({ from, to, x: f[0], y: f[1], d: f[2] });
+    };
+    for (const o of ev.filter(e => e.type === 'offside')) add(o.t + 0.1, o.t + 5.6, o.t + 1, [[o.x, o.y, 0], [o.x, o.y, 1.9]]);
+    this.assistants(this.fr.at(this.t0), this.t0);   // (makes the list of restarts)
+    for (const { r, from, to } of this.arEvents.restarts) {
+      add(from, to + 0.4, r.t - 0.05, [[r.x, r.y, 0], [r.x, r.y, 1.9]]);
+    }
+    return out;
   }
   // A hard cut in the camera path: the second-half kick-off (everyone is back in position).
   cutBefore(i) { return i === this.camHalf; }

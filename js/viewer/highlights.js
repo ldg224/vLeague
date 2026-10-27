@@ -714,30 +714,53 @@ export class HighlightsRenderer {
     });
   }
   // S-34: two assistant referees, one on each touchline, each keeping level with the second-last defender of the goal in his half (the offside
-  // line). The flag goes straight up for an offside, and waves for a foul near him that earned a card or a penalty.
+  // line). The flag goes straight up for an offside, and waves for a foul near him that earned a card or a penalty. When the ball goes out, the
+  // assistant on that side runs to the spot and shows the restart with the flag, pointing the way the ball is going: a throw-in towards the goal
+  // the throwing team attacks, a goal kick up the pitch, a corner down at the corner flag (1.18).
   assistants(st, t) {
     if (!this.arEvents) {
-      const ev = this.d.events, near = (e, y) => Math.abs(e.y - y) < 14;
+      const ev = this.d.events, near = (e, y) => Math.abs(e.y - y) < 14, outs = ev.filter(e => e.type === 'out');
       this.arEvents = {
         offside: ev.filter(e => e.type === 'offside'),
         fouls: ev.filter(e => e.type === 'foul' && (e.penalty || ev.some(c => c.type === 'card' && c.player === e.player && c.t >= e.t && c.t - e.t < 3))),
         near,
+        // each throw-in, goal kick and corner, with the moment the ball went out before it (the flag is up from just after that until just after the restart)
+        restarts: ev.filter(e => e.type === 'throw_in' || e.type === 'goal_kick' || e.type === 'corner').map(r => {
+          const o = outs.filter(q => q.t <= r.t && r.t - q.t < 45).pop();
+          return { r, from: (o ? o.t : r.t - 6) + 0.4, to: r.t + 0.6, idx: r.type === 'goal_kick' || r.y >= 34 ? 1 : 0 };   // a goal kick is shown by the assistant on the camera's side of the pitch
+        }),
       };
     }
-    const { offside, fouls, near } = this.arEvents, out = [];
-    for (const [goalX, y] of [[0, -1.6], [105, 69.6]]) {
-      // the team defending this goal is the one whose keeper is nearer to it
-      const gk = side => { const gi = [...this.gkIdx].find(i => (i < this.nHome) === (side === 0)); return gi == null ? 52.5 : st.players[gi][0]; };
+    const { offside, fouls, near, restarts } = this.arEvents, out = [];
+    // the team defending a goal is the one whose keeper is nearer to it
+    const gk = side => { const gi = [...this.gkIdx].find(i => (i < this.nHome) === (side === 0)); return gi == null ? 52.5 : st.players[gi][0]; };
+    [[0, -1.6], [105, 69.6]].forEach(([goalX, y], idx) => {
       const side = Math.abs(gk(0) - goalX) < Math.abs(gk(1) - goalX) ? 0 : 1;
       const xs = st.players.filter((_, i) => (i < this.nHome) === (side === 0)).map(p => p[0]).sort((a, b) => Math.abs(a - goalX) - Math.abs(b - goalX));
-      const x = clamp(xs[1] ?? xs[0] ?? 52.5, goalX ? 52.5 : 0, goalX ? 105 : 52.5), half = e => (e.x > 52.5) === !!goalX;
+      let x = clamp(xs[1] ?? xs[0] ?? 52.5, goalX ? 52.5 : 0, goalX ? 105 : 52.5);
+      const half = e => (e.x > 52.5) === !!goalX;
+      // a restart on his touchline: he runs to the spot (at a jog), and back to the offside line after
+      let rs = null, w = 0;
+      for (const q of restarts) {
+        if (q.idx !== idx || t < q.from || t >= q.to + 8) continue;
+        const spot = this.arSpot(q.r), run = clamp(Math.abs(x - spot) / 7, 0.6, 6);
+        const a = seg01(t, q.from, q.from + run) * (1 - seg01(t, q.to, q.to + run));
+        if (a >= w) { w = a; rs = q; x = lerp(x, spot, a); }
+      }
       let flag = null;
       const o = offside.find(e => t >= e.t + 0.4 && t < e.t + 4 && half(e)); if (o) flag = { kind: 'up', k: seg01(t, o.t + 0.4, o.t + 0.9) };
+      if (!flag && rs && t >= rs.from + 0.3 && t < rs.to + 0.5) {
+        const r = rs.r, team = r.team === this.home.code ? 0 : 1, atk = gk(team) < 52.5 ? 1 : -1;
+        const dx = r.type === 'throw_in' ? atk : r.type === 'goal_kick' ? (r.x < 52.5 ? 1 : -1) : (r.x < 52.5 ? -1 : 1);
+        flag = { kind: 'point', k: seg01(t, rs.from + 0.3, rs.from + 0.9) * (1 - seg01(t, rs.to, rs.to + 0.5)), dx, lift: r.type === 'corner' ? -0.8 : 0.05 };
+      }
       const f = !flag && fouls.find(e => t >= e.t + 0.5 && t < e.t + 3.5 && half(e) && near(e, y < 34 ? 0 : 68)); if (f) flag = { kind: 'wave', k: seg01(t, f.t + 0.5, f.t + 0.9), phase: t * 9 };
       out.push({ x, y, flag, toward: goalX ? 1 : -1 });
-    }
+    });
     return out;
   }
+  // Where the assistant stands for a restart: level with a throw-in, at the corner flag for a corner, at the edge of the box for a goal kick.
+  arSpot(r) { return r.type === 'goal_kick' ? r.x + (r.x < 52.5 ? 17 : -17) : r.type === 'corner' ? r.x + (r.x < 52.5 ? 1.5 : -1.5) : clamp(r.x, 2, 103); }
   // Where a player is at time t (null for an id that is not in the match).
   playerAt(id, t) {
     if (!this.idxOf) this.idxOf = new Map(this.d.players.map(p => [p.id, p.idx]));
@@ -911,16 +934,39 @@ export class HighlightsRenderer {
     c.fillStyle = K.shorts; c.fillRect(bx - bw / 2 + 1, top + bh * 0.72, bw - 2, bh * 0.28);                          // shorts
     c.fillStyle = K.trim; c.fillRect(bx - bw / 2, top + bh * 0.3, bw, Math.max(2, bh * 0.04));                        // collar trim
     c.fillStyle = '#e8b894'; c.beginPath(); c.arc(bx, top + bh * 0.16, bw * 0.34, 0, Math.PI * 2); c.fill();
+    if (it.flag?.kind === 'point') return this.drawPointFlag(cam, it, bx, top, bh, bw);
     const f = it.flag, k = f ? easeOut(f.k) : 0, shoulder = [bx + bw * 0.35, top + bh * 0.34], hip = [bx + bw * 0.5, top + bh * 0.66];
     const tip = [bx + bw * 0.5, top - bh * 0.34 * k];                       // the flag raised straight up
     const hand = f ? [lerp(hip[0], tip[0], k) + (f.kind === 'wave' ? Math.sin(f.phase) * bw * 0.5 * k : 0), lerp(hip[1], tip[1] + bh * 0.1, k)] : hip;
     c.strokeStyle = '#1d212a'; c.lineWidth = Math.max(3, bw * 0.28); c.lineCap = 'round';
     c.beginPath(); c.moveTo(...shoulder); c.lineTo(...hand); c.stroke();
-    const fw = Math.max(10, bw * 0.7), fh = fw * 0.7, fx = hand[0], fy = f ? hand[1] - bh * 0.2 - fh : hand[1];   // the flag sits on top of a short pole when raised, hangs from his hand when down
+    const fw = Math.max(14, bw * 1.05), fh = fw * 0.75, fx = hand[0], fy = f ? hand[1] - bh * 0.2 - fh : hand[1];   // the flag sits on top of a short pole when raised, hangs from his hand when down
     c.strokeStyle = '#d6d3d1'; c.lineWidth = Math.max(1.5, bw * 0.08);
     c.beginPath(); c.moveTo(hand[0], hand[1]); c.lineTo(hand[0], f ? fy : fy + fh); c.stroke();                               // pole
     c.fillStyle = '#facc15'; c.fillRect(fx, fy, fw / 2, fh / 2); c.fillRect(fx + fw / 2, fy + fh / 2, fw / 2, fh / 2);
     c.fillStyle = '#dc2626'; c.fillRect(fx + fw / 2, fy, fw / 2, fh / 2); c.fillRect(fx, fy + fh / 2, fw / 2, fh / 2);
+  }
+
+  // The assistant's arm out along the line with the checked flag held at the end of it: it points the way the ball is going (it.flag.dx: +1 towards
+  // the right-hand goal, -1 the left) and, for a corner, down towards the corner flag. Drawn from pitch positions, so it points the right way from any camera.
+  drawPointFlag(cam, it, bx, top, bh, bw) {
+    const c = this.c, f = it.flag, k = easeOut(f.k), face = it.y < 34 ? 1 : -1, len = Math.hypot(1, f.lift);
+    const dir = [f.dx / len, 0, f.lift / len], sh = [it.x, it.y + face * 0.12, 1.42];
+    const reach = (m, kk = k) => [lerp(it.x + f.dx * 0.1, sh[0] + dir[0] * m, kk), sh[1] + face * 0.1 * kk, lerp(0.95, sh[2] + dir[2] * m, kk)];
+    const hand = reach(0.75), tip = reach(1.45), drop = 0.62 * k, S = cam.p(sh[0], sh[1], sh[2]), Hd = cam.p(...hand), Tp = cam.p(...tip);
+    if (!S || !Hd || !Tp) return;
+    c.strokeStyle = '#1d212a'; c.lineWidth = Math.max(3, bw * 0.28); c.lineCap = 'round';
+    c.beginPath(); c.moveTo(S[0], S[1]); c.lineTo(Hd[0], Hd[1]); c.stroke();
+    c.strokeStyle = '#d6d3d1'; c.lineWidth = Math.max(1.5, bw * 0.08);
+    c.beginPath(); c.moveTo(Hd[0], Hd[1]); c.lineTo(Tp[0], Tp[1]); c.stroke();                         // the pole
+    // the cloth: a 2 x 2 check hanging from the pole, from the hand out to the tip
+    const at = (u, v) => cam.p(hand[0] + (tip[0] - hand[0]) * u, hand[1] + (tip[1] - hand[1]) * u, hand[2] + (tip[2] - hand[2]) * u - drop * v);
+    for (let a = 0; a < 2; a++) for (let b = 0; b < 2; b++) {
+      const q = [at(a / 2, b / 2), at((a + 1) / 2, b / 2), at((a + 1) / 2, (b + 1) / 2), at(a / 2, (b + 1) / 2)];
+      if (q.some(v => !v)) continue;
+      c.fillStyle = (a + b) % 2 ? '#dc2626' : '#facc15';
+      c.beginPath(); c.moveTo(q[0][0], q[0][1]); for (const v of q.slice(1)) c.lineTo(v[0], v[1]); c.closePath(); c.fill();
+    }
   }
 
   // The kit a player wears in this match (S-23): { main, sprite } or null (then the club colours and the old goalkeeper colours apply).
