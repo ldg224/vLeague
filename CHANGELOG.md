@@ -3,6 +3,10 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.17.2 (2026-10-27)
+
+**Fixed:** the browser console warning "Multiple GoTrueClient instances detected". Two parts of a page asking for the database at the same moment could each build their own sign-in client; they now share one. It was harmless, and signing in and out work as before.
+
 ## 1.17.1 (2026-10-27)
 
 Headlines: Broadcast view is back

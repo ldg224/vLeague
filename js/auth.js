@@ -13,7 +13,7 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 
 export const ready = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
-let client = null;
+let client = null, building = null;
 
 // "Remember me" keeps the session in localStorage; otherwise it lasts until the browser tab closes.
 const REMEMBER = 'vleague-remember';
@@ -26,8 +26,10 @@ function storage() {
 async function sb() {
   if (!ready) throw new Error('Signing in isn’t working right now. Try again later.');
   if (!client) {
-    const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/+esm');
-    client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, storage: storage(), storageKey: 'vleague-auth' } });
+    // Callers that ask at the same moment share one build: two clients on one storage key makes Supabase warn ("Multiple GoTrueClient instances").
+    building ||= import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/+esm')
+      .then(({ createClient }) => (client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, storage: storage(), storageKey: 'vleague-auth' } })));
+    try { await building; } finally { building = null; }
   }
   return client;
 }
