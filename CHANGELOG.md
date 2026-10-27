@@ -11,6 +11,10 @@ Headlines: Event scoreboards | A look for every round or match
 
 **Added:** a look picker in Editor > Fixtures. Every round has one (the look for the whole week) and every match has one (its own look, or "Same as the round"). Each choice shows a small preview of the design and saves at once. The old Scoreboard look dropdown in round settings is replaced by it.
 
+**Changed:** the referee and assistants wear one shared kit per match that clashes with neither team's shirts.
+
+**Fixed:** a second yellow shows as one yellow-and-red mark on the scrubber, not two yellows.
+
 **Changed:** looks now come from one list (`js/looks.js`), so a new look or effect is a small addition and works on every scoreboard. How: `docs/LOOKS.md`.
 
 Database change: 0071 (a look column on matches and the four new looks), already applied.
