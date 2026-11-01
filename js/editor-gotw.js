@@ -7,6 +7,7 @@
 import { goalMoments, shortlist, describe } from './goal-wow.js';
 import { loadMatchFile } from './match-file.js';
 import { ClipStage, recordClip, recordReel } from './goal-clip.js';
+import { recordInstagram } from './goal-instagram.js';
 import { rounds } from './league-fixtures.js';
 import { kickoff } from './dashboard-data.js';
 import { icon } from './icons.js';
@@ -31,7 +32,7 @@ export async function mountGotw({ db, esc, explain, clubs, season, deadlines }) 
   if (!list.length) { root.innerHTML = '<p class="quiet">No round has been played yet.</p>'; return; }
   let week = Number(sessionStorage.getItem('gw-week')) || list[list.length - 1].week;
   if (!list.some(r => r.week === week)) week = list[list.length - 1].week;
-  let row = null, stage = null, busy = '', msg = '';
+  let row = null, stage = null, busy = '', msg = '', made = null;   // made: the winner's Instagram video just recorded, shown for a look before it is saved
   const label = w => list.find(r => r.week === w)?.label || `Round ${w}`;
 
   const load = async () => {
@@ -147,14 +148,21 @@ export async function mountGotw({ db, esc, explain, clubs, season, deadlines }) 
     const yes = done(), c = row.candidates, left = c.filter(x => x.d === 'n' || x.d === 'x');
     const nextLock = (deadlines || []).map(d => new Date(d.locks_at || d.locked_at)).filter(d => d > new Date()).sort((a, b) => a - b)[0];
     const opts = [...(nextLock ? [['lock', `When the next round locks (${when(nextLock)})`]] : []), ['24', 'In 1 day'], ['48', 'In 2 days'], ['72', 'In 3 days'], ['168', 'In a week']];
-    const rows = yes.map((m, i) => `<li><span class="gw-n">${i + 1}</span><span class="gw-t"><b>${who(m)}</b><small>${fixLine(m)}, ${esc(describe(m))}</small></span><button class="btn ghost" data-dl="${esc(m.key)}" type="button">Download</button><button class="gw-x" data-key="${esc(m.key)}" type="button">Take out</button></li>`).join('');
+    const win = yes.find(m => m.win), winCap = win ? [`GOAL OF THE WEEK, ${label(week)}`, '', `${win.scorerName} (${nameOf(win.team)}), ${nameOf(win.home)} v ${nameOf(win.away)} ${win.minute}′`, '', '#vLeague #GoalOfTheWeek'].join('\n') : '';
+    const rows = yes.map((m, i) => `<li${m.win ? ' class="win"' : ''}><span class="gw-n">${i + 1}</span><span class="gw-t"><b>${who(m)}</b><small>${fixLine(m)}, ${esc(describe(m))}</small></span><span class="gw-btns"><button class="gw-b" data-ig="${esc(m.key)}" type="button">Instagram clip</button><button class="gw-b" data-dl="${esc(m.key)}" type="button">16:9</button><button class="gw-b${m.win ? ' on' : ''}" data-win="${esc(m.key)}" type="button" aria-pressed="${!!m.win}">${m.win ? 'Winner' : 'Make winner'}</button><button class="gw-x" data-key="${esc(m.key)}" type="button">Take out</button></span></li>`).join('');
     root.innerHTML = head(`<section class="nw-card"><h2>${esc(label(week))}: your ${yes.length}</h2>
       ${yes.length < WANT ? `<p class="nw-note">You said Yes to ${yes.length} of ${c.length}; you wanted ${WANT}. ${left.length ? 'Look at the No pile again, or go ahead with fewer.' : ''}</p>` : ''}
       <ol class="gw-list">${rows || '<li class="quiet">No goals chosen yet.</li>'}</ol>
       <div class="nw-actions">${left.length ? '<button class="btn ghost" id="gw-again" type="button">Look at the No pile again</button>' : ''}<button class="btn ghost" id="gw-all" type="button">Show all ${c.length} again</button><button class="btn ghost" id="gw-reset" type="button">Reset this week</button></div>
-      ${yes.length ? `<p class="nw-note">Voting happens on WhatsApp. Download the clips one by one, or all ${yes.length} as one video.</p>
-      <div class="nw-actions"><button class="btn" id="gw-all-dl" type="button">Download all ${yes.length} as one video</button></div><p class="nw-msg" role="status"></p>` : ''}</section>`);
-    root.querySelectorAll('.gw-x').forEach(b => b.addEventListener('click', async () => { c.find(x => x.key === b.dataset.key).d = 'n'; await save({ candidates: c, finalists: [] }); draw(); }));
+      ${yes.length ? `<p class="nw-note">Voting happens on WhatsApp. “Instagram clip” is a 1080 × 1920 video for Reels and Stories; “16:9” is the wide clip. Mark the vote’s winner with “Make winner”.</p>
+      <div class="nw-actions"><button class="btn" id="gw-all-ig" type="button">Download all ${yes.length} Instagram clips</button><button class="btn ghost" id="gw-all-dl" type="button">Download all ${yes.length} as one wide video</button></div><p class="nw-msg" role="status"></p>` : ''}</section>
+      ${win ? `<section class="nw-card gw-win"><h2>Winner: ${esc(win.scorerName)}</h2>
+        <p class="nw-note">${esc(nameOf(win.team))}, ${fixLine(win)}. The winner’s video has the vLeague intro, the goal with its details and a GOAL flash, and the address at the end (about 9 seconds).</p>
+        ${made?.key === win.key ? `<video class="gw-prev" src="${made.url}" controls playsinline loop></video>` : ''}
+        <div class="nw-actions"><button class="btn" id="gw-win-make" type="button">${made?.key === win.key ? 'Record it again' : 'Make the winner’s Instagram video'}</button>${made?.key === win.key ? '<button class="btn" id="gw-win-save" type="button">Download</button>' : ''}</div>
+        <label class="nw-field">Instagram caption <small>copy it for the post</small><textarea id="gw-cap" readonly>${esc(winCap)}</textarea></label>
+        <div class="nw-actions"><button class="btn ghost" id="gw-copy" type="button">Copy caption</button></div><p class="nw-msg gw-winmsg" role="status"></p></section>` : ''}`);
+    root.querySelectorAll('.gw-x').forEach(b => b.addEventListener('click', async () => { const t = c.find(x => x.key === b.dataset.key); t.d = 'n'; t.win = false; await save({ candidates: c, finalists: [] }); draw(); }));
     root.querySelector('#gw-again')?.addEventListener('click', async () => { left.forEach(x => { x.d = null; }); await save({ candidates: c, finalists: [] }); draw(); });
     root.querySelector('#gw-all').addEventListener('click', async () => { c.forEach(x => { x.d = null; }); await save({ candidates: c, finalists: [] }); draw(); });
     root.querySelector('#gw-reset').addEventListener('click', resetWeek);
@@ -164,6 +172,41 @@ export async function mountGotw({ db, esc, explain, clubs, season, deadlines }) 
     };
     const slug = t => t.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const note = t => { const n = root.querySelector('.nw-msg'); if (n) n.textContent = t; };
+    const igName = (m, i) => `goal-of-the-week-${slug(label(week))}-${i + 1}-${slug(m.scorerName)}-instagram`;
+    root.querySelectorAll('[data-win]').forEach(b => b.addEventListener('click', async () => {
+      const on = !c.find(x => x.key === b.dataset.win).win;
+      c.forEach(x => { x.win = false; }); if (on) c.find(x => x.key === b.dataset.win).win = true;
+      await save({ candidates: c }); draw();
+    }));
+    root.querySelectorAll('[data-ig]').forEach(b => b.addEventListener('click', async () => {
+      const i = yes.findIndex(x => x.key === b.dataset.ig), was = b.textContent;
+      b.disabled = true; b.textContent = 'Recording… keep this tab open';
+      try { save1(await recordInstagram(season, yes[i], { label: label(week), rank: i + 1, n: yes.length }), igName(yes[i], i)); b.textContent = 'Downloaded'; }
+      catch (err) { b.textContent = was; note(err.message || 'The clip wouldn’t record.'); }
+      b.disabled = false;
+    }));
+    root.querySelector('#gw-all-ig')?.addEventListener('click', async e => {
+      const b = e.currentTarget, was = b.textContent;
+      b.disabled = true;
+      try {
+        for (let i = 0; i < yes.length; i++) {
+          b.textContent = `Recording ${i + 1} of ${yes.length}… keep this tab open`;
+          save1(await recordInstagram(season, yes[i], { label: label(week), rank: i + 1, n: yes.length }), igName(yes[i], i));
+        }
+        b.textContent = 'Downloaded (allow multiple downloads if asked)';
+      } catch (err) { b.textContent = was; note(err.message || 'The clips wouldn’t record.'); }
+      b.disabled = false;
+    });
+    root.querySelector('#gw-win-make')?.addEventListener('click', async e => {
+      const b = e.currentTarget, wmsg = root.querySelector('.gw-winmsg'); b.disabled = true; b.textContent = 'Recording about 9 seconds… keep this tab open';
+      try {
+        const r = await recordInstagram(season, win, { label: label(week), winner: true });
+        if (made) URL.revokeObjectURL(made.url);
+        made = { ...r, key: win.key, url: URL.createObjectURL(r.blob) }; draw();
+      } catch (err) { b.disabled = false; b.textContent = 'Make the winner’s Instagram video'; wmsg.textContent = err.message || 'The video wouldn’t record.'; }
+    });
+    root.querySelector('#gw-win-save')?.addEventListener('click', () => save1(made, `goal-of-the-week-${slug(label(week))}-winner-${slug(win.scorerName)}-instagram`));
+    root.querySelector('#gw-copy')?.addEventListener('click', async e => { try { await navigator.clipboard.writeText(winCap); e.target.textContent = 'Copied'; } catch { root.querySelector('#gw-cap').select(); } });
     root.querySelectorAll('[data-dl]').forEach(b => b.addEventListener('click', async () => {
       const i = yes.findIndex(x => x.key === b.dataset.dl), m = yes[i], was = b.textContent;
       b.disabled = true; b.textContent = 'Recording… keep this tab open';

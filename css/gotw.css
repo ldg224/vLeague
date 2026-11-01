@@ -44,6 +44,12 @@
 .gw-t b span { font-weight: 400; color: var(--muted); margin-left: 4px; }
 .gw-t small { color: var(--muted); font-size: var(--fs-s); overflow-wrap: anywhere; }
 .gw-x { flex: none; min-height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--muted); cursor: pointer; font: 600 var(--fs-s) var(--font); }
+.gw-btns { flex: none; display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; max-width: 330px; }
+.gw-b { min-height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--text); cursor: pointer; font: 600 var(--fs-s) var(--font); }
+.gw-b.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+.gw-b:disabled { opacity: .5; cursor: default; }
+.gw-list li { flex-wrap: wrap; }
+.gw-prev { display: block; width: 100%; max-width: 270px; aspect-ratio: 9 / 16; border-radius: var(--r-sm); background: #0b0f14; }
 .gw-votes { flex: none; display: grid; justify-items: end; font: 900 var(--fs-l)/1 var(--font-display); font-variant-numeric: tabular-nums; }
 .gw-votes small { font: 400 var(--fs-xs) var(--font); color: var(--muted); }
 .gw-list .win .gw-n, .gw-list .win .gw-votes { color: var(--brand); }

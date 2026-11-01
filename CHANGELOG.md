@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.19.0 (2026-11-02)
+
+Headlines: Instagram clips for Goal of the week | A branded winner video
+
+- **Added, Goal of the week:** Editor → Goal of the week now makes Instagram-sized videos (1080 × 1920, for Reels and Stories). Each of the five goals has an "Instagram clip" button, and "Download all 5 Instagram clips" records them one after another. The 16:9 download is still there.
+- **Added, winner:** press "Make winner" on the goal the WhatsApp vote picked, then "Make the winner's Instagram video": a vLeague intro, the goal with a panel for the scorer, club, score, minute and stats (distance, xG, header or volley, passing move, assist), a GOAL flash at the moment of the goal, and an outro with the address (about 9 seconds). It shows a preview to check before you download, with a caption to copy.
+No database change (the winner is saved with the round's goals).
 ## 1.18.1 (2026-10-28)
 
 Headlines: Every club on the Stakes leaderboard
