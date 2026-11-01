@@ -216,7 +216,7 @@ export async function mountGotw({ db, esc, explain, clubs, season, deadlines }) 
     }));
     root.querySelector('#gw-all-dl')?.addEventListener('click', async e => {
       const b = e.currentTarget, was = b.textContent;
-      b.disabled = true;
+      b.disabled = true; b.textContent = 'Loading the goals… keep this tab open';
       try { save1(await recordReel(season, yes, { label: label(week), onProgress: (i, n) => { b.textContent = `Recording ${i + 1} of ${n}… keep this tab open`; } }), `goal-of-the-week-${slug(label(week))}`); b.textContent = 'Downloaded'; }
       catch (err) { b.textContent = was; note(err.message || 'The video wouldn’t record.'); }
       b.disabled = false;

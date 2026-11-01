@@ -230,8 +230,9 @@ export async function recordReel(season, list, { width = 1280, label = '', onPro
     rec.ondataavailable = e => e.data.size && chunks.push(e.data);
     const done = new Promise(res => { rec.onstop = res; });
     c.fillStyle = DARK; c.fillRect(0, 0, out.width, out.height);
+    // Load every goal's pictures before recording: building one blocks the page for seconds, which froze the video mid-way when it happened during a scene.
+    for (const m of list) await stage.renderer(m);
     rec.start();
-    stage.renderer(list[0]).catch(() => {});
     await scene(3.6, intro, { wipeIn: false });
     for (let i = 0; i < n; i++) {
       const m = list[i];
@@ -240,7 +241,6 @@ export async function recordReel(season, list, { width = 1280, label = '', onPro
       await scene(1.9, t => title(t, i, m));
       await loaded;
       if (!stage.ready) throw new Error('A goal’s pictures didn’t load.');
-      if (list[i + 1]) stage.renderer(list[i + 1]).catch(() => {});
       await scene(stage.to - stage.from, (t, d) => play(t, i, m, d));
     }
     await scene(3.6, outro, { wipeOut: false });

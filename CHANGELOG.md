@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.19.1 (2026-11-02)
+
+Headlines: The five-goal video no longer freezes
+
+**Fixed, Goal of the week:** "Download all 5 as one wide video" froze for several seconds part-way through, because each goal's pictures were loaded while it was recording. They are now all loaded first (the button says "Loading the goals…"), then it records without stopping.
+No database change.
+
 ## 1.19.0 (2026-11-02)
 
 Headlines: Instagram clips for Goal of the week | A branded winner video
