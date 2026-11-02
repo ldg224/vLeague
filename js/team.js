@@ -232,7 +232,7 @@ function fixturesHtml(club, season, ctx, fixtures) {
   return `<section class="lg-card fx-card tm-games" aria-labelledby="tm-fx-h"><div class="lg-card-head"><h2 id="tm-fx-h">Fixtures</h2><span class="tm-cnote">${fixtures.length} match${fixtures.length === 1 ? '' : 'es'}</span></div>
     <ul class="fx-list">${days.map(d => {
       const list = fixtures.filter(f => (f.date || '') === d);
-      return `<li class="fx-day"><h3>${d ? esc(dayLabel(d, ymd(ctx.now))) : 'Date to be confirmed'}</h3><span>Round ${esc(list[0].week ?? '')}</span></li>${list.map(f => rowHtml(f, season, ctx, { forTeam: club.code })).join('')}`;
+      return `<li class="fx-day"><h3>${d ? esc(dayLabel(d, ymd(ctx.now))) : 'Date to be confirmed'}</h3><span>${esc(list[0].round || `Round ${list[0].week ?? ''}`)}</span></li>${list.map(f => rowHtml(f, season, ctx, { forTeam: club.code })).join('')}`;
     }).join('')}</ul></section>`;
 }
 

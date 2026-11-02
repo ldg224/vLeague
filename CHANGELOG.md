@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.23.1 (2026-11-02)
+
+Headlines: Round codes P1–P3, 1–22, SF, GF
+
+**Fixed:** preseason rounds are now Round P1, P2 and P3 (with their names), the season's rounds are 1 to 22, and the finals are SF and GF. The Stakes tab and a club's fixtures printed the raw week number, so the first real round showed as "Round 5"; they now use the round code like the rest of the site.
+No database change.
+
 ## 1.23.0 (2026-11-02)
 
 Headlines: Result prices follow the players' ratings all season

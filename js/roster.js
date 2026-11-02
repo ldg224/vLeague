@@ -85,19 +85,32 @@ export function weekNumbers(fixtures, rounds = []) {
   return [...new Set([...fixtures.map(f => f.week), ...rounds.map(r => r.week)])].sort((a, b) => a - b);
 }
 
-// How each week is called. A numbered week is "Round N", where N is its count among numbered weeks (or the number
-// you picked); a week without a number shows only its name. `short` is what fits on a small tab.
+// How each week is called, by its round code (user, 2 Nov 2026): preseason rounds are P1, P2, P3 ("Round P1") with their own count, the season's rounds
+// 1 to 22 ("Round 1"), then SF and GF for the finals (shown by their name, or "Semi-finals" / "Grand Final"). A regular round counts among numbered weeks (or takes
+// the number you picked); a week that is none of these shows only its name. `code` / `short` is the code, for a small tab or a heading.
+const finalCode = r => (/grand/i.test(r.name || '') ? 'GF' : /semi/i.test(r.name || '') ? 'SF' : r.kind === 'finals' ? 'SF' : null);
 export function roundLabels(weeks, rounds) {
   const byWeek = new Map((rounds || []).map(r => [r.week, r]));
   const out = new Map();
-  let count = 0;
+  let count = 0, pre = 0;
   for (const w of weeks) {
     const r = byWeek.get(w) || {};
+    const name = r.name || null;
+    if (r.kind === 'preseason') {
+      const code = `P${++pre}`;
+      out.set(w, { no: code, code, numbered: true, preseason: true, name, label: name ? `Round ${code} · ${name}` : `Round ${code}`, short: code });
+      continue;
+    }
+    const fin = r.numbered === false || r.kind === 'finals' ? finalCode(r) : null;
+    if (fin) {
+      out.set(w, { no: fin, code: fin, numbered: false, finals: true, name, label: name || (fin === 'GF' ? 'Grand Final' : 'Semi-finals'), short: fin });
+      continue;
+    }
     const numbered = r.numbered !== false;
     if (numbered) count++;
     const no = numbered ? (r.number_override ?? count) : null;
-    const base = numbered ? `Round ${no}` : (r.kind === 'finals' ? 'Finals' : r.kind === 'preseason' ? 'Preseason' : 'Special round');
-    out.set(w, { no, numbered, name: r.name || null, label: r.name ? (numbered ? `${base} · ${r.name}` : r.name) : base, short: numbered ? String(no) : '★' });
+    const base = numbered ? `Round ${no}` : 'Special round';
+    out.set(w, { no, code: numbered ? String(no) : null, numbered, name, label: name ? (numbered ? `${base} · ${name}` : name) : base, short: numbered ? String(no) : '★' });
   }
   return out;
 }

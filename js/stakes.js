@@ -76,6 +76,8 @@ export function averageText(l) {
 }
 // "Expected 1.4": the player's expected number for the stat on the card, in a full match.
 const expectedHtml = (l, pid) => l.usual == null ? '' : `<div class="st-exp"${pid}><span class="st-exp-k">Expected</span><b>${Number(l.usual).toFixed(1)}</b></div><p class="st-basis"${pid}>${esc(averageText(l))}</p>`;
+// A round's name for a heading: the league's round code (Round 1, Round P1, SF...), passed in by the league page; the week number only as a last resort.
+const roundName = (o, w) => o.round?.(w) || `Round ${w}`;
 const colourOf = (o, code) => { const c = o.club?.(code)?.colour; return /^#[0-9a-f]{6}$/i.test(c || '') ? c : '#4a6fa5'; };
 
 function stakeCard(l, st, o) {
@@ -149,7 +151,7 @@ function predictRow(l, st, o) {
 function predictSection(rows, st, o) {
   const weeks = [...rows.reduce((m, l) => m.set(l.week, [...(m.get(l.week) || []), l]), new Map()).entries()];
   const cfg = st.cfg || DEFAULTS;
-  return weeks.map(([w, list]) => `<section class="lg-card st-predict" data-tour="lineup"><div class="lg-card-head"><h2>Game predictors</h2><span class="st-lucount">Round ${w} · ${list.length} game${list.length === 1 ? '' : 's'}</span></div>
+  return weeks.map(([w, list]) => `<section class="lg-card st-predict" data-tour="lineup"><div class="lg-card-head"><h2>Game predictors</h2><span class="st-lucount">${esc(roundName(o, w))} · ${list.length} game${list.length === 1 ? '' : 's'}</span></div>
     <p class="st-predict-lead">Who wins? Call every game. Each result pays by its chance: a favourite pays a little, a long shot pays a lot, and your payout is fixed when you lock in.</p>
     <ul class="st-prs">${list.map(l => predictRow(l, st, o)).join('')}</ul></section>`).join('');
 }
@@ -166,7 +168,7 @@ function boardStrip(b, o) {
 function roundSection(rows, st, o) {
   const n = rows.length, vars = `--c-lg:${bestCols(n, 5)};--c-md:${bestCols(n, 3)};--c-sm:${bestCols(n, 2)}`;
   const lk = rows[0].locks_at, locked = lk ? new Date(lk) <= Date.now() : false;
-  return `<section class="st-round"><div class="st-roundhead"><h2>Round ${rows[0].week} stakes</h2><span>${n} stake${n === 1 ? '' : 's'}</span></div>
+  return `<section class="st-round"><div class="st-roundhead"><h2>${esc(roundName(o, rows[0].week))} stakes</h2><span>${n} stake${n === 1 ? '' : 's'}</span></div>
     ${lk ? `<p class="st-roundnote">${locked ? 'Picks are locked: the round has started. Stakes settle as each game finishes.' : `Picks lock when the round’s first game starts: ${esc(kick(lk))}.`}</p>` : ''}
     <div class="st-grid" style="${vars}">${rows.map(l => stakeCard(l, st, o)).join('')}</div></section>`;
 }
