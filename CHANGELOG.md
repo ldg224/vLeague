@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.21.0 (2026-11-02)
+
+Headlines: Game predictors pay by the real chance
+
+**Changed, Stakes:** a win, draw or loss no longer pays the same 2.2× or 3× for every match. Each match now has a chance for a home win, a draw and an away win, worked out from each club's squad and its results so far (preseason included), and each result pays about 1 ÷ its chance, less a small cut. A strong favourite at home might pay 1.2×, an even match around 2× to 3.5×, and a long shot up to 15×. Each button shows its chance and payout, the price can move until the round locks, and your pick keeps the payout it was placed at.
+**Changed, Editor → Stakes:** "Right win pays" and "Right draw pays" are replaced by "League's cut on results (%)" (default 8) and "Biggest result payout" (default 15).
+Database change: 0075 (new settings, the chance and price on each result stake, the slate and the pick function), already applied.
+
 ## 1.20.0 (2026-11-02)
 
 Headlines: Stakes by the round, with goals and shots, and an expected figure on every card

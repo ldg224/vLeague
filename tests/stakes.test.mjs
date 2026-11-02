@@ -189,17 +189,21 @@ test('a placed pick is locked, shows its pick and what it pays at the payout it 
 test('resultLabel names the pick', () => {
   assert.equal(resultLabel('home', 'Turtle', 'SKS'), 'Turtle win'); assert.equal(resultLabel('away', 'Turtle', 'SKS'), 'SKS win'); assert.equal(resultLabel('draw', 'Turtle', 'SKS'), 'Draw');
 });
-test('the tour has a predictor step only when there are predictors, quoting the payouts', () => {
+test('the tour has a predictor step only when there are predictors', () => {
   assert.ok(!stepsFor(DEFAULTS, false).some(s => /predictor/i.test(s.title)));
-  const s = stepsFor({ ...DEFAULTS, result_win_mult: 2.5, result_draw_mult: 3.5 }, true).find(x => /predictor/i.test(x.title));
-  assert.match(s.text, /2\.5 times/); assert.match(s.text, /3\.5 times/); assert.match(s.text, /Draw/);
+  const s = stepsFor(DEFAULTS, true).find(x => /predictor/i.test(x.title));
+  assert.match(s.text, /chance/); assert.match(s.text, /Draw/);
 });
-test('the Editor form carries the win and draw payouts and the switch', () => {
+test('the Editor form carries the margin, the biggest payout and the switch', () => {
   const f = new FormData();
-  for (const [k, v] of [['result_win_mult', '2.5'], ['result_draw_mult', '3.5'], ['score_all', 'on']]) f.append(k, v);
+  for (const [k, v] of [['result_margin', '8'], ['result_max_mult', '15'], ['score_all', 'on']]) f.append(k, v);
   const o3 = readSettings(f);
-  assert.equal(o3.result_win_mult, 2.5); assert.equal(o3.result_draw_mult, 3.5); assert.equal(o3.score_all, true);
+  assert.equal(o3.result_margin, 8); assert.equal(o3.result_max_mult, 15); assert.equal(o3.score_all, true);
   assert.ok(!('score_exact_mult' in o3) && !('score_per_week' in o3));
+});
+test('a result button shows the match’s own chance and payout', () => {
+  const html = stakesView(state({ slate: [{ ...resultLine(9), mult_home: 6.5, mult_draw: 4, mult_away: 1.25, p_home: 0.14, p_draw: 0.23, p_away: 0.63 }] }), o);
+  assert.match(html, /pays 6\.5×/); assert.match(html, /pays 4×/); assert.match(html, /pays 1\.25×/); assert.match(html, /63% chance/); assert.match(html, /14% chance/);
 });
 test('history names a result pick and the final score', () => {
   const html = stakesView(state({ history: [{ kind: 'result', home: 'AAA', away: 'BBB', result: 'home', stake: 100, status: 'won', payout: 220, act_home: 2, act_away: 1 }], slate: [line(1)] }), o);

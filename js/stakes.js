@@ -119,7 +119,10 @@ function stakePanel(l, st) {
 // The game predictors (FotMob's Predict and Stadium Live, in vLeague's look): every game of the round is a row with three big choices, Team A win, Draw or Team B win,
 // each showing what it pays. Tap one to pick it (it lights up in that club's colour), set the stake with the pill, then Lock in. A placed pick locks the row.
 export const RESULTS = ['home', 'draw', 'away'];
-const resultMult = (cfg, which) => Number(which === 'draw' ? cfg.result_draw_mult ?? DEFAULTS.result_draw_mult : cfg.result_win_mult ?? DEFAULTS.result_win_mult);
+// What a result pays: the match's own price (from each side's chance of winning, db 0075), else the league's flat fallback.
+const resultMult = (cfg, which, l) => Number(l?.[`mult_${which}`] ?? (which === 'draw' ? cfg.result_draw_mult ?? DEFAULTS.result_draw_mult : cfg.result_win_mult ?? DEFAULTS.result_win_mult));
+export const chanceText = p => (p == null ? '' : `${Math.max(1, Math.round(Number(p) * 100))}% chance`);
+export const multText = m => `${Number(m).toFixed(Number(m) < 10 ? 2 : 1).replace(/\.?0+$/, '')}×`;
 export const resultLabel = (which, home, away) => (which === 'home' ? `${home} win` : which === 'away' ? `${away} win` : 'Draw');
 function predictRow(l, st, o) {
   const cfg = st.cfg || DEFAULTS, bal = st.wallet?.coins ?? 0, mine = l.my_status != null && l.my_result != null;
@@ -127,10 +130,10 @@ function predictRow(l, st, o) {
   const locked = l.locks_at ? new Date(l.locks_at) <= Date.now() : false, closed = (st.cfg ? !st.cfg.betting_open : false) || locked, chosen = mine ? l.my_result : rs.pick;
   const hn = o.name(l.home), an = o.name(l.away);
   const choice = which => {
-    const on = chosen === which, mult = mine ? Number(l.my_mult) : resultMult(cfg, which);
+    const on = chosen === which, mult = mine ? Number(l.my_mult) : resultMult(cfg, which, l);
     const crest = which === 'home' ? o.crest(l.home, 40) : which === 'away' ? o.crest(l.away, 40) : `<span class="st-rr-draw" aria-hidden="true">=</span>`;
     return `<button type="button" class="st-rr is-${which}${on ? ' on' : ''}${chosen && !on ? ' off' : ''}" data-st="rpick" data-line="${l.line_id}" data-which="${which}" aria-pressed="${on}"${mine || closed ? ' disabled' : ''}>
-      ${crest}<b>${esc(resultLabel(which, hn, an))}</b><span>${mine ? (on ? `pays ${Number(mult)}×` : '') : `pays ${Number(mult)}×`}</span></button>`;
+      ${crest}<b>${esc(resultLabel(which, hn, an))}</b><span>${mine ? (on ? `pays ${multText(mult)}` : '') : `pays ${multText(mult)}`}</span>${!mine && l.p_home != null ? `<em>${chanceText(l[`p_${which}`])}</em>` : ''}</button>`;
   };
   const act = mine
     ? `<div class="st-pr-act is-mine"><p><b>Locked in: ${esc(resultLabel(l.my_result, hn, an))}</b> · ${coins(l.my_stake)} Coins<br>Pays <b>${coins(payout(l.my_stake, l.my_mult))}</b> if you are right</p>${locked ? '' : `<button type="button" class="st-link" data-st="take" data-line="${l.line_id}">Take back</button>`}</div>`
@@ -147,7 +150,7 @@ function predictSection(rows, st, o) {
   const weeks = [...rows.reduce((m, l) => m.set(l.week, [...(m.get(l.week) || []), l]), new Map()).entries()];
   const cfg = st.cfg || DEFAULTS;
   return weeks.map(([w, list]) => `<section class="lg-card st-predict" data-tour="lineup"><div class="lg-card-head"><h2>Game predictors</h2><span class="st-lucount">Round ${w} · ${list.length} game${list.length === 1 ? '' : 's'}</span></div>
-    <p class="st-predict-lead">Who wins? Call every game. A right win pays <b>${resultMult(cfg, 'home')}×</b> your stake, a right draw <b>${resultMult(cfg, 'draw')}×</b>.</p>
+    <p class="st-predict-lead">Who wins? Call every game. Each result pays by its chance: a favourite pays a little, a long shot pays a lot, and your payout is fixed when you lock in.</p>
     <ul class="st-prs">${list.map(l => predictRow(l, st, o)).join('')}</ul></section>`).join('');
 }
 
@@ -209,7 +212,7 @@ export const stepsFor = (cfg, hasScore = false) => [
   { target: '[data-tour="wallet"]', title: 'Your Coins', text: `You start with ${Number(cfg.start_coins).toLocaleString('en-AU')} Coins${cfg.daily_topup > 0 ? ` and get ${Number(cfg.daily_topup).toLocaleString('en-AU')} more each day` : ''}.` },
   { target: '.st-stake', title: 'A stake', text: 'Each card is one player in one match, and the big number is the league’s line for his stat: a keeper’s saves, a midfielder’s passes, a defender’s tackles, or a forward’s goals, shots or shots on target. Under it is his expected figure, worked out from every match he has played, preseason too. Tap his photo or name to see his stats.' },
   { target: '.st-stake .st-sides', title: 'Over or under', text: 'Think he’ll do more than the line? Tap blue OVER. Fewer? Tap red UNDER. Lines end in .5, so there is always a winner.', pick: true },
-  ...(hasScore ? [{ target: '.st-predict', title: 'Game predictors', text: `Below the cards, every game has a predictor: who wins? Tap Team A win, Draw or Team B win, tap the Stake pill to change your stake, then Lock in. A right win pays ${Number(cfg.result_win_mult)} times your stake and a right draw pays ${Number(cfg.result_draw_mult)} times.` }] : []),
+  ...(hasScore ? [{ target: '.st-predict', title: 'Game predictors', text: `Below the cards, every game has a predictor: who wins? Tap Team A win, Draw or Team B win, tap the Stake pill to change your stake, then Lock in. Each result shows its chance and what it pays: a strong favourite pays little, a long shot pays a lot.` }] : []),
   { target: '.st-sheet', title: 'Stake some Coins', text: `Choose how many Coins to put on it. Get it right and you get ${Number(cfg.multiplier)} times your stake back; get it wrong and the stake is gone. You can take a pick back until the round’s first game starts${cfg.lock_minutes > 0 ? ` (${cfg.lock_minutes} minutes before kick-off)` : ''}. Stakes appear a week before the round, and if a player does not play, your Coins come back.` },
   { target: '[data-tour="board"]', title: 'The leaderboard', text: 'Picks settle by themselves once the match is played. The richest clubs sit at the top.' },
 ];

@@ -12,7 +12,7 @@ begin
   delete from public.stakes_lines where fixture in (select id from public.fixtures where week = wk);
   update public.stakes_settings set visible = true, lines_days = 28, daily_topup = 0;
 
-  insert into t_log(name, ok, detail) select 'default payouts: win 2.2, draw 3.0', result_win_mult = 2.2 and result_draw_mult = 3.0, result_win_mult || '/' || result_draw_mult from public.stakes_settings;
+  null;
 
   -- every open game of the round gets a result stake; they do not use up the round's stakes
   perform set_config('request.jwt.claims', json_build_object('sub', mgr, 'role', 'authenticated')::text, true);
@@ -33,6 +33,12 @@ begin
   select count(*) into cnt from public.stakes_lines l join public.fixtures f on f.id = l.fixture where f.week = wk and l.kind = 'result';
   insert into t_log(name, ok, detail) values ('asking again does not make more', cnt = nfx, cnt::text);
 
+  -- the prices come from the chances: they add up, a favourite pays less than a long shot, and nothing pays more than the cap
+  select count(*) into cnt from public.stakes_lines l join public.fixtures f on f.id = l.fixture where f.week = wk and l.kind = 'result' and abs(l.p_home + l.p_draw + l.p_away - 1) < .001 and l.mult_home is not null;
+  insert into t_log(name, ok, detail) values ('every result is priced and the chances add up to 1', cnt = nfx, cnt || ' of ' || nfx);
+  insert into t_log(name, ok, detail) select 'the likelier result pays less', bool_and((l.p_home >= l.p_away) = (l.mult_home <= l.mult_away)), count(*)::text from public.stakes_lines l join public.fixtures f on f.id = l.fixture where f.week = wk and l.kind = 'result';
+  insert into t_log(name, ok, detail) select 'no payout over the cap, none under 1.05', max(greatest(l.mult_home, l.mult_draw, l.mult_away)) <= (select result_max_mult from public.stakes_settings) and min(least(l.mult_home, l.mult_draw, l.mult_away)) >= 1.05, max(greatest(l.mult_home, l.mult_draw, l.mult_away))::text from public.stakes_lines l where l.kind = 'result' and l.mult_home is not null;
+
   -- three games to settle: a home pick that wins, a draw pick that wins, an away pick that loses
   select * into fa from public.fixtures where week = wk order by starts_at, id limit 1 offset 0;
   select * into fb from public.fixtures where week = wk order by starts_at, id limit 1 offset 1;
@@ -52,9 +58,9 @@ begin
   if l3 is not null then perform public.stakes_place_result(l3, 'away', 50); end if;
   perform set_config('role', 'postgres', true);
   select mult into m from public.stakes_picks where user_id = mgr and line_id = l1;
-  insert into t_log(name, ok, detail) values ('a win pick keeps the win payout (2.2)', m = 2.2, m::text);
+  insert into t_log(name, ok, detail) select 'a win pick keeps the price on the card', m = x.mult_home and m > 1, m::text from public.stakes_lines x where x.id = l1;
   select mult into m from public.stakes_picks where user_id = mgr and line_id = l2;
-  insert into t_log(name, ok, detail) values ('a draw pick keeps the draw payout (3.0)', m = 3.0, m::text);
+  insert into t_log(name, ok, detail) select 'a draw pick keeps the draw price on the card', m = x.mult_draw and m > 1, m::text from public.stakes_lines x where x.id = l2;
   perform set_config('request.jwt.claims', json_build_object('sub', mgr, 'role', 'authenticated')::text, true);
   perform set_config('role', 'authenticated', true);
   select count(*) into cnt from public.stakes_slate() s where s.kind = 'result' and s.my_result is not null;
@@ -69,15 +75,15 @@ begin
   insert into public.results (fixture, summary) values (fb.id, jsonb_build_object('home', 1, 'away', 1, 'players', '{}'::jsonb));
   if l3 is not null then insert into public.results (fixture, summary) values (fc.id, jsonb_build_object('home', 1, 'away', 0, 'players', '{}'::jsonb)); end if;
   select payout into pay from public.stakes_picks where user_id = mgr and line_id = l1;
-  insert into t_log(name, ok, detail) values ('a right home pick pays 2.2x (110)', pay = 110, pay::text);
+  insert into t_log(name, ok, detail) select 'a right home pick pays its price (stake 50 x the price)', pay = floor(50 * k.mult), pay::text from public.stakes_picks k where k.user_id = mgr and k.line_id = l1;
   select payout into pay from public.stakes_picks where user_id = mgr and line_id = l2;
-  insert into t_log(name, ok, detail) values ('a right draw pick pays 3.0x (150)', pay = 150, pay::text);
+  insert into t_log(name, ok, detail) select 'a right draw pick pays its price', pay = floor(50 * k.mult), pay::text from public.stakes_picks k where k.user_id = mgr and k.line_id = l2;
   if l3 is not null then
     select status into st from public.stakes_picks where user_id = mgr and line_id = l3;
     insert into t_log(name, ok, detail) values ('a wrong pick loses the stake', st = 'lost', st);
   end if;
   select coins into bal from public.stakes_wallets where user_id = mgr;
-  insert into t_log(name, ok, detail) values ('the wallet adds up', bal = 1000 - 50 - 50 - (case when l3 is not null then 50 else 0 end) + 110 + 150, bal::text);
+  insert into t_log(name, ok, detail) select 'the wallet adds up', bal = 1000 - 50 - 50 - (case when l3 is not null then 50 else 0 end) + sum(k.payout), bal::text from public.stakes_picks k where k.user_id = mgr and k.line_id in (l1, l2, l3);
   insert into t_log(name, ok, detail) select 'the real score is kept', act_home = 2 and act_away = 1, act_home || '-' || act_away from public.stakes_picks where user_id = mgr and line_id = l1;
 
   -- history lists result picks
@@ -96,8 +102,9 @@ begin
   perform set_config('role', 'postgres', true);
   perform set_config('request.jwt.claims', json_build_object('sub', off, 'role', 'authenticated')::text, true);
   perform set_config('role', 'authenticated', true);
-  perform public.stakes_save_settings('{"result_win_mult": 2.5, "result_draw_mult": 3.5, "score_all": true}');
-  insert into t_log(name, ok, detail) select 'payouts saved', result_win_mult = 2.5 and result_draw_mult = 3.5 and score_all, result_win_mult::text from public.stakes_settings;
+  perform public.stakes_save_settings('{"result_margin": 10, "result_max_mult": 12, "score_all": true}');
+  insert into t_log(name, ok, detail) select 'margin and biggest payout saved', result_margin = 10 and result_max_mult = 12 and score_all, result_margin::text from public.stakes_settings;
+  begin perform public.stakes_save_settings('{"result_margin": 60}'); insert into t_log values (default, 'a margin over 30% refused', false, ''); exception when others then insert into t_log values (default, 'a margin over 30% refused', sqlerrm like '%out of range%', sqlerrm); end;
   begin perform public.stakes_save_settings('{"result_win_mult": 0.5}'); insert into t_log values (default, 'a payout under 1.01 refused', false, ''); exception when others then insert into t_log values (default, 'a payout under 1.01 refused', sqlerrm like '%out of range%', sqlerrm); end;
 end $$;
 select name, ok, detail from t_log order by n;

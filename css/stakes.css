@@ -219,6 +219,7 @@ html.st-intro-open { overflow: hidden; }
 .st-rr { display: grid; justify-items: center; align-content: center; gap: 4px; min-height: 96px; padding: 10px 8px; border: 2px solid var(--line); border-radius: var(--r-lg); background: var(--surface); color: var(--text-strong); cursor: pointer; text-align: center; transition: transform .1s, border-color .15s, background-color .15s, filter .15s; }
 .st-rr b { font: 800 var(--fs-m)/1.15 var(--font); overflow-wrap: anywhere; }
 .st-rr span { font: 700 var(--fs-xs) var(--font); color: var(--muted); letter-spacing: .03em; }
+.st-rr em { font: 400 var(--fs-xs) var(--font); font-style: normal; color: var(--faint); font-variant-numeric: tabular-nums; }
 .st-rr .crest { flex: none; }
 .st-rr-draw { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: color-mix(in oklab, var(--text) 14%, transparent); color: var(--text-strong); font: 900 24px/1 var(--font-display); }
 .st-rr.is-home { --k: var(--cc); } .st-rr.is-away { --k: var(--ca); } .st-rr.is-draw { --k: #7f96b2; }
