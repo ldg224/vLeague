@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.25.0 (2026-11-03)
+
+Headlines: Trophies on every team page
+
+**Added (S-31):** every team page has a Trophies card with a row for each competition the club has won or finished runner-up in, with the trophy's picture, the seasons and a count if it won it more than once. A club that has won nothing shows an empty card. The pictures come from Editor → History.
+**Changed:** the text-only Honours rows in the Club card are gone, replaced by the Trophies card.
+Database change: none.
+
 ## 1.24.1 (2026-11-03)
 
 Headlines: Own goals under the right club
