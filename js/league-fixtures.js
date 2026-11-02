@@ -5,7 +5,7 @@
 //     mode 'round' arg = a round (week) number (default view; default: the current round)
 //     mode 'date'  arg = a YYYY-MM-DD inside the week to show (default: this week, else the nearest week with matches)
 //     mode 'team'  arg = a club code (default: your own club, else the first)
-//   fixturesAddress(mode, arg)                  '#fixtures/round/8' ('#fixtures' for the current round)
+//   fixturesAddress(mode, arg)                  '#fixtures/round/8', '#fixtures/round/P1', '#fixtures/round/SF' (the round code; '#fixtures' for the current round)
 //   parseSub(sub)                               'date/2026-10-12' -> { mode: 'date', arg: '2026-10-12' }; '' -> By round
 //
 // ctx = { club(code) -> { name, short_name, colour }, crest(code, px) -> html, mine?: code, hidden: Set of fixture ids whose score
@@ -157,16 +157,20 @@ export function byDate(season, ctx, arg) {
 
 export function rounds(season) {
   const weeks = [...new Set(season.fixtures.filter(f => !f.test && f.week != null).map(f => f.week))].sort((a, b) => a - b);
-  return weeks.map(w => ({ week: w, label: season.fixtures.find(f => f.week === w && f.round)?.round || `Round ${w}`, pre: season.fixtures.some(f => f.week === w && f.preseason) }));
+  // `code` goes in the address (#fixtures/round/P1, /round/1, /round/SF): the round code, or w<week> for a round without one
+  const codeOf = w => { const c = season.rounds?.[w]?.code; return c ? String(c) : `w${w}`; };
+  return weeks.map(w => ({ week: w, code: codeOf(w), label: season.fixtures.find(f => f.week === w && f.round)?.round || `Round ${w}`, pre: season.fixtures.some(f => f.week === w && f.preseason) }));
 }
 
 export function byRound(season, ctx, arg) {
   const list = rounds(season);
   if (!list.length) return none('No fixtures yet', 'Rounds appear here once the office has set the fixtures.');
-  const want = Number(arg), current = activeWeek(season, ctx.now);
+  // the address names a round by its code (P1, 7, SF); w<week> for a round without one
+  const a = String(arg ?? '').toLowerCase(), byCode = list.find(r => r.code.toLowerCase() === a);
+  const want = byCode ? byCode.week : /^w\d+$/.test(a) ? Number(a.slice(1)) : NaN, current = activeWeek(season, ctx.now);
   const i = Math.max(0, list.findIndex(r => r.week === (list.some(r => r.week === want) ? want : current)));
   const r = list[i], fixtures = season.fixtures.filter(f => f.week === r.week && !f.test).sort(byKickoff);
-  return `${arrows(esc(r.label) + (r.pre ? tag : ''), i > 0 ? fixturesAddress('round', list[i - 1].week) : '', i < list.length - 1 ? fixturesAddress('round', list[i + 1].week) : '', 'round')}<ul class="fx-list">${dayGroups(fixtures, season, ctx, {})}</ul>`;
+  return `${arrows(esc(r.label) + (r.pre ? tag : ''), i > 0 ? fixturesAddress('round', list[i - 1].code) : '', i < list.length - 1 ? fixturesAddress('round', list[i + 1].code) : '', 'round')}<ul class="fx-list">${dayGroups(fixtures, season, ctx, {})}</ul>`;
 }
 
 export function byTeam(season, ctx, arg) {

@@ -86,9 +86,14 @@ test('By round: opens on the current round, steps through every round, names the
   const now = byRound(season, ctx(), null);
   assert.match(now, /<b class="fx-title">Round 1<\/b>/);
   assert.match(now, /aria-disabled="true" class="fx-arrow" aria-label="Previous round"/);
-  assert.match(now, /href="#fixtures\/round\/2"/);
-  assert.match(byRound(season, ctx(), '3'), /<b class="fx-title">Finals<\/b>/);
-  assert.match(byRound(season, ctx(), '3'), /aria-disabled="true" class="fx-arrow" aria-label="Next round"/);
+  assert.match(now, /href="#fixtures\/round\/w2"/);                   // no round codes in this season: w<week>
+  assert.match(byRound(season, ctx(), 'w3'), /<b class="fx-title">Finals<\/b>/);
+  assert.match(byRound(season, ctx(), 'w3'), /aria-disabled="true" class="fx-arrow" aria-label="Next round"/);
+  // with round codes the address uses them: P1, 1, SF (case does not matter)
+  const coded = { ...season, rounds: { 1: { code: 'P1' }, 2: { code: '1' }, 3: { code: 'SF' } } };
+  assert.match(byRound(coded, ctx(), null), /href="#fixtures\/round\/1"/);
+  assert.match(byRound(coded, ctx(), 'sf'), /<b class="fx-title">Finals<\/b>/);
+  assert.match(byRound(coded, ctx(), 'P1'), /href="#fixtures\/round\/1"/);
   assert.match(byRound(season, ctx({ now: new Date('2026-10-20T12:00:00') }), null), /<b class="fx-title">Round 2<\/b>/);
 });
 
