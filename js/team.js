@@ -14,7 +14,8 @@ import { loadSeason, finished, matchUrl, status, byKickoff, kickoff } from './da
 import { crest, teamOf, useClubs } from './places.js';
 import { prefs, spoilerHidden, fmtTime } from './prefs.js';
 import { clubSummary } from './match-model.js';
-import { loadHistory, cabinet } from './history-data.js';
+import { loadHistory, cabinet, trophyUrl } from './history-data.js';
+import { icon } from './icons.js';
 import { accentFor, onColour } from './club-colour.js';
 import { POS_ORDER } from './pitch.js';
 import { tableRows, tableCard } from './league-table.js';
@@ -184,13 +185,17 @@ function overviewHtml(club, season, ctx, fixtures, squad, won, sum) {
   ].filter(([, v]) => v);
   const cap = `<li class="tm-capline${used > CAP ? ' over' : used >= CAP * 0.9 ? ' warn' : ''}"><span>Weekly cap</span><b>${money(used)} <small>of ${money(CAP)}</small></b>
       <i class="tm-bar" role="progressbar" aria-label="Weekly cap used" aria-valuemin="0" aria-valuemax="${CAP}" aria-valuenow="${used}"><i style="width:${pct.toFixed(1)}%"></i></i></li>`;
-  const honours = won.length ? `<li class="fx-day"><h3>Honours</h3></li>${won.map(w => `<li class="tm-fact"><span>${esc(w.comp.name)}, ${w.place === 'winner' ? 'winners' : 'runners-up'}</span><b>${w.seasons.map(x => esc(x.name)).join(', ')}</b></li>`).join('')}` : '';
+  // The trophy cabinet (S-31): every club has the card; a club that has won nothing gets an empty one. One row per competition and place, with the trophy's picture.
+  const pic = w => (w.art ? `<img class="tm-cup" src="${esc(trophyUrl(w.art))}" alt="" loading="lazy">` : `<span class="tm-cup none" aria-hidden="true">${icon('trophy')}</span>`);
+  const trophies = `<section class="lg-card tm-trophies" aria-labelledby="tm-tro-h"><div class="lg-card-head"><h2 id="tm-tro-h">Trophies</h2></div>
+      ${won.length ? `<ul class="tm-cabinet">${won.map(w => `<li class="tm-trophy${w.place === 'winner' ? '' : ' is-runner'}">${pic(w)}<span class="tm-tro-t"><b>${esc(w.comp.name)}</b><small>${w.place === 'winner' ? 'Winners' : 'Runners-up'}: ${w.seasons.map(x => esc(x.name)).join(', ')}</small></span>${w.seasons.length > 1 ? `<span class="tm-tro-n" aria-label="${w.seasons.length} times">×${w.seasons.length}</span>` : ''}</li>`).join('')}</ul>`
+        : '<div class="sc-empty"><b>No trophies yet</b><span>Anything the club wins is kept here.</span></div>'}</section>`;
   const clubCard = `<section class="lg-card tm-club" aria-labelledby="tm-club-h"><div class="lg-card-head"><h2 id="tm-club-h">Club</h2></div>
-      <ul class="tm-facts">${facts.map(([k, v]) => `<li class="tm-fact"><span>${k}</span><b>${v}</b></li>`).join('')}${squad.length ? cap : ''}${honours}</ul></section>`;
+      <ul class="tm-facts">${facts.map(([k, v]) => `<li class="tm-fact"><span>${k}</span><b>${v}</b></li>`).join('')}${squad.length ? cap : ''}</ul></section>`;
 
   return `<div class="tm-cols">
       <div class="tm-main">${matches}${table}${suspendedCard(club, season, ctx, squad)}</div>
-      <div class="tm-side">${leaders}${clubCard}</div>
+      <div class="tm-side">${leaders}${trophies}${clubCard}</div>
     </div>`;
 }
 
