@@ -70,7 +70,18 @@
 .st-lineblock { display: grid; justify-items: center; gap: 0; margin-top: 6px; }
 .st-linenum { font: 900 44px/1 var(--font-display); font-stretch: 125%; color: var(--text-strong); font-variant-numeric: tabular-nums; }
 .st-statname { font: 700 var(--fs-s) var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
-.st-avg { margin: 0; font: 400 var(--fs-xs) var(--font); color: var(--faint); }
+.st-linek { font: 700 var(--fs-xs) var(--font); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.st-exp { display: inline-flex; align-items: baseline; gap: 8px; margin-top: 4px; padding: 5px 14px; border-radius: 999px; background: color-mix(in oklab, var(--blue-500) 12%, transparent); color: var(--brand); }
+.st-exp-k { font: 600 var(--fs-s) var(--font); }
+.st-exp b { font: 900 var(--fs-l) var(--font-display); font-stretch: 125%; font-variant-numeric: tabular-nums; }
+.st-basis { margin: 0; font: 400 var(--fs-xs)/1.4 var(--font); color: var(--muted); }
+.st-pickline { margin: 0; font: 400 var(--fs-s)/1.4 var(--font); color: var(--muted); }
+.st-pickline b { color: var(--text-strong); font-weight: 700; } .st-pickline .is-over { color: var(--brand); } .st-pickline .is-under { color: var(--res-l); }
+.st-roundnote { margin: -4px 0 0; font: 400 var(--fs-s)/1.4 var(--font); color: var(--muted); }
+.st-top[data-pid], .st-info [data-pid] { cursor: pointer; }
+.st-top:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.st-stake.is-locked .st-close { background: rgba(0, 0, 0, .55); }
+@media (hover: hover) { .st-top[data-pid]:hover .st-photo { filter: brightness(1.06); } }
 
 /* UNDER left in red, OVER right in blue: big, filling the width of the card */
 .st-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-top: 1px solid var(--line); margin-top: auto; }

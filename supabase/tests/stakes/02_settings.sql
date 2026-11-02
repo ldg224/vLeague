@@ -9,7 +9,7 @@ begin
   update public.stakes_settings set lines_days = 28, score_all = false;
   select id into mgr from public.profiles where role = 'manager' limit 1;
   select id into off from public.profiles where role = 'office' limit 1;
-  select * into fx from public.fixtures where starts_at > now() and not postponed and starts_at < now() + interval '60 days' order by starts_at limit 1;
+  select * into fx from public.fixtures where starts_at > now() and not postponed and week not in (select week from public.rounds where kind = 'preseason') and starts_at < now() + interval '60 days' order by starts_at limit 1;
   delete from public.stakes_wallets where user_id = mgr;
   delete from public.stakes_lines where fixture in (select id from public.fixtures where week = fx.week);   -- live lines may already exist for this round
   insert into public.submitted_sheets (club, week, sheet)
@@ -54,7 +54,7 @@ begin
   -- the multiplier changes after the pick: the pick still pays what it was placed at
   perform set_config('role', 'postgres', true);
   update public.stakes_settings set multiplier = 3.0;
-  insert into public.results (fixture, summary) select fx.id, jsonb_build_object('players', (select jsonb_object_agg(x.player_id, jsonb_build_object('min', 90, 'sv', 99, 'sot', 99, 'pas', 99, 'tk', 99)) from public.stakes_lines x where x.fixture = fx.id));
+  insert into public.results (fixture, summary) select fx.id, jsonb_build_object('players', (select jsonb_object_agg(x.player_id, jsonb_build_object('min', 90, 'sv', 99, 'sot', 99, 'pas', 99, 'tk', 99, 'g', 99, 'sh', 99)) from public.stakes_lines x where x.fixture = fx.id));
   select coins into bal from public.stakes_wallets where user_id = mgr;
   insert into t_log(name, ok, detail) values ('pays at the placed 2.0 (100), not the new 3.0', bal = 550, bal::text);
 

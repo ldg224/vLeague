@@ -4,7 +4,7 @@
 //   stakesView() -> the tab's shell;  mountStakes({ db, esc, explain }) -> fills it in
 export const stakesView = () => '<h1>Stakes</h1><div id="sk-root"><p class="quiet">Loading…</p></div>';
 
-export const STAT_NAMES = { sv: 'Saves (goalkeepers)', pas: 'Passes (midfielders)', sot: 'Shots on target (forwards)', tk: 'Tackles won (defenders)' };
+export const STAT_NAMES = { sv: 'Saves (goalkeepers)', pas: 'Passes (midfielders)', sot: 'Shots on target (forwards)', g: 'Goals (forwards)', sh: 'Shots (forwards)', tk: 'Tackles won (defenders)' };
 const num = (v, d = 0) => (Number.isFinite(Number(v)) ? Number(v) : d);
 
 // What the form says (a FormData), as the object the database takes. Anything that cannot be a number is left out so the database keeps its old value.
@@ -56,10 +56,10 @@ export async function mountStakes({ db, esc, explain }) {
         <section class="ed-invite"><h2>Payout and stakes</h2>
           <div class="ed-fields">${field('Payout multiplier', 'multiplier', S.multiplier, { min: 1.01, max: 10, step: 0.01, hint: '1.90 = 100 wins 190 back' })}${field('Smallest stake', 'min_stake', S.min_stake, { min: 1 })}${field('Biggest stake', 'max_stake', S.max_stake, { hint: '0 = no limit' })}</div></section>
         <section class="ed-invite"><h2>Stakes</h2>
-          <div class="ed-fields">${field('Stakes per round', 'lines_per_week', S.lines_per_week, { min: 1, max: 24, hint: 'the most valuable starters across the round' })}${field('Most from one match', 'lines_per_match', S.lines_per_match, { min: 1, max: 6, hint: 'spreads them across the round' })}${field('Harder or easier lines (%)', 'line_adjust', S.line_adjust, { min: -30, max: 30, hint: '+ raises every line, − lowers it' })}</div>
-          <div class="ed-fields">${field('Picks close before kick-off (minutes)', 'lock_minutes', S.lock_minutes, { max: 1440, hint: '0 = at kick-off' })}${field('Lines open this many days ahead', 'lines_days', S.lines_days, { min: 1, max: 28 })}</div>
+          <div class="ed-fields">${field('Stakes per round', 'lines_per_week', S.lines_per_week, { min: 1, max: 24, hint: 'the most valuable players across the round' })}${field('Most from one match', 'lines_per_match', S.lines_per_match, { min: 1, max: 6, hint: 'spreads them across the round' })}${field('Harder or easier lines (%)', 'line_adjust', S.line_adjust, { min: -30, max: 30, hint: '+ raises every line, − lowers it' })}</div>
+          <div class="ed-fields">${field('Picks close before kick-off (minutes)', 'lock_minutes', S.lock_minutes, { max: 1440, hint: '0 = at kick-off' })}${field('Lines open this many days ahead', 'lines_days', S.lines_days, { min: 1, max: 28, hint: 'before the round’s first game; picks lock when it starts' })}</div>
           <p class="ed-hint">Which stats are offered (a player only gets a stake when his stat is ticked):</p>
-          <div class="sk-stats">${['sv', 'pas', 'sot', 'tk'].map(stat).join('')}</div>
+          <div class="sk-stats">${['sv', 'pas', 'sot', 'g', 'sh', 'tk'].map(stat).join('')}</div>
           <p class="ed-hint">Each stake is a card with the player’s photo; the line is set near his average and always ends in .5, so there is a winner. Stakes already made keep their number.</p></section>
         <section class="ed-invite"><h2>Game predictors</h2>
           <div class="ed-fields">${field('Right win pays', 'result_win_mult', S.result_win_mult, { min: 1.01, max: 20, step: 0.1, hint: 'times the stake, home or away' })}${field('Right draw pays', 'result_draw_mult', S.result_draw_mult, { min: 1.01, max: 20, step: 0.1, hint: 'times the stake' })}</div>

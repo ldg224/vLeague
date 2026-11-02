@@ -6,7 +6,8 @@ begin
   update public.stakes_settings set visible = default, betting_open = default, start_coins = default, daily_topup = default, bailout_below = default, bailout_to = default, multiplier = default, min_stake = default, max_stake = default, lines_per_week = default, lines_per_match = default, score_per_week = default, score_exact_mult = default, score_result_mult = default, stats = default, line_adjust = default, lock_minutes = default, lines_days = default, show_board = default;   -- a known starting point, whatever the office has set live
   update public.stakes_settings set visible = true, score_per_week = 0, score_all = false, lines_days = 28;   -- (score predictions have their own test, 03)
   select id into u from public.profiles where role='manager' limit 1;
-  select * into fx from public.fixtures where starts_at > now() and not postponed and starts_at < now()+interval '60 days' order by starts_at limit 1;
+  delete from public.stakes_wallets where user_id = u;
+  select * into fx from public.fixtures where starts_at > now() and not postponed and week not in (select week from public.rounds where kind = 'preseason') and starts_at < now()+interval '60 days' order by starts_at limit 1;
   delete from public.stakes_lines where fixture in (select id from public.fixtures where week = fx.week);   -- live lines may already exist for this round
   -- fake submitted sheets for both clubs: first 11 players of each club
   insert into public.submitted_sheets (club, week, sheet)
@@ -17,16 +18,17 @@ begin
   perform set_config('role','authenticated',true);
   perform public.stakes_wallet();
   insert into t_log(name,ok,detail) select 'wallet 1000', coins=1000, coins::text from public.stakes_wallets where user_id=u;
-  select count(*) into lines from public.stakes_slate() s where s.fixture=fx.id;
-  insert into t_log(name,ok,detail) values ('2 lines made for the match (the per-match limit)',lines=2,lines::text);
-  select line_id into pk from public.stakes_slate() s where s.fixture=fx.id limit 1;
+  select s.fixture into fx.id from public.stakes_slate() s where s.kind = 'player' limit 1;   -- the round's stakes are spread over its matches: use one that has some
+  select count(*) into lines from public.stakes_slate() s where s.fixture=fx.id and s.kind = 'player';
+  insert into t_log(name,ok,detail) values ('1 or 2 lines made for the match (the per-match limit)',lines between 1 and 2,lines::text);
+  select line_id into pk from public.stakes_slate() s where s.fixture=fx.id and s.kind = 'player' limit 1;
   select public.stakes_place(pk,'over',100) into bal;
   insert into t_log(name,ok,detail) values ('stake deducted',bal=900,bal::text);
   begin perform public.stakes_place(pk,'under',10); insert into t_log values (default,'dup blocked',false,''); exception when others then insert into t_log values (default,'dup blocked',true,sqlerrm); end;
   begin perform public.stakes_place(pk+0,'over',5000); insert into t_log values (default,'overspend blocked',false,''); exception when others then insert into t_log values (default,'overspend blocked',true,sqlerrm); end;
   perform set_config('role','postgres',true);
   -- settle: fake result giving the line player a huge stat so over wins
-  insert into public.results (fixture, summary) select fx.id, jsonb_build_object('players', (select jsonb_object_agg(l.player_id, jsonb_build_object('min',90,'sv',99,'sot',99,'pas',99,'tk',99)) from public.stakes_lines l where l.fixture=fx.id));
+  insert into public.results (fixture, summary) select fx.id, jsonb_build_object('players', (select jsonb_object_agg(l.player_id, jsonb_build_object('min',90,'sv',99,'sot',99,'pas',99,'tk',99,'g',99,'sh',99)) from public.stakes_lines l where l.fixture=fx.id and l.player_id is not null));
   select coins into bal from public.stakes_wallets where user_id=u;
   insert into t_log(name,ok,detail) values ('over wins 190 back',bal=1090,bal::text);
   insert into t_log(name,ok,detail) select 'pick won', status='won' and payout=190, status||' '||payout from public.stakes_picks where id=(select max(id) from public.stakes_picks);

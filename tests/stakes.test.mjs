@@ -125,18 +125,31 @@ test('the Editor can switch the lineup off', () => {
 
 // ---- the game predictors ----
 
-test('a card only calls the number the player\'s average when it is his own', () => {
-  assert.equal(averageText({ usual: 33.84, usual_src: 'own', pos: 'MID' }), 'Averages 33.8 a match');
-  assert.equal(averageText({ usual: 3.5, usual_src: 'position', pos: 'GK' }), 'Keepers average 3.5 a match');
-  assert.equal(averageText({ usual: 1.69, usual_src: 'position', pos: 'FWD' }), 'Forwards average 1.7 a match');
-  assert.equal(averageText({ usual: 32.5, usual_src: 'default', pos: 'MID' }), 'Starting line, no matches yet');
+test('a card says where the expected figure comes from, preseason included', () => {
+  assert.equal(averageText({ usual: 1.69, usual_src: 'own', usual_n: 5, usual_pre: 2, pos: 'FWD' }), 'Based on 5 matches, 2 in preseason');
+  assert.equal(averageText({ usual: 1.69, usual_src: 'own', usual_n: 1, usual_pre: 0, pos: 'FWD' }), 'Based on 1 match');
+  assert.equal(averageText({ usual: 1.2, usual_src: 'blend', usual_n: 1, usual_pre: 1, pos: 'FWD' }), 'Only 1 match, 1 in preseason so far, steadied by the forwards average');
+  assert.equal(averageText({ usual: 3.5, usual_src: 'position', pos: 'GK' }), 'No minutes yet: Keepers average 3.5 a match');
+  assert.equal(averageText({ usual: 32.5, usual_src: 'default', pos: 'MID' }), 'No minutes yet: a starting estimate');
   assert.equal(averageText({ usual: null }), '');
-  const html = stakesView(state({ slate: [{ ...line(1), usual: 3.5, usual_src: 'position', pos: 'GK' }] }), o);
-  assert.match(html, /Keepers average 3\.5 a match/); assert.doesNotMatch(html, /Averages 3\.5/);
+  const html = stakesView(state({ slate: [{ ...line(1), stat: 'g', pos: 'FWD', line: 0.5, usual: 0.4, usual_src: 'own', usual_n: 4, usual_pre: 2 }] }), o);
+  assert.match(html, /class="st-exp"[^>]*><span class="st-exp-k">Expected<\/span><b>0\.4<\/b>/); assert.match(html, /Based on 4 matches, 2 in preseason/); assert.match(html, />Goals</);
+});
+test('names, photos and numbers open the player popup; the buttons do not', () => {
+  const html = stakesView(state(), o);
+  assert.match(html, /<h3 class="st-pname"><span class="plk"[^>]*data-pid="p1"/);
+  assert.match(html, /class="st-top" data-pid="p1" role="link"/);
+  assert.doesNotMatch(html, /<button[^>]*data-pid/);
+});
+test('a locked round disables the sides and hides Take back', () => {
+  const locked = { ...line(2, true), locks_at: '2020-01-01T00:00:00Z' };
+  const html = stakesView(state({ slate: [locked] }), o);
+  assert.match(html, /Locked/); assert.match(html, /Picks are locked/); assert.doesNotMatch(html, /Take back/);
+  assert.match(html, /class="st-side under on[^>]*disabled|class="st-side under[^>]*disabled/);
 });
 
 // ---- the game predictors: Team A win, Draw or Team B win ----
-const resultLine = (id, my) => ({ line_id: id, kind: 'result', featured: false, fixture: 'f' + id, week: 1, home: 'AAA', away: 'BBB', starts_at: '2026-11-01T08:00:00Z', locks_at: '2026-11-01T08:00:00Z',
+const resultLine = (id, my) => ({ line_id: id, kind: 'result', featured: false, fixture: 'f' + id, week: 1, home: 'AAA', away: 'BBB', starts_at: '2026-11-01T08:00:00Z', locks_at: '2099-01-01T00:00:00Z',
   player_id: null, player_name: null, team: null, pos: null, stat: null, line: null, usual: null, my_side: null, my_result: my || null, my_home: null, my_away: null,
   my_stake: my ? 100 : null, my_status: my ? 'open' : null, my_mult: my ? (my === 'draw' ? 3 : 2.2) : null, my_mult2: null });
 const ROW = /<li class="st-pr[\s\S]*?<\/li>/g;

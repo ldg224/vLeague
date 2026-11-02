@@ -3,6 +3,17 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.20.0 (2026-11-02)
+
+Headlines: Stakes by the round, with goals and shots, and an expected figure on every card
+
+**Added, Stakes:** forwards can now be offered **goals**, **shots** or **shots on target**, spread across the round so it isn't all one stat. Every card shows the player's **Expected** figure for the stat in a full match, worked out from every game he has played, **preseason included**, with a line under it saying how many matches it rests on (and how many were preseason). Until a player has two games' worth of minutes his figure is steadied by his position's average, and the card says so.
+**Added, Stakes:** tap a player's photo, name, line or expected figure to open his player popup. Player names in "Your picks" open it too.
+**Changed, Stakes:** a round's stakes now appear **7 days before the round's first game**, made from each club's squad when no team sheet is in yet (a player who doesn't play is refunded, as before). The whole round **locks when its first game starts**, not game by game; locked rounds stay on the page with a "Locked" tag until every game is played, and Take back goes away.
+**Changed, Editor → Stakes:** goals and shots are new tick boxes under the stats; Lines open this many days ahead is now 7.
+**Fixed, Stakes:** a stat missing from a played match counts as 0 instead of refunding the pick.
+Database change: 0074 (new stats, the round lock, the expected figure, the slate; coming rounds' unpicked stakes are remade), already applied.
+
 ## 1.19.2 (2026-11-02)
 
 Headlines: Reset wallets reaches every account
