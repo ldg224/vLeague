@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.23.0 (2026-11-02)
+
+Headlines: Result prices follow the players' ratings all season
+
+**Changed, Stakes:** 1.22.0 fixed each club's strength at the moment the engine games were played, so rating changes during the season would not have moved the prices. Now every time a match is priced, the database reads the current ratings of each club's best goalkeeper, 4 defenders, 3 midfielders and 3 forwards. What each rating is worth in goals was measured from 1,115 match-engine games, 330 of them with deliberately varied squads, and the chances it gives match what the engine actually did. A rating change shows up in the next price with no re-run (for example, +2 on DTP's forwards takes their home chance against SKS from 46% to 55%). The fit only needs redoing if the match engine itself changes.
+Database change: 0078 (the coefficients, the club strength read live from players, the pricing), already applied.
+
 ## 1.22.0 (2026-11-02)
 
 Headlines: Result prices come from the match engine
