@@ -196,9 +196,9 @@ test('the tour has a predictor step only when there are predictors', () => {
 });
 test('the Editor form carries the margin, the biggest payout and the switch', () => {
   const f = new FormData();
-  for (const [k, v] of [['result_margin', '8'], ['result_max_mult', '15'], ['score_all', 'on']]) f.append(k, v);
+  for (const [k, v] of [['result_margin', '8'], ['result_max_mult', '15'], ['result_noise', '12'], ['score_all', 'on']]) f.append(k, v);
   const o3 = readSettings(f);
-  assert.equal(o3.result_margin, 8); assert.equal(o3.result_max_mult, 15); assert.equal(o3.score_all, true);
+  assert.equal(o3.result_margin, 8); assert.equal(o3.result_max_mult, 15); assert.equal(o3.result_noise, 12); assert.equal(o3.score_all, true);
   assert.ok(!('score_exact_mult' in o3) && !('score_per_week' in o3));
 });
 test('a result button shows the match’s own chance and payout', () => {

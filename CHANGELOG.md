@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.22.0 (2026-11-02)
+
+Headlines: Result prices come from the match engine
+
+**Changed, Stakes:** the chances behind the game predictors are no longer a guess from squad value. The real match engine played 785 games (every pairing of clubs, home and away), a goals model was fitted to what it did, and each match's chance of a home win, a draw and an away win comes from that model. Checked against the engine's own games, a chance of 45% happened 45% of the time. The honest result is that the engine is very open: no side is more than about a 55% favourite, so prices run roughly 1.8× to 4.8×, and a 12× shot would be wrong.
+**Added, Stakes:** a small random error on every match's chances (12% of each chance by default, the same all week, different for every match), so the prices can't be used to read results. Editor → Stakes has a "Random error on result chances (%)" box; 0 makes the prices exact.
+**Added:** `supabase/tools/stakes_model.py` plays the engine and fits the model. Run it again when squads change, then put the new numbers in a migration.
+Database change: 0077 (the club ratings table, the error, the pricing), already applied.
+
 ## 1.21.1 (2026-11-02)
 
 Headlines: Softer result prices

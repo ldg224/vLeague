@@ -13,7 +13,7 @@ export function readSettings(f) {
   const out = {
     start_coins: n('start_coins'), daily_topup: n('daily_topup'), bailout_below: n('bailout_below'), bailout_to: n('bailout_to'),
     multiplier: n('multiplier'), min_stake: n('min_stake'), max_stake: n('max_stake') ?? 0,
-    lines_per_week: n('lines_per_week'), lines_per_match: n('lines_per_match'), result_margin: n('result_margin'), result_max_mult: n('result_max_mult'), line_adjust: n('line_adjust'), lock_minutes: n('lock_minutes'), lines_days: n('lines_days'),
+    lines_per_week: n('lines_per_week'), lines_per_match: n('lines_per_match'), result_margin: n('result_margin'), result_max_mult: n('result_max_mult'), result_noise: n('result_noise'), line_adjust: n('line_adjust'), lock_minutes: n('lock_minutes'), lines_days: n('lines_days'),
     show_board: f.get('show_board') === 'on', score_all: f.get('score_all') === 'on', stats: f.getAll('stats'),
   };
   for (const k of Object.keys(out)) if (out[k] === undefined || (typeof out[k] === 'number' && !Number.isFinite(out[k]))) delete out[k];
@@ -62,7 +62,7 @@ export async function mountStakes({ db, esc, explain }) {
           <div class="sk-stats">${['sv', 'pas', 'sot', 'g', 'sh', 'tk'].map(stat).join('')}</div>
           <p class="ed-hint">Each stake is a card with the player’s photo; the line is set near his average and always ends in .5, so there is a winner. Stakes already made keep their number.</p></section>
         <section class="ed-invite"><h2>Game predictors</h2>
-          <div class="ed-fields">${field('League’s cut on results (%)', 'result_margin', S.result_margin, { min: 0, max: 30, hint: 'win, draw and loss pay by their chance, less this' })}${field('Biggest result payout', 'result_max_mult', S.result_max_mult, { min: 2, max: 100, step: 0.5, hint: 'times the stake, for the longest shot' })}</div>
+          <div class="ed-fields">${field('League’s cut on results (%)', 'result_margin', S.result_margin, { min: 0, max: 30, hint: 'win, draw and loss pay by their chance, less this' })}${field('Biggest result payout', 'result_max_mult', S.result_max_mult, { min: 2, max: 100, step: 0.5, hint: 'times the stake, for the longest shot' })}${field('Random error on result chances (%)', 'result_noise', S.result_noise, { min: 0, max: 40, hint: 'so prices never give a result away; 0 = exact' })}</div>
           <label class="dr-check"><input type="checkbox" name="score_all"${S.score_all ? ' checked' : ''}> Show the game predictors: Team A win, Draw or Team B win for every match, below the stake cards</label></section>
         <section class="ed-invite"><h2>Leaderboard</h2>
           <label class="dr-check"><input type="checkbox" name="show_board"${S.show_board ? ' checked' : ''}> Show the leaderboard to managers</label></section>
