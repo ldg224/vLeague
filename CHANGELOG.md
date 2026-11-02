@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.19.2 (2026-11-02)
+
+Headlines: Reset wallets reaches every account
+
+**Fixed, Stakes:** Editor → Stakes → Reset wallets only reset wallets that already existed, and a wallet is only made when a manager first opens Stakes. Anyone who hadn't opened it yet was missed and later started at the starting Coins instead of the reset amount. The reset now gives every account a wallet at the amount you choose, opened or not.
+Database change: 0073 (replaces the reset function), already applied.
+
 ## 1.19.1 (2026-11-02)
 
 Headlines: The five-goal video no longer freezes

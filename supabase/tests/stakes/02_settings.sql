@@ -71,6 +71,7 @@ begin
   perform set_config('role', 'postgres', true);
   select coins into bal from public.stakes_wallets where user_id = mgr;
   insert into t_log(name, ok, detail) values ('reset puts wallets to the amount', bal = 300 and cnt >= 1, bal || ' / ' || cnt);
+  insert into t_log(name, ok, detail) select 'reset reaches every account, opened or not', count(*) = 0, count(*)::text from public.profiles pr where not exists (select 1 from public.stakes_wallets x where x.user_id = pr.id and x.coins = 300);
   insert into t_log(name, ok, detail) select 'reset is in the ledger', count(*) >= 1, count(*)::text from public.stakes_ledger where reason = 'reset' and user_id = mgr;
   begin
     perform set_config('request.jwt.claims', json_build_object('sub', mgr, 'role', 'authenticated')::text, true);
