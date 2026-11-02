@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.24.0 (2026-11-02)
+
+Headlines: Match ids follow the round codes
+
+**Changed:** every match's id (in its address, `match.html?id=...`) now follows the round code and the clubs as they are: `p1-ccf-prf` for a preseason match, `r1-dtp-sks` for Round 1, `sf-...` and `gf-...` for the finals, with `-2` for a second meeting in a round. Before, an id was made once from the week number and never changed, so many said the wrong round and some the wrong clubs (`w3-ccf-cfc-2` was SKS v TUR). Results, Stakes, Goal of the Week and each manager's opened results all moved with them. The Editor renames ids by itself after any change to the fixtures, so they stay right.
+**Kept:** old match links still work: the match page finds where an old id went and shows the new address.
+Database change: 0079 (the renaming function, the old-id table; 125 matches renamed), already applied.
+
 ## 1.23.3 (2026-11-02)
 
 Headlines: Round links use round codes

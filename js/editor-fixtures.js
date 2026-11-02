@@ -156,6 +156,7 @@ export async function mountFixtures(ctx) {
     let ok = false, err = '', note = '';
     try { note = (await fn(tx)) || ''; ok = true; }
     catch (e) { err = failText(e); for (const s of [...tx.steps].reverse()) { try { await s.undo(); } catch { /* best effort */ } } }
+    if (ok) { try { await (await ctx.db()).rpc('fixture_ids_by_round'); } catch { /* ids catch up on the next change */ } }   // ids follow the round codes (db 0079)
     try { await load(); } catch (e) { err = err || failText(e); }
     busy = false;
     notify(ok ? `${label}: done.${note ? ` ${note}` : ''}` : `${label} didn’t work. ${err}`, ok ? (note ? 'warn' : '') : 'bad');

@@ -71,6 +71,13 @@ try {
   if (demo != null) season = demoMatchSeason(rows, demo);
   if (demo != null && preview && q.has('pre')) season.fixtures.forEach(f => { f.preseason = true; f.exhibition = true; });   // localhost only: look at a preseason match page
   fx = season?.fixtures.find(f => String(f.id) === String(id)) || (demo != null ? season.fixtures[0] : null) || null;
+  if (!fx && id && season && !preview) {   // an old id (before ids followed the round codes, db 0079): find where it went and put the new one in the address
+    const { db } = await import('./auth.js');
+    let data = null;
+    try { ({ data } = await (await db()).from('fixture_aliases').select('fixture').eq('old', id).maybeSingle()); } catch { /* no alias: the not-found card below */ }
+    fx = data?.fixture ? season.fixtures.find(f => String(f.id) === String(data.fixture)) || null : null;
+    if (fx) { q.set('id', fx.id); history.replaceState(history.state, '', `${location.pathname}?${q}${location.hash}`); }
+  }
   if (!fx) main.innerHTML = '<div class="mh"><section class="lg-card"><p class="empty">That match couldn’t be found. <a href="league.html#fixtures">See all matches</a></p></section></div>';
   else {
     // Localhost preview only: ?file=_t/match.json lays a real engine match file (clubs AAA and BBB) over this demo match, to look at the match viewer.
