@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.21.1 (2026-11-02)
+
+Headlines: Softer result prices
+
+**Fixed, Stakes:** the result prices in 1.21.0 leaned too hard on squad value and on a few early results, so a side like SKS away at DTP paid nearly 13×. Ratings now weigh squad value half as much and early results less, so prices spread out only as the season shows it (that match is now about 5.9×, and most games sit between 1.8× and 3.7×).
+Database change: 0076 (replaces the two rating functions), already applied.
+
 ## 1.21.0 (2026-11-02)
 
 Headlines: Game predictors pay by the real chance
