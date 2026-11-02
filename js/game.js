@@ -142,7 +142,7 @@ async function run() {
     const now = new Date(), k = kickoff(fx), s = st(), sc = shownScore(fx, season, now), h = home(), a = away(), sd = stadium();
     const state = s === 'live' ? `<span class="live"><span class="dot"></span>${liveMinute(fx, season, now)}'</span>` : { ft: 'Full time', upcoming: 'Upcoming', awaiting: 'Kicking off', postponed: 'Postponed', tba: 'Date to be confirmed' }[s];
     const score = sc ? `<strong class="${s === 'live' ? 'is-live' : ''}">${sc.home}<i>–</i>${sc.away}</strong>` : `<strong class="ko">${k ? esc(fmtTime(k)) : 'TBA'}</strong>`;
-    const goals = side => (data ? eventsTo(horizon()).filter(e => e.type === 'goal' && e.team === side) : (fx.result?.goals || []).filter(g => g.team === side && (s === 'ft' || g.t <= horizon())))
+    const goals = side => (data ? eventsTo(horizon()).filter(e => e.type === 'goal' && (e.own_goal ? e.team !== side : e.team === side)) : (fx.result?.goals || []).filter(g => (g.own_goal ? g.team !== side : g.team === side) &&(s === 'ft' || g.t <= horizon())))
       .map(g => `<li>${esc(data ? data.byId[g.scorer]?.name || '' : g.scorer_name || '')}${g.own_goal ? ' (og)' : ''} <small>${esc(g.minute)}'</small></li>`).join('');
     return `<section class="gc-head"><h1 class="sr-only" tabindex="-1">${esc(fullNameOf(h))} v ${esc(fullNameOf(a))}</h1>${fx.test ? '<div class="gc-test" role="note"><b>TEST MATCH</b><span>Made-up players. Not part of the season.</span></div>' : ''}${scoreboard({ fx, season, look: lookInfo(season, fx), h: fullNameOf(h), a: fullNameOf(a), hColour: kitColour(fx.home), aColour: kitColour(fx.away),
       crests: [crest(h, 64), crest(a, 64)], score, state, goals: [goals(fx.home), goals(fx.away)],

@@ -506,7 +506,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
     this.scoreLine(sc, 580, k);
     c.globalAlpha = a;   // scoreLine resets it
     if (scorers) {
-      const list = side => this.goals.filter(g => g.team === (side ? this.away.code : this.home.code))
+      const list = side => this.goals.filter(g => (g.team === (side ? this.away.code : this.home.code)) !== !!g.own_goal)
         .map(g => `${lastName(this.names[g.scorer])} ${g.minute}'${g.own_goal ? ' (OG)' : ''}`);
       list(0).slice(0, 4).forEach((s, i) => this.scorerLine(s, W / 2 - 520, 760 + i * 38));
       list(1).slice(0, 4).forEach((s, i) => this.scorerLine(s, W / 2 + 520, 760 + i * 38));

@@ -533,7 +533,7 @@ export class HighlightsRenderer {
     this.text('FULL-TIME', W / 2, 150, { size: 50, weight: 900, align: 'center', colour: LIME, spacing: 12, alpha: k });
     this.scoreLine([this.d.result.home, this.d.result.away], 380, k);
     // Scorers
-    const list = side => this.goals.filter(g => g.team === (side ? this.away.code : this.home.code))
+    const list = side => this.goals.filter(g => (g.team === (side ? this.away.code : this.home.code)) !== !!g.own_goal)
       .map(g => `${lastName(this.names[g.scorer])} ${g.minute}'${g.own_goal ? ' (OG)' : ''}`);
     const a = easeOut((t - 0.6) / 0.6);
     list(0).slice(0, 4).forEach((s, i) => this.scorerLine(s, W / 2 - 520, 555 + i * 38, { alpha: a }));
