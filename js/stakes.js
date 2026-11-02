@@ -160,7 +160,7 @@ function predictSection(rows, st, o) {
 function boardStrip(b, o) {
   const list = b;
   return `<section class="lg-card st-boardstrip" data-tour="board"><div class="lg-card-head"><h2>Leaderboard</h2><span class="st-lucount">${b.length} club${b.length === 1 ? '' : 's'}</span></div>
-    ${list.length ? `<ol class="st-bs">${list.map(r => `<li class="${r.mine ? 'me' : ''}"><i class="st-rank">${r.rank}</i>${r.club ? o.crest(r.club, 28) : ''}<span class="st-bn"><b>${esc(r.name)}</b><em>${r.settled ? `${r.won} of ${r.settled} right` : 'No picks settled yet'}</em></span><b class="st-bc">${coins(r.coins)}</b></li>`).join('')}</ol>`
+    ${list.length ? `<ol class="st-bs">${list.map(r => `<li class="${r.mine ? 'me' : ''}"><i class="st-rank">${r.rank}</i>${r.club ? o.crest(r.club, 28) : ''}<span class="st-bn"><b>${esc(r.name)}</b>${r.settled ? `<em>${r.won} of ${r.settled} right</em>` : ''}</span><b class="st-bc">${coins(r.coins)}</b></li>`).join('')}</ol>`
       : '<p class="st-empty">Nobody is on the board yet.</p>'}</section>`;
 }
 

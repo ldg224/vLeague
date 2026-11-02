@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.23.2 (2026-11-02)
+
+Headlines: Tidier Stakes leaderboard
+
+**Changed, Stakes:** the leaderboard no longer says "No picks settled yet" under every club; the "3 of 5 right" line only appears once a club has picks settled.
+No database change.
+
 ## 1.23.1 (2026-11-02)
 
 Headlines: Round codes P1–P3, 1–22, SF, GF
