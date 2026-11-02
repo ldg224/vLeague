@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.24.1 (2026-11-03)
+
+Headlines: Own goals under the right club
+
+**Fixed:** an own goal was listed under the club of the player who scored it. It now shows under the club that gets the goal (still marked as an own goal) on the Game centre scoreboard and in the scorer lists of the highlights and full-match videos.
+Database change: none.
+
 ## 1.24.0 (2026-11-02)
 
 Headlines: Match ids follow the round codes
