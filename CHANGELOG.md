@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.23.3 (2026-11-02)
+
+Headlines: Round links use round codes
+
+**Changed, Fixtures:** round links now use the round code instead of the week number: `#fixtures/round/P1` to `P3` for preseason, `#fixtures/round/1` to `22` for the season, `#fixtures/round/SF` and `/GF` for the finals. Before, `#fixtures/round/5` opened Round 1. Links shared before this change point at a different round now.
+No database change.
+
 ## 1.23.2 (2026-11-02)
 
 Headlines: Tidier Stakes leaderboard
