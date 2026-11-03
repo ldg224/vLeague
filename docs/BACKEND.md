@@ -56,9 +56,12 @@ office presses "Set up again" (Editor → Clubs), which empties it and starts th
 
 **Line-up deadlines** (0.6, `0005_lineup_deadlines.sql`; the user's decision, 1 October 2026). The office sets a
 deadline per week (Editor → Fixtures; the Deadlines tab was removed in 0.27). `lock_due_weeks()` runs every minute (pg_cron job `vleague-lock-weeks`): for
-each deadline that has passed, it copies every club's last save from *before* the deadline into `week_sheets`, so a
-late-running job never lets a later change in. Managers keep editing `team_sheets` at any time; after week N locks,
-changes count for week N+1. Clubs that never saved get no row and the engine picks their team. The s3 Editor's
+each deadline that has passed, it copies every club's sheet SUBMITTED for that week (before the deadline) into `week_sheets`, so a
+late-running job never lets a later change in. **Submit or it's random** (0.63 brought SUBMIT; 1.26.0, `0080_random_xi.sql`, the user's
+decision of 3 Nov 2026): every club that plays in the week and didn't submit gets `random_week_sheet()`: a fixed 4-4-2, each slot a random
+player of that position from its squad, the rest on the bench in random order, random captain and set-piece takers, middle tactics, the
+automatic kit, stored with `random = true` (the line-up card shows it as "4-4-2 · Random XI"). Saved drafts are never used. Clubs with a
+bye get no row. Deadline reminders and the office digest go to clubs that play in the round and haven't submitted for it. The s3 Editor's
 Simulate reads the fixture's week from `week_sheets` (with the anon key) and refuses to run before the week is
 locked. The league's time zone is Australia/Melbourne; deadlines are stored as exact instants (timestamptz).
 

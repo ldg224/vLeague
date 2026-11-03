@@ -7,8 +7,8 @@
 // Three views of the same pitch (WR-33), picked with the pills: Average rating (season average match rating as a badge, red under 5.0, orange under 7.0, green from 7.0,
 // blue with a star for the standout), Contributions (goals and assists, nothing for zero) and Value (the editor's value under the shirt).
 // LINEUP RULE (changed by the user, 15 Oct 2026): a club's XI appears as soon as it SUBMITS a team sheet (submitted_lineups(), formation, XI,
-// captain and kit only; the portraits wear that kit from then on, user 18 Oct 2026), and from the lock on the locked sheet (week_sheets) is used. A club that has not submitted (a draft the lock picked up for it is not shown) keeps an empty
-// half-pitch saying so; unsubmitted drafts are never shown.
+// captain and kit only; the portraits wear that kit from then on, user 18 Oct 2026), and from the lock on the locked sheet (week_sheets) is used. A club that has not submitted keeps an empty half-pitch saying so until the
+// lock; then it shows the random XI the lock picked for it (week_sheets.random, 0080: submit or it's random, user 3 Nov 2026). Unsubmitted drafts are never shown.
 import { db } from './auth.js';
 import { FORMATIONS, DEFAULT_FORMATION, autoLineup } from './pitch.js';
 import { loadKits, matchKits } from './kits-data.js';
@@ -28,13 +28,13 @@ export async function loadLineups(fx, season, rows, { fake = false } = {}) {
   const c = await db(), now = new Date();
   const [dl, ws, sub, kits] = await Promise.all([
     c.from('deadlines').select('week, locks_at, locked_at').eq('week', fx.week).maybeSingle().then(r => r.data || null).catch(() => null),
-    c.from('week_sheets').select('club, formation, captain, lineup, kit, submitted').eq('week', fx.week).in('club', [fx.home, fx.away]).then(r => r.data || []).catch(() => []),
+    c.from('week_sheets').select('club, formation, captain, lineup, kit, submitted, random').eq('week', fx.week).in('club', [fx.home, fx.away]).then(r => r.data || []).catch(() => []),
     c.rpc('submitted_lineups', { p_week: fx.week, p_clubs: [fx.home, fx.away] }).then(r => r.data || []).catch(() => []),   // submitted, not yet locked
     loadKits(),
   ]);
   const open = Boolean(dl && (dl.locked_at || new Date(dl.locks_at) <= now));   // the week's line-ups have locked
   const known = new Set((season.players || []).map(p => String(p.id)));
-  const sheetOf = code => { const r = open ? ws.find(x => x.club === code && x.submitted) : sub.find(x => x.club === code); return filled(r) && Object.values(r.lineup).some(id => known.has(String(id))) ? r : null; };
+  const sheetOf = code => { const r = open ? ws.find(x => x.club === code && (x.submitted || x.random)) : sub.find(x => x.club === code); return filled(r) && Object.values(r.lineup).some(id => known.has(String(id))) ? r : null; };
   const made = (code, f) => ({ club: code, formation: f, lineup: autoLineup(f, (season.players || []).filter(p => p.team === code)) });
   const sides = season.demoSheets   // the demo (js/demo-match.js): every club has locked its team
     ? { home: season.demoSheets[fx.home] || null, away: season.demoSheets[fx.away] || null }
@@ -119,7 +119,8 @@ function bar(side, L, ctx) {
   const name = ctx.club(code)?.short_name || ctx.club(code)?.name || team.name;
   const chip = value != null ? `<span class="ml-chip" title="Team value">${esc(money(value))}</span>` : '';
   const shirt = L.kits[side]?.badge ? `<img class="ml-kit" src="${L.kits[side].badge}" alt="" title="${esc(name)} kit: ${esc({ home: 'home', away: 'away', special: 'special', special2: 'special 2', special3: 'special 3' }[sheet.kit] || 'default')}">` : '';
-  const form = sheet ? `<span class="ml-form">${esc(FORMATIONS[sheet.formation] ? sheet.formation : DEFAULT_FORMATION)}</span>` : '';
+  const shape = sheet ? esc(FORMATIONS[sheet.formation] ? sheet.formation : DEFAULT_FORMATION) : '';
+  const form = !sheet ? '' : sheet.random ? `<span class="ml-form" title="No team sheet submitted, so the XI was picked at random">${shape} · Random XI</span>` : `<span class="ml-form">${shape}</span>`;
   return `<div class="ml-side is-${side}">${side === 'home' ? `${chip}${ctx.crest(team, 32)}<b>${esc(name)}</b>${shirt}${form}` : `${form}${shirt}<b>${esc(name)}</b>${ctx.crest(team, 32)}${chip}`}</div>`;
 }
 
@@ -137,7 +138,7 @@ export function lineupCard(L, ctx) {
   const best = shown.map(id => [id, avgOf(ctx.stats, id)]).filter(x => x[1] != null).sort((a, b) => b[1] - a[1])[0];
   const star = best ? best[0] : null;
   const pills = `<nav class="ml-pills sc-toggle" aria-label="Lineup view">${VIEWS.map(([k, l]) => `<button type="button" data-lview="${k}" aria-pressed="${k === ctx.view}">${esc(l)}</button>`).join('')}</nav>`;
-  const half = side => (L[side].sheet ? '' : `<div class="ml-empty is-${side}">${icon('lock')}<b>Lineup not submitted yet</b><span>It shows as soon as the club submits its team.</span></div>`);
+  const half = side => (L[side].sheet ? '' : `<div class="ml-empty is-${side}">${icon('lock')}<b>Lineup not submitted yet</b><span>It shows as soon as the club submits its team. Without one, a random XI is picked at the lock.</span></div>`);
   return `<section class="lg-card ml" aria-labelledby="ml-h">
     <div class="ml-bar">${bar('home', L, ctx)}<h2 id="ml-h">Predicted lineup</h2>${bar('away', L, ctx)}</div>
     ${pills}

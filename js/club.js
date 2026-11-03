@@ -139,7 +139,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   let savedAt = rowRes.data?.updated_at ? new Date(rowRes.data.updated_at) : null;
   let sel = null;   // { slot } or { player }: the first tap of a move
   let timer = null, saving = false, again = false;
-  // SUBMIT (0.63): the sheet submitted for each upcoming round. Without one, a round uses the latest draft, as before.
+  // SUBMIT (0.63): the sheet submitted for each upcoming round. Without one, the round gets a random XI (0080, user 3 Nov 2026).
   const submitted = new Map((subRes.error ? [] : subRes.data || []).map(s => [s.week, s]));
   let picking = false, pickWeek = null, subBusy = false, subMsg = '';
 
@@ -381,7 +381,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
     const s = submitted.get(next.week), same = sameAsNow(s);
     const line = s ? (same ? `<b>Submitted</b> for ${esc(wk(next.week))} · ${esc(tidy(dayTime.format(new Date(s.submitted_at))))}`
       : `<b>Changed since you submitted</b> for ${esc(wk(next.week))}. Submit again to use these changes.`)
-      : `<b>Not submitted</b> for ${esc(wk(next.week))} yet. If you don’t, your latest saved sheet is used.`;
+      : `<b>Not submitted</b> for ${esc(wk(next.week))} yet. If you don’t, a random XI is picked for you.`;
     const cls = s ? (same ? 'is-done' : 'is-changed') : 'is-todo';
     if (!picking) {
       // Already submitted and unchanged: say so, and offer the next round's sheet instead of asking again.
@@ -422,7 +422,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   async function withdraw(week) {
     const { error } = await ok(c.rpc('withdraw_team_sheet', { p_week: week }));
     if (error) { subMsg = /locked/.test(error.message) ? error.message : 'That didn’t withdraw. Try again.'; drawSubmit(); return; }
-    submitted.delete(week); subMsg = `Withdrawn: ${wk(week)} will use your latest saved sheet.`; drawSubmit();
+    submitted.delete(week); subMsg = `Withdrawn: ${wk(week)} gets a random XI unless you submit again.`; drawSubmit();
   }
 
   // ----- changes -----

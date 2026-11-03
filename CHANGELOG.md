@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.26.0 (2026-11-03)
+
+Headlines: Submit your team sheet or get a random XI
+
+**Changed:** when a round locks, a club that hasn't SUBMITTED a team sheet for it no longer plays its last saved sheet. It gets a random XI instead: a 4-4-2 with a random player of the right position in each spot, the rest of the squad on the bench in random order, and a random captain and set-piece takers. The match page shows that team as "4-4-2 · Random XI". My club, the deadline reminder email and the line-ups email say so too.
+**Changed, emails:** deadline reminders now go to every club that plays in the round and hasn't submitted for it. Before, saving any change to the sheet counted as picked.
+**Fixed by hand:** preseason week 3: Lucky FC and Paragon Rangers FC hadn't submitted, so their old sheets were swapped for random XIs before their matches were played.
+Database change: 0080 (`random_week_sheet`, the new lock rule, `week_sheets.random`, the reminder rule), already applied. Edge Function `send-reminders` redeployed.
+
 ## 1.25.0 (2026-11-03)
 
 Headlines: Trophies on every team page

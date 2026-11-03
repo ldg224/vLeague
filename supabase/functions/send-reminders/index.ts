@@ -102,8 +102,8 @@ async function compose(r: Row, s: Season | null, admin: any): Promise<Mail | nul
     return {
       subject: `Pick your XI: week ${d.week} locks ${shortWhen(d.locks_at)}`,
       heading: `Pick your XI for week ${d.week}`,
-      lines: [`Hi ${first}, you haven’t picked a team for <b>${esc(vs)}</b> yet.`,
-        `Line-ups lock <b>${esc(when(d.locks_at))}</b>. If you don’t pick one, the engine picks for you.`],
+      lines: [`Hi ${first}, you haven’t submitted a team for <b>${esc(vs)}</b> yet.`,
+        `Line-ups lock <b>${esc(when(d.locks_at))}</b>. If you don’t submit one, a random XI is picked for you.`],
       button: ['Pick your XI', `${SITE}club.html`],
     };
   }
@@ -122,8 +122,8 @@ async function compose(r: Row, s: Season | null, admin: any): Promise<Mail | nul
     const { data: sheet } = await admin.from('week_sheets').select('*').eq('week', d.week).eq('club', opp).maybeSingle();
     const names = new Map((s?.players || []).map((p: any) => [String(p.id), p.name]));
     const xi = sheet && Object.keys(sheet.lineup || {}).length
-      ? `<b>${esc(sheet.formation || '')}</b>: ${Object.values(sheet.lineup).map(id => esc(names.get(String(id)) || '?')).join(', ')}`
-      : 'No team sheet. The engine picks their team.';
+      ? `<b>${esc(sheet.formation || '')}</b>${sheet.random ? ' (picked at random: no team sheet submitted)' : ''}: ${Object.values(sheet.lineup).map(id => esc(names.get(String(id)) || '?')).join(', ')}`
+      : 'No team sheet yet.';
     return {
       subject: `Week ${d.week} line-ups are out`,
       heading: `${teamName(s, opp)}’s line-up`,
