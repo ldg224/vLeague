@@ -5,7 +5,7 @@ declare u uuid; fx record; n int; pk bigint;
 begin
   update public.stakes_settings set visible = true, betting_open = true, lines_days = 28;
   select id into u from public.profiles where role='manager' limit 1;
-  select * into fx from public.fixtures where starts_at > now() and not postponed and starts_at < now()+interval '28 days' order by starts_at limit 1;
+  select * into fx from public.fixtures where starts_at > now() and not postponed and week not in (select week from public.fixtures where starts_at <= now()) and starts_at < now()+interval '28 days' order by starts_at limit 1;   -- a round that has not started
   delete from public.stakes_lines where fixture in (select id from public.fixtures where week = fx.week);
   update public.rounds set kind = 'preseason', counts_for_ladder = false where week = fx.week;
   perform set_config('request.jwt.claims', json_build_object('sub',u,'role','authenticated')::text, true);

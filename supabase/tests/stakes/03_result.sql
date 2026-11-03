@@ -7,7 +7,7 @@ begin
   update public.stakes_settings set visible = default, betting_open = default, start_coins = default, daily_topup = default, bailout_below = default, bailout_to = default, multiplier = default, min_stake = default, max_stake = default, lines_per_week = default, lines_per_match = default, score_per_week = default, score_exact_mult = default, score_result_mult = default, result_win_mult = default, result_draw_mult = default, stats = default, line_adjust = default, lock_minutes = default, lines_days = default, show_board = default, score_all = default;   -- a known starting point, whatever the office has set live
   select id into mgr from public.profiles where role = 'manager' limit 1;
   select id into off from public.profiles where role = 'office' limit 1;
-  select week into wk from public.fixtures where starts_at > now() and not postponed and week not in (select week from public.rounds where kind = 'preseason') and starts_at < now() + interval '60 days' order by starts_at limit 1;
+  select week into wk from public.fixtures where starts_at > now() and not postponed and week not in (select week from public.rounds where kind = 'preseason') and week not in (select week from public.fixtures where starts_at <= now()) and starts_at < now() + interval '60 days' order by starts_at limit 1;   -- a round that has not started
   delete from public.stakes_wallets where user_id = mgr;
   delete from public.stakes_lines where fixture in (select id from public.fixtures where week = wk);
   update public.stakes_settings set visible = true, lines_days = 28, daily_topup = 0;
@@ -70,7 +70,8 @@ begin
   perform set_config('role', 'postgres', true);
   update public.stakes_settings set result_win_mult = 5, result_draw_mult = 9;
 
-  -- settle: fa 2-1 (home pick wins), fb 1-1 (draw pick wins), fc 1-0 (away pick loses)
+  -- settle: the three matches are over, fa 2-1 (home pick wins), fb 1-1 (draw pick wins), fc 1-0 (away pick loses)
+  update public.fixtures set starts_at = now() - interval '2 hours' where id in (fa.id, fb.id, fc.id);
   insert into public.results (fixture, summary) values (fa.id, jsonb_build_object('home', 2, 'away', 1, 'players', '{}'::jsonb));
   insert into public.results (fixture, summary) values (fb.id, jsonb_build_object('home', 1, 'away', 1, 'players', '{}'::jsonb));
   if l3 is not null then insert into public.results (fixture, summary) values (fc.id, jsonb_build_object('home', 1, 'away', 0, 'players', '{}'::jsonb)); end if;

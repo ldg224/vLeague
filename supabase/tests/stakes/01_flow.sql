@@ -7,7 +7,7 @@ begin
   update public.stakes_settings set visible = true, score_per_week = 0, score_all = false, lines_days = 28;   -- (score predictions have their own test, 03)
   select id into u from public.profiles where role='manager' limit 1;
   delete from public.stakes_wallets where user_id = u;
-  select * into fx from public.fixtures where starts_at > now() and not postponed and week not in (select week from public.rounds where kind = 'preseason') and starts_at < now()+interval '60 days' order by starts_at limit 1;
+  select * into fx from public.fixtures where starts_at > now() and not postponed and week not in (select week from public.rounds where kind = 'preseason') and week not in (select week from public.fixtures where starts_at <= now()) and starts_at < now()+interval '60 days' order by starts_at limit 1;   -- a round that has not started
   delete from public.stakes_lines where fixture in (select id from public.fixtures where week = fx.week);   -- live lines may already exist for this round
   -- fake submitted sheets for both clubs: first 11 players of each club
   insert into public.submitted_sheets (club, week, sheet)
@@ -27,7 +27,8 @@ begin
   begin perform public.stakes_place(pk,'under',10); insert into t_log values (default,'dup blocked',false,''); exception when others then insert into t_log values (default,'dup blocked',true,sqlerrm); end;
   begin perform public.stakes_place(pk+0,'over',5000); insert into t_log values (default,'overspend blocked',false,''); exception when others then insert into t_log values (default,'overspend blocked',true,sqlerrm); end;
   perform set_config('role','postgres',true);
-  -- settle: fake result giving the line player a huge stat so over wins
+  -- settle: the match is over, and a fake result gives the line player a huge stat so over wins
+  update public.fixtures set starts_at = now() - interval '2 hours' where id = fx.id;
   insert into public.results (fixture, summary) select fx.id, jsonb_build_object('players', (select jsonb_object_agg(l.player_id, jsonb_build_object('min',90,'sv',99,'sot',99,'pas',99,'tk',99,'g',99,'sh',99)) from public.stakes_lines l where l.fixture=fx.id and l.player_id is not null));
   select coins into bal from public.stakes_wallets where user_id=u;
   insert into t_log(name,ok,detail) values ('over wins 190 back',bal=1090,bal::text);
