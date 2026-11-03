@@ -175,13 +175,15 @@ DEADLINE_CHECKS = [
     ('manager', 'saving a team sheet keeps a version', '',
      """update public.team_sheets set formation = '4-3-3' where club = 'TUR'; reset role;
         select count(*) >= 1 as ok from public.team_sheet_versions where club = 'TUR' and sheet->>'formation' = '4-3-3';"""),
-    ('anon', 'a week locks with each club\u2019s last save before the deadline, and everyone can read it',
-     "insert into public.deadlines (week, locks_at) values (97, now() - interval '1 hour'); "
-     + VER + """('TUR', '{"formation":"4-4-2","captain":"0015"}', now() - interval '3 hours'),
-                ('TUR', '{"formation":"3-5-2","captain":"0001"}', now() - interval '2 hours'),
-                ('TUR', '{"formation":"4-3-3","captain":"9999"}', now() - interval '30 minutes');
+    ('anon', 'a week locks with each club\u2019s submitted sheet, a late or missing one gets a random XI, and everyone can read it',
+     """insert into public.fixtures (id, week, home, away, starts_at) values ('w97-tur-lau', 97, 'TUR', 'LAU', now() + interval '1 day');
+        insert into public.deadlines (week, locks_at) values (97, now() - interval '1 hour') on conflict (week) do update set locks_at = excluded.locks_at;   -- a new fixture sets its round's deadline, so this comes after it
+        insert into public.submitted_sheets (club, week, sheet, submitted_at) values
+          ('TUR', 97, '{"formation":"3-5-2","captain":"0001"}', now() - interval '2 hours'),
+          ('LAU', 97, '{"formation":"3-5-2","captain":"0002"}', now() - interval '30 minutes');
         select public.lock_due_weeks();""",
-     """select (select formation = '3-5-2' and captain = '0001' from public.week_sheets where week = 97 and club = 'TUR')
+     """select (select formation = '3-5-2' and captain = '0001' and submitted and not random from public.week_sheets where week = 97 and club = 'TUR')
+          and (select formation = '4-4-2' and random and not submitted from public.week_sheets where week = 97 and club = 'LAU')
           and (select locked_at is not null from public.deadlines where week = 97) as ok;"""),
     ('anon', 'a deadline still to come locks nothing',
      "insert into public.deadlines (week, locks_at) values (97, now() + interval '1 hour'); select public.lock_due_weeks();",
@@ -201,6 +203,7 @@ DEADLINE_CHECKS = [
 # 0.7: settings and email reminders. The fake manager is FC Turtle's, with a confirmed email and a past sign-in so
 # due_emails() counts them (pre runs with full rights; everything is rolled back).
 MAILABLE = f"update auth.users set email_confirmed_at = now(), last_sign_in_at = now() where id = '{FAKE_MANAGER}';"
+DUE_ROUND = " insert into public.fixtures (id, week, home, away, starts_at) values ('w98-tur-lau', 98, 'TUR', 'LAU', now() + interval '1 day'); insert into public.deadlines (week, locks_at) values (98, now() + interval '2 hours') on conflict (week) do update set locks_at = excluded.locks_at;"   # reminders go only to clubs that play in the round (0080); a new fixture sets its round's deadline, so the deadline comes after it
 RES_PRE = '''insert into public.fixtures (id, week, home, away, starts_at) values ('w98-tur-lau', 98, 'TUR', 'LAU', now() + interval '1 day'), ('w97-tur-lau', 97, 'TUR', 'LAU', now() - interval '1 day'); insert into public.results (fixture, summary) values ('w98-tur-lau', '{"home":1,"away":0}'), ('w97-tur-lau', '{"home":2,"away":2}'); insert into storage.objects (bucket_id, name) values ('matches', 'w98-tur-lau.json.gz'), ('matches', 'w97-tur-lau.json.gz');'''
 
 SETTINGS_CHECKS = [
@@ -242,23 +245,20 @@ SETTINGS_CHECKS = [
      """select public.send_at('2026-10-09 02:00+11', interval '3 hours') = '2026-10-08 21:30+11' as ok;"""),
     ('anon', 'a reminder due at 3 pm goes at 3 pm', '',
      """select public.send_at('2026-10-08 18:00+11', interval '3 hours') = '2026-10-08 15:00+11' as ok;"""),
-    ('office', 'a club that hasn\u2019t picked a team gets a deadline reminder',
-     MAILABLE + " delete from public.team_sheet_versions where club = 'TUR'; "
-     "insert into public.deadlines (week, locks_at) values (98, now() + interval '2 hours');",
+    ('office', 'a club that plays and hasn\u2019t submitted gets a deadline reminder, even with a saved draft',
+     MAILABLE + DUE_ROUND + " insert into public.team_sheet_versions (club, sheet, saved_at) values ('TUR', '{}', now());",
      f"reset role; select exists (select 1 from public.due_emails() where user_id = '{FAKE_MANAGER}' and kind = 'deadline' and key like '98-%') as ok;"),
-    ('office', 'a club that has picked a team gets no reminder',
-     MAILABLE + " insert into public.deadlines (week, locks_at) values (98, now() + interval '2 hours'); "
-     "insert into public.team_sheet_versions (club, sheet, saved_at) values ('TUR', '{}', now());",
+    ('office', 'a club that has submitted gets no reminder',
+     MAILABLE + DUE_ROUND + " insert into public.submitted_sheets (club, week, sheet) values ('TUR', 98, '{}');",
+     f"reset role; select not exists (select 1 from public.due_emails() where user_id = '{FAKE_MANAGER}' and kind = 'deadline') as ok;"),
+    ('office', 'a club with no match that round gets no reminder',
+     MAILABLE + " insert into public.deadlines (week, locks_at) values (98, now() + interval '2 hours');",
      f"reset role; select not exists (select 1 from public.due_emails() where user_id = '{FAKE_MANAGER}' and kind = 'deadline') as ok;"),
     ('office', 'a reminder already sent is not sent again',
-     MAILABLE + " delete from public.team_sheet_versions where club = 'TUR'; "
-     "insert into public.deadlines (week, locks_at) values (98, now() + interval '2 hours'); "
-     f"insert into public.email_log (user_id, kind, key) values ('{FAKE_MANAGER}', 'deadline', '98-24h');",
+     MAILABLE + DUE_ROUND + f" insert into public.email_log (user_id, kind, key) values ('{FAKE_MANAGER}', 'deadline', '98-24h');",
      f"reset role; select not exists (select 1 from public.due_emails() where user_id = '{FAKE_MANAGER}' and kind = 'deadline' and key = '98-24h') as ok;"),
     ('office', 'reminders switched off are not sent',
-     MAILABLE + " delete from public.team_sheet_versions where club = 'TUR'; "
-     "insert into public.deadlines (week, locks_at) values (98, now() + interval '2 hours'); "
-     f"""insert into public.user_settings (user_id, prefs) values ('{FAKE_MANAGER}', '{{"email":{{"deadline":"off"}}}}');""",
+     MAILABLE + DUE_ROUND + f""" insert into public.user_settings (user_id, prefs) values ('{FAKE_MANAGER}', '{{"email":{{"deadline":"off"}}}}');""",
      f"reset role; select not exists (select 1 from public.due_emails() where user_id = '{FAKE_MANAGER}' and kind = 'deadline') as ok;"),
     # results and match files (0.12, 0.14): hidden until kick-off, office reads any time, only the office writes
     ('anon', 'guest cannot read a result before kick-off', RES_PRE, "select count(*) = 0 as ok from public.results where fixture = 'w98-tur-lau';"),

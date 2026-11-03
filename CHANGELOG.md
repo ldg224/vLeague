@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.26.1 (2026-11-04)
+
+Headlines: Stakes keeps unplayed matches secret
+
+**Fixed (B-32):** results are saved before a match is played, and Stakes was reading them too early. A player's card could count a match that hadn't been played, saving a result would have paid out picks straight away, and a round left the Stakes page once its results were saved. Stakes now uses a match only after full time (kick-off plus the 45-minute live match). Picks settle within a minute of full time, and a round stays on the page until every game in it is over. No pick had been paid out early, and open picks were left as they were.
+**Changed, security checks:** the week-lock and deadline-reminder checks now test the submit-or-random rule from 1.26.0. No change to how locks or reminders work.
+Database change: 0081 (`stakes_match_over`, `stakes_settle_due` and the `vleague-stakes-settle` job, plus changes to `stakes_usual_info`, `stakes_club_rating`, `stakes_settle` and `stakes_slate`), already applied.
+
 ## 1.26.0 (2026-11-03)
 
 Headlines: Submit your team sheet or get a random XI
