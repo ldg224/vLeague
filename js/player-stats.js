@@ -17,6 +17,13 @@
 // MIN_PEERS players of his position have played MIN_MATCHES matches and so has he. Before that the classes still show (a first guess from everyone with
 // 90 minutes) but are marked provisional, because one game's numbers can be luck. The league average beside each stat is shown from the first match.
 import { countedFixtures, totals, per90, MIN_MINUTES } from './season-stats.js';
+import { status } from './dashboard-data.js';
+
+// The saved results to leave out of a player's card: every match not yet at full time, and any the viewer has hidden (spoiled(f), spoiler-free mode).
+// A saved result is the whole match, final numbers included, so one that hasn't kicked off (the office can read those) or is still playing out must not count.
+// The demo's matches are dated in the coming days but count as played (demo: true).
+export const resultsToHide = (season, { now = new Date(), spoiled = () => false, demo = false } = {}) =>
+  new Set(season.fixtures.filter(f => f.result && ((!demo && status(f, season, now) !== 'ft') || spoiled(f))).map(f => f.id));
 
 export const MIN_PEERS = 6;
 export const MIN_MATCHES = 3;

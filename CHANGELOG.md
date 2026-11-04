@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.30.1 (2026-11-05)
+
+Headlines: Player stats wait for full time
+
+**Fixed:** the player popup counted every saved result, so a match still playing out, or (for the office) one that hadn't kicked off, showed up early in a player's stats, match list and maps, final score included. A match now only counts at full time, for everyone, as on the rest of the site.
+Database change: none.
+
 ## 1.30.0 (2026-11-05)
 
 Headlines: Event weeks dress the match page | Confetti, snow and fireworks

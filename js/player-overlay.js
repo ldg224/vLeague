@@ -17,7 +17,7 @@ import { accentFor, onColour } from './club-colour.js';
 import { loadPlayers } from './players-data.js';
 import { portrait } from './portrait.js';
 import { hasPreseason, scopeNow } from './preseason.js';
-import { playerView, averageRating, CLASSES, MIN_PEERS, MIN_MATCHES } from './player-stats.js';
+import { playerView, resultsToHide, averageRating, CLASSES, MIN_PEERS, MIN_MATCHES } from './player-stats.js';
 import { icon } from './icons.js';
 import { extractMaps, mergeMaps, heatMap } from './player-maps.js';
 import { shotsOf, playerShotMap, shotMapClick } from './match-shotmap.js';
@@ -43,7 +43,7 @@ export async function getData() {
   const h = (host || globalThis.vlPlayerHost)?.();
   if (h?.season) {
     if (!h.season.players?.length) h.season.players = h.demo ? playersFromResults(h.season) : await loadPlayers().catch(() => []);
-    return { season: h.season, rows: h.rows || [] };
+    return { season: h.season, rows: h.rows || [], demo: h.demo };
   }
   if (memo && Date.now() - memo.at < 5 * 60 * 1000) return memo.data;
   const [rows, season, list] = await Promise.all([clubs().catch(() => []), loadSeason().catch(() => null), loadPlayers().catch(() => [])]);
@@ -55,9 +55,9 @@ export async function getData() {
 }
 
 // ---- the card ----
-export function renderPlayerInto(root, { season, rows }, id) {
+export function renderPlayerInto(root, { season, rows, demo }, id) {
   const now = new Date(), byCode = new Map((rows || []).map(r => [r.code, r]));
-  const hidden = new Set(season ? season.fixtures.filter(f => f.result && !f.test && spoilerHidden(f, season, now)).map(f => f.id) : []);
+  const hidden = season ? resultsToHide(season, { now, demo, spoiled: f => !f.test && spoilerHidden(f, season, now) }) : new Set();
   const scope = season && hasPreseason(season) ? scopeNow(season, now) : 'season';
   const v = season ? playerView(season, id, { hidden, scope }) : null;
   if (!v) {

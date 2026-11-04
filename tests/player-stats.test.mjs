@@ -2,8 +2,9 @@
 // Player pages (js/player-stats.js): totals, the match log, spoiler-free, the keeper's set and the league places, on two made-up matches.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { playerView, averageRating, classOf, MIN_PEERS } from '../js/player-stats.js';
 import { plink, wirePlayerLinks } from '../js/player-link.js';
+globalThis.location ??= { hostname: '', search: '', href: 'http://localhost/' };   // dashboard-data.js reads location when it loads
+const { playerView, resultsToHide, averageRating, classOf, MIN_PEERS } = await import('../js/player-stats.js');
 
 const P = (name, team, slot, o = {}) => ({ name, team, slot, min: 90, g: 0, a: 0, sh: 0, sot: 0, xg: 0, kp: 0, pas: 20, pc: 15, tk: 0, int: 0, clr: 0, blk: 0, sv: 0, gc: 0, yc: 0, rc: 0, fl: 0, fd: 0, dr: 0, aw: 0, off: 0, cr: 0, tch: 40, km: 5, pw: 0, pcn: 0, r: 6.5, ...o });
 const players = [
@@ -46,6 +47,17 @@ test('a keeper gets the goalkeeping set and a save percentage', () => {
 test('a match the viewer has not opened is left out of everything', () => {
   const v = playerView(season, 'a1', { hidden: new Set(['f2']) });
   assert.equal(v.row.g, 2); assert.equal(v.log.length, 1);
+});
+test('a saved result stays out until full time, whoever can read it', () => {
+  const at = (id, date, time, g) => ({ id, week: 1, home: 'AAA', away: 'BBB', date, time, result: { home: g, away: 0, players: { a1: P('Ana', 'AAA', 'ST', { g }) } } });
+  const s = { players, live_minutes: 45, fixtures: [at('done', '2026-11-01', '12:00', 1), at('playing', '2026-11-05', '11:30', 2), at('ahead', '2026-11-05', '16:00', 3), at('off', '2026-11-05', '10:00', 4)] };
+  s.fixtures[3].postponed = true;
+  const now = new Date(2026, 10, 5, 12, 0);
+  assert.deepEqual([...resultsToHide(s, { now })], ['playing', 'ahead', 'off']);
+  const v = playerView(s, 'a1', { hidden: resultsToHide(s, { now }) });
+  assert.equal(v.row.g, 1); assert.equal(v.log.length, 1);
+  assert.deepEqual([...resultsToHide(s, { now, spoiled: f => f.id === 'done' })], ['done', 'playing', 'ahead', 'off']);
+  assert.deepEqual([...resultsToHide(s, { now, demo: true })], []);
 });
 test('a player link wraps the name, escapes the id and leaves it alone with no id', () => {
   assert.match(plink('a"1', 'Ana'), /data-pid="a&quot;1"[^>]*>Ana<\/span>/);
