@@ -236,8 +236,8 @@ function start() {
       styleCards();
     }
     tickCountdown();
-    // Boosted captain's entrance (S-33), once the line-ups it lands on are on the page. It keeps to itself which ones this device has seen.
-    if (lineups && tabNow(s.st) === 'preview') playBoostIntro(fx.id, boostSides(lineups, season.players, c => rows.find(r => r.code === c)?.name || season.teams?.find(t => t.code === c)?.name || c), { replay: demo != null && q.has('replay') });
+    // Boosted captain's entrance (S-33), once the line-ups it lands on are on the page.
+    if (lineups && tabNow(s.st) === 'preview') playBoostIntro(fx.id, boostSides(lineups, season.players, c => rows.find(r => r.code === c)?.name || season.teams?.find(t => t.code === c)?.name || c));
     mountViewer(s);
     liveReactions(fx.id, s.st === 'live' && !s.hid);   // the reaction bar while the match is live (S-20A)
   };

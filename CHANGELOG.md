@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.28.2 (2026-11-04)
+
+Headlines: Boosted Captain entrance plays every time
+
+**Changed (S-33):** the Boosted Captain entrance now plays every time the match page is opened or reloaded, instead of once per match on each device. It plays once per page open, so tapping the pills or a live refresh doesn't start it again.
+Database change: none.
+
 ## 1.28.1 (2026-11-04)
 
 Headlines: See your own Boosted Captain as soon as you submit

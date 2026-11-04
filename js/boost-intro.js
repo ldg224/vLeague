@@ -1,11 +1,9 @@
 // Boosted captain's entrance (S-33, the user's idea, 4 Nov 2026): when a match's line-ups show a boosted captain, a gradient C grows to fill the screen over
 // "BOOSTED CAPTAIN" and the player's name, then flies down and lands on the C beside his name on the pitch.
 //   boostSides(L, players, clubName) -> [{ side, code, player, club }]: the boosted captains in these line-ups (loadLineups' result), home first
-//   playBoostIntro(fixtureId, sides, { replay }) -> plays each one not yet seen on this device. A tap or Esc skips. Nothing plays with reduced motion on, or while the tab is hidden.
+//   playBoostIntro(fixtureId, sides) -> plays each one every time the page is opened (the user, 4 Nov 2026), once per page load, so a redraw or a live tick doesn't start it again. A tap or Esc skips. Nothing plays with reduced motion on, or while the tab is hidden.
 // It is a layer of its own on <body>, so a redraw of the page underneath can't break it (js/paint.js); the mark it lands on is looked up at the moment it flies.
-const seenKey = (id, code) => `vl-boost-intro:${id}:${code}`;
-const seen = key => { try { return localStorage.getItem(key) === '1'; } catch { return false; } };
-const remember = key => { try { localStorage.setItem(key, '1'); } catch { /* it just plays again next time */ } };
+const played = new Set();
 
 export function boostSides(L, players, clubName) {
   return ['home', 'away'].flatMap(side => {
@@ -25,12 +23,12 @@ export const arcPoint = (a, b, t) => {
 const OUT = 'cubic-bezier(.16, 1, .3, 1)', BACK = 'cubic-bezier(.34, 1.56, .64, 1)';
 let running = false;
 
-export function playBoostIntro(fixtureId, sides, { replay = false } = {}) {
+export function playBoostIntro(fixtureId, sides) {
   if (running || !sides?.length || document.hidden || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const todo = sides.filter(s => replay || !seen(seenKey(fixtureId, s.code)));
+  const todo = sides.filter(s => !played.has(`${fixtureId}:${s.code}`));
   if (!todo.length) return;
   running = true;
-  todo.forEach(s => remember(seenKey(fixtureId, s.code)));
+  todo.forEach(s => played.add(`${fixtureId}:${s.code}`));
   for (const s of todo) document.body.classList.add(`bi-wait-${s.side}`);   // the mark stays empty until the C lands on it
 
   const root = document.createElement('div');
