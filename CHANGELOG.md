@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.28.1 (2026-11-04)
+
+Headlines: See your own Boosted Captain as soon as you submit
+
+**Changed (S-33):** a club now sees its own Boosted Captain entrance and glow on the Predicted lineup as soon as it has submitted the boost. Everyone else, the office included, still sees it from the lock, so it stays a surprise for rivals.
+Database change: none.
+
 ## 1.28.0 (2026-11-04)
 
 Headlines: Boosted Captain entrance

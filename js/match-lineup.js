@@ -9,6 +9,7 @@
 // LINEUP RULE (changed by the user, 15 Oct 2026): a club's XI appears as soon as it SUBMITS a team sheet (submitted_lineups(), formation, XI,
 // captain and kit only; the portraits wear that kit from then on, user 18 Oct 2026), and from the lock on the locked sheet (week_sheets) is used. A club that has not submitted keeps an empty half-pitch saying so until the
 // lock; then it shows the random XI the lock picked for it (week_sheets.random, 0080: submit or it's random, user 3 Nov 2026). Unsubmitted drafts are never shown.
+// BOOSTED CAPTAIN (S-33, the user, 4 Nov 2026): a club sees its own boost as soon as it submits, read from its own submitted sheet. Everyone else, the office included, sees it from the lock.
 import { db } from './auth.js';
 import { FORMATIONS, DEFAULT_FORMATION, autoLineup } from './pitch.js';
 import { loadKits, matchKits } from './kits-data.js';
@@ -23,18 +24,23 @@ import { plink } from './player-link.js';
 const image = url => new Promise(res => { if (!url) return res(null); const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
 const filled = row => Boolean(row && row.lineup && Object.keys(row.lineup).length);
 
+// A submitted line-up, with the boost added only when it is the viewer's own club's sheet.
+export const withOwnBoost = (row, own, mine) => (row && mine && row.club === mine && own?.club === mine && own.sheet?.boost === true ? { ...row, boost: true } : row);
+
 // fake (localhost preview only): a club with no locked sheet gets the best XI the squad can make, to look at the pitch with both halves full.
-export async function loadLineups(fx, season, rows, { fake = false } = {}) {
+// mine: the viewer's club code, for withOwnBoost.
+export async function loadLineups(fx, season, rows, { fake = false, mine = null } = {}) {
   const c = await db(), now = new Date();
-  const [dl, ws, sub, kits] = await Promise.all([
+  const [dl, ws, sub, kits, own] = await Promise.all([
     c.from('deadlines').select('week, locks_at, locked_at').eq('week', fx.week).maybeSingle().then(r => r.data || null).catch(() => null),
     c.from('week_sheets').select('club, formation, captain, lineup, kit, submitted, random, boost').eq('week', fx.week).in('club', [fx.home, fx.away]).then(r => r.data || []).catch(() => []),
     c.rpc('submitted_lineups', { p_week: fx.week, p_clubs: [fx.home, fx.away] }).then(r => r.data || []).catch(() => []),   // submitted, not yet locked
     loadKits(),
+    mine && [fx.home, fx.away].includes(mine) ? c.from('submitted_sheets').select('club, sheet').eq('week', fx.week).eq('club', mine).maybeSingle().then(r => r.data || null).catch(() => null) : null,
   ]);
   const open = Boolean(dl && (dl.locked_at || new Date(dl.locks_at) <= now));   // the week's line-ups have locked
   const known = new Set((season.players || []).map(p => String(p.id)));
-  const sheetOf = code => { const r = open ? ws.find(x => x.club === code && (x.submitted || x.random)) : sub.find(x => x.club === code); return filled(r) && Object.values(r.lineup).some(id => known.has(String(id))) ? r : null; };
+  const sheetOf = code => { const r = open ? ws.find(x => x.club === code && (x.submitted || x.random)) : withOwnBoost(sub.find(x => x.club === code), own, mine); return filled(r) && Object.values(r.lineup).some(id => known.has(String(id))) ? r : null; };
   const made = (code, f) => ({ club: code, formation: f, lineup: autoLineup(f, (season.players || []).filter(p => p.team === code)) });
   const sides = season.demoSheets   // the demo (js/demo-match.js): every club has locked its team
     ? { home: season.demoSheets[fx.home] || null, away: season.demoSheets[fx.away] || null }

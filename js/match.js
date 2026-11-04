@@ -266,7 +266,7 @@ function start() {
   };
   main.innerHTML = '<div class="mh" id="mh"><div id="mh-head"></div><div id="mh-player"></div><div class="mh-cols"><div class="mh-main" id="mh-main"></div><aside class="mh-side" aria-label="About this match"><div id="mh-chance"></div><div id="mh-venue"></div><div id="mh-extra"></div></aside></div></div>';
   draw();
-  loadLineups(fx, season, rows, { fake: preview && q.has('fake') }).then(l => { lineups = l; draw(); }).catch(() => { lineups = { home: { sheet: null, locked: false }, away: { sheet: null, locked: false }, kits: {} }; draw(); });
+  loadLineups(fx, season, rows, { fake: preview && q.has('fake'), mine: mine?.code || null }).then(l => { lineups = l; draw(); }).catch(() => { lineups = { home: { sheet: null, locked: false }, away: { sheet: null, locked: false }, kits: {} }; draw(); });
   loadChanceSheets().then(x => { chanceSheets = x; draw(); });
   loadHistory().then(h => { history = h; draw(); }).catch(() => {});   // the league's past seasons, for the Insights
   addEventListener('hashchange', draw);
