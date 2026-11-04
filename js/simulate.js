@@ -54,11 +54,13 @@ const scale = v => Math.min(10, Math.max(1, Math.round(v * 100) / 100));
 const stamp = f => `${f.date || ''}T${f.time || ''}`;
 
 // Players who miss each fixture: a red card or second yellow bans the player from the club's next game(s), in
-// kick-off order, skipping postponed ones. Returns Map(fixture id -> [{ player, name, reason }]).
+// kick-off order, skipping postponed ones. A preseason ban is only served in preseason games: one with no preseason
+// game left is held for next season's preseason and never touches the real season (user, 4 Nov 2026).
+// Returns Map(fixture id -> [{ player, name, reason }]).
 export function suspensions(season) {
   const out = new Map();
   const played = season.fixtures.filter(f => f.date && !f.postponed && !f.test);
-  const clubGames = code => played.filter(f => f.home === code || f.away === code).sort((a, b) => stamp(a).localeCompare(stamp(b)));
+  const clubGames = (code, pre) => played.filter(f => (f.home === code || f.away === code) && Boolean(f.preseason) === pre).sort((a, b) => stamp(a).localeCompare(stamp(b)));
   const owner = id => season.players.find(p => String(p.id) === String(id))?.team;
   for (const f of season.fixtures) {
     if (!f.result || !f.date || f.test) continue;
@@ -67,7 +69,7 @@ export function suspensions(season) {
       const team = c.team || owner(c.player);
       if (!team) continue;
       const reason = `${c.card === 'red' ? 'Red card' : 'Two yellows'} v ${f.home === team ? f.away : f.home} (week ${f.week})`;
-      clubGames(team).filter(g => stamp(g) > stamp(f)).slice(0, BAN_MATCHES).forEach(g => {
+      clubGames(team, Boolean(f.preseason)).filter(g => stamp(g) > stamp(f)).slice(0, BAN_MATCHES).forEach(g => {
         if (!out.has(g.id)) out.set(g.id, []);
         out.get(g.id).push({ player: String(c.player), name: c.name, reason });
       });

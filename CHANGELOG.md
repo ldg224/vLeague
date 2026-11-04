@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.26.2 (2026-11-04)
+
+Headlines: Preseason suspensions stay out of the real season
+
+**Changed:** a red card or two yellows in preseason no longer carries into the real season. The ban is still served in the club's next preseason game if it has one. If it has none, the player is free to play in the real season and the ban waits for next season's preseason.
+Database change: none.
+
 ## 1.26.1 (2026-11-04)
 
 Headlines: Stakes keeps unplayed matches secret
