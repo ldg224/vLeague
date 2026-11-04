@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.29.0 (2026-11-04)
+
+Headlines: A new scoreboard, and Fresh Chalk for Opening Week
+
+**Changed:** the scoreboard on the match video (highlights and full match) is redesigned at the same size. Its background is now artwork: dark mowing stripes on every look, with chalk pitch markings or floodlight beams on some. The score and clock are angled blocks, the score is underlined in both clubs' colours, and the club stripes glow.
+**Added:** the Fresh Chalk look, a mown pitch with chalk markings, for Opening Week. A look can now name its artwork (`mow`, `chalk` or `beams`).
+**Fixed:** a long name on the plate above the scoreboard no longer touches its edges, and the Derby look's orange bar stays inside the board's corners.
+Database change: 0083 (the Fresh Chalk look, set on Opening Week if the round is still on Classic), applied with this release.
+
 ## 1.28.2 (2026-11-04)
 
 Headlines: Boosted Captain entrance plays every time

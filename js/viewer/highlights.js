@@ -5,8 +5,8 @@
 //   WebCodecs, and makes a matching thumbnail plus YouTube title and description.
 
 import { safeColour, onColour, logoPath } from './ui.js';
-import { resolveLook } from '../looks.js';
-import { drawLookFx, drawMoustache } from './look-canvas.js';
+import { resolveLook, artOf } from '../looks.js';
+import { drawLookArt, drawLookFx, drawMoustache } from './look-canvas.js';
 import { kickoff } from './data.js';
 import { buildEffects } from './effects.js';
 import { kitSprite, cleanDesign, drawPrint, TURNS, turnIndex } from '../kit.js';
@@ -1347,7 +1347,7 @@ export class HighlightsRenderer {
     const pre = !!(this.fx?.preseason || this.season?.rounds?.[this.fx?.week]?.preseason), PRE = '#8522f0';
     const star = key === 'grand_final' ? '★ ' : '';
     const label = `${star}${plateText}${star ? ' ★' : ''}`.trim();
-    c.save(); c.font = `800 22px ${FONT}`; const pw = Math.min(w, Math.max(180, c.measureText(label).width + 56)); c.restore();
+    c.save(); c.font = `900 22px ${FONT}`; const pw = Math.min(w, Math.max(180, c.measureText(label).width + label.length * 2 + 64)); c.restore();   // the width counts the letter spacing, so a long name isn't clipped
     const ph = 36, py = y - ph + 2;
     const gold = (a, b) => { const g = c.createLinearGradient(x, py, x, py + ph); g.addColorStop(0, a); g.addColorStop(1, b); return g; };
     // plate
@@ -1360,14 +1360,16 @@ export class HighlightsRenderer {
     else if (key !== 'classic' && acc) { plateFill = acc; plateInk = onColour(acc); }
     if (pre) { plateFill = PRE; plateInk = '#fff'; }
     c.save(); c.shadowColor = 'rgba(0,0,0,.4)'; c.shadowBlur = 16;
-    c.beginPath(); c.roundRect(x, py, pw, ph + 6, [12, 12, 0, 0]); c.fillStyle = plateFill; c.fill(); c.restore();
-    if (key === 'christmas') { c.save(); c.strokeStyle = '#fff'; c.lineWidth = 2; c.beginPath(); c.roundRect(x + 3, py + 3, pw - 6, ph - 2, [9, 9, 0, 0]); c.stroke(); c.restore(); }
-    this.text(label, x + pw / 2, py + 27, { size: 22, weight: 900, align: 'center', colour: plateInk, spacing: 2 });
+    c.beginPath(); c.moveTo(x, py + ph + 6); c.lineTo(x, py + 12); c.quadraticCurveTo(x, py, x + 12, py); c.lineTo(x + pw - 14, py); c.lineTo(x + pw + 4, py + ph + 6); c.closePath(); c.fillStyle = plateFill; c.fill(); c.restore();
+    if (key === 'christmas') { c.save(); c.strokeStyle = '#fff'; c.lineWidth = 2; c.beginPath(); c.moveTo(x + 3, py + ph + 4); c.lineTo(x + 3, py + 12); c.quadraticCurveTo(x + 3, py + 3, x + 12, py + 3); c.lineTo(x + pw - 16, py + 3); c.lineTo(x + pw - 3, py + ph + 4); c.stroke(); c.restore(); }
+    this.text(label, x + pw / 2 - 2, py + 27, { size: 22, weight: 900, align: 'center', colour: plateInk, spacing: 2 });
     // board
     c.save(); c.shadowColor = key === 'grand_final' ? 'rgba(255,215,0,.55)' : 'rgba(0,0,0,.4)'; c.shadowBlur = key === 'grand_final' ? 30 : 20;
-    let fill = 'rgba(6,26,56,0.92)';
-    if (key === 'christmas') fill = 'rgba(15,38,26,0.95)';
-    else if (key === 'grand_final') fill = 'rgba(14,20,32,0.96)';
+    const down = (a, b) => { const g = c.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, a); g.addColorStop(1, b); return g; };
+    let fill = down('#0d2a52', '#061430');
+    if (key === 'finals') fill = down('#2c2410', '#141007');
+    else if (key === 'christmas') fill = 'rgba(15,38,26,0.95)';
+    else if (key === 'grand_final') fill = down('#2a2308', '#0b101a');
     else if (th) { const g = c.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]); fill = g; }
     else if (key === 'derby') { const g = c.createLinearGradient(x, 0, x + w, 0); g.addColorStop(0, mixHex(this.hc, '#0b0f17', 0.72)); g.addColorStop(0.49, '#0b0f17'); g.addColorStop(0.51, '#0b0f17'); g.addColorStop(1, mixHex(this.ac, '#0b0f17', 0.72)); fill = g; }
     this.pill(x, y, w, h, fill, [0, 14, 14, 14]);
@@ -1381,26 +1383,34 @@ export class HighlightsRenderer {
       c.lineWidth = 7; const cols = ['#c62828', '#ffffff', '#2e7d32'];
       for (let i = -h, k = 0; i < w + h; i += 16, k++) { c.strokeStyle = cols[k % 3]; c.beginPath(); c.moveTo(x + i, y + h + 4); c.lineTo(x + i + h + 8, y - 4); c.stroke(); }
       c.fillStyle = 'rgba(15,38,26,.97)'; c.beginPath(); c.roundRect(x + 5, y + 5, w - 10, h - 10, 10); c.fill();
-    } else if (key === 'derby') { c.fillStyle = '#ff7043'; c.fillRect(x, y + h - 5, w, 5); }
+    } else if (key === 'derby') { c.beginPath(); c.roundRect(x, y, w, h, [0, 14, 14, 14]); c.clip(); c.fillStyle = '#ff7043'; c.fillRect(x, y + h - 5, w, 5); }
     else if (th) { c.strokeStyle = th.edge; c.lineWidth = 2; c.beginPath(); c.roundRect(x, y, w, h, [0, 14, 14, 14]); c.stroke(); }
     else if (key !== 'classic' && acc) { c.strokeStyle = acc; c.beginPath(); c.roundRect(x, y, w, h, [0, 14, 14, 14]); c.stroke(); }
     if (pre) { c.strokeStyle = PRE; c.lineWidth = 4; c.beginPath(); c.roundRect(x, y, w, h, [0, 14, 14, 14]); c.stroke(); }
     c.restore();
+    // The artwork, then the look's effects over it. Chalk and beams take the look's colour; the older gold looks are gold.
+    drawLookArt(c, x, y, w, h, artOf(L), key === 'finals' || key === 'grand_final' ? '#ffd76a' : th ? (artOf(L) === 'beams' ? th.glow : th.ink) : '#9cc4ff', this._T || 0, x + 246);
     if (th && !pre) drawLookFx(c, x, y, w, h, th, this._T || 0);
+    const slant = (bx, by, bw, bh, s) => { c.beginPath(); c.moveTo(bx + s, by); c.lineTo(bx + bw, by); c.lineTo(bx + bw - s, by + bh); c.lineTo(bx, by + bh); c.closePath(); };
+    const clubBar = (bx, colour) => { c.save(); c.shadowColor = colour; c.shadowBlur = 12; slant(bx, y + 10, 10, 44, 4); c.fillStyle = colour; c.fill(); c.restore(); };
     // contents
     if (this.A.league) this.leagueFit((x + 12) + (44) / 2, (y + 10) + (44) / 2, 44, 44);
-    c.fillStyle = this.hc; c.fillRect(x + 70, y + 12, 6, 40);
+    clubBar(x + 68, this.hc);
     this.text(this.home.code, x + 88, y + 44, { size: 32, weight: 900 });
-    this.pill(x + 184, y + 10, 124, 44, '#ffffff', 10);
+    // The score: a white block leaning with the stripes, underlined in the two clubs' colours.
+    c.save(); c.shadowColor = 'rgba(0,0,0,.45)'; c.shadowBlur = 10; c.shadowOffsetY = 2; slant(x + 182, y + 9, 128, 46, 10);
+    const paper = c.createLinearGradient(0, y + 9, 0, y + 55); paper.addColorStop(0, '#ffffff'); paper.addColorStop(1, '#dfe6f0'); c.fillStyle = paper; c.fill(); c.restore();
+    c.save(); slant(x + 182, y + 9, 128, 46, 10); c.clip(); c.fillStyle = this.hc; c.fillRect(x + 182, y + 51, 64, 4); c.fillStyle = this.ac; c.fillRect(x + 246, y + 51, 64, 4); c.restore();
     if (th?.fx.includes('moustache')) {   // Movember: a moustache for the dash
       this.text(`${sc[0]}`, x + 246 - 26, y + 44, { size: 32, weight: 900, align: 'right', colour: DARK });
       this.text(`${sc[1]}`, x + 246 + 26, y + 44, { size: 32, weight: 900, align: 'left', colour: DARK });
       drawMoustache(c, x + 246, y + 31, 34, th.plate[0]);
     } else this.text(`${sc[0]} - ${sc[1]}`, x + 246, y + 44, { size: 32, weight: 900, align: 'center', colour: DARK });
     this.text(this.away.code, x + 322, y + 44, { size: 32, weight: 900 });
-    c.fillStyle = this.ac; c.fillRect(x + 408, y + 12, 6, 40);
+    clubBar(x + 404, this.ac);
     const clockFill = pre ? PRE : th ? th.clock : key === 'finals' || key === 'grand_final' ? gold('#ffe08a', '#d4a900') : key === 'christmas' ? '#c62828' : key === 'derby' ? '#ff7043' : this.limeGrad(x + 428, y, x + 548, y);
-    this.pill(x + 428, y + 12, 120, 40, clockFill, 10);
+    c.save(); c.shadowColor = 'rgba(0,0,0,.35)'; c.shadowBlur = 8; slant(x + 424, y + 12, 126, 40, 9); c.fillStyle = clockFill; c.fill(); c.restore();
+    c.save(); slant(x + 424, y + 12, 126, 40, 9); c.clip(); c.fillStyle = 'rgba(255,255,255,.14)'; c.fillRect(x + 424, y + 12, 126, 18); c.restore();
     this.text(clock, x + 488, y + 42, { size: 26, weight: 900, align: 'center', colour: th && !pre ? th.clockInk : !pre && (key === 'finals' || key === 'grand_final' || key === 'derby') ? '#1b1400' : '#fff' });
     // A test match (made-up players) says so on screen, in the broadcast and the highlights.
     if (this.fx?.test) {

@@ -7,12 +7,17 @@
 // Draws the in-game score bug of each look on a pitch-green canvas (a developer's check; see docs/LOOKS.md).
 import { HighlightsRenderer } from '../js/viewer/highlights.js';
 import { PRESETS } from '../js/looks.js';
-const keys = (new URLSearchParams(location.search).get('k') || ['classic', ...Object.keys(PRESETS)].join(',')).split(',');
+const q = new URLSearchParams(location.search), zoom = Number(q.get('s') || 1);   // ?s=2 draws at double size, to judge the detail
+// The older looks have no preset, so they need their table rows here or they'd draw as Classic.
+const OLDER = { finals: ['#f5c542', 'FINALS'], grand_final: ['#ffd700', 'GRAND FINAL'], christmas: ['#e53935', 'CHRISTMAS ROUND'], derby: ['#ff7043', 'DERBY'] };
+const looks = Object.fromEntries(Object.entries(OLDER).map(([key, [accent, banner]]) => [key, { key, name: banner, settings: { accent, banner } }]));
+const keys = (q.get('k') || ['classic', ...Object.keys(OLDER), ...Object.keys(PRESETS)].join(',')).split(',');
+const crest = new Image(); crest.src = '../assets/brand/crest.svg'; await new Promise(r => { crest.onload = crest.onerror = r; });
 await document.fonts.ready;
 for (const k of keys) {
-  const cv = document.createElement('canvas'); cv.width = 700; cv.height = 190; document.getElementById('out').append(cv);
-  const c = cv.getContext('2d'), r = Object.create(HighlightsRenderer.prototype);
-  Object.assign(r, { c, A: { league: null, logos: {} }, fx: { week: 12, look: k }, season: { looks: {}, rounds: { 12: { label: 'Round 12', name: 'Opening Week', numbered: true, no: 12 } } },
+  const cv = document.createElement('canvas'); cv.width = 700 * zoom; cv.height = 190 * zoom; document.getElementById('out').append(cv);
+  const c = cv.getContext('2d'), r = Object.create(HighlightsRenderer.prototype); c.scale(zoom, zoom);
+  Object.assign(r, { c, A: { league: crest.naturalWidth ? crest : null, logos: {} }, fx: { week: 12, look: k }, season: { looks, rounds: { 12: { label: 'Round 12', name: 'Opening Week', numbered: true, no: 12 } } },
     home: { code: 'HAR', colour: '#1e88a8' }, away: { code: 'BRU', colour: '#a0522d' }, hc: '#1e88a8', ac: '#a0522d', _T: 3.2 });
   r.scoreBoard(70, 90, [2, 1], '67:12');
 }

@@ -18,6 +18,8 @@ const pair = (v, d) => (Array.isArray(v) ? [hex(v[0], d[0]), hex(v[1] ?? v[0], d
 
 // The effects a look can switch on. Each is drawn once in css/scoreboard.css (page) and js/viewer/look-canvas.js (video).
 export const FX = ['shine', 'snow', 'lights', 'stars', 'sparkle', 'confetti', 'moustache'];
+// The artwork behind a score bug (js/viewer/look-canvas.js): mowing stripes, the same with chalk pitch markings, or floodlight beams over the stripes.
+export const ART = ['mow', 'chalk', 'beams'];
 
 const BASE = {
   bg: ['#12182a', '#0a0e1a'], edge: '#3a4560', ink: '#f2f2f2', score: ['#ffffff', '#ffffff'],
@@ -32,12 +34,21 @@ export function cleanTheme(raw) {
     plate: pair(raw.plate, BASE.plate), plateInk: hex(raw.plateInk, BASE.plateInk), glow: hex(raw.glow, BASE.glow),
     clock: hex(raw.clock, BASE.clock), clockInk: hex(raw.clockInk, BASE.clockInk),
     fx: (Array.isArray(raw.fx) ? raw.fx : []).filter(n => FX.includes(n)).slice(0, 5),
+    art: ART.includes(raw.art) ? raw.art : null,
   };
 }
+
+// Which artwork a look's score bug has: its theme's, else the older looks' below, else mowing stripes.
+const OLDER_ART = { grand_final: 'beams' };
+export const artOf = look => look?.theme?.art || OLDER_ART[look?.key] || 'mow';
 
 // The looks that ship with the app. The five older looks (classic, finals, grand_final, christmas, derby) keep their own designs in
 // css/scoreboard.css and have no theme here.
 export const PRESETS = {
+  opening_week: {
+    name: 'Fresh Chalk', banner: 'OPENING WEEK', accent: '#7fd66a',
+    theme: { bg: ['#1a6b39', '#0d3d20'], edge: '#7fae88', ink: '#f5f8ef', score: ['#ffffff', '#e4efdc'], plate: ['#f6f8f0', '#dbe6cf'], plateInk: '#0c2a16', glow: '#a6e08a', clock: '#f6f8f0', clockInk: '#0c2a16', fx: [], art: 'chalk' },
+  },
   movember: {
     name: 'Movember', banner: 'MOVEMBER', accent: '#26c6da',
     theme: { bg: ['#0e3a5c', '#07192e'], edge: '#1b7f9a', ink: '#eaf9ff', score: ['#ffffff', '#aef0ff'], plate: ['#8a5a3a', '#6b4429'], plateInk: '#ffffff', glow: '#26c6da', clock: '#26c6da', clockInk: '#04222a', fx: ['moustache'] },
@@ -48,7 +59,7 @@ export const PRESETS = {
   },
   new_year: {
     name: 'New Year', banner: 'NEW YEAR', accent: '#e8c76a',
-    theme: { bg: ['#1c2150', '#0a0d24'], edge: '#6f6a96', ink: '#f3ecd6', score: ['#fff3c9', '#d9b863'], plate: ['#f1deb0', '#d9b863'], plateInk: '#2a2208', glow: '#e8c76a', clock: '#e8d3a2', clockInk: '#2a2208', fx: ['sparkle', 'confetti'] },
+    theme: { bg: ['#1c2150', '#0a0d24'], edge: '#6f6a96', ink: '#f3ecd6', score: ['#fff3c9', '#d9b863'], plate: ['#f1deb0', '#d9b863'], plateInk: '#2a2208', glow: '#e8c76a', clock: '#e8d3a2', clockInk: '#2a2208', fx: ['sparkle', 'confetti'], art: 'beams' },
   },
   festive: {
     name: 'Festive', banner: 'FESTIVE', accent: '#b3203a',

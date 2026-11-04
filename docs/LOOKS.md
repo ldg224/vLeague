@@ -32,6 +32,7 @@ my_look: {
     glow: '#c9b037',                  // the soft light round the board and the score
     clock: '#c9b037', clockInk: '#1b1400',   // the timer block on the video bug
     fx: ['stars'],                    // up to five effects
+    art: 'mow',                       // the artwork behind the video bug: mow, chalk or beams (mow if left out)
   },
 },
 ```
@@ -39,6 +40,9 @@ Every colour is `#rrggbb`; anything else is replaced by the base theme's colour,
 
 ## Effects (`FX`)
 `shine` (a slow sweep) · `snow` · `lights` (a string of coloured bulbs along the top) · `stars` (the Southern Cross) · `sparkle` · `confetti` · `moustache` (a big handlebar moustache behind the score, and the dash between the scores becomes a moustache; on the video bug too).
+
+## Artwork (`ART`)
+Every score bug on the video has artwork behind it, drawn by `drawLookArt` in `js/viewer/look-canvas.js`: `mow` (dark mowing stripes) · `chalk` (the stripes with a chalk pitch marked on them) · `beams` (floodlights over the stripes). Grand Final uses `beams`; the other older looks use `mow`. Colours come from the look, so a look only has to name its artwork. The older page scoreboard (`js/scoreboard.js`, Game centre) has no artwork.
 
 ## Adding a look (the usual job)
 1. Add the entry to `PRESETS` in `js/looks.js`. The key is lowercase letters, digits and `_` (2 to 24).

@@ -1,7 +1,7 @@
 // Run with:  node --test "tests/*.test.mjs"
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PRESETS, PRESET_ROWS, FX, resolveLook, cleanTheme, themeVars, fxHtml, swatch, fxNames, starPoints } from '../js/looks.js';
+import { PRESETS, PRESET_ROWS, FX, ART, artOf, resolveLook, cleanTheme, themeVars, fxHtml, swatch, fxNames, starPoints } from '../js/looks.js';
 import { lookInfo, scoreboard } from '../js/scoreboard.js';
 
 test('every preset is a valid look: a key the table accepts, a clean theme, only known effects', () => {
@@ -13,6 +13,17 @@ test('every preset is a valid look: a key the table accepts, a clean theme, only
     assert.equal(look.theme.fx.length, p.theme.fx.length, `${key}: no effect was dropped`);
   }
   assert.deepEqual(PRESET_ROWS.map(r => r.key), Object.keys(PRESETS));
+});
+
+test('artwork: only known names get through, and every look has some', () => {
+  assert.equal(cleanTheme({ art: 'chalk' }).art, 'chalk');
+  assert.equal(cleanTheme({ art: '<script>' }).art, null);
+  for (const [key, p] of Object.entries(PRESETS)) if (p.theme.art) assert.ok(ART.includes(p.theme.art), key);
+  assert.equal(artOf(resolveLook('opening_week')), 'chalk');
+  assert.equal(artOf(resolveLook('new_year')), 'beams');
+  assert.equal(artOf(resolveLook('classic')), 'mow');
+  assert.equal(artOf({ key: 'grand_final', theme: null }), 'beams');
+  assert.equal(artOf(resolveLook('anzac', { key: 'anzac', name: 'Anzac', settings: { theme: { fx: [] } } })), 'mow');
 });
 
 test('a look the app does not know falls back to Classic; the five older looks have no theme', () => {

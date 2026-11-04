@@ -73,6 +73,7 @@ try {
   if (demo != null && preview && q.has('pre')) season.fixtures.forEach(f => { f.preseason = true; f.exhibition = true; });   // localhost only: look at a preseason match page
   if (demo != null && q.get('boost')) for (const code of q.get('boost').split(',')) if (season.demoSheets[code]) season.demoSheets[code].boost = true;   // the demo (localhost or the office): ?boost=CCF,SKS to watch the Boosted Captain entrance
   fx = season?.fixtures.find(f => String(f.id) === String(id)) || (demo != null ? season.fixtures[0] : null) || null;
+  if (fx && preview && q.get('look')) fx.look = q.get('look');   // localhost only: ?look=opening_week to see a look on the real viewer
   if (!fx && id && season && !preview) {   // an old id (before ids followed the round codes, db 0079): find where it went and put the new one in the address
     const { db } = await import('./auth.js');
     let data = null;
