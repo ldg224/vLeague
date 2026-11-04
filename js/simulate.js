@@ -7,7 +7,7 @@
 // `season` is what loadSeason() returns (teams, players, fixtures with their results); `client` is the signed-in
 // Supabase client. The engine (Pyodide, about 10 MB, cached by the browser) loads on the first call only.
 // Each club plays its week's locked team sheet (formation, tactics, XI, set-piece takers); a club with no locked sheet
-// gets the engine's own picks. Players suspended by a red card are left out. Finals (no week) use the engine's picks.
+// gets the engine's own picks. Players suspended by a red card are left out. Finals use their round's locked sheets too (S-33).
 
 import { isFormation } from './pitch.js';
 
@@ -106,6 +106,7 @@ function sheetTactics(sheet, available) {
     t.lineup = Object.fromEntries(Object.entries(sheet.lineup).filter(([, id]) => ok(id)).map(([slot, id]) => [slot, String(id)]));
   }
   for (const k of ['captain', 'penalties', 'freekicks', 'corners']) if (ok(sheet[k])) t[k] = String(sheet[k]);
+  if (sheet.boost && t.captain) t.captain_boost = true;   // Boosted captain (S-33): a suspended captain drops out above, so there's no boost
   return t;
 }
 
@@ -134,7 +135,7 @@ export async function simulateFixture(c, season, fixture, { onProgress, seed } =
   const suspended = (suspensions(season).get(fixture.id) || []).map(s => ({ player: s.player, reason: s.reason }));
   const out = new Set(suspended.map(s => s.player));
   toLeague(season, [fixture.home, fixture.away], out);   // validates both squads before loading anything
-  const sheets = fixture.week != null && !fixture.stage ? await weekSheets(c, fixture.week) : {};
+  const sheets = fixture.week != null ? await weekSheets(c, fixture.week) : {};
   const league = toLeague(season, [fixture.home, fixture.away], out, sheets);
   return runEngine(league, fixture.home, fixture.away, seed, { fixture_id: fixture.id || null, week: fixture.week ?? null, date: fixture.date || null, time: fixture.time || null, stage: fixture.stage || null, suspended }, onProgress);
 }
@@ -259,9 +260,10 @@ export function summariseMatch(d) {
   }
   const motm = Object.keys(players).reduce((best, id) => (!best || players[id].r > players[best].r ? id : best), null);
   const fr = d.frames.data;
+  const boosted = [d.teams?.home, d.teams?.away].filter(t => t?.captain_boost).map(t => t.code);   // Boosted captain (S-33): spends a use (0082)
   return {
     home: d.result.home, away: d.result.away, duration_t: fr[fr.length - 1][0] / 10, periods: d.periods,
-    goals, cards, stats: d.stats.teams, players, motm, engine: d.engine.version, seed: d.engine.seed,
+    goals, cards, stats: d.stats.teams, players, motm, engine: d.engine.version, seed: d.engine.seed, ...(boosted.length ? { boosted } : {}),
   };
 }
 

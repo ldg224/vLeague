@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.27.0 (2026-11-04)
+
+Headlines: Boosted Captain
+
+**Added (S-33):** Boosted Captain. A switch in the captain's menu and on the submit panel, off by default, turns on a boost for one round. The captain gets +1 offense and +1 defense for that match. While the captain's match rating is below 6.0, every teammate has -0.5 of each, until the rating is back at 6.0 or above; the captain keeps the +1. A club has 5 uses a season, finals included, and none in preseason. A captain who can't play has no boost and the use isn't spent, a postponed match gives the use back, and a random XI can't use it. A boosted captain glows on the line-ups from when they lock, with a short animation (none if reduced motion is on).
+**Changed:** finals now use their round's locked team sheets. Before, a finals match with a stage set ignored them and the engine picked the teams.
+**Engine 0.3.0:** matches without a boost play exactly as before.
+Database change: 0082 (`week_sheets.boost`, `sheet_boosted`, `boost_weeks`, `my_boost_weeks`, changes to `submit_team_sheet` and `lock_due_weeks`), already applied.
+
 ## 1.26.2 (2026-11-04)
 
 Headlines: Preseason suspensions stay out of the real season

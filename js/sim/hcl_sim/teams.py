@@ -29,10 +29,37 @@ def apply_form(players, form):
                 p.attrs[k] = round(max(1.0, min(99.0, p.attrs[k] * (1 + form))), 1)
 
 
+def _rated(player, change, overrides):
+    """A player's attributes as if both of his ratings were `change` different, staying within 1 to 10."""
+    shifted = dict(player)
+    for k in ('offense', 'defense'):
+        base = player.get(k)
+        shifted[k] = max(1.0, min(10.0, (5.0 if base is None else float(base)) + change))
+    return ratings.derive(shifted, overrides)
+
+
+def apply_boost(team, squad, attributes):
+    """Boosted captain (S-33): +1 to both ratings for the captain now, and a copy of every teammate's attributes at -0.5 for
+    Match._boost_check to swap in while the captain's rating is below 6.0. Does nothing if the captain isn't in the XI."""
+    cap = next((p for p in team.players if str(p.id) == team.captain), None)
+    if cap is None:
+        return
+    by_id = {str(s['id']): s for s in squad}
+    cap.attrs = _rated(by_id[str(cap.id)], 1.0, attributes.get(cap.id))
+    mates = [p for p in team.players if p is not cap]
+    team.boost = {
+        'captain': cap, 'mates': mates,
+        'normal': {p.id: p.attrs for p in mates},
+        'low': {p.id: _rated(by_id[str(p.id)], -0.5, attributes.get(p.id)) for p in mates},
+        'down': False, 'next': 60.0, 'seen': 0, 'flat': 0.0, 'volume': 0.0, 'conceded': 0, 'low_minutes': 0,
+    }
+
+
 def build_team(league, code):
     info = league['teams'][code]
     tac = dict(league['tactics'].get(code, {}))
     form = _form(tac.pop('form', 0))
+    boosted = bool(tac.pop('captain_boost', False))
     formation = tac.pop('formation', None) or '4-3-3'
     if formation not in tactics.FORMATIONS:
         print(f'warning: unknown formation {formation!r} for {code}, using 4-3-3')
@@ -64,8 +91,11 @@ def build_team(league, code):
         starters.append(p)
     apply_form(starters, form)   # after picking the XI, so form never changes who plays
     tac_clean = {k: v / 100 if v > 1 else v for k, v in tac.items() if isinstance(v, (int, float))}
-    return Team(code=code, name=info['name'], colour=info['colour'], players=starters, formation=formation, tactics=tac_clean,
+    team = Team(code=code, name=info['name'], colour=info['colour'], players=starters, formation=formation, tactics=tac_clean,
                 takers=takers, form=form, captain=captain if any(str(p.id) == captain for p in starters) else '')
+    if boosted:
+        apply_boost(team, squad, league['attributes'])
+    return team
 
 
 def resolve_team(league, value):

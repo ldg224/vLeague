@@ -107,11 +107,12 @@ function suggestPieces(sheet, byId) {
 async function teamSheet(box, { club, squad, userId, season }) {
   const c = await db();
   const byId = new Map(squad.map(p => [String(p.id), p]));
-  const [rowRes, dlRes, kitRes, subRes] = await Promise.all([
+  const [rowRes, dlRes, kitRes, subRes, boostRes] = await Promise.all([
     ok(c.from('team_sheets').select('*').eq('club', club.code).maybeSingle()),
     ok(c.from('deadlines').select('*').order('locks_at')),
     ok(c.from('club_kits').select('*').eq('club', club.code)),
     ok(c.from('submitted_sheets').select('week, sheet, submitted_at').eq('club', club.code)),
+    ok(c.rpc('my_boost_weeks')),
   ]);
   const kitRows = (kitRes.error ? [] : kitRes.data || []).filter(k => FIELD_SLOTS.includes(k.slot) || k.slot === 'gk');   // the goalkeeper kit is only drawn, never picked
   const kitsMade = Object.fromEntries(kitRows.filter(k => k.slot !== 'gk').map(k => [k.slot, cleanDesign(k.design)]));   // the club's outfield kits (none until the kits table exists)
@@ -142,6 +143,10 @@ async function teamSheet(box, { club, squad, userId, season }) {
   // SUBMIT (0.63): the sheet submitted for each upcoming round. Without one, the round gets a random XI (0080, user 3 Nov 2026).
   const submitted = new Map((subRes.error ? [] : subRes.data || []).map(s => [s.week, s]));
   let picking = false, pickWeek = null, subBusy = false, subMsg = '';
+  // Boosted captain (S-33): off unless a round's submitted sheet has it or the manager turns it on for that round, so it never carries over to the next one.
+  const BOOST_USES = 5, boostUsed = new Set((boostRes.error ? [] : boostRes.data || []).map(r => r.week)), boostPick = new Map();
+  const boostWeek = () => { const rounds = upcoming(); return picking && rounds.some(r => r.week === pickWeek) ? pickWeek : rounds[0]?.week ?? null; };
+  const boostOn = week => week != null && Boolean(sheet.captain) && !boostRes.error && !season?.rounds?.[week]?.preseason && (boostPick.has(week) ? boostPick.get(week) : Boolean(submitted.get(week)?.sheet?.boost));
 
   box.innerHTML = `<div class="ts">
     <div class="ts-grid">
@@ -172,7 +177,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
     </dialog>
     <dialog autofocus tabindex="-1" class="dlg" id="dlg-piece" aria-labelledby="dlg-piece-t">
       <div class="dlg-head"><h2 id="dlg-piece-t">Captain</h2><button type="button" class="dlg-done dlg-quiet" data-close>Cancel</button></div>
-      <div class="dlg-body"><ul class="pk" id="piece-list"></ul></div>
+      <div class="dlg-body"><div id="piece-boost"></div><ul class="pk" id="piece-list"></ul></div>
     </dialog>
     <dialog autofocus tabindex="-1" class="dlg" id="dlg-tactics" aria-labelledby="dlg-tactics-t">
       <div class="dlg-head"><h2 id="dlg-tactics-t">Tactics</h2><button type="button" class="dlg-done" data-close>Done</button></div>
@@ -229,11 +234,25 @@ async function teamSheet(box, { club, squad, userId, season }) {
       ['tactics', 'Tactics', preset, true],
       ['kit', 'Kit', kitLabel, true],
     ];
-    $('#fm-rows', box).innerHTML = rows.map(([k, label, v, ok]) => `<li><button type="button" class="fm-row" data-open="${esc(k)}"><i class="fm-dot${ok ? ' ok' : ''}" aria-hidden="true"></i><span class="fm-k">${esc(label)}</span><span class="fm-v${ok ? '' : ' todo'}">${esc(v)}</span></button></li>`).join('');
+    const boostTag = boostOn(boostWeek()) ? '<b class="bc-tag">Boosted</b>' : '';
+    $('#fm-rows', box).innerHTML = rows.map(([k, label, v, ok]) => `<li><button type="button" class="fm-row" data-open="${esc(k)}"><i class="fm-dot${ok ? ' ok' : ''}" aria-hidden="true"></i><span class="fm-k">${esc(label)}</span><span class="fm-v${ok ? '' : ' todo'}">${k === 'piece:captain' ? boostTag : ''}${esc(v)}</span></button></li>`).join('');
   }
+  // Boosted captain (S-33): the switch for one round, in the captain's menu and on the submit panel. The database has the last word on the 5 uses (0082).
+  function boostSwitch() {
+    const week = boostWeek();
+    if (boostRes.error || week == null || season?.rounds?.[week]?.preseason) return '';
+    const on = boostOn(week), left = BOOST_USES - [...boostUsed].filter(w => w !== week).length, after = Math.max(0, left - (on ? 1 : 0));
+    const why = !sheet.captain ? 'Pick a captain first.' : left <= 0 ? `You've used all ${BOOST_USES} this season.` : '';
+    const pips = Array.from({ length: BOOST_USES }, (_, i) => `<i class="bc-pip${i < after ? ' on' : ''}">C</i>`).join('');
+    return `<div class="bc${on ? ' on' : ''}"><div class="bc-main"><span class="bc-text"><b>Boosted Captain</b><small>${esc(wk(week))}: +1 offense and defense for your captain. While their match rating is below 6.0, every teammate has -0.5 of each.</small></span>
+      <button type="button" class="bc-switch" role="switch" data-boost aria-checked="${on}" aria-label="Boosted Captain for ${esc(wk(week))}"${why ? ' disabled' : ''}><i></i></button></div>
+      <p class="bc-uses" role="img" aria-label="${after} of ${BOOST_USES} uses left"><span class="bc-pips" aria-hidden="true">${pips}</span><span aria-hidden="true">${after} of ${BOOST_USES} left</span>${why ? `<span class="bc-why">${esc(why)}</span>` : ''}</p></div>`;
+  }
+  function drawBoost() { const el = $('#piece-boost', box); if (el) el.innerHTML = pieceKey === 'captain' ? boostSwitch() : ''; }
   function drawPieceList() {
     const label = PIECES.find(([k]) => k === pieceKey)?.[1] || '';
     $('#dlg-piece-t', box).textContent = label;
+    drawBoost();
     const xi = Object.keys(FORMATIONS[sheet.formation]).map(slot => ({ slot, p: byId.get(String(sheet.lineup[slot])) })).filter(x => x.p);
     $('#piece-list', box).innerHTML = [`<li><button type="button" class="pk-row" data-set="" aria-pressed="${!sheet[pieceKey]}"><span class="pk-name">Not set</span></button></li>`,
       ...xi.map(({ slot, p }) => `<li><button type="button" class="pk-row" data-set="${esc(p.id)}" aria-pressed="${String(sheet[pieceKey]) === String(p.id)}"><span class="pk-pos pos-${esc(p.position)}">${esc(p.position)}</span><span class="pk-name">${esc(p.name)}<small>${esc(slot)}</small></span></button></li>`)].join('');
@@ -370,7 +389,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
     return fx ? { week: d.week, locks: new Date(d.locks_at), fx } : null;
   }).filter(Boolean).sort((a, b) => a.locks - b.locks);
   const bodyOf = () => { const b = JSON.parse(JSON.stringify(sheet)); if (b.kit == null) delete b.kit; return b; };
-  const sameAsNow = s => s && JSON.stringify(normaliseSheet(s.sheet, avail)) === JSON.stringify(normaliseSheet(bodyOf(), avail));
+  const sameAsNow = s => s && Boolean(s.sheet?.boost) === boostOn(s.week) && JSON.stringify(normaliseSheet(s.sheet, avail)) === JSON.stringify(normaliseSheet(bodyOf(), avail));
   const teamName = code => season?.teams?.find(x => x.code === code)?.name || code;
   const filled = () => Object.keys(FORMATIONS[sheet.formation]).filter(s => sheet.lineup[s]).length;
 
@@ -403,6 +422,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
           <span class="ts-round-main"><b>${esc(wk(r.week))}${season?.rounds?.[r.week]?.preseason ? tag : ''}</b><span>${home ? 'v' : 'at'} ${esc(teamName(opp))}${k ? ` · ${esc(when(k, now))}` : ''}</span><small>Locks ${esc(when(r.locks, now))}</small></span>
           <span class="ts-round-state">${sub ? `Submitted<button type="button" class="link-btn" data-withdraw="${r.week}">Withdraw</button>` : 'Not submitted'}</span></label>`;
       }).join('')}</fieldset>
+      ${boostSwitch()}
       ${xi < slots ? `<p class="ts-sub-warn">Your XI has ${xi} of ${slots} players. Empty spots are filled automatically.</p>` : ''}
       <div class="ts-sub-actions"><button type="button" class="ts-submit-btn" data-sub-go aria-label="Submit for ${esc(wk(pickWeek))}" ${subBusy ? 'disabled' : ''}>${subBusy ? 'Submitting…' : 'Submit'}</button><button type="button" class="link-btn" data-sub-cancel>Cancel</button></div>
       ${subMsg ? `<p class="ts-sub-msg" role="alert">${esc(subMsg)}</p>` : ''}`;
@@ -410,11 +430,13 @@ async function teamSheet(box, { club, squad, userId, season }) {
 
   async function submitFor(week) {
     subBusy = true; subMsg = ''; drawSubmit();
-    const body = bodyOf();
+    const body = bodyOf(), boosted = boostOn(week);
+    if (boosted) body.boost = true;
     const { data, error } = await ok(c.rpc('submit_team_sheet', { p_week: week, p_sheet: body }));
     subBusy = false;
-    if (error) { subMsg = /locked|play in that round|deadline|linked|complete/.test(error.message) ? error.message : 'That didn’t submit. Check your connection and try again.'; drawSubmit(); return; }
+    if (error) { subMsg = /locked|play in that round|deadline|linked|complete|Boosted Captain/.test(error.message) ? error.message : 'That didn’t submit. Check your connection and try again.'; drawSubmit(); return; }
     submitted.set(week, { week, sheet: body, submitted_at: data || new Date().toISOString() });
+    boostPick.delete(week); if (boosted) boostUsed.add(week); else boostUsed.delete(week);
     picking = false; subMsg = week === upcoming()[0]?.week ? '' : `Also submitted for ${wk(week)}.`;   // the next round's line already says it
     drawSubmit();
     $('#submit .ts-submit-btn', box)?.focus();
@@ -422,7 +444,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   async function withdraw(week) {
     const { error } = await ok(c.rpc('withdraw_team_sheet', { p_week: week }));
     if (error) { subMsg = /locked/.test(error.message) ? error.message : 'That didn’t withdraw. Try again.'; drawSubmit(); return; }
-    submitted.delete(week); subMsg = `Withdrawn: ${wk(week)} gets a random XI unless you submit again.`; drawSubmit();
+    submitted.delete(week); boostPick.delete(week); boostUsed.delete(week); subMsg = `Withdrawn: ${wk(week)} gets a random XI unless you submit again.`; drawSubmit();
   }
 
   // ----- changes -----
@@ -594,6 +616,14 @@ async function teamSheet(box, { club, squad, userId, season }) {
     if (t.closest('[data-close]')) { t.closest('dialog').close(); return; }
     const st0 = t.closest('[data-set]');
     if (st0) { sheet[pieceKey] = st0.dataset.set || null; changed(); t.closest('dialog').close(); return; }
+    const bs = t.closest('[data-boost]');
+    if (bs) {
+      const host = bs.closest('#piece-boost, #submit'), week = boostWeek();
+      boostPick.set(week, !boostOn(week)); subMsg = '';
+      drawBoost(); drawSubmit(); drawForm();
+      host?.querySelector('[data-boost]')?.focus();
+      return;
+    }
     const f = t.closest('[data-f]'), pl = t.closest('.pl'), pr = t.closest('[data-preset]'), st = t.closest('[data-tac]'), fbs = t.closest('[data-fb]');
     if (t.closest('[data-fb-toggle]')) {
       fbOpen = !fbOpen; if (fbOpen) fb = fbFrom(sheet.formation);

@@ -11,6 +11,7 @@ import tempfile
 import unittest
 
 from hcl_sim import physics, ratings, teams
+from hcl_sim.engine import Match
 from hcl_sim.run import simulate
 from hcl_sim.validate import validate
 
@@ -241,6 +242,71 @@ class OutOfPosition(unittest.TestCase):
                 self.assertTrue(a == 0 or abs((b - a) - pen(pid)) <= 0.11, (pid, a, b, pen(pid)))
             else:
                 self.assertEqual(a, b, pid)
+
+
+class BoostedCaptain(unittest.TestCase):
+    def league(self, boost=True):
+        lg = synthetic_league()
+        lg['tactics']['AAA'] = {'captain': '0005', 'captain_boost': boost}
+        return lg
+
+    def test_captain_gets_plus_one_and_mates_are_ready_at_minus_half(self):
+        lg = self.league()
+        team = teams.build_team(lg, 'AAA')
+        cap = next(p for p in team.players if p.id == '0005')
+        self.assertIs(team.boost['captain'], cap)
+        plain = ratings.derive(lg['players']['0005'])
+        self.assertAlmostEqual(cap.attrs['finishing'] - plain['finishing'], 4.75, delta=0.11)
+        mate = next(p for p in team.players if p.id == '0006')
+        low = team.boost['low']['0006']
+        self.assertAlmostEqual(mate.attrs['finishing'] - low['finishing'], 2.375, delta=0.11)
+        self.assertNotIn('captain_boost', team.tactics)
+
+    def test_no_boost_without_the_captain_in_the_xi_or_the_switch(self):
+        self.assertIsNone(teams.build_team(self.league(False), 'AAA').boost)
+        lg = self.league()
+        lg['tactics']['AAA']['captain'] = 'nobody'
+        self.assertIsNone(teams.build_team(lg, 'AAA').boost)
+
+    def test_rating_stops_at_ten(self):
+        lg = self.league()
+        lg['players']['0005'].update(offense=10, defense=10)
+        cap = next(p for p in teams.build_team(lg, 'AAA').players if p.id == '0005')
+        self.assertEqual(cap.attrs, ratings.derive(lg['players']['0005']))
+
+    def test_penalty_follows_the_rating_and_spares_the_captain(self):
+        lg = self.league()
+        home, away = teams.build_team(lg, 'AAA'), teams.build_team(lg, 'BBB')
+        m = Match(home, away, seed=7)
+        b = home.boost
+        cap, mate = b['captain'], b['mates'][1]
+        fast, cap_attrs = mate.vmax_base, cap.attrs
+        m.t = 60.0
+        m.ev('card', cap, card='yellow')
+        m.ev('card', cap, card='red')       # 6.6 - 0.3 - 1.5 is below 6.0
+        m._boost_check(home)
+        self.assertTrue(b['down'])
+        self.assertEqual(mate.attrs, b['low'][mate.id])
+        self.assertLess(mate.vmax_base, fast)
+        self.assertIs(cap.attrs, cap_attrs)
+        b['flat'] += 2.0                    # a goal and more: back above
+        m.t = 120.0
+        m._boost_check(home)
+        self.assertFalse(b['down'])
+        self.assertEqual(mate.attrs, b['normal'][mate.id])
+        self.assertEqual(mate.vmax_base, fast)
+
+    def test_a_full_match_records_the_boost_and_a_plain_one_is_unchanged(self):
+        lg = self.league()
+        data = simulate(lg, 'AAA', 'BBB', seed=3, include_frames=False)
+        self.assertTrue(data['teams']['home']['captain_boost'])
+        self.assertIn('boost_low_minutes', data['teams']['home'])
+        self.assertNotIn('captain_boost', data['teams']['away'])
+        self.assertTrue(validate(simulate(lg, 'AAA', 'BBB', seed=3))['ok'])
+        plain = synthetic_league()
+        one = simulate(plain, 'AAA', 'BBB', seed=3, include_frames=False)
+        self.assertNotIn('captain_boost', one['teams']['home'])
+        self.assertEqual(one['result'], simulate(synthetic_league(), 'AAA', 'BBB', seed=3, include_frames=False)['result'])
 
 
 if __name__ == '__main__':

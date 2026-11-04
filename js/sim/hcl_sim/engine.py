@@ -15,6 +15,11 @@ from .config import (PITCH_LENGTH, PITCH_WIDTH, GOAL_Y1, GOAL_Y2, GOAL_HEIGHT, B
                      TICK, HALF_SECONDS, DEFAULT_FPS, MAX_PLAYER_SPEED, TUNING, PENALTY_SPOT, SIX_DEPTH)
 from .geometry import clamp, dist, unit, seg_point_dist, sigmoid, rotate
 from .models import Ball
+from .output import RATING_BASE, VOLUME_NORM
+
+# Boosted captain (S-33): what each simple action adds to the captain's live rating (js/live-rating.js), and about how long a match lasts on the clock.
+BOOST_ACTIONS = {'take_on': 0.1, 'clearance': 0.05, 'block': 0.1, 'aerial_duel': 0.05, 'foul': -0.05, 'miscontrol': -0.05, 'save': 0.3}
+BOOST_MATCH_SECONDS = 99 * 60
 
 KICK_TYPES = ('pass', 'shoot', 'cross', 'clear')
 OFFSIDE_EXEMPT = ('throw', 'goal_kick', 'corner')
@@ -253,9 +258,69 @@ class Match:
         if victim is not None:
             self._foul(o, victim, False, force_card=card)
 
+    def _boost_check(self, team):
+        """Boosted captain (S-33), once a match minute: while the captain's live rating is below 6.0, every teammate plays at -0.5.
+        The rating is js/live-rating.js's without the out-of-position penalty, read only from what has happened so far. Uses no
+        random numbers, so a match without a boost plays exactly as before."""
+        b = team.boost
+        b['next'] += 60.0
+        cap = b['captain']
+        pid = cap.id
+        for e in self.events[b['seen']:]:
+            kind, mine = e['type'], e.get('player') == pid
+            if kind == 'pass':
+                if mine:
+                    b['volume'] += 0.012 if e.get('outcome') == 'complete' else -0.035
+            elif kind == 'shot':
+                if mine and e.get('outcome') in ('goal', 'saved'):
+                    b['volume'] += 0.15
+                if e.get('assist_candidate') == pid:
+                    b['volume'] += 0.25
+            elif kind == 'goal':
+                if e.get('own_goal'):
+                    b['flat'] -= 0.8 if e.get('scorer') == pid else 0.0
+                elif e.get('scorer') == pid:
+                    b['flat'] += 1.0
+                if e.get('assist') == pid:
+                    b['flat'] += 0.7
+                if e.get('team') != team.code:
+                    b['conceded'] += 1
+                    if cap.is_gk:
+                        b['volume'] -= 0.25 + (0.15 if b['conceded'] > 4 else 0.0)
+                    elif cap.line == 'DEF':
+                        b['volume'] -= 0.1
+            elif mine:
+                if kind == 'control':
+                    b['volume'] += 0.1 if e.get('how') == 'interception' else 0.0
+                elif kind == 'tackle':
+                    b['volume'] += 0.12 if e.get('won') else 0.0
+                elif kind in BOOST_ACTIONS:
+                    b['volume'] += BOOST_ACTIONS[kind]
+                elif kind == 'card':
+                    b['flat'] -= 0.3 if e.get('card') == 'yellow' else 1.5
+        b['seen'] = len(self.events)
+        lead = self.score[team.side] - self.score[1 - team.side]
+        rating = RATING_BASE + b['flat'] + b['volume'] - VOLUME_NORM.get(cap.position, VOLUME_NORM['MID']) * min(1.0, self.t / BOOST_MATCH_SECONDS)
+        rating += 0.2 if lead > 0 else -0.2 if lead < 0 else 0.0
+        down = round(rating, 1) < 6.0
+        if down:
+            b['low_minutes'] += 1
+        if down != b['down']:
+            b['down'] = down
+            for p in b['mates']:
+                attrs = dict(b['low' if down else 'normal'][p.id])
+                if p.is_gk and p.position != 'GK':   # an emergency keeper keeps his minimum goalkeeping (_emergency_keeper)
+                    for a in ('reflexes', 'handling', 'gk_positioning', 'diving'):
+                        attrs[a] = max(attrs[a], 25.0)
+                p.attrs = attrs
+                p.setup_physical()
+
     def _tick(self):
         self.tick += 1
         self.t = self.tick * TICK
+        for team in (self.home, self.away):
+            if team.boost and self.t >= team.boost['next']:
+                self._boost_check(team)
         b = self.ball
         if self.script:
             self._script_tick()

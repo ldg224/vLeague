@@ -261,3 +261,25 @@
 .pl-pic { grid-row: 1 / span 2; width: 34px; height: 40px; line-height: 0; }
 .pl-pic svg { display: block; width: 100%; height: 100%; }
 @media (max-width: 767px) { .pl-pic { width: 30px; height: 35px; } }
+
+/* Boosted captain (S-33): the blue-to-purple switch in the captain's menu and on the submit panel. The gradient and glow are the user's call. */
+.bc { margin: 0 0 16px; padding: 12px; border: 1px solid var(--line); border-radius: var(--r-sm, 8px); background: var(--surface-sunk); }
+.bc.on { border-color: #905aff; box-shadow: 0 0 14px rgba(144, 90, 255, .3); }
+.bc-main { display: flex; align-items: center; gap: 12px; }
+.bc-text { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.bc-text b { color: var(--text-strong, var(--text)); font: 700 var(--fs-m) var(--font); }
+.bc-text small { color: var(--muted); font: 400 var(--fs-s)/1.35 var(--font); }
+.bc-switch { position: relative; flex: none; width: 52px; height: 30px; padding: 0; border: 0; border-radius: 999px; background: color-mix(in oklab, var(--text) 25%, var(--surface)); cursor: pointer; transition: background-color .15s; }
+.bc-switch::before { content: ''; position: absolute; inset: -7px 0; }   /* a 44 px target */
+.bc-switch i { position: absolute; left: 3px; top: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .35); transition: transform .15s; }
+.bc-switch[aria-checked="true"] { background: linear-gradient(90deg, #4080ff, #a04dff); box-shadow: 0 0 12px rgba(144, 90, 255, .65); }
+.bc-switch[aria-checked="true"] i { transform: translateX(22px); }
+.bc-switch:disabled { opacity: .45; cursor: not-allowed; }
+.bc-switch:focus-visible { outline: 2px solid var(--focus, var(--brand)); outline-offset: 2px; }
+.bc-uses { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 0; color: var(--muted); font: 600 var(--fs-xs) var(--font); font-variant-numeric: tabular-nums; }
+.bc-pips { display: inline-flex; gap: 4px; }
+.bc-pip { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--line); color: var(--faint, var(--muted)); font: 700 var(--fs-xs)/1 var(--font); font-size: 10px; font-style: normal; }
+.bc-pip.on { border-color: #905aff; background: linear-gradient(135deg, #4080ff, #a04dff); color: #fff; }
+.bc-why { color: var(--text-soft, var(--text)); }
+.bc-tag { margin-right: 8px; padding: 2px 8px; border-radius: 999px; background: linear-gradient(90deg, #4080ff, #a04dff); color: #fff; font: 700 var(--fs-xs) var(--font); }
+#submit .bc { margin: 12px 0; }

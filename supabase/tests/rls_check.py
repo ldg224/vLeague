@@ -160,6 +160,15 @@ SETUP_CHECKS = [
 # 0.6: line-up deadlines. Weeks 97 and 98 are test weeks (99 belongs to the Editor Test page); everything is rolled back. A version is "saved" at a set time by
 # inserting into team_sheet_versions directly (pre runs with full rights).
 VER = "insert into public.team_sheet_versions (club, sheet, saved_at) values "
+# Boosted captain (S-33): a round still to come for TUR, and five boosts already spent on other rounds.
+BOOST_NEXT = """insert into public.rounds (week) values (90) on conflict (week) do nothing;
+  insert into public.fixtures (id, week, home, away, starts_at) values ('bc-next', 90, 'TUR', 'LAU', now() + interval '2 days');
+  insert into public.deadlines (week, locks_at) values (90, now() + interval '1 day') on conflict (week) do update set locks_at = excluded.locks_at;"""
+BOOST_FIVE = ''.join(f""" insert into public.rounds (week) values ({w}) on conflict (week) do nothing;
+  insert into public.fixtures (id, week, home, away, starts_at) values ('bc-{w - 90}', {w}, 'TUR', 'LAU', now() + interval '3 days'), ('bc-o{w}', {w}, 'SKS', 'CCF', now() + interval '3 days');
+  insert into public.week_sheets (week, club, boost) values ({w}, 'TUR', true);""" for w in range(91, 96))
+BOOST_SUBMIT = """select public.submit_team_sheet(90, '{"boost":true,"captain":"0001","lineup":{"ST":"0001"}}');"""
+
 DEADLINE_CHECKS = [
     ('anon', 'guest can read deadlines', "insert into public.deadlines (week, locks_at) values (97, now() + interval '1 day');",
      "select count(*) >= 1 as ok from public.deadlines where week = 97;"),
@@ -197,6 +206,30 @@ DEADLINE_CHECKS = [
     ('office', 'office cannot delete a locked week',
      "insert into public.deadlines (week, locks_at) values (97, now() - interval '1 hour'); select public.lock_due_weeks();",
      {'error': 'already locked'}, "delete from public.deadlines where week = 97;"),
+    # Boosted captain (S-33, 0082)
+    ('manager', 'a boost switched on when submitting is copied to the locked sheet, and is private until the lock',
+     BOOST_NEXT, """select public.submit_team_sheet(90, '{"boost":true,"captain":"0001","lineup":{"ST":"0001"}}');
+        select (select count(*) = 1 from public.my_boost_weeks())
+           and (select not (to_jsonb(s) ? 'boost') from public.submitted_lineups(90, array['TUR']) s) as ok;"""),
+    ('anon', 'locking copies the boost, and a random XI never has one',
+     BOOST_NEXT + """ insert into public.submitted_sheets (club, week, sheet) values ('TUR', 90, '{"boost":true,"captain":"0001","lineup":{"ST":"0001"}}');
+        update public.deadlines set locks_at = now() - interval '1 minute' where week = 90; update public.submitted_sheets set submitted_at = now() - interval '1 hour' where week = 90; select public.lock_due_weeks();""",
+     """select (select boost from public.week_sheets where week = 90 and club = 'TUR')
+           and (select random and not boost from public.week_sheets where week = 90 and club = 'LAU') as ok;"""),
+    ('manager', 'a boost needs a captain in the XI', BOOST_NEXT, {'error': 'needs a captain'},
+     """select public.submit_team_sheet(90, '{"boost":true,"captain":"0001","lineup":{"ST":"0002"}}');"""),
+    ('manager', 'a boost can’t be used in preseason', BOOST_NEXT + " update public.rounds set kind = 'preseason' where week = 90;", {'error': 'preseason'},
+     BOOST_SUBMIT),
+    ('manager', 'a sixth boost is refused', BOOST_NEXT + BOOST_FIVE, {'error': 'all 5'}, BOOST_SUBMIT),
+    ('manager', 'a sheet without the boost is still fine with all 5 used', BOOST_NEXT + BOOST_FIVE,
+     """select public.submit_team_sheet(90, '{"captain":"0001","lineup":{"ST":"0001"}}') is not null as ok;"""),
+    ('manager', 'a postponed match gives its boost back', BOOST_NEXT + BOOST_FIVE + " update public.fixtures set postponed = true where id = 'bc-1';",
+     BOOST_SUBMIT + " select count(*) = 5 as ok from public.my_boost_weeks();"),
+    ('manager', 'a match played without the boost (captain couldn’t play) gives it back', BOOST_NEXT + BOOST_FIVE + """ insert into public.results (fixture, summary) values ('bc-1', '{"home":0,"away":0}');""",
+     BOOST_SUBMIT + " select count(*) = 5 as ok from public.my_boost_weeks();"),
+    ('manager', 'a match played with the boost keeps it spent', BOOST_NEXT + BOOST_FIVE + """ insert into public.results (fixture, summary) values ('bc-1', '{"home":0,"away":0,"boosted":["TUR"]}');""",
+     {'error': 'all 5'}, BOOST_SUBMIT),
+    ('manager', 'manager cannot read another club’s boosts', '', {'error': 'permission denied'}, "select * from public.boost_weeks('LAU');"),
 ]
 
 

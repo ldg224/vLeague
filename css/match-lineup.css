@@ -112,6 +112,14 @@
 .mk small { position: absolute; top: -7px; right: -7px; min-width: 14px; height: 14px; padding: 0 3px; border-radius: 999px; background: var(--text-strong); color: var(--surface);
   font: 700 var(--fs-xs)/14px var(--font); text-align: center; font-variant-numeric: tabular-nums; }
 .mk-cap { width: 15px; height: 15px; margin-right: 4px; vertical-align: -3px; border-radius: 50%; background: color-mix(in oklab, var(--text) 45%, var(--surface)); color: var(--surface); font: 700 10px/1 var(--font); }
+/* Boosted captain (S-33): the blue-to-purple glow behind the player and on the C, with one ring that opens out when the line-ups appear. The gradient is the user's call. */
+.mk-cap.is-boost { background: linear-gradient(135deg, #4080ff, #a04dff); color: #fff; box-shadow: 0 0 0 1.5px var(--surface), 0 0 8px rgba(144, 90, 255, .9); }
+.ml-p.is-boosted .ml-av { isolation: isolate; }
+.ml-p.is-boosted .ml-av::before { content: ''; position: absolute; z-index: -1; inset: 0; border-radius: 50%; background: radial-gradient(circle, rgba(160, 77, 255, .55), rgba(64, 128, 255, .35)); box-shadow: 0 0 0 3px #7a5cff, 0 0 24px 8px rgba(144, 90, 255, .8); pointer-events: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .ml-p.is-boosted .ml-av::after { content: ''; position: absolute; z-index: -1; inset: 0; border-radius: 50%; border: 3px solid #a04dff; opacity: 0; pointer-events: none; animation: ml-boost 1.4s ease-out .3s 2; }
+  @keyframes ml-boost { 0% { opacity: .9; transform: scale(.75); } 100% { opacity: 0; transform: scale(1.35); } }
+}
 .ev-ic .mk { width: 26px; height: 26px; } .ev-ic .mk svg { width: 18px; height: 18px; } .ev-ic .mk-c { width: 9px; height: 13px; }
 .mk.is-red { background: #e5322d; }
 

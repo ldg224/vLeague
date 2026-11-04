@@ -28,7 +28,7 @@ export async function loadLineups(fx, season, rows, { fake = false } = {}) {
   const c = await db(), now = new Date();
   const [dl, ws, sub, kits] = await Promise.all([
     c.from('deadlines').select('week, locks_at, locked_at').eq('week', fx.week).maybeSingle().then(r => r.data || null).catch(() => null),
-    c.from('week_sheets').select('club, formation, captain, lineup, kit, submitted, random').eq('week', fx.week).in('club', [fx.home, fx.away]).then(r => r.data || []).catch(() => []),
+    c.from('week_sheets').select('club, formation, captain, lineup, kit, submitted, random, boost').eq('week', fx.week).in('club', [fx.home, fx.away]).then(r => r.data || []).catch(() => []),
     c.rpc('submitted_lineups', { p_week: fx.week, p_clubs: [fx.home, fx.away] }).then(r => r.data || []).catch(() => []),   // submitted, not yet locked
     loadKits(),
   ]);
@@ -98,7 +98,7 @@ function players(side, L, ctx, cls, star) {
   return Object.entries(sheet.lineup).filter(([slot]) => slots[slot]).map(([slot, id]) => {
     const p = byId.get(String(id)); if (!p) return '';
     const gk = slots[slot].want === 'GK', k = L.kits[side], face = faceOf(p, code, ctx, k?.[gk ? 'gkChest' : 'fieldChest'] || k?.fieldChest);
-    const cap = String(sheet.captain) === String(id) ? captainMark() : '';
+    const isCap = String(sheet.captain) === String(id), boosted = isCap && sheet.boost, cap = isCap ? captainMark(boosted) : '';
     const st = ctx.stats?.get(String(id)), avg = avgOf(ctx.stats, id);
     let mark = '';
     if (ctx.view === 'rating' && avg != null) {
@@ -108,7 +108,7 @@ function players(side, L, ctx, cls, star) {
       mark = `${st.a ? `<span class="ml-m is-a">${assistMark(st.a)}</span>` : ''}${st.g ? `<span class="ml-m is-g">${goalMark(st.g)}</span>` : ''}`;
     }
     const worth = ctx.view === 'value' ? `<b class="ml-v" aria-label="Value ${esc(money(p.value))}">${esc(money(p.value))}</b>` : '';
-    return `<li class="ml-p ${cls}" style="--x:${slots[slot].x.toFixed(1)};--y:${slots[slot].y.toFixed(1)}" data-id="${esc(id)}"><span class="ml-av">${face}${mark}${worth}</span>`
+    return `<li class="ml-p ${cls}${boosted ? ' is-boosted' : ''}" style="--x:${slots[slot].x.toFixed(1)};--y:${slots[slot].y.toFixed(1)}" data-id="${esc(id)}"><span class="ml-av">${face}${mark}${worth}</span>`
       + `<span class="ml-n">${plink(id, nameTag(cap, p.number, p.name))}</span></li>`;
   }).join('');
 }

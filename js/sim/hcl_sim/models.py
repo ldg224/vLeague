@@ -80,7 +80,8 @@ class Team:
     tactics: dict = field(default_factory=dict)
     takers: dict = field(default_factory=dict)   # kind ('penalty', 'free_kick', 'corner') -> player id
     captain: str = ''
-    form: float = 0.0        # per-match skill modifier applied in teams.build_team (fraction, +/- 0.05)
+    boost: dict = None       # Boosted captain (S-33): the state teams.apply_boost sets up and Match._boost_check updates; None when not used
+    form: float = 0.0       # per-match skill modifier applied in teams.build_team (fraction, +/- 0.05)
     side: int = 0
     direction: int = 1       # +1 attacks toward x = 105, -1 toward x = 0
 

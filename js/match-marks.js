@@ -11,4 +11,4 @@ export const goalMark = n => chip('mk-goal', BALL, 'Goal', n);
 export const redBallMark = (label, n) => chip('mk-goal is-red', BALL, label, n);
 export const assistMark = n => chip('mk-assist', BOOT, 'Assist', n);
 export const cardMark = which => chip('mk-card', `<i class="mk-c is-${which === 'red' ? 'r' : 'y'}"></i>`, which === 'red' ? 'Red card' : 'Yellow card');
-export const captainMark = () => '<b class="mk mk-cap" role="img" aria-label="Captain">C</b>';
+export const captainMark = (boosted = false) => `<b class="mk mk-cap${boosted ? ' is-boost' : ''}" role="img" aria-label="${boosted ? 'Boosted captain' : 'Captain'}">C</b>`;

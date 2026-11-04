@@ -59,7 +59,7 @@ function side(fx, L, ctx, F, star, which) {
     const pic = L?.kits?.[which]?.[gk ? 'gk' : 'field'] || L?.kits?.[which]?.field;
     const num = numberOf(p, id);
     const kk = L?.kits?.[which], face = faceOf(p, code, ctx, kk?.[gk ? 'gkChest' : 'fieldChest'] || kk?.fieldChest) || (pic ? `<img src="${pic}" alt="">${num !== '' ? `<i class="ml-sn">${esc(num)}</i>` : ''}` : `<i class="ml-disc" style="--c:${esc(colour)};--on:${esc(onColour(colour))}">${esc(num)}</i>`);
-    const cap = sheet && String(sheet.captain) === String(id) ? captainMark() : '';
+    const isCap = sheet && String(sheet.captain) === String(id), boosted = isCap && sheet.boost, cap = isCap ? captainMark(boosted) : '';
     let marks = '';
     if (ctx.view === 'rating' && f.r != null) {
       const top = String(id) === star;
@@ -71,7 +71,7 @@ function side(fx, L, ctx, F, star, which) {
       if (f.pm) marks += `<span class="ml-m is-g${f.g ? ' is-up' : ''}">${redBallMark('Penalty not scored', f.pm)}</span>`;
       if (ctx.view === 'rating' && (f.rc || f.yc)) marks += `<span class="ml-off">${f.rc && f.off ? `<em>${esc(f.off)}′</em>` : ''}${cardMark(f.rc ? 'red' : 'yellow')}</span>`;
     } else if (p) marks += `<b class="ml-v" aria-label="Value ${esc(money(p.value))}">${esc(money(p.value))}</b>`;
-    return `<li class="ml-p is-${which}" style="--x:${slots[slot].x.toFixed(1)};--y:${slots[slot].y.toFixed(1)}"><span class="ml-av">${face}${marks}</span>`
+    return `<li class="ml-p is-${which}${boosted ? ' is-boosted' : ''}" style="--x:${slots[slot].x.toFixed(1)};--y:${slots[slot].y.toFixed(1)}"><span class="ml-av">${face}${marks}</span>`
       + `<span class="ml-n">${nameTag(cap, p ? num : '', name)}</span></li>`;
   }).join('');
   const rated = xi.list.map(p => F[p.id]?.r).filter(r => r != null);

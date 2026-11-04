@@ -180,6 +180,9 @@ def _team_block(team):
     }
     if team.form:
         block['form'] = round(team.form, 4)
+    if team.boost:
+        block['captain_boost'] = True
+        block['boost_low_minutes'] = team.boost['low_minutes']
     block['lineup'] = [{'idx': p.idx, 'id': p.id, 'name': p.name, 'position': p.position, 'slot': p.slot} for p in team.players]
     return block
 
