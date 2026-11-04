@@ -1,0 +1,16 @@
+/* Boosted captain's entrance (js/boost-intro.js): a full-screen moment in the look of the league's announcement. The size, gradient and glow are the user's call (S-33). */
+.bi { position: fixed; inset: 0; z-index: 2000; display: grid; place-items: center; overflow: hidden; color: #fff; font-family: var(--font, Archivo, sans-serif); cursor: pointer; }
+.bi-back { position: absolute; inset: 0; background: radial-gradient(circle at 50% 40%, #3a2a86 0, #16194a 38%, #070a1c 78%); opacity: 0; }
+.bi-say { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); margin: 0; }
+.bi-stage { position: absolute; left: 50%; top: 40%; width: 0; height: 0; display: grid; place-items: center; --size: min(56vmin, 340px); }
+.bi-disc { position: absolute; left: calc(var(--size) / -2); top: calc(var(--size) / -2); width: var(--size); height: var(--size); border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, #4080ff, #a04dff); box-shadow: 0 0 calc(var(--size) * .2) rgba(144, 90, 255, .75), 0 0 calc(var(--size) * .5) rgba(64, 128, 255, .35); will-change: transform, opacity; opacity: 0; }
+.bi-ring { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(#4080ff, #a04dff, #d9c7ff, #4080ff); }
+.bi-core { position: absolute; inset: 7%; border-radius: 50%; background: #0a0d1c; }
+.bi-disc b { position: relative; font-weight: 900; font-stretch: 125%; font-size: calc(var(--size) * .58); line-height: 1; }
+.bi-wave { position: absolute; left: calc(var(--size) * -.5); top: calc(var(--size) * -.5); width: var(--size); height: var(--size); border-radius: 50%; border: 3px solid #905aff; opacity: 0; }
+.bi-words { position: absolute; left: 0; right: 0; top: calc(40% + min(56vmin, 340px) / 2 + 28px); padding: 0 16px; display: grid; justify-items: center; gap: 12px; text-align: center; opacity: 0; }
+.bi-words strong { display: block; max-width: 100%; font-weight: 900; font-stretch: 125%; font-size: clamp(28px, 8vw, 72px); line-height: 1; text-transform: uppercase; background: linear-gradient(90deg, #6ea0ff, #4080ff 35%, #a04dff 80%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.bi-words span { font-weight: 600; font-size: clamp(14px, 3.4vw, 20px); color: #e6e8ff; opacity: 0; }
+.bi-burst { position: fixed; width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, .95), rgba(160, 77, 255, .75) 42%, rgba(64, 128, 255, 0) 70%); pointer-events: none; }
+/* The real mark waits, empty, until the C lands on it */
+.bi-wait-home .ml-p.is-home .mk-cap.is-boost, .bi-wait-away .ml-p.is-away .mk-cap.is-boost { visibility: hidden; }

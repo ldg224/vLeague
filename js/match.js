@@ -19,6 +19,7 @@ import { paint, quietly } from './paint.js';
 import { icon } from './icons.js';
 import { accentFor, isHex } from './club-colour.js';
 import { loadLineups, lineupCard } from './match-lineup.js';
+import { boostSides, playBoostIntro } from './boost-intro.js';
 import { formCard } from './match-form.js';
 import { insights, insightsCard } from './match-insights.js';
 import { chanceCard, venueCard } from './match-side.js';
@@ -70,6 +71,7 @@ try {
   demo = q.has('demo') && (preview || prof?.role === 'office') ? Number(q.get('demo') || 6) : null;
   if (demo != null) season = demoMatchSeason(rows, demo);
   if (demo != null && preview && q.has('pre')) season.fixtures.forEach(f => { f.preseason = true; f.exhibition = true; });   // localhost only: look at a preseason match page
+  if (demo != null && q.get('boost')) for (const code of q.get('boost').split(',')) if (season.demoSheets[code]) season.demoSheets[code].boost = true;   // the demo (localhost or the office): ?boost=CCF,SKS to watch the Boosted Captain entrance
   fx = season?.fixtures.find(f => String(f.id) === String(id)) || (demo != null ? season.fixtures[0] : null) || null;
   if (!fx && id && season && !preview) {   // an old id (before ids followed the round codes, db 0079): find where it went and put the new one in the address
     const { db } = await import('./auth.js');
@@ -234,6 +236,8 @@ function start() {
       styleCards();
     }
     tickCountdown();
+    // Boosted captain's entrance (S-33), once the line-ups it lands on are on the page. It keeps to itself which ones this device has seen.
+    if (lineups && tabNow(s.st) === 'preview') playBoostIntro(fx.id, boostSides(lineups, season.players, c => rows.find(r => r.code === c)?.name || season.teams?.find(t => t.code === c)?.name || c), { replay: demo != null && q.has('replay') });
     mountViewer(s);
     liveReactions(fx.id, s.st === 'live' && !s.hid);   // the reaction bar while the match is live (S-20A)
   };

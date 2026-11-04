@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.28.0 (2026-11-04)
+
+Headlines: Boosted Captain entrance
+
+**Added (S-33):** when the Predicted lineup shows a boosted captain, a gradient C grows to fill the screen over "BOOSTED CAPTAIN" and the player's name, then flies down and lands on the C beside his name on the pitch. It plays once per match on each device, about 4 seconds for each boosted captain, and a tap or Esc skips it. It doesn't play with reduced motion on. A boost stays secret until the line-ups lock, so it can't appear before then.
+Database change: none.
+
 ## 1.27.0 (2026-11-04)
 
 Headlines: Boosted Captain
