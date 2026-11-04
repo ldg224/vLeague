@@ -88,7 +88,7 @@ export function weekNumbers(fixtures, rounds = []) {
 // How each week is called, by its round code (user, 2 Nov 2026): preseason rounds are P1, P2, P3 ("Round P1") with their own count, the season's rounds
 // 1 to 22 ("Round 1"), then SF and GF for the finals (shown by their name, or "Semi-finals" / "Grand Final"). A regular round counts among numbered weeks (or takes
 // the number you picked); a week that is none of these shows only its name. `code` / `short` is the code, for a small tab or a heading.
-const finalCode = r => (/grand/i.test(r.name || '') ? 'GF' : /semi/i.test(r.name || '') ? 'SF' : r.kind === 'finals' ? 'SF' : null);
+const finalCode = r => (/grand/i.test(r.name || '') ? 'GF' : /semi/i.test(r.name || '') ? 'SF' : /third/i.test(r.name || '') ? 'TP' : r.kind === 'finals' ? 'SF' : null);
 export function roundLabels(weeks, rounds) {
   const byWeek = new Map((rounds || []).map(r => [r.week, r]));
   const out = new Map();

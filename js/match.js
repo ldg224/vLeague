@@ -35,6 +35,9 @@ import { liveReactions } from './reactions.js';
 import { playerCard, MatchPlayer } from './viewer/player.js';
 import { loadKits, matchKits } from './kits-data.js';
 import { loadHistory } from './history-data.js';
+import { resolveLook, boardOf, artOf, artInk, isEventLook, SCENES, stageName } from './looks.js';
+import { startPageLook } from './look-page.js';
+import { drawLookArt, drawLookFx } from './viewer/look-canvas.js';
 
 chrome();
 const main = document.getElementById('main');
@@ -73,7 +76,10 @@ try {
   if (demo != null && preview && q.has('pre')) season.fixtures.forEach(f => { f.preseason = true; f.exhibition = true; });   // localhost only: look at a preseason match page
   if (demo != null && q.get('boost')) for (const code of q.get('boost').split(',')) if (season.demoSheets[code]) season.demoSheets[code].boost = true;   // the demo (localhost or the office): ?boost=CCF,SKS to watch the Boosted Captain entrance
   fx = season?.fixtures.find(f => String(f.id) === String(id)) || (demo != null ? season.fixtures[0] : null) || null;
-  if (fx && preview && q.get('look')) fx.look = q.get('look');   // localhost only: ?look=opening_week to see a look on the real viewer
+  if (fx && preview && q.get('look')) {   // localhost only: ?look=opening_week to see a look on the real viewer and the header (&stage=SF for a semi-final)
+    fx.look = q.get('look'); fx.stage = q.get('stage') || fx.stage;
+    season.looks = { [fx.look]: { key: fx.look, name: fx.look, settings: {} }, ...season.looks };
+  }
   if (!fx && id && season && !preview) {   // an old id (before ids followed the round codes, db 0079): find where it went and put the new one in the address
     const { db } = await import('./auth.js');
     let data = null;
@@ -103,6 +109,29 @@ function start() {
   const tabsFor = st => (st === 'live' || st === 'ft' ? TABS.played : TABS.upcoming);
   const tabNow = st => { const t = location.hash.slice(1), list = tabsFor(st); return list.some(x => x[0] === t) ? t : list[0][0]; };
   const redsOf = code => (fx.result?.cards || []).filter(c => c.team === code && (c.card === 'red' || c.card === 'second_yellow')).length;
+
+  // ---- an event's look on the header, the same design as the scoreboard on the video. Only the events change this page: a normal week (Classic) and a preseason match stay as they are.
+  const look = !fx.preseason && isEventLook(fx.look) ? resolveLook(fx.look, season?.looks?.[fx.look]) : null;
+  const lookVars = () => {
+    const b = boardOf(look);
+    return `--l-bg1:${b.bg[0]};--l-bg2:${b.bg[1]};--l-edge:${b.edge};--l-ink:${b.ink};--l-p1:${b.plate[0]};--l-p2:${b.plate[1]};--l-pink:${b.plateInk};--l-clock:${b.clock};--l-clockink:${b.clockInk}`;
+  };
+  const plateText = () => {
+    const big = stageName(fx) || season.rounds?.[fx.week]?.name || fx.round || `Round ${fx.week}`;
+    return look.banner && !fx.stage && !big.toLowerCase().includes(look.banner.toLowerCase()) ? `${big} · ${look.banner}` : big;
+  };
+  // The look's artwork behind the band, drawn again only when the band changes size. Moving pieces are on the page's background (js/look-page.js), not here.
+  const dressHead = () => {
+    const cv = document.querySelector('.mh-art');
+    if (!cv) return;
+    const w = cv.clientWidth, h = cv.clientHeight, k = Math.min(devicePixelRatio || 1, 2), size = `${w}x${h}x${k}`;
+    if (!w || !h || cv.dataset.size === size) return;
+    cv.dataset.size = size; cv.width = w * k; cv.height = h * k;
+    const c = cv.getContext('2d'); c.scale(k, k);
+    drawLookArt(c, 0, 0, w, h, artOf(look), artInk(look), 0);
+    if (look.theme) drawLookFx(c, 0, 0, w, h, look.theme);
+    else if (look.key === 'grand_final') drawLookFx(c, 0, 0, w, h, { fx: ['sparkle'], score: ['#ffe566', '#ffd700'] });
+  };
 
   // ---- the middle block
   const middle = ({ now, st, played, hid }) => {
@@ -146,9 +175,9 @@ function start() {
         + `<span class="mh-badge">${crest(t, 88)}</span></a>`;
     };
     const ghost = (code, t, cls) => `<span class="mh-ghost ${cls}" aria-hidden="true"><b class="mh-full">${esc(fullNameOf(t))}</b><b class="mh-code">${esc(code)}</b></span>`;
-    return `<section class="lg-card mh-head${fx.preseason ? ' is-pre' : ''}" aria-label="Match">
-      <div class="mh-band">
-        <p class="mh-round">${esc(fx.round || `Round ${fx.week}`)}${fx.preseason ? tag : ''}</p>
+    return `<section class="lg-card mh-head${fx.preseason ? ' is-pre' : ''}${look ? ` has-look look-${esc(look.key)}` : ''}" aria-label="Match"${look ? ` style="${lookVars()}"` : ''}>
+      <div class="mh-band">${look ? `<canvas class="mh-art" aria-hidden="true"></canvas>${SCENES[look.key]?.fireworks ? '<canvas class="mh-fire" aria-hidden="true"></canvas>' : ''}` : ''}
+        <p class="mh-round">${look ? esc(plateText()) : esc(fx.round || `Round ${fx.week}`)}${fx.preseason ? tag : ''}</p>
         <p class="mh-info">${k ? `<span>${icon('calendar-days')}${esc(when(k))}</span>` : ''}${ground ? `<span>${icon('map-pin')}${esc(ground)}</span>` : ''}</p>
         <div class="mh-teams">${ghost(fx.home, home, 'is-home')}${ghost(fx.away, away, 'is-away')}${side(fx.home, home, 'is-home')}<div class="mh-mid">${middle(s)}</div>${side(fx.away, away, 'is-away')}</div>
         ${scorers(s)}
@@ -237,6 +266,7 @@ function start() {
       styleCards();
     }
     tickCountdown();
+    if (look) dressHead();
     // Boosted captain's entrance (S-33), once the line-ups it lands on are on the page.
     if (lineups && tabNow(s.st) === 'preview') playBoostIntro(fx.id, boostSides(lineups, season.players, c => rows.find(r => r.code === c)?.name || season.teams?.find(t => t.code === c)?.name || c));
     mountViewer(s);
@@ -267,6 +297,11 @@ function start() {
   };
   main.innerHTML = '<div class="mh" id="mh"><div id="mh-head"></div><div id="mh-player"></div><div class="mh-cols"><div class="mh-main" id="mh-main"></div><aside class="mh-side" aria-label="About this match"><div id="mh-chance"></div><div id="mh-venue"></div><div id="mh-extra"></div></aside></div></div>';
   draw();
+  if (look) {
+    new ResizeObserver(dressHead).observe(document.getElementById('mh-head'));
+    // The event's confetti, fireworks and props on the page. They hold still while the video plays, as the silk and the contour lines do, so the picture doesn't stutter.
+    startPageLook(look,document.documentElement.dataset.theme === 'light' ? 'light' : 'dark', { paused: () => Boolean(viewer?.playing || viewer?.tactical?.playing) });
+  }
   loadLineups(fx, season, rows, { fake: preview && q.has('fake'), mine: mine?.code || null }).then(l => { lineups = l; draw(); }).catch(() => { lineups = { home: { sheet: null, locked: false }, away: { sheet: null, locked: false }, kits: {} }; draw(); });
   loadChanceSheets().then(x => { chanceSheets = x; draw(); });
   loadHistory().then(h => { history = h; draw(); }).catch(() => {});   // the league's past seasons, for the Insights

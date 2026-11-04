@@ -39,10 +39,13 @@ my_look: {
 Every colour is `#rrggbb`; anything else is replaced by the base theme's colour, and unknown effect names are dropped, so a look stored in the database can't put anything else on the page. A `looks` table row with `settings.theme` overlays the preset of the same key (field by field), and a row with no preset at all still works, so a look can be made or tuned in the database without a release.
 
 ## Effects (`FX`)
-`shine` (a slow sweep) · `snow` · `lights` (a string of coloured bulbs along the top) · `stars` (the Southern Cross) · `sparkle` · `confetti` · `moustache` (a big handlebar moustache behind the score, and the dash between the scores becomes a moustache; on the video bug too).
+`shine` (a slow sweep) · `snow` · `lights` (a string of coloured bulbs along the top) · `stars` (the Southern Cross) · `sparkle` · `confetti` · `moustache` (a big handlebar moustache behind the score on the page, a quiet pattern of small moustaches on the video bug; on both, the dash between the scores becomes a moustache).
 
 ## Artwork (`ART`)
 Every score bug on the video has artwork behind it, drawn by `drawLookArt` in `js/viewer/look-canvas.js`: `mow` (dark mowing stripes) · `chalk` (the stripes with a chalk pitch marked on them) · `beams` (floodlights over the stripes). Grand Final uses `beams`; the other older looks use `mow`. Colours come from the look, so a look only has to name its artwork. The older page scoreboard (`js/scoreboard.js`, Game centre) has no artwork.
+
+## Events on the match page
+Only the looks in `EVENT_LOOKS` (`js/looks.js`) change the match page; Classic and every other look leave it exactly as it was, and so does a preseason match. An event's header wears the board's design (`boardOf`, `.has-look` in `css/match.css`), what it spills (`spill` on the theme: `SPILL`) falls over the page's background above the contour lines and behind the cards, and its `SCENES` entry puts props in the bottom corners and can add fireworks (`js/look-page.js`). All of it holds still while the video plays and with reduced motion on. Props are Fluent Emoji 3D images in `assets/looks` (Microsoft, MIT: see the licence there), stored in the repo so they look the same on every device; keep to that one set. The rule below against emoji means device font characters, not these files.
 
 ## Adding a look (the usual job)
 1. Add the entry to `PRESETS` in `js/looks.js`. The key is lowercase letters, digits and `_` (2 to 24).

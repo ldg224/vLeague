@@ -11,10 +11,61 @@
 .mh .empty { margin: 0; padding: 20px; color: var(--muted); font: 400 var(--fs-m) var(--font); }
 
 .mh-head { overflow: hidden; }
+.has-look.mh-head .mh-round { padding-top: 10px; }
 .mh-round { margin: 0; padding: 20px 20px 8px; text-align: center; font: 900 var(--fs-l)/1.2 var(--font-display); font-stretch: 125%; text-transform: uppercase; color: var(--text-strong); }
 .mh-info { display: flex; flex-wrap: wrap; gap: 4px 20px; justify-content: center; margin: 0; padding: 0 20px; color: var(--muted); font: 400 var(--fs-s) var(--font); }
 .mh-info span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
 .mh-info .ic { width: 16px; height: 16px; flex: none; color: var(--faint); }
+
+/* ---------- the match's look: the header wears the same design as the scoreboard on the video (js/looks.js boardOf, js/match.js) ---------- */
+/* The band is the board: dark in both themes, so it sets its own text colours. The clubs' washes and hollow names stay on top of it; the tabs below stay neutral. */
+.mh-head.has-look { border: 2px solid var(--l-edge); }
+.mh-head.look-grand_final { box-shadow: 0 0 28px color-mix(in oklab, var(--l-edge) 45%, transparent); }
+.has-look .mh-band {
+  position: relative; isolation: isolate;
+  --text-strong: var(--l-ink); --text-soft: color-mix(in oklab, var(--l-ink) 82%, transparent); --muted: color-mix(in oklab, var(--l-ink) 68%, transparent); --faint: color-mix(in oklab, var(--l-ink) 55%, transparent);
+  background:
+    radial-gradient(var(--hs) 100% at var(--hx) var(--hy), color-mix(in oklab, var(--ha, transparent) 28%, transparent), transparent 78%),
+    radial-gradient(var(--as) 100% at var(--ax) var(--ay), color-mix(in oklab, var(--aa, transparent) 28%, transparent), transparent 78%),
+    linear-gradient(var(--l-bg1), var(--l-bg2));
+}
+.mh-art, .mh-fire { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; pointer-events: none; }
+.has-look .mh-band > :not(.mh-art, .mh-fire) { position: relative; z-index: 1; }
+/* The plate: a tab hanging from the top of the board, leaning like the plate above the video's scoreboard */
+.has-look .mh-round {
+  width: fit-content; max-width: calc(100% - 32px); margin: 0 auto 14px; padding: 10px 44px; color: var(--l-pink);
+  background: linear-gradient(90deg, var(--l-p1), var(--l-p2));
+  clip-path: polygon(0 0, 100% 0, calc(100% - 18px) 100%, 18px 100%);
+}
+/* The score or kick-off: a white block leaning with the stripes, underlined in the two clubs' colours */
+.has-look .mh-score, .has-look .mh-ko {
+  padding: 10px 30px 14px; color: #0b1f3f;
+  background: linear-gradient(90deg, var(--ha, #0b1f3f) 50%, var(--aa, #0b1f3f) 50%) bottom / 100% 6px no-repeat, linear-gradient(#ffffff, #dfe6f0);
+  clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+}
+.has-look .mh-score i { color: #6a7a92; }
+.has-look .mh-score.is-hidden b, .has-look .mh-score.is-hidden i { color: #6a7a92; }
+/* Full time, the countdown: the clock block */
+.has-look .mh-sub { padding: 5px 20px; border-radius: 0; background: var(--l-clock); color: var(--l-clockink); clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
+.has-look .mh-sub:empty { display: none; }
+.has-look .mh-sub.is-live { background: var(--res-l); color: #fff; }
+.has-look .mh-hide button { color: var(--l-ink); text-decoration: underline; }
+@media (max-width: 767px) {
+  .has-look .mh-round { padding: 8px 32px; margin-bottom: 10px; }
+  .has-look .mh-score, .has-look .mh-ko { padding: 8px 20px 11px; }
+  .has-look .mh-ko { padding-inline: 14px; font-size: 24px; clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); }
+}
+
+/* What the look spills over the page: above the contour lines (.lg::before, drawn first at the same level) and under the cards */
+.lg-spill { position: fixed; inset: 0; z-index: -1; width: 100%; height: 100%; pointer-events: none; }
+
+/* The event's props in the bottom corners (js/look-page.js): in front of the cards so they can be seen, never in the way of a tap */
+.lg-props { position: fixed; inset: auto 0 0; z-index: 5; height: 0; pointer-events: none; --prop: 1; }
+.lg-prop { position: absolute; bottom: 0; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .35)); }
+canvas.lg-prop { filter: none; }
+@media (max-width: 1700px) { .lg-props { --prop: .68; } }   /* with no room beside the cards they sit over the corner of one, so they stay small */
+@media (max-width: 991px) { .lg-props { --prop: .6; } }
+@media (max-width: 767px) { .lg-props { --prop: .5; } }
 
 /* ---------- the clubs' band ---------- */
 /* The two washes drift a little, each at its own slow pace (registered properties so the gradient centres can animate); still when reduced motion is on. */

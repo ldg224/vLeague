@@ -20,4 +20,6 @@ test('the finals are SF and GF', () => {
   assert.equal(m.get(27).short, 'SF'); assert.equal(m.get(27).label, 'Semi Finals');
   assert.equal(m.get(28).short, 'GF'); assert.equal(m.get(28).label, 'Grand Final');
   assert.equal(roundLabels([30], [{ week: 30, kind: 'finals', numbered: false }]).get(30).label, 'Semi-finals');
+  const tp = roundLabels([29], [{ week: 29, kind: 'finals', numbered: false, name: 'Third Place Final' }]).get(29);
+  assert.equal(tp.short, 'TP'); assert.equal(tp.label, 'Third Place Final');
 });

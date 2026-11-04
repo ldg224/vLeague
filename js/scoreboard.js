@@ -4,7 +4,7 @@
 //
 //   lookInfo(season, fx)  -> { key, name, accent, banner, ornament, theme }
 //   scoreboard({ fx, season, look, h, a, hColour, aColour, crests: [homeHtml, awayHtml], score, state, goals: [homeHtml, awayHtml], meta })
-import { resolveLook, themeVars, fxHtml } from './looks.js';
+import { resolveLook, themeVars, fxHtml, stageName } from './looks.js';
 
 const HEX = /^#[0-9a-f]{6}$/i;
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));   // (not imported from member.js, which pulls in the sign-in code: this file stays pure, so the Editor's previews and the tests can use it)
@@ -15,7 +15,7 @@ export function lookInfo(season, fx) { return resolveLook(fx?.look, season?.look
 // The round's name for the plate: a named round shows its name big and "Round 3" small; an unnamed one shows "Round 3".
 export function roundPlate(season, fx) {
   const r = season?.rounds?.[fx.week] || {};
-  const stage = fx.stage === 'SF' ? 'Semi-final' : fx.stage === 'GF' ? 'Grand Final' : null;
+  const stage = stageName(fx);
   if (stage) return { big: stage, small: r.name || r.label || '' };
   if (r.name) return { big: r.name, small: r.numbered && r.no ? `Round ${r.no}` : '' };
   return { big: r.label || `Week ${fx.week}`, small: '' };

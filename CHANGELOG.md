@@ -3,6 +3,18 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.30.0 (2026-11-05)
+
+Headlines: Event weeks dress the match page | Confetti, snow and fireworks
+
+Released together with 1.29.0 below, which wasn't released on its own.
+**Added:** event looks now dress the match page: Opening Week, Spring Blossom, Movember, Derby, Festive, New Year's, Australia Day, Last Round, Semi final, Third place final, Grand final and Lunar New Year. The header wears the same design as the video's scoreboard, falling pieces (confetti, snow, ticker tape and more) cross the page's background above the contour lines, and props stand in the bottom corners: a tree with flashing lights and presents, a kangaroo, trophies. New Year's has fireworks. A normal week and preseason matches keep the page as it was. The page's effects hold still while a video plays.
+**Added:** on the video (highlights and full match), pieces now fall past the scoreboard with no visible edge, and move on the full match view too.
+**Added:** the Spring Blossom, Last Round, Third Place Final and Lunar New Year looks in the Editor's look picker, a Third Place Final round, and a Third place final stage.
+**Changed:** Festive, Movember, New Year and Australia Day are redone, and each finals stage has its own finish.
+**Fixed:** a plate no longer says the same thing twice ("MOVEMBER ROUND · MOVEMBER"), and the Grand Final's stage can now be set in the Editor (its round wasn't marked as finals).
+Database change: 0083 and 0084 (the looks, the Third Place Final round and stage, the Grand Final's round marked as finals), applied with this release.
+
 ## 1.29.0 (2026-11-04)
 
 Headlines: A new scoreboard, and Fresh Chalk for Opening Week

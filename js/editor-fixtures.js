@@ -24,7 +24,7 @@ export function fixturesView() {
 const TEST_WEEK = 99;   // test matches live here (js/simulate.js); they never count as part of the season
 const LOCKS = [[0, 'At the first kick-off'], [30, '30 minutes'], [60, '1 hour'], [180, '3 hours'], [360, '6 hours'], [720, '12 hours'], [1440, '1 day'], [2880, '2 days'], [4320, '3 days'], [10080, '1 week']];
 const KINDS = [['regular', 'Regular'], ['preseason', 'Preseason'], ['special', 'Special'], ['finals', 'Finals']];   // Preseason: its own purple table and stats, never the real season (js/preseason.js)
-const STAGES = [['', 'Regular'], ['SF', 'Semi-final'], ['GF', 'Grand Final']];
+const STAGES = [['', 'Regular'], ['SF', 'Semi-final'], ['TP', 'Third place final'], ['GF', 'Grand Final']];
 // When the games of a round kick off: blocks of games. games 0 = "all the rest".
 const PATTERNS = {
   saturday: ['Saturday night', [{ day: 6, time: '19:00', games: 0, gap: 90 }]],

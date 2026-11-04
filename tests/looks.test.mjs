@@ -1,8 +1,48 @@
 // Run with:  node --test "tests/*.test.mjs"
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PRESETS, PRESET_ROWS, FX, ART, artOf, resolveLook, cleanTheme, themeVars, fxHtml, swatch, fxNames, starPoints } from '../js/looks.js';
+import { readFileSync, existsSync } from 'node:fs';
+import { PRESETS, PRESET_ROWS, FX, ART, SPILL, EVENT_LOOKS, SCENES, isEventLook, spillOf, stageName, boardOf, pageSpillInk, artOf, resolveLook, cleanTheme, themeVars, fxHtml, swatch, fxNames, starPoints } from '../js/looks.js';
 import { lookInfo, scoreboard } from '../js/scoreboard.js';
+
+test('only the events change the match page: a normal week does not', () => {
+  assert.equal(isEventLook('classic'), false);
+  assert.equal(isEventLook('christmas'), false);
+  assert.equal(isEventLook(undefined), false);
+  assert.deepEqual([...EVENT_LOOKS].sort(), ['australia_day', 'derby', 'festive', 'finals', 'grand_final', 'last_round', 'lunar_new_year', 'movember', 'new_year', 'opening_week', 'spring_blossom', 'third_place']);
+});
+
+test('every event has a scene whose pictures are in the repo, and board colours', () => {
+  for (const key of EVENT_LOOKS) {
+    assert.ok(SCENES[key]?.props?.length, key);
+    for (const p of SCENES[key].props) { assert.ok(existsSync(new URL(`../assets/looks/${p.src}.png`, import.meta.url)), p.src); assert.ok(['left', 'right'].includes(p.side), p.src); }
+    const b = boardOf(resolveLook(key, { key, name: key, settings: {} }));
+    for (const c of [...b.bg, b.edge, b.ink, ...b.plate, b.plateInk, b.clock, b.clockInk]) assert.match(c, /^#[0-9a-f]{6}$/i, key);
+  }
+});
+
+test('what falls past the board: only known names get through, and the older looks have theirs', () => {
+  assert.equal(cleanTheme({ spill: 'snow' }).spill, 'snow');
+  assert.equal(cleanTheme({ spill: '<script>' }).spill, null);
+  for (const k of ['grand_final', 'finals', 'derby']) assert.ok(SPILL.includes(spillOf({ key: k, theme: null })), k);
+  assert.equal(spillOf({ key: 'classic', theme: null }), null);
+  assert.equal(spillOf(resolveLook('festive', null)), 'snow');
+  assert.ok(pageSpillInk(resolveLook('festive', null), 'light').length && pageSpillInk({ key: 'derby', theme: null }, 'dark').length);
+});
+
+test('the stages have names, the third place final among them', () => {
+  assert.equal(stageName({ stage: 'SF' }), 'Semi-final'); assert.equal(stageName({ stage: 'TP' }), 'Third place final'); assert.equal(stageName({ stage: 'GF' }), 'Grand Final');
+  assert.equal(stageName({}), null);
+});
+
+test('the database and the presets describe each redone look the same (0084, or the old colours would come back)', () => {
+  const sql = readFileSync(new URL('../supabase/migrations/0084_event_looks.sql', import.meta.url), 'utf8');
+  for (const key of ['festive', 'movember', 'new_year', 'australia_day', 'spring_blossom', 'last_round', 'third_place', 'lunar_new_year']) {
+    const line = sql.split('\n').find(l => l.includes(`('${key}',`));
+    assert.ok(line, key);
+    assert.deepEqual(JSON.parse(line.slice(line.indexOf(`'{`) + 1, line.lastIndexOf(`}'`) + 1)).theme, PRESETS[key].theme, key);
+  }
+});
 
 test('every preset is a valid look: a key the table accepts, a clean theme, only known effects', () => {
   for (const [key, p] of Object.entries(PRESETS)) {
@@ -65,7 +105,7 @@ test('the scoreboard draws a themed look with its colours and effects, and an ol
   const draw = look => scoreboard({ fx: { week: 3, look }, season, look: lookInfo(season, { look }), h: 'Reds', a: 'Blues', crests: ['', ''], score: '<strong>1</strong>', state: 'FT', goals: ['', ''], meta: '' });
   const f = draw('festive'), d = draw('derby');
   assert.match(f, /data-themed/);
-  assert.match(f, /--t-bg1:#174a31/);
+  assert.match(f, /--t-bg1:#1a5c3e/);
   assert.match(f, /class="sb-fx"/);
   assert.match(f, /fx-lights/);
   assert.match(f, /fx-snow/);
@@ -85,6 +125,6 @@ test('the Editor previews: every look has a swatch and a note about its effects'
     const s = swatch(resolveLook(key, { key, name: key, settings: {} }));
     assert.ok(s.bg.length === 2 && /^#[0-9a-f]{6}$/.test(s.edge) && /^#[0-9a-f]{6}$/.test(s.accent), key);
   }
-  assert.deepEqual(fxNames(resolveLook('new_year', null)), ['Sparkle', 'Confetti']);
+  assert.deepEqual(fxNames(resolveLook('new_year', null)), ['Falling confetti', 'Sparkle']);
   assert.deepEqual(fxNames(resolveLook('classic', { settings: {} })), []);
 });

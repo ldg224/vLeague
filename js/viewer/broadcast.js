@@ -488,6 +488,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
   // Score bug with the match clock (top left) and the league mark (bottom right).
   bug(t) {
     const c = this.c, sc = this.scoreAt(t), x = 60, y = 86;
+    this._T = t;   // what moves on the score bug (falling confetti, twinkling lights) runs on the match clock
     this.scoreBoard(x, y, sc, t >= this.t1 ? 'FT' : this.clockAt(t));
     this.redCards(t, this.home.code, x + 88, y + 4);
     this.redCards(t, this.away.code, x + 322, y + 4);

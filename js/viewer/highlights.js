@@ -5,8 +5,8 @@
 //   WebCodecs, and makes a matching thumbnail plus YouTube title and description.
 
 import { safeColour, onColour, logoPath } from './ui.js';
-import { resolveLook, artOf } from '../looks.js';
-import { drawLookArt, drawLookFx, drawMoustache } from './look-canvas.js';
+import { resolveLook, artOf, artInk, spillOf, stageName } from '../looks.js';
+import { drawLookArt, drawLookFx, drawLookSpill, drawMoustache } from './look-canvas.js';
 import { kickoff } from './data.js';
 import { buildEffects } from './effects.js';
 import { kitSprite, cleanDesign, drawPrint, TURNS, turnIndex } from '../kit.js';
@@ -1332,23 +1332,26 @@ export class HighlightsRenderer {
   look() {
     if (this._look) return this._look;
     const S = this.season || {}, fx = this.fx || {}, row = S.looks?.[fx.look], r = S.rounds?.[fx.week] || {};
-    const stage = fx.stage === 'SF' ? 'Semi-final' : fx.stage === 'GF' ? 'Grand Final' : null;
+    const stage = stageName(fx);
     const big = stage || r.name || r.label || (fx.week != null ? `Week ${fx.week}` : '');
     const small = stage ? (r.name || r.label || '') : (r.name && r.numbered && r.no ? `Round ${r.no}` : '');
     const rl = resolveLook(fx.look, row);
-    return (this._look = { key: rl.key, accent: rl.accent, banner: rl.banner || '', ornament: rl.ornament || '', theme: rl.theme, big, small });
+    return (this._look = { key: rl.key, accent: rl.accent, banner: stage ? '' : rl.banner || '', ornament: rl.ornament || '', theme: rl.theme, big, small });   // a stage names itself: "SEMI-FINAL", not "SEMI-FINAL · FINALS"
   }
 
   // The score bug in the round's design: a plate with the round's name above, then the board. Both the highlights and the
   // broadcast view draw it, so a Grand Final looks like a Grand Final in either.
   scoreBoard(x, y, sc, clock) {
     const c = this.c, L = this.look(), w = 560, h = 64, key = L.key, acc = L.accent, th = L.theme;
-    const plateText = [L.ornament, L.big.toUpperCase(), L.banner && L.banner.toLowerCase() !== L.big.toLowerCase() ? `· ${L.banner}` : ''].filter(Boolean).join(' ');
+    const plateText = [L.ornament, L.big.toUpperCase(), L.banner && !L.big.toLowerCase().includes(L.banner.toLowerCase()) ? `· ${L.banner}` : ''].filter(Boolean).join(' ');   // "MOVEMBER ROUND", not "MOVEMBER ROUND · MOVEMBER"
     const pre = !!(this.fx?.preseason || this.season?.rounds?.[this.fx?.week]?.preseason), PRE = '#8522f0';
     const star = key === 'grand_final' ? '★ ' : '';
     const label = `${star}${plateText}${star ? ' ★' : ''}`.trim();
     c.save(); c.font = `900 22px ${FONT}`; const pw = Math.min(w, Math.max(180, c.measureText(label).width + label.length * 2 + 64)); c.restore();   // the width counts the letter spacing, so a long name isn't clipped
     const ph = 36, py = y - ph + 2;
+    // What falls past the board: most of it behind the board (here), one piece in four in front (after the contents, below).
+    const spill = pre ? null : spillOf(L), spillInk = th ? (spill === 'moustaches' ? [th.plate[1]] : spill === 'embers' ? [th.glow, th.plate[0], th.plate[1]] : [th.score[0], th.score[1], th.glow, th.ink]) : ['#ff7043', '#ffb199', '#ffd0a0'];
+    if (spill) drawLookSpill(c, x, y, w, h, spill, spillInk, this._T || 0);
     const gold = (a, b) => { const g = c.createLinearGradient(x, py, x, py + ph); g.addColorStop(0, a); g.addColorStop(1, b); return g; };
     // plate
     let plateFill = 'rgba(21,101,192,.95)', plateInk = '#fff';
@@ -1371,7 +1374,7 @@ export class HighlightsRenderer {
     else if (key === 'christmas') fill = 'rgba(15,38,26,0.95)';
     else if (key === 'grand_final') fill = down('#2a2308', '#0b101a');
     else if (th) { const g = c.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]); fill = g; }
-    else if (key === 'derby') { const g = c.createLinearGradient(x, 0, x + w, 0); g.addColorStop(0, mixHex(this.hc, '#0b0f17', 0.72)); g.addColorStop(0.49, '#0b0f17'); g.addColorStop(0.51, '#0b0f17'); g.addColorStop(1, mixHex(this.ac, '#0b0f17', 0.72)); fill = g; }
+    else if (key === 'derby') { const g = c.createLinearGradient(x, 0, x + w, 0); g.addColorStop(0, mixHex(this.hc, '#0b0f17', 0.42)); g.addColorStop(0.44, '#0b0f17'); g.addColorStop(0.56, '#0b0f17'); g.addColorStop(1, mixHex(this.ac, '#0b0f17', 0.42)); fill = g; }
     this.pill(x, y, w, h, fill, [0, 14, 14, 14]);
     c.restore();
     // trim
@@ -1389,8 +1392,9 @@ export class HighlightsRenderer {
     if (pre) { c.strokeStyle = PRE; c.lineWidth = 4; c.beginPath(); c.roundRect(x, y, w, h, [0, 14, 14, 14]); c.stroke(); }
     c.restore();
     // The artwork, then the look's effects over it. Chalk and beams take the look's colour; the older gold looks are gold.
-    drawLookArt(c, x, y, w, h, artOf(L), key === 'finals' || key === 'grand_final' ? '#ffd76a' : th ? (artOf(L) === 'beams' ? th.glow : th.ink) : '#9cc4ff', this._T || 0, x + 246);
+    drawLookArt(c, x, y, w, h, artOf(L), artInk(L), this._T || 0, x + 246);
     if (th && !pre) drawLookFx(c, x, y, w, h, th, this._T || 0);
+    else if (key === 'grand_final' && !pre) drawLookFx(c, x, y, w, h, { fx: ['shine', 'sparkle'], score: ['#ffe566', '#ffd700'] }, this._T || 0);
     const slant = (bx, by, bw, bh, s) => { c.beginPath(); c.moveTo(bx + s, by); c.lineTo(bx + bw, by); c.lineTo(bx + bw - s, by + bh); c.lineTo(bx, by + bh); c.closePath(); };
     const clubBar = (bx, colour) => { c.save(); c.shadowColor = colour; c.shadowBlur = 12; slant(bx, y + 10, 10, 44, 4); c.fillStyle = colour; c.fill(); c.restore(); };
     // contents
@@ -1412,6 +1416,7 @@ export class HighlightsRenderer {
     c.save(); c.shadowColor = 'rgba(0,0,0,.35)'; c.shadowBlur = 8; slant(x + 424, y + 12, 126, 40, 9); c.fillStyle = clockFill; c.fill(); c.restore();
     c.save(); slant(x + 424, y + 12, 126, 40, 9); c.clip(); c.fillStyle = 'rgba(255,255,255,.14)'; c.fillRect(x + 424, y + 12, 126, 18); c.restore();
     this.text(clock, x + 488, y + 42, { size: 26, weight: 900, align: 'center', colour: th && !pre ? th.clockInk : !pre && (key === 'finals' || key === 'grand_final' || key === 'derby') ? '#1b1400' : '#fff' });
+    if (spill) drawLookSpill(c, x, y, w, h, spill, spillInk, this._T || 0, true);
     // A test match (made-up players) says so on screen, in the broadcast and the highlights.
     if (this.fx?.test) {
       const tw = 330, tx = W / 2 - tw / 2, ty = 22;

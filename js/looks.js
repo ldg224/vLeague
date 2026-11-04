@@ -20,6 +20,8 @@ const pair = (v, d) => (Array.isArray(v) ? [hex(v[0], d[0]), hex(v[1] ?? v[0], d
 export const FX = ['shine', 'snow', 'lights', 'stars', 'sparkle', 'confetti', 'moustache'];
 // The artwork behind a score bug (js/viewer/look-canvas.js): mowing stripes, the same with chalk pitch markings, or floodlight beams over the stripes.
 export const ART = ['mow', 'chalk', 'beams'];
+// What falls (or rises) past the score bug on the video, over the board and the picture around it: drawLookSpill in js/viewer/look-canvas.js.
+export const SPILL = ['confetti', 'gold', 'snow', 'petals', 'embers', 'stars', 'moustaches', 'glints'];
 
 const BASE = {
   bg: ['#12182a', '#0a0e1a'], edge: '#3a4560', ink: '#f2f2f2', score: ['#ffffff', '#ffffff'],
@@ -35,7 +37,60 @@ export function cleanTheme(raw) {
     clock: hex(raw.clock, BASE.clock), clockInk: hex(raw.clockInk, BASE.clockInk),
     fx: (Array.isArray(raw.fx) ? raw.fx : []).filter(n => FX.includes(n)).slice(0, 5),
     art: ART.includes(raw.art) ? raw.art : null,
+    spill: SPILL.includes(raw.spill) ? raw.spill : null,
   };
+}
+
+// What a look spills past the score bug: its theme's, else the older looks' below, else nothing.
+const OLDER_SPILL = { finals: 'gold', grand_final: 'gold', derby: 'embers' };
+export const spillOf = look => look?.theme?.spill || OLDER_SPILL[look?.key] || null;
+// The colour of the chalk and the beams in a look's artwork.
+export const artInk = look => (look?.key === 'finals' || look?.key === 'grand_final' ? '#ffd76a' : look?.theme ? (artOf(look) === 'beams' ? look.theme.glow : look.theme.ink) : '#9cc4ff');
+
+// A look's board colours for a page header (the match page), the same as the score bug on the video: { bg: [top, bottom], edge, ink, plate: [left, right], plateInk, clock, clockInk }.
+const OLDER_BOARD = {
+  classic: { bg: ['#0d2a52', '#061430'], edge: '#2a4a7a', ink: '#ffffff', plate: ['#1565c0', '#1565c0'], plateInk: '#ffffff', clock: '#1e88e5', clockInk: '#ffffff' },
+  finals: { bg: ['#2c2410', '#141007'], edge: '#f5c542', ink: '#ffffff', plate: ['#ffe08a', '#f5c542'], plateInk: '#2a1d00', clock: '#f5c542', clockInk: '#1b1400' },
+  grand_final: { bg: ['#2a2308', '#0b101a'], edge: '#ffd700', ink: '#ffffff', plate: ['#fff3b0', '#d4a900'], plateInk: '#2a1d00', clock: '#d4a900', clockInk: '#1b1400' },
+  christmas: { bg: ['#0f261a', '#0f261a'], edge: '#c62828', ink: '#ffffff', plate: ['#c62828', '#c62828'], plateInk: '#ffffff', clock: '#c62828', clockInk: '#ffffff' },
+  derby: { bg: ['#0b0f17', '#0b0f17'], edge: '#ff7043', ink: '#ffffff', plate: ['#ff8a50', '#ff7043'], plateInk: '#1b0a00', clock: '#ff7043', clockInk: '#1b1400' },
+};
+export function boardOf(look) {
+  const t = look?.theme;
+  return t ? { bg: t.bg, edge: t.edge, ink: t.ink, plate: t.plate, plateInk: t.plateInk, clock: t.clock, clockInk: t.clockInk } : OLDER_BOARD[look?.key] || OLDER_BOARD.classic;
+}
+// A finals match's stage in words, or null. Every plate reads it from here.
+export const stageName = fx => ({ SF: 'Semi-final', TP: 'Third place final', GF: 'Grand Final' })[fx?.stage] || null;
+
+// The looks that dress the match page (the user's list, 5 Nov 2026). Any other look, Classic included, leaves the page as it always was.
+export const EVENT_LOOKS = ['opening_week', 'spring_blossom', 'movember', 'derby', 'festive', 'new_year', 'australia_day', 'last_round', 'finals', 'third_place', 'grand_final', 'lunar_new_year'];
+export const isEventLook = key => EVENT_LOOKS.includes(key);
+
+// What stands in the bottom corners of an event's match page (assets/looks, Fluent Emoji 3D, MIT): side, height and distance from the edge in px at desktop size, later ones
+// in front. `lights` flash on the tree (js/look-page.js). `fireworks` go off over the page's background.
+const PROP = (src, side, h, x = 20, extra = {}) => ({ src, side, h, x, ...extra });
+export const SCENES = {
+  opening_week: { props: [PROP('goal_net', 'right', 170, 70), PROP('soccer_ball', 'right', 76, 24)] },
+  spring_blossom: { props: [PROP('cherry_blossom', 'right', 130), PROP('tulip', 'left', 120)] },
+  movember: { props: [PROP('barber_pole', 'right', 170)] },
+  derby: { props: [PROP('fire', 'right', 150), PROP('crossed_swords', 'left', 110)] },
+  festive: { props: [PROP('christmas_tree', 'right', 240, 56, { lights: true }), PROP('wrapped_gift', 'right', 92, 204), PROP('wrapped_gift', 'right', 72, 16), PROP('wrapped_gift', 'left', 84)] },
+  new_year: { fireworks: true, props: [PROP('bottle_with_popping_cork', 'right', 170), PROP('party_popper', 'left', 130)] },
+  australia_day: { props: [PROP('kangaroo', 'right', 200), PROP('koala', 'left', 110)] },
+  last_round: { props: [PROP('chequered_flag', 'right', 150), PROP('hourglass_done', 'left', 110)] },
+  finals: { props: [PROP('trophy', 'right', 170)] },
+  third_place: { props: [PROP('3rd_place_medal', 'right', 150)] },
+  grand_final: { props: [PROP('trophy', 'right', 230), PROP('1st_place_medal', 'left', 120)] },
+  lunar_new_year: { props: [PROP('red_paper_lantern', 'right', 170, 92), PROP('red_paper_lantern', 'right', 120, 20), PROP('firecracker', 'left', 110)] },
+};
+
+// The colours of what a look spills over a page's background, chosen to read on the page in either theme.
+export function pageSpillInk(look, theme) {
+  const t = look?.theme;
+  if (!t) return ['#ff7043', '#ffb199', '#e0562a'];
+  if (spillOf(look) === 'moustaches') return [t.plate[0]];
+  if (spillOf(look) === 'embers') return [t.glow, t.plate[0], t.plate[1]];
+  return theme === 'light' ? [t.plate[0], t.plate[1], t.edge, t.glow] : [t.score[0], t.score[1], t.glow, t.ink];
 }
 
 // Which artwork a look's score bug has: its theme's, else the older looks' below, else mowing stripes.
@@ -45,25 +100,41 @@ export const artOf = look => look?.theme?.art || OLDER_ART[look?.key] || 'mow';
 // The looks that ship with the app. The five older looks (classic, finals, grand_final, christmas, derby) keep their own designs in
 // css/scoreboard.css and have no theme here.
 export const PRESETS = {
+  lunar_new_year: {
+    name: 'Lunar New Year', banner: 'LUNAR NEW YEAR', accent: '#e8b923',
+    theme: { bg: ['#8f1420', '#3c060c'], edge: '#e8b923', ink: '#fff3d6', score: ['#ffffff', '#ffe9a8'], plate: ['#f2c94c', '#c9971c'], plateInk: '#3c0a0a', glow: '#e8b923', clock: '#f2c94c', clockInk: '#3c0a0a', fx: ['shine'], spill: 'gold' },
+  },
+  spring_blossom: {
+    name: 'Spring Blossom', banner: 'SPRING', accent: '#ff9fbd',
+    theme: { bg: ['#3c2a4d', '#1a1226'], edge: '#ffc4d6', ink: '#fff4f8', score: ['#ffffff', '#ffe0ea'], plate: ['#ffc4d6', '#f08fb0'], plateInk: '#3a0f24', glow: '#ff9fbd', clock: '#ffd6e3', clockInk: '#3a0f24', fx: [], spill: 'petals' },
+  },
+  last_round: {
+    name: 'Last Round', banner: 'LAST ROUND', accent: '#42a5f5',
+    theme: { bg: ['#0d2a52', '#050d1f'], edge: '#42a5f5', ink: '#f2f8ff', score: ['#ffffff', '#d6ebff'], plate: ['#42a5f5', '#1565c0'], plateInk: '#ffffff', glow: '#90caf9', clock: '#42a5f5', clockInk: '#04142b', fx: [], art: 'beams', spill: 'glints' },
+  },
+  third_place: {
+    name: 'Third Place Final', banner: 'THIRD PLACE FINAL', accent: '#d99a5b',
+    theme: { bg: ['#54301a', '#1e1008'], edge: '#d99a5b', ink: '#fbeee0', score: ['#eeb47a', '#c9823f'], plate: ['#eeb47a', '#b0733a'], plateInk: '#241204', glow: '#d99a5b', clock: '#e0a56a', clockInk: '#241204', fx: ['shine'], art: 'beams', spill: 'confetti' },
+  },
   opening_week: {
     name: 'Fresh Chalk', banner: 'OPENING WEEK', accent: '#7fd66a',
     theme: { bg: ['#1a6b39', '#0d3d20'], edge: '#7fae88', ink: '#f5f8ef', score: ['#ffffff', '#e4efdc'], plate: ['#f6f8f0', '#dbe6cf'], plateInk: '#0c2a16', glow: '#a6e08a', clock: '#f6f8f0', clockInk: '#0c2a16', fx: [], art: 'chalk' },
   },
   movember: {
     name: 'Movember', banner: 'MOVEMBER', accent: '#26c6da',
-    theme: { bg: ['#0e3a5c', '#07192e'], edge: '#1b7f9a', ink: '#eaf9ff', score: ['#ffffff', '#aef0ff'], plate: ['#8a5a3a', '#6b4429'], plateInk: '#ffffff', glow: '#26c6da', clock: '#26c6da', clockInk: '#04222a', fx: ['moustache'] },
+    theme: { bg: ['#0e3a5c', '#07192e'], edge: '#1b7f9a', ink: '#eaf9ff', score: ['#ffffff', '#aef0ff'], plate: ['#8a5a3a', '#6b4429'], plateInk: '#ffffff', glow: '#26c6da', clock: '#26c6da', clockInk: '#04222a', fx: ['moustache'], spill: 'moustaches' },
   },
   australia_day: {
     name: 'Australia Day', banner: 'AUSTRALIA DAY', accent: '#ffc72c',
-    theme: { bg: ['#1b4a2a', '#0e2a18'], edge: '#8a7a1c', ink: '#f4f1dc', score: ['#ffe27a', '#f2b705'], plate: ['#ffc72c', '#e0a800'], plateInk: '#2a1d00', glow: '#f2b705', clock: '#ffc72c', clockInk: '#2a1d00', fx: ['stars'] },
+    theme: { bg: ['#1d6a3c', '#0c3a20'], edge: '#ffc72c', ink: '#fff8e0', score: ['#ffe27a', '#f2b705'], plate: ['#ffc72c', '#e0a800'], plateInk: '#2a1d00', glow: '#f2b705', clock: '#ffc72c', clockInk: '#2a1d00', fx: ['stars'], spill: 'stars' },
   },
   new_year: {
     name: 'New Year', banner: 'NEW YEAR', accent: '#e8c76a',
-    theme: { bg: ['#1c2150', '#0a0d24'], edge: '#6f6a96', ink: '#f3ecd6', score: ['#fff3c9', '#d9b863'], plate: ['#f1deb0', '#d9b863'], plateInk: '#2a2208', glow: '#e8c76a', clock: '#e8d3a2', clockInk: '#2a2208', fx: ['sparkle', 'confetti'], art: 'beams' },
+    theme: { bg: ['#262c78', '#0c0f30'], edge: '#e8c76a', ink: '#f8f2de', score: ['#fff3c9', '#d9b863'], plate: ['#f1deb0', '#d9b863'], plateInk: '#2a2208', glow: '#e8c76a', clock: '#e8d3a2', clockInk: '#2a2208', fx: ['sparkle', 'confetti'], art: 'beams', spill: 'confetti' },
   },
   festive: {
     name: 'Festive', banner: 'FESTIVE', accent: '#b3203a',
-    theme: { bg: ['#174a31', '#4a1f2c'], edge: '#b23a4e', ink: '#fff7ea', score: ['#fff3dc', '#f1d9a8'], plate: ['#b3203a', '#8f1a2e'], plateInk: '#ffffff', glow: '#d4a373', clock: '#a3182f', clockInk: '#ffffff', fx: ['lights', 'snow'] },
+    theme: { bg: ['#1a5c3e', '#0b2c1f'], edge: '#d9b36a', ink: '#fff7ea', score: ['#fff3dc', '#f1d9a8'], plate: ['#c4213f', '#8f1a2e'], plateInk: '#ffffff', glow: '#d4a373', clock: '#c4213f', clockInk: '#ffffff', fx: ['lights', 'snow'], spill: 'snow' },
   },
 };
 
@@ -99,7 +170,11 @@ export function swatch(look) {
   return { bg: ['#1b2638', '#0f1622'], edge: a, ink: '#ffffff', accent: a };
 }
 const FX_NAMES = { shine: 'Shine', snow: 'Snow', lights: 'Lights', stars: 'Stars', sparkle: 'Sparkle', confetti: 'Confetti', moustache: 'Moustache' };
-export const fxNames = look => (look.theme?.fx || []).map(n => FX_NAMES[n]).filter(Boolean);
+const SPILL_NAMES = { confetti: 'Falling confetti', gold: 'Gold ticker tape', snow: 'Falling snow', petals: 'Petals', embers: 'Embers', stars: 'Falling stars', moustaches: 'Falling moustaches', glints: 'Glints' };
+export const fxNames = look => {
+  const fall = spillOf(look), shown = (look.theme?.fx || []).filter(n => n !== fall).map(n => FX_NAMES[n]).filter(Boolean);
+  return [...(fall ? [SPILL_NAMES[fall]] : []), ...shown];
+};
 
 const MOUSTACHE = 'M36 8C32 3 25 3 19 6C13 9 8 8 4 4C3 3 1 4 2 6C4 13 12 17 20 16C26 15.5 31 13 36 15C41 13 46 15.5 52 16C60 17 68 13 70 6C71 4 69 3 68 4C64 8 59 9 53 6C47 3 40 3 36 8Z';
 // The moustache as a picture for CSS (the dash between the scores); encoded so it can sit inside a style attribute.
