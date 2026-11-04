@@ -12,10 +12,8 @@ test('only a sheet with the boost plays the entrance, home first', () => {
   assert.deepEqual(boostSides(L, players, clubName).map(s => s.side), ['away']);
 });
 
-test('a submitted sheet plays the entrance as soon as it has the boost, before the lock too', () => {
-  const L = { home: { sheet: { club: 'TUR', captain: '1', boost: true }, locked: false }, away: { sheet: null, locked: false } };
-  assert.deepEqual(boostSides(L, players, clubName).map(s => s.player), ['Tao Huang']);
-  assert.deepEqual(boostSides({ home: { sheet: { club: 'TUR', captain: '1', boost: false } }, away: { sheet: null } }, players, clubName), []);
+test('a submitted sheet before the lock has no boost field, so a rival\'s boost stays hidden', () => {
+  assert.deepEqual(boostSides({ home: { sheet: { club: 'TUR', captain: '1' } }, away: { sheet: null } }, players, clubName), []);
 });
 
 test('no captain we can name means no entrance', () => {

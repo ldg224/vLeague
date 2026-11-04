@@ -161,8 +161,7 @@ SETUP_CHECKS = [
 # inserting into team_sheet_versions directly (pre runs with full rights).
 VER = "insert into public.team_sheet_versions (club, sheet, saved_at) values "
 # Boosted captain (S-33): a round still to come for TUR, and five boosts already spent on other rounds.
-BOOST_NEXT = """delete from public.submitted_sheets where club = 'TUR';   -- real sheets are hidden only inside this rolled-back transaction
-  insert into public.rounds (week) values (90) on conflict (week) do nothing;
+BOOST_NEXT = """insert into public.rounds (week) values (90) on conflict (week) do nothing;
   insert into public.fixtures (id, week, home, away, starts_at) values ('bc-next', 90, 'TUR', 'LAU', now() + interval '2 days');
   insert into public.deadlines (week, locks_at) values (90, now() + interval '1 day') on conflict (week) do update set locks_at = excluded.locks_at;"""
 BOOST_FIVE = ''.join(f""" insert into public.rounds (week) values ({w}) on conflict (week) do nothing;
@@ -208,13 +207,10 @@ DEADLINE_CHECKS = [
      "insert into public.deadlines (week, locks_at) values (97, now() - interval '1 hour'); select public.lock_due_weeks();",
      {'error': 'already locked'}, "delete from public.deadlines where week = 97;"),
     # Boosted captain (S-33, 0082)
-    ('manager', 'a submitted boost counts as a use and shows on the submitted line-up (0083), without tactics, bench or set pieces',
-     BOOST_NEXT, """select public.submit_team_sheet(90, '{"boost":true,"captain":"0001","lineup":{"ST":"0001"},"tactics":{"tempo":1},"penalties":"0001"}');
+    ('manager', 'a boost switched on when submitting is copied to the locked sheet, and is private until the lock',
+     BOOST_NEXT, """select public.submit_team_sheet(90, '{"boost":true,"captain":"0001","lineup":{"ST":"0001"}}');
         select (select count(*) = 1 from public.my_boost_weeks())
-           and (select s.boost and not (to_jsonb(s) ?| array['tactics', 'bench', 'penalties', 'sheet']) from public.submitted_lineups(90, array['TUR']) s) as ok;"""),
-    ('manager', 'a boost switched off shows as off on the submitted line-up',
-     BOOST_NEXT, """select public.submit_team_sheet(90, '{"captain":"0001","lineup":{"ST":"0001"}}');
-        select (select not s.boost from public.submitted_lineups(90, array['TUR']) s) as ok;"""),
+           and (select not (to_jsonb(s) ? 'boost') from public.submitted_lineups(90, array['TUR']) s) as ok;"""),
     ('anon', 'locking copies the boost, and a random XI never has one',
      BOOST_NEXT + """ insert into public.submitted_sheets (club, week, sheet) values ('TUR', 90, '{"boost":true,"captain":"0001","lineup":{"ST":"0001"}}');
         update public.deadlines set locks_at = now() - interval '1 minute' where week = 90; update public.submitted_sheets set submitted_at = now() - interval '1 hour' where week = 90; select public.lock_due_weeks();""",
