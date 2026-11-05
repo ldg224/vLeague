@@ -61,12 +61,12 @@ export class Replay {
     c.beginPath(); c.moveTo(525, 0); c.lineTo(525, 680); c.stroke();
     c.beginPath(); c.arc(525, 340, 91.5, 0, Math.PI * 2); c.stroke();
     c.fillStyle = 'rgba(255,255,255,.55)';
-    c.beginPath(); c.arc(525, 340, 3, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(525, 340, 5, 0, Math.PI * 2); c.fill();
     for (const right of [false, true]) {
       const x0 = right ? 1050 : 0, s = right ? -1 : 1;
       c.strokeRect(right ? 885 : 0, 138.4, 165, 403.2);
       c.strokeRect(right ? 995 : 0, 248.4, 55, 183.2);
-      c.beginPath(); c.arc(x0 + s * 110, 340, 3, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.arc(x0 + s * 110, 340, 5, 0, Math.PI * 2); c.fill();
       c.beginPath(); c.arc(x0 + s * 110, 340, 91.5, right ? Math.PI - 0.93 : -0.93, right ? Math.PI + 0.93 : 0.93); c.stroke();
       c.fillStyle = 'rgba(255,255,255,.18)'; c.fillRect(right ? 1050 : -16, 303.4, 16, 73.2);
       c.strokeRect(right ? 1050 : -16, 303.4, 16, 73.2); c.fillStyle = 'rgba(255,255,255,.55)';

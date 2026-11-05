@@ -76,6 +76,8 @@ TUNING = {
     'tackle_base_success': 0.42,
     'foul_base': 0.10,
     'yellow_on_foul': 0.16,
+    'second_yellow_factor': 0.35,  # a booked player: a referee thinks twice before a second yellow (B-31)
+    'booked_foul_factor': 0.6,     # and he goes in less hard, so he fouls less
 
     # Goalkeeping
     'gk_reaction': 0.30,          # seconds for a 100-rated keeper; up to +0.15 for poor ones

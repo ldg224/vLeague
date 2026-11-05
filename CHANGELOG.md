@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.31.2 (2026-11-05)
+
+Headlines: Fewer red cards | Penalties look right
+
+**Fixed (B-31):** too many red cards. A booked player now goes in less hard and is much less likely to get a second yellow, so sendings-off drop from about one a match to about one in every three matches (0.86 to 0.30 a match over test simulations). Yellow cards, goals and everything else stay about the same. This applies to matches simulated from now on (engine 0.3.1).
+**Fixed (B-34):** the keeper now walks onto his line for a penalty and stands on it (he stopped about a metre short, then jumped to 0.3 m off it), on matches simulated from now on. The penalty and centre spots are bigger on the video when the camera is close, and on the tactical view, on every match.
+Database change: none.
+
 ## 1.31.1 (2026-11-05)
 
 Headlines: Stats keep hidden results hidden

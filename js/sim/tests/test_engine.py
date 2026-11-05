@@ -31,6 +31,17 @@ def synthetic_league():
     return {'teams': teams, 'players': players, 'attributes': {}, 'tactics': {}, 'schedule': []}
 
 
+class Cards(unittest.TestCase):
+    def test_a_booked_player_is_less_likely_to_be_booked_again(self):
+        league = synthetic_league()
+        m = Match(teams.build_team(league, 'AAA'), teams.build_team(league, 'BBB'), seed=1)
+        o = m.players[5]
+        o.yellow = 0
+        first = m._booking_chance(o, False, False)
+        o.yellow = 1
+        self.assertLess(m._booking_chance(o, False, False), first * 0.5)
+
+
 class Physics(unittest.TestCase):
     def test_ground_pass_arrives_at_planned_speed(self):
         for d, arrival in ((10, 6), (25, 8), (40, 9)):

@@ -1043,6 +1043,8 @@ class Match:
         skill = o.a('tackling') - (0.6 * p.a('dribbling') + 0.2 * p.a('strength') + 0.2 * p.a('agility'))
         p_win = clamp(TUNING['tackle_base_success'] + 0.9 * skill - (0.18 if behind else 0.0), 0.08, 0.85)
         p_foul = clamp(TUNING['foul_base'] + 0.12 * o.a('aggression') + (0.1 if behind else 0.0) - 0.08 * o.a('tackling'), 0.02, 0.4)
+        careful = TUNING['booked_foul_factor'] if o.yellow else 1.0   # a booked player goes in less hard
+        p_foul *= careful
         if self.in_own_box(o):
             p_foul *= 0.5     # defenders are more careful in their own box
         o.tackle_ready_at = t + 1.0
@@ -1070,13 +1072,18 @@ class Match:
                 self._set_possession(self.team_of(o))
         else:
             # Beaten. Sometimes the defender brings the attacker down rather than let him go.
-            if rng.random() < 0.10 + 0.15 * o.a('aggression'):
+            if rng.random() < (0.10 + 0.15 * o.a('aggression')) * careful:
                 self._foul(o, p, behind)
                 return
             o.stunned_until = t + rng.uniform(0.7, 1.2)
             self.ev('tackle', o, won=False, opponent=p.id)
             if p.action and p.action['kind'] == 'dribble':
                 self.ev('take_on', p, won=True, opponent=o.id)
+
+    def _booking_chance(self, o, behind, dogso):
+        """The chance a foul by o earns a yellow (a second one, if he is already booked)."""
+        chance = TUNING['yellow_on_foul'] * (0.6 + 0.8 * o.a('aggression')) + (0.12 if behind else 0) + (0.2 if dogso else 0)
+        return chance * TUNING['second_yellow_factor'] if o.yellow else chance
 
     def _foul(self, o, p, behind, force_card=None):
         rng = self.rng
@@ -1092,7 +1099,7 @@ class Match:
             card = 'red'
         elif rng.random() < 0.006:
             card = 'red'
-        elif rng.random() < TUNING['yellow_on_foul'] * (0.6 + 0.8 * o.a('aggression')) + (0.12 if behind else 0) + (0.2 if dogso else 0):
+        elif rng.random() < self._booking_chance(o, behind, dogso):
             card = 'yellow' if o.yellow == 0 else 'second_yellow'
         if force_card:
             card = force_card
@@ -1323,7 +1330,7 @@ class Match:
                     p.urgency = 2
                 else:
                     p.tx, p.ty = self.restart_targets.get(p, (p.x, p.y))
-                    p.urgency = 2 if dist(p.x, p.y, p.tx, p.ty) > 20 else 1
+                    p.urgency = 2 if dist(p.x, p.y, p.tx, p.ty) > 20 or (p.is_gk and self.restart['kind'] == 'penalty') else 1   # a keeper walks right onto his line for a penalty (B-34)
             return
 
         # A penalty is live as soon as the taker is on the spot, but everyone else stays on their marks outside the box until the

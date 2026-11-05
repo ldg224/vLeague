@@ -259,7 +259,7 @@ def setpiece_targets(kind, attacking, defending, spot, taker, off_line_att):
                 if p is taker:
                     put(team, p, sx_a - 1.5, sy_a)
                 elif team is defending and p.is_gk:
-                    targets[p] = attacking.from_att(PITCH_LENGTH - 0.3, 34)
+                    targets[p] = attacking.from_att(PITCH_LENGTH, 34)   # on his line (B-34)
                 elif p.is_gk:
                     put(attacking, p, 14, 34)   # the taker's own keeper stays back by his goal, not in the line outside the box
                 else:

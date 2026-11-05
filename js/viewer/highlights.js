@@ -1003,6 +1003,13 @@ export class HighlightsRenderer {
   }
   arc(cx, cy, r, a0, a1, n = 40) { const out = []; for (let i = 0; i <= n; i++) { const a = a0 + (a1 - a0) * i / n; out.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]); } return out; }
 
+  // A penalty or centre spot, painted on the grass: it grows with the camera, and stays a visible dot when the camera is far away (B-34).
+  spot(cam, x, y) {
+    const c = this.c, p = cam.p(x, y); if (!p) return;
+    this.quad(cam, this.arc(x, y, 0.3, 0, Math.PI * 2, 18), 'rgba(255,255,255,.85)');
+    c.fillStyle = 'rgba(255,255,255,.85)'; c.beginPath(); c.arc(p[0], p[1], 3, 0, Math.PI * 2); c.fill();
+  }
+
   drawPitch(cam) {
     const c = this.c;
     const sky = c.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, '#05070a'); sky.addColorStop(1, '#0b1410');
@@ -1019,9 +1026,9 @@ export class HighlightsRenderer {
       this.line(cam, [[x0, 24.84], [x0 + s * 5.5, 24.84], [x0 + s * 5.5, 43.16], [x0, 43.16]], lw);
       const a = Math.acos(5.5 / 9.15);
       this.line(cam, this.arc(x0 + s * 11, 34, 9.15, s > 0 ? -a : Math.PI - a, s > 0 ? a : Math.PI + a, 24), lw);
-      const spot = cam.p(x0 + s * 11, 34); if (spot) { c.fillStyle = 'rgba(255,255,255,.85)'; c.beginPath(); c.arc(spot[0], spot[1], 3, 0, Math.PI * 2); c.fill(); }
+      this.spot(cam, x0 + s * 11, 34);
     }
-    const cs = cam.p(52.5, 34); if (cs) { c.fillStyle = 'rgba(255,255,255,.85)'; c.beginPath(); c.arc(cs[0], cs[1], 3.5, 0, Math.PI * 2); c.fill(); }
+    this.spot(cam, 52.5, 34);
     this.drawBoards(cam);
   }
 
