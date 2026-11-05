@@ -2,7 +2,13 @@
 // Made-up results for two clubs, small enough to check by hand.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MIN_MINUTES, countedFixtures, totals, rank, format, per90, PLAYER_CARDS, TEAM_CARDS } from '../js/season-stats.js';
+import { MIN_MINUTES, countedFixtures, withoutHidden, totals, rank, format, per90, PLAYER_CARDS, TEAM_CARDS } from '../js/season-stats.js';
+
+test('a hidden result is left out of what the stats count, and counted as hidden', () => {
+  const a = { id: 'a' }, b = { id: 'b' };
+  assert.deepEqual(withoutHidden([a, b], f => f.id === 'b'), { seen: [a], hiddenCount: 1 });
+  assert.deepEqual(withoutHidden([a, b]), { seen: [a, b], hiddenCount: 0 });
+});
 
 const P = (name, team, slot, o = {}) => ({ name, team, slot, min: 90, g: 0, a: 0, sh: 0, sot: 0, xg: 0, kp: 0, pas: 0, pc: 0, tk: 0, int: 0, clr: 0, blk: 0, sv: 0, gc: 0, yc: 0, rc: 0, fl: 0, dr: 0, cr: 0, r: 6.5, ...o });
 const stats = (o = {}) => ({ xg: 1, shots: 8, shots_on_target: 3, big_chances: 1, passes: 300, passes_completed: 240, crosses: 10, tackles_won: 12, interceptions: 8, clearances: 15, saves: 2, fouls: 10, yellow_cards: 1, red_cards: 0, corners: 4, offsides: 1, possession: 50, ...o });

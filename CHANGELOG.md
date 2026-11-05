@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.31.1 (2026-11-05)
+
+Headlines: Stats keep hidden results hidden
+
+**Fixed:** with spoiler-free on, the Stats tab and Overview's Top rated, Top scorers and Top assists still counted results you had hidden, so a list could give a score away. They now leave them out, with a "results hidden" line and Show all, as the table and Team of the week do.
+Database change: none.
+
 ## 1.31.0 (2026-11-05)
 
 Headlines: Preseason is put away now it's over

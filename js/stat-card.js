@@ -54,6 +54,9 @@ function row({ row: r, value, rank }, card, ctx, kind, lead, big) {
 
 const empty = (card, line, head = 'No matches played yet') => `<div class="sc-empty"><b>${esc(head)}</b><span>${esc(line || card.note || 'Fills in as the season is played.')}</span></div>`;
 
+// The line above stats that leave hidden results out (spoiler-free mode), with the same "Show all" as the table and Team of the week.
+export const hiddenLine = n => (n ? `<p class="tb-hidden">${n} result${n === 1 ? '' : 's'} hidden, so the stats leave ${n === 1 ? 'it' : 'them'} out. <button type="button" data-reveal-all>Show all</button></p>` : '');
+
 export function statCard(card, ranked, ctx, { kind = 'player' } = {}) {
   const top = ranked.slice(0, 3);
   const more = top.length ? `<a class="sc-more" href="${listAddress(card)}" aria-label="All: ${esc(card.title)}">${CHEVRON}</a>` : '';

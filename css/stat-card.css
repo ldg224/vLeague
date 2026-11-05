@@ -127,6 +127,7 @@
 .sc a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 999px; }
 
 /* A grid of stat cards (Player stats, Team stats, the Overview leaders): three across from 992 px, two from 640, one on phones. */
+.sc-section > .tb-hidden, .lg-slot > .tb-hidden { margin: 0 4px 8px; }   /* off a card: in line with the section title */
 .sc-group { display: grid; gap: 12px; }
 .sc-group > h3 { margin: 8px 4px 0; font: 600 var(--fs-xs) var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .sc-grid { display: grid; gap: 16px; }

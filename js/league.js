@@ -13,8 +13,8 @@ import { finished, logoUrl } from './dashboard-data.js';
 import { crest as crestHtml, useClubs } from './places.js';
 import { loadKits } from './kits-data.js';
 import { kitSprite, kitChest, startDesign } from './kit.js';
-import { countedFixtures, totals, rank, PLAYER_CARDS, TEAM_CARDS } from './season-stats.js';
-import { statCard, statPage, wireStatPage, initialsCrest } from './stat-card.js';
+import { countedFixtures, withoutHidden, totals, rank, PLAYER_CARDS, TEAM_CARDS } from './season-stats.js';
+import { statCard, hiddenLine, statPage, wireStatPage, initialsCrest } from './stat-card.js';
 import { demoSeason } from './demo-season.js';
 import { counts, inStats } from './scope.js';
 import { tableRows, tableCard, rowTops, reshuffle, shield, woodenSpoon } from './league-table.js';
@@ -126,6 +126,7 @@ if (ctx) {
   const scopeNow = () => scopeOf(season, tableNow());
   const bar = () => scopeBar(season, tableNow());
   const played = () => (!season ? [] : demo != null ? countedFixtures(season.fixtures, scopeNow()) : countedFixtures(finished(season), scopeNow()));
+  const visible = () => withoutHidden(played(), f => spoilerHidden(f, season, tableNow()));   // what this viewer's stats count: spoiler-free keeps hidden results out
   const KINDS = { player: PLAYER_CARDS, team: TEAM_CARDS };
   // Address changes made by the page itself replace the entry (a stat switched, a position picked), so "Back" still goes to where the
   // full page was opened from: `moved` counts the changes that added an entry.
@@ -139,23 +140,23 @@ if (ctx) {
       .map(c => statCard(c, rank(data[kind === 'team' ? 'teams' : 'players'], c, 3), sctx, { kind })).join('')}</div></div>`).join('');
   };
   const stats = (sub, picked) => {
-    const data = totals(played());
+    const { seen, hiddenCount } = visible(), data = totals(seen), hid = hiddenLine(hiddenCount);
     const [cardId, position = 'all'] = sub.split('/');
     const found = ['player', 'team'].map(kind => [kind, KINDS[kind].find(c => c.id === cardId)]).find(x => x[1]);
     if (found) {
       const [kind, c] = found, rows = kind === 'team' ? data.teams : data.players;
-      return statPage(c, rank(kind === 'team' || position === 'all' ? rows : rows.filter(r => r.pos === position), c), sctx, {
+      return hid + statPage(c, rank(kind === 'team' || position === 'all' ? rows : rows.filter(r => r.pos === position), c), sctx, {
         kind, title: kind === 'team' ? 'Team stats' : 'Player stats', back: '#stats', cards: KINDS[kind], position,
       });
     }
     const note = demo != null ? `<p class="sc-demo"><b>Demo data</b> ${realClubs ? 'Real clubs and kits, made-up players and results' : 'Made-up clubs, players and results'}, ${demo} ${demo === 1 ? 'round' : 'rounds'} (try <code>demo=0</code> to <code>demo=6</code>). Not real.</p>` : '';
     const pre = hasPreseason(season) && scopeNow() === 'preseason';
     if (!data.players.length && demo == null) {
-      return `${bar() ? `<div class="sc-section"><div class="sc-head"><h2 class="sc-title">${pre ? 'Preseason stats' : 'Stats'}</h2>${bar()}</div></div>` : ''}<section class="lg-card sc-none"><div class="sc-empty"><b>No matches played yet</b><span>Player and team stats appear here as ${pre ? 'preseason is' : 'the season is'} played.</span></div></section>`;
+      return `${bar() ? `<div class="sc-section"><div class="sc-head"><h2 class="sc-title">${pre ? 'Preseason stats' : 'Stats'}</h2>${bar()}</div></div>` : ''}${hid}<section class="lg-card sc-none"><div class="sc-empty"><b>No matches played yet</b><span>Player and team stats appear here as ${pre ? 'preseason is' : 'the season is'} played.</span></div></section>`;
     }
     const team = sub === 'team', kind = team ? 'team' : 'player';
     const toggle = `<nav class="sc-toggle" aria-label="Stats of"><a href="#stats"${team ? '' : ' aria-current="true"'}>Player</a><a href="#stats/team"${team ? ' aria-current="true"' : ''}>Team</a></nav>`;
-    return `${note}<div class="sc-section${pre ? ' is-pre' : ''}"><div class="sc-head"><h2 class="sc-title">${pre ? 'Preseason ' : ''}${team ? (pre ? 'team stats' : 'Team stats') : (pre ? 'player stats' : 'Player stats')}</h2>${bar()}${toggle}</div>${grid(kind, data)}</div>`;
+    return `${note}<div class="sc-section${pre ? ' is-pre' : ''}"><div class="sc-head"><h2 class="sc-title">${pre ? 'Preseason ' : ''}${team ? (pre ? 'team stats' : 'Team stats') : (pre ? 'player stats' : 'Player stats')}</h2>${bar()}${toggle}</div>${hid}${grid(kind, data)}</div>`;
   };
 
   // A hardly-there splash of vLeague blue on every card (css/league-page.css, --sheen): each card gets its own spot, picked from its title so the
@@ -208,7 +209,7 @@ if (ctx) {
   };
   // The three leader cards under the table (WR-19): the top three of each stat, each with its ">" link to the full list.
   const leaders = () => {
-    const data = totals(played());
+    const data = totals(visible().seen);
     return ['rating', 'scorers', 'assists'].map(id => { const c = PLAYER_CARDS.find(x => x.id === id); return statCard(c, rank(data.players, c, 3), sctx, { kind: 'player' }); }).join('');
   };
   // One way to put a view on the page. paint() draws only when the HTML really changed, so a timed refresh that finds nothing new touches
@@ -223,7 +224,7 @@ if (ctx) {
   // redraws only that card, and the Instagram embed is never reloaded by them. A card swapped in keeps its silk look (the same style values).
   const SKELETON = `<div class="lg-cols" data-view="overview"><div class="lg-main"><div class="lg-slot" data-slot="table"></div><div class="lg-slot" data-slot="trio"></div><div class="lg-slot" data-slot="ig"></div></div>`
     + '<aside class="lg-side"><div class="lg-slot" data-slot="round"></div><div class="lg-slot" data-slot="tw"></div></aside></div>';
-  const overviewParts = () => ({ table: tableHtml(), trio: `<div class="lg-trio">${leaders()}</div>`, round: roundWidget(inView(season, tableNow()), fixturesCtx(), widgetWeek), tw: teamHtml() });
+  const overviewParts = () => ({ table: tableHtml(), trio: `${hiddenLine(visible().hiddenCount)}<div class="lg-trio">${leaders()}</div>`, round: roundWidget(inView(season, tableNow()), fixturesCtx(), widgetWeek), tw: teamHtml() });
   let social = null, socialLoaded = false;   // the league's Instagram row (WR-30), read once
   const igHtml = () => (socialLoaded ? instagramCard(social) : '');
   const fillSlot = (el, html, timed) => {

@@ -28,6 +28,13 @@ export const POSITIONS = [['all', 'All'], ['FWD', 'Forwards'], ['MID', 'Midfield
 
 export const countedFixtures = (list, scope = 'season') => list.filter(f => f.result?.players && inStats(f, scope));
 
+// What one viewer's stats may count: the list without the results they have hidden (spoiled(f), spoiler-free mode), and how many that left out.
+// A hidden goal must not move a scorers list, or the list gives the result away.
+export const withoutHidden = (list, spoiled = () => false) => {
+  const seen = list.filter(f => !spoiled(f));
+  return { seen, hiddenCount: list.length - seen.length };
+};
+
 const blank = (keys, extra) => Object.assign(Object.fromEntries(keys.map(k => [k, 0])), extra);
 
 export function totals(fixtures) {
