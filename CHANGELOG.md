@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.31.0 (2026-11-05)
+
+Headlines: Preseason is put away now it's over
+
+**Changed:** once every preseason game is played, preseason is hidden from the table, stats, Team of the week, Fixtures (all views and This round), club pages and players' match logs, and the Preseason | vLeague switch goes away.
+**Added:** a "Preseason table, stats and fixtures" link on the current season's card in the Seasons tab (or go to `league.html#preseason`) opens it all again in that browser tab, in purple, with the switch to go back. Links to preseason match pages still work.
+Database change: none.
+
 ## 1.30.1 (2026-11-05)
 
 Headlines: Player stats wait for full time

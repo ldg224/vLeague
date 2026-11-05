@@ -211,7 +211,7 @@ export function roundWidget(season, ctx, week = null) {
 // ---------- the tab ----------
 export const MODES = [['round', 'By round'], ['date', 'By date'], ['team', 'By team']];
 
-export function fixturesView(season, ctx, { mode = 'round', arg = null } = {}) {
+export function fixturesView(season, ctx, { mode = 'round', arg = null } = {}, { title = 'Fixtures', scopeBar = '' } = {}) {
   if (!season || !season.fixtures.length) {
     return `<section class="lg-card fx-card"><div class="lg-card-head"><h2>Fixtures</h2></div>${none('No fixtures yet', 'Matches appear here once the office has set the fixtures.')}</section>`;
   }
@@ -221,5 +221,5 @@ export function fixturesView(season, ctx, { mode = 'round', arg = null } = {}) {
     + `${hasTests ? `<a class="fx-test" href="${fixturesAddress('test')}" data-fxgo${mode === 'test' ? ' aria-current="true"' : ''}>Test matches</a>` : ''}</nav>`;
   const hid = hiddenCount ? `<p class="tb-hidden">${hiddenCount} result${hiddenCount === 1 ? '' : 's'} hidden. <button type="button" data-reveal-all>Show all</button></p>` : '';
   const body = (mode === 'round' ? byRound : mode === 'team' ? byTeam : mode === 'test' && hasTests ? byTest : byDate)(season, ctx, arg);
-  return `<section class="lg-card fx-card" aria-label="Fixtures"><div class="lg-card-head"><h2>Fixtures</h2></div>${pills}${hid}${body}</section>`;
+  return `<section class="lg-card fx-card" aria-label="${esc(title)}"><div class="lg-card-head"><h2>${esc(title)}</h2>${scopeBar}</div>${pills}${hid}${body}</section>`;
 }

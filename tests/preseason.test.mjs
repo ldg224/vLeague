@@ -4,8 +4,10 @@ import assert from 'node:assert/strict';
 globalThis.location ??= { hostname: '', search: '', href: 'http://localhost/' };   // dashboard-data.js reads location when it loads
 const store = new Map();
 globalThis.localStorage = { getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k) };
+const tabStore = new Map();
+globalThis.sessionStorage = { getItem: k => tabStore.get(k) ?? null, setItem: (k, v) => tabStore.set(k, String(v)), removeItem: k => tabStore.delete(k) };
 const { tableOf, counts, inStats } = await import('../js/scope.js');
-const { hasPreseason, phaseOf, scopeNow, pickScope } = await import('../js/preseason.js');
+const { hasPreseason, phaseOf, scopeNow, pickScope, preseasonOver, inView, scopeBar } = await import('../js/preseason.js');
 const { tableRows, tableCard, shield } = await import('../js/league-table.js');
 const { countedFixtures } = await import('../js/season-stats.js');
 
@@ -56,6 +58,38 @@ test('a viewer pick holds while the phase stays the same, and lapses when it cha
   assert.equal(scopeNow(s, new Date('2026-11-09T12:00')), 'season', 'phase is now season too');
   pickScope(s, 'preseason', before);
   assert.equal(scopeNow(s, new Date('2026-11-09T12:00')), 'season', 'a pick made in preseason does not hold the season back');
+});
+
+test('once preseason is over it is hidden, and a look back opens it until the switch or the tab ends it', () => {
+  store.clear(); tabStore.clear();
+  const result = { home: 1, away: 0 }, game = pre('2026-11-01', { result }), real = fx('2026-11-08');
+  const s = season([game, real, fx('2026-11-01', { test: true, week: 99 })]), during = new Date('2026-10-20T12:00'), after = new Date('2026-11-05T12:00');
+  assert.equal(preseasonOver(s, during), false);
+  assert.equal(inView(s, during), s, 'during preseason every game stays listed');
+  assert.match(scopeBar(s, during), /data-scope/);
+
+  assert.equal(preseasonOver(s, after), true);
+  assert.equal(scopeNow(s, after), 'season');
+  assert.equal(scopeBar(s, after), '', 'no switch');
+  assert.ok(!inView(s, after).fixtures.includes(game), 'preseason left out of the lists');
+  assert.ok(inView(s, after).fixtures.includes(real));
+  assert.equal(inView(s, after).fixtures.length, 2, 'test matches stay');
+
+  pickScope(s, 'preseason', after);
+  assert.equal(scopeNow(s, after), 'preseason');
+  assert.deepEqual(inView(s, after).fixtures, [game], 'only preseason while looking back');
+  assert.match(scopeBar(s, after), /data-scope="season"/, 'the way out');
+  assert.equal(store.get('vl-table-scope'), undefined, 'kept for this tab only');
+  tabStore.clear();
+  assert.equal(scopeNow(s, after), 'season', 'a new tab is back on the season');
+  pickScope(s, 'preseason', after); pickScope(s, 'season', after);
+  assert.equal(scopeNow(s, after), 'season', 'the switch leaves it');
+
+  store.set('vl-table-scope', JSON.stringify({ scope: 'preseason', phase: 'season' }));
+  assert.equal(scopeNow(s, after), 'season', 'an old remembered pick does not bring it back');
+  const plain = season([fx('2026-11-08')]);
+  assert.equal(preseasonOver(plain, after), false);
+  assert.equal(scopeBar(plain, after), '');
 });
 
 test('the preseason table counts preseason results only, and the season table leaves them out', () => {

@@ -20,7 +20,7 @@ import { accentFor, onColour } from './club-colour.js';
 import { POS_ORDER } from './pitch.js';
 import { tableRows, tableCard } from './league-table.js';
 import { countedFixtures, totals, rank, PLAYER_CARDS } from './season-stats.js';
-import { hasPreseason, scopeNow, pickScope, scopePills } from './preseason.js';
+import { inView, scopeBar, scopeNow, pickScope } from './preseason.js';
 import { suspensions } from './simulate.js';
 import { statCard } from './stat-card.js';
 import { plink } from './player-link.js';import { portrait } from './portrait.js';
@@ -73,8 +73,9 @@ function render(club, team, season, won, rows) {
     .sort((a, b) => POS_ORDER.indexOf(a.position) - POS_ORDER.indexOf(b.position) || (Number(a.number) || 99) - (Number(b.number) || 99) || a.name.localeCompare(b.name));
 
   // Results this account hasn't revealed stay hidden (spoiler-free), as on the league page.
-  const fixtures = season ? season.fixtures.filter(f => (f.home === club.code || f.away === club.code) && !f.test).sort(byKickoff) : [];   // preseason (exhibition) matches stay in the list
-  const games = season ? finished(season, now).filter(f => fixtures.includes(f) && !f.exhibition) : [];   // but not in the form strip
+  const ofClub = s => (s ? s.fixtures.filter(f => (f.home === club.code || f.away === club.code) && !f.test).sort(byKickoff) : []);
+  const fixtures = ofClub(season), listed = () => ofClub(inView(season, now));   // the lists show preseason (exhibition) matches during preseason, then only when looking back at it (js/preseason.js)
+  const games = season ? finished(season, now).filter(f => fixtures.includes(f) && !f.exhibition) : [];   // never in the form strip
   const shown = games.filter(f => !spoilerHidden(f, season, now));
   const hidden = new Set(fixtures.filter(f => spoilerHidden(f, season, now)).map(f => f.id));
   const sum = season && team ? clubSummary({ ...season, fixtures: season.fixtures.filter(f => !spoilerHidden(f, season, now)) }, club.code, now) : null;
@@ -108,9 +109,9 @@ function render(club, team, season, won, rows) {
   </article>`;
 
   const panels = {
-    overview: () => overviewHtml(club, season, ctx, fixtures, squad, won, sum),
+    overview: () => overviewHtml(club, season, ctx, listed(), squad, won, sum),
     squad: () => squadHtml(squad, club),
-    fixtures: () => fixturesHtml(club, season, ctx, fixtures),
+    fixtures: () => fixturesHtml(club, season, ctx, listed()),
   };
   const draw = () => {
     main.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-pressed', b.dataset.tab === tab));
@@ -167,7 +168,7 @@ function overviewHtml(club, season, ctx, fixtures, squad, won, sum) {
         : '<p class="empty">No fixtures yet.</p>'}</section>`;
 
   const scope = season ? scopeNow(season, now) : 'season', pre = scope === 'preseason';   // preseason games make a preseason table until the real season starts (js/preseason.js)
-  const table = season ? tableCard(tableRows(season, { now, hidden: ctx.hidden, scope }), ctx, { filters: false, title: pre ? 'Preseason table' : 'Table', pre, scopeBar: hasPreseason(season) ? scopePills(scope) : '' }) : '';
+  const table = season ? tableCard(tableRows(season, { now, hidden: ctx.hidden, scope }), ctx, { filters: false, title: pre ? 'Preseason table' : 'Table', pre, scopeBar: scopeBar(season, now) }) : '';
 
   // The club's own leaders, from the same numbers as the Stats tab.
   const played = season ? countedFixtures(finished(season, now), scope).filter(f => !ctx.hidden.has(f.id)) : [];

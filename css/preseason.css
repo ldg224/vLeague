@@ -9,6 +9,8 @@
 
 /* Preseason | Season switch: the Preseason button is purple when it is the one showing. */
 .ps-pills { margin-left: auto; }
+.lg-card-head:has(> .ps-pills) { flex-wrap: wrap; }   /* a long title and the switch share a phone's width */
+.fx-card .lg-card-head:has(> .ps-pills) h2 { color: var(--preseason-ink); }
 .ps-pills button[data-scope="preseason"][aria-pressed="true"] { background: var(--preseason); color: #fff; }
 :root:not([data-theme="light"]) .ps-pills button[data-scope="preseason"][aria-pressed="true"] { color: #fff; }
 

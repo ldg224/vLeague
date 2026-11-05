@@ -22,7 +22,7 @@ import { paint, quietly, busy, snapshotInputs, restoreInputs } from './paint.js'
 import { spoilerHidden, revealScore, fmtTime } from './prefs.js';
 import { fixturesView, parseSub, roundWidget, rounds } from './league-fixtures.js';
 import { teamOfWeekCard } from './team-of-week.js';
-import { hasPreseason, scopeNow as scopeOf, pickScope, scopePills } from './preseason.js';
+import { hasPreseason, preseasonOver, inView, scopeBar, scopeNow as scopeOf, pickScope } from './preseason.js';
 import { loadPlayers } from './players-data.js';
 import { instagramCard } from './instagram.js';
 import { seasonsView, grandFinal } from './seasons-tab.js';
@@ -121,9 +121,10 @@ if (ctx) {
     face: faceOf,   // (player id, club code, px) -> the player's portrait, or '' until the players have loaded
   };
   // Preseason (js/preseason.js): the table, stats and Team of the week show either the preseason games or the real season. Automatic: preseason until the
-  // first real match kicks off; the Preseason | Season switch lets anyone look at the other one (a viewer's pick lasts until the page is closed).
+  // first real match kicks off. During preseason the Preseason | Season switch lets anyone look at the other one. Once preseason is over it is hidden everywhere,
+  // and the Seasons tab's link (league.html#preseason) opens it for this browser tab, with the switch there to leave again.
   const scopeNow = () => scopeOf(season, tableNow());
-  const bar = () => (hasPreseason(season) ? scopePills(scopeNow()) : '');
+  const bar = () => scopeBar(season, tableNow());
   const played = () => (!season ? [] : demo != null ? countedFixtures(season.fixtures, scopeNow()) : countedFixtures(finished(season), scopeNow()));
   const KINDS = { player: PLAYER_CARDS, team: TEAM_CARDS };
   // Address changes made by the page itself replace the entry (a stat switched, a position picked), so "Back" still goes to where the
@@ -188,9 +189,11 @@ if (ctx) {
       if (!memo.has(fx.id)) { try { const [h, d, a] = chanceOf(seen, fx, { sheets: chanceSheets, now }).pct; memo.set(fx.id, { h, d, a }); } catch { memo.set(fx.id, null); } }
       return memo.get(fx.id);
     };
-    return { ...sctx, now, hidden, mine: ctx.club?.code, time: fmtTime, chance, venue: code => stadiums?.[code] || '' };
+    const listed = season ? new Set(inView(season, now).fixtures.map(f => f.id)) : new Set();   // the lists count only their own hidden results (a finished preseason's aren't on them)
+    return { ...sctx, now, hidden: new Set([...hidden].filter(id => listed.has(id))), mine: ctx.club?.code, time: fmtTime, chance, venue: code => stadiums?.[code] || '' };
   };
-  const fixturesHtml = sub => fixturesView(season, fixturesCtx(), parseSub(sub));
+  const lookingBack = () => scopeNow() === 'preseason' && preseasonOver(season, tableNow());   // the Fixtures tab says so, and has the way out
+  const fixturesHtml = sub => fixturesView(inView(season, tableNow()), fixturesCtx(), parseSub(sub), lookingBack() ? { title: 'Preseason fixtures', scopeBar: bar() } : {});
   // Team of the week (WR-21): the best XI of a round, from the matches the viewer may see (results hidden by spoiler-free mode stay out).
   // Shirt numbers come from the players list (read once, a moment after the page; the demo's made-up players get a number worked out from their id).
   let numbers = null;
@@ -220,7 +223,7 @@ if (ctx) {
   // redraws only that card, and the Instagram embed is never reloaded by them. A card swapped in keeps its silk look (the same style values).
   const SKELETON = `<div class="lg-cols" data-view="overview"><div class="lg-main"><div class="lg-slot" data-slot="table"></div><div class="lg-slot" data-slot="trio"></div><div class="lg-slot" data-slot="ig"></div></div>`
     + '<aside class="lg-side"><div class="lg-slot" data-slot="round"></div><div class="lg-slot" data-slot="tw"></div></aside></div>';
-  const overviewParts = () => ({ table: tableHtml(), trio: `<div class="lg-trio">${leaders()}</div>`, round: roundWidget(season, fixturesCtx(), widgetWeek), tw: teamHtml() });
+  const overviewParts = () => ({ table: tableHtml(), trio: `<div class="lg-trio">${leaders()}</div>`, round: roundWidget(inView(season, tableNow()), fixturesCtx(), widgetWeek), tw: teamHtml() });
   let social = null, socialLoaded = false;   // the league's Instagram row (WR-30), read once
   const igHtml = () => (socialLoaded ? instagramCard(social) : '');
   const fillSlot = (el, html, timed) => {
@@ -249,7 +252,7 @@ if (ctx) {
     const gf = all.find(f => f.stage === 'GF' && !f.test && f.result);
     return seasonsView({
       current: { label: picked?.label || 'Season 1', live: picked?.live !== false }, final: grandFinal(all.filter(f => f.result), { hidden }), shield: season ? shield(season, { now, hidden }) : null, spoon: season ? woodenSpoon(season, { now, hidden }) : null,history: honours,
-      club: code => clubRows?.get(code) || sctx.club(code), crest: sctx.crest, trophy: trophyUrl, hiddenCount: gf && hidden.has(gf.id) ? 1 : 0,
+      club: code => clubRows?.get(code) || sctx.club(code), crest: sctx.crest, trophy: trophyUrl, hiddenCount: gf && hidden.has(gf.id) ? 1 : 0, preseason: preseasonOver(season, now),
     });
   };
   loadHistory().then(h => { honours = h; drawInSoon(); }).catch(() => {});
@@ -424,6 +427,10 @@ if (ctx) {
   };
 
   wireStatPage(main, { go });
+  // league.html#preseason (the link on the Seasons tab): a look back at the finished preseason, on the normal tabs. Set up before the frame, so its own listener then reads the new address.
+  const openPreseason = () => { if (location.hash !== '#preseason') return; if (hasPreseason(season)) { pickScope(season, 'preseason', tableNow()); twWeek = null; widgetWeek = null; } go('#overview'); };
+  openPreseason();
+  addEventListener('hashchange', openPreseason);
   const draftNow = await openDraft().catch(() => null);
   frameApi = mountFrame(document.getElementById('frame'), {
     office, stakes: false,   // switched on below once the office's setting is read

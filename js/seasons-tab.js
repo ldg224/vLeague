@@ -13,6 +13,7 @@
 // the winner (with the competition's trophy picture) and the runner-up, a current club by its crest and name or a past team by its logo (its code on a badge until it has one).
 // The current season's card also has the vLeague Shield (S-26): the club top of the table once every league match is played (opts.shield, from shield() in
 // js/league-table.js), "To be decided" until then. Past seasons show the Shield only where the office recorded it as a competition in History.
+// opts.preseason: the current season's preseason is over, so it is hidden everywhere else and its card has the one link to it (league.html#preseason, js/preseason.js).
 // opts = { current: { label, live }, final: grandFinal(...) | null, shield: { winner } | null, history: loadHistory() | null, club(code) -> { name, short_name }, crest(code, px) -> html,
 //          trophy(path) -> url, hiddenCount }
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -36,6 +37,7 @@ function who(code, o) {
 
 const row = (label, html, cup = '') => `<div class="ss-row"><dt>${label}</dt><dd>${html}${cup}</dd></div>`;
 const pending = '<span class="ss-tbd">To be decided</span>';
+const preseasonLink = o => (o.preseason ? '<a class="ss-pre" href="#preseason">Preseason table, stats and fixtures</a>' : '');
 
 function currentCard(o) {
   const f = o.final, decided = f?.winner;   // (no trophy picture and no competition name here: those belong to the seasons recorded in History)
@@ -44,7 +46,7 @@ function currentCard(o) {
     + `<p class="ss-comp">League</p><dl class="ss-rows">`
     + row('Winner', decided ? who(f.winner, o) : pending) + row('Runner-up', decided ? who(f.runnerUp, o) : pending) + '</dl>'
     + `<p class="ss-comp">vLeague Shield</p><dl class="ss-rows">${row('Winner', o.shield?.winner ? who(o.shield.winner, o) : pending)}</dl>`
-    + `<p class="ss-comp">Wooden spoon</p><dl class="ss-rows">${row('Last place', o.spoon?.winner ? who(o.spoon.winner, o) : pending)}</dl></section>`;
+    + `<p class="ss-comp">Wooden spoon</p><dl class="ss-rows">${row('Last place', o.spoon?.winner ? who(o.spoon.winner, o) : pending)}</dl>${preseasonLink(o)}</section>`;
 }
 
 function pastCard(season, h, o, live = false) {
@@ -67,7 +69,7 @@ function pastCard(season, h, o, live = false) {
   const extra = !live ? '' : (has(/shield/i) ? '' : `<p class="ss-comp">vLeague Shield</p><dl class="ss-rows">${row('Winner', o.shield?.winner ? who(o.shield.winner, o) : pending)}</dl>`)
     + (has(/spoon/i) ? '' : `<p class="ss-comp">Wooden spoon</p><dl class="ss-rows">${row('Last place', o.spoon?.winner ? who(o.spoon.winner, o) : pending)}</dl>`);
   return `<section class="lg-card ss" aria-label="${esc(season.name)}"><header class="ss-head"><h3>${esc(season.name)}</h3><span class="ss-pill">Finished</span></header>`
-    + `${body || '<p class="ss-comp">No winners recorded yet</p>'}${extra}</section>`;
+    + `${body || '<p class="ss-comp">No winners recorded yet</p>'}${extra}${live ? preseasonLink(o) : ''}</section>`;
 }
 
 export function seasonsView(o) {

@@ -16,7 +16,7 @@ import { prefs, spoilerHidden } from './prefs.js';
 import { accentFor, onColour } from './club-colour.js';
 import { loadPlayers } from './players-data.js';
 import { portrait } from './portrait.js';
-import { hasPreseason, scopeNow } from './preseason.js';
+import { hasPreseason, inView, scopeNow } from './preseason.js';
 import { playerView, resultsToHide, averageRating, CLASSES, MIN_PEERS, MIN_MATCHES } from './player-stats.js';
 import { icon } from './icons.js';
 import { extractMaps, mergeMaps, heatMap } from './player-maps.js';
@@ -59,7 +59,7 @@ export function renderPlayerInto(root, { season, rows, demo }, id) {
   const now = new Date(), byCode = new Map((rows || []).map(r => [r.code, r]));
   const hidden = season ? resultsToHide(season, { now, demo, spoiled: f => !f.test && spoilerHidden(f, season, now) }) : new Set();
   const scope = season && hasPreseason(season) ? scopeNow(season, now) : 'season';
-  const v = season ? playerView(season, id, { hidden, scope }) : null;
+  const v = season ? playerView(inView(season, now), id, { hidden, scope }) : null;   // once preseason is over his match log leaves it out too
   if (!v) {
     root.innerHTML = '<div class="pp"><section class="lg-card"><h1 class="pp-name" tabindex="-1">Player not found</h1><p class="empty">There’s no player with that number.</p></section></div>';
     return { ok: false };

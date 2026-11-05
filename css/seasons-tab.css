@@ -33,3 +33,7 @@
 .sc-group h3.ss-league { margin: 0 0 12px; font: 900 var(--fs-xl)/1.15 var(--font-display); font-stretch: 125%; text-transform: uppercase; letter-spacing: .01em; }
 .ss-league.is-now { color: var(--brand); }
 .ss-league.is-before { color: var(--res-w); }
+
+/* The one way back to a finished preseason: a quiet link at the foot of the current season's card. */
+.ss-pre { display: flex; align-items: center; min-height: 44px; margin-top: 4px; border-top: 1px solid var(--line); color: var(--brand); font: 600 var(--fs-s) var(--font); text-decoration: none; }
+@media (hover: hover) { .ss-pre:hover { text-decoration: underline; } }
