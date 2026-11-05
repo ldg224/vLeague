@@ -3,7 +3,7 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
-## 1.31.2 (2026-11-05)
+## 1.32.0 (2026-11-05)
 
 Headlines: Fewer red cards | Penalties look right
 
