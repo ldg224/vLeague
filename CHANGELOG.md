@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.34.1 (2026-11-07)
+
+Headlines: The scoreboard wears each team's kit for the match
+
+**Changed:** the scoreboard on the match video and the match page's header now show the colour of the kit each team is wearing in that match, not the club's main colour. The video's other team graphics, such as the possession bar, match it. A club with no kit still uses its club colour. The cards under the header keep the clubs' own colours.
+**Changed:** the colour bars on the video's scoreboard have a thin outline, and the score's underline has a fine line above it, so near-black and white kits stay visible.
+**Fixed:** the match page and its line-ups ignored a kit the Editor chose for a fixture. The Editor's choice now comes first, then the team's own pick.
+**Fixed:** the match video could start before the teams' kit picks had loaded and show the wrong kit. It now waits for them.
+Database change: none in this version. The file for migration 0086 (B-35, every pair of clubs meets once at each ground), already applied, is added to the repo.
+
 ## 1.34.0 (2026-11-06)
 
 Headlines: A shorter pre-match show, with handshakes and faces | Scoreboard effects at the right speed
