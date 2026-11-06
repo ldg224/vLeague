@@ -5,7 +5,7 @@
 import { W, H, makeCam, clamp, lerp, easeOut, easeInOut, seg01, lastName, LIME } from './highlights.js';
 
 const TAU = Math.PI * 2;
-const PRE = [['warmup', 30], ['home', 45], ['away', 45], ['walkout', 45], ['anthem', 95], ['ready', 10]];   // seconds of the 270 before kick-off
+const PRE = [['warmup', 20], ['home', 22], ['away', 22], ['walkout', 25], ['anthem', 36], ['handshake', 15], ['ready', 10]];   // seconds of the 150 before kick-off
 
 function fade(r, local, dur, len = 0.45) {
   const a = Math.max(1 - clamp(local / len, 0, 1), seg01(local, dur - len, dur));
@@ -26,7 +26,7 @@ function tag(r, left, right, a = 1) {
 }
 
 // Players (and the referee) on the pitch, far to near. pos(i, t) gives where the player with index i is; his speed comes from where he is a moment later.
-function pitchScene(r, cam, sides, pos, t, { ball = null, faces = [52.5, 34, 0], ref = null } = {}) {
+function pitchScene(r, cam, sides, pos, t, { ball = null, faces = [52.5, 34, 0], ref = null, ars = [], after = null } = {}) {
   r.ballAt = faces; r.trail = [];
   r.drawPitch(cam); r.drawGoal(cam, 0); r.drawGoal(cam, 105);
   const items = [...sides[0], ...sides[1]].map(i => {
@@ -34,8 +34,10 @@ function pitchScene(r, cam, sides, pos, t, { ball = null, faces = [52.5, 34, 0],
     return { i, x, y, vx: (x2 - x) * 10, vy: (y2 - y) * 10, lying: false, dive: null, d: cam.p(x, y)?.[2] ?? 0 };
   });
   if (ref) items.push({ ref: true, x: ref[0], y: ref[1], card: null, d: cam.p(ref[0], ref[1])?.[2] ?? 0 });
+  for (const a of ars) items.push({ ar: true, x: a[0], y: a[1], d: cam.p(a[0], a[1])?.[2] ?? 0 });
   items.sort((a, b) => a.d - b.d);
-  for (const it of items) { if (it.ref) r.drawReferee(cam, it, t); else r.drawPlayer(cam, it, false); }
+  for (const it of items) { if (it.ref) r.drawReferee(cam, it, t); else if (it.ar) r.drawAssistant(cam, it); else r.drawPlayer(cam, it, false); }
+  after?.(cam);
   for (const b of ball || []) r.drawBall(cam, { ball: [b[0], b[1], 0], inPlay: false, ballAlpha: 1 });
 }
 
@@ -64,6 +66,13 @@ function warmup(r, local, dur, t0) {
   tag(r, 'WARM-UPS', `${r.home.code} V ${r.away.code}  ·  KICK-OFF SOON`, seg01(local, 0.4, 1));
 }
 
+// A player's face and shoulders, in his kit's colour.
+function portrait(r, q, colour, cx, cy, R, bottom) {
+  const c = r.c, main = r.kitOf({ i: q.idx })?.main || (r.gkIdx.has(q.idx) ? (q.idx < r.nHome ? '#f5b042' : '#a855f7') : colour), w = R * 2.7, top = cy + R * 0.82;
+  c.fillStyle = main; c.beginPath(); c.roundRect(cx - w / 2, top, w, Math.max(R * 0.4, bottom - top), [R, R, 0, 0]); c.fill();
+  r.drawHead(cx, cy, R, 0);
+}
+
 // Starting line-up and introductions: the club's XI, each player called out in turn.
 function lineupCard(r, team, colour, local, dur) {
   const c = r.c, L = team.lineup, step = dur / Math.max(1, L.length), now = clamp(Math.floor(local / step), 0, L.length - 1), p = L[now];
@@ -77,10 +86,11 @@ function lineupCard(r, team, colour, local, dur) {
   r.text(`STARTING XI  ·  ${team.formation || ''}`, 380, 640, { size: 28, weight: 800, align: 'center', colour: 'rgba(255,255,255,.8)', spacing: 4 });
   // Whoever is being introduced.
   const k = easeOut((local - now * step) / 0.5), captain = q => team.captain != null && String(team.captain) === String(q.id);
-  r.pill(90, 700, 580, 200, 'rgba(6,26,56,0.88)', 18);
+  r.pill(90, 700, 700, 200, 'rgba(6,26,56,0.88)', 18);
   r.text(r.shirtNo(p.id), 170, 830, { size: 96, weight: 900, align: 'center', colour: LIME, alpha: k });
-  r.text(lastName(p.name).toUpperCase(), 260, 800, { size: 54, weight: 900, italic: true, alpha: k });
-  r.text(`${p.slot || p.position || ''}${captain(p) ? '  ·  CAPTAIN' : ''}`, 262, 850, { size: 28, weight: 800, colour: 'rgba(255,255,255,.75)', spacing: 3, alpha: k });
+  c.save(); c.globalAlpha = k; c.beginPath(); c.roundRect(90, 700, 700, 200, 18); c.clip(); portrait(r, p, colour, 305, 765, 44, 900); c.restore();
+  r.text(lastName(p.name).toUpperCase(), 385, 800, { size: 54, weight: 900, italic: true, alpha: k });
+  r.text(`${p.slot || p.position || ''}${captain(p) ? '  ·  CAPTAIN' : ''}`, 387, 850, { size: 28, weight: 800, colour: 'rgba(255,255,255,.75)', spacing: 3, alpha: k });
   // The XI.
   const x = 860, top = 110, row = 80;
   L.forEach((q, i) => {
@@ -90,7 +100,8 @@ function lineupCard(r, team, colour, local, dur) {
     if (!on) { c.fillStyle = colour; c.fillRect(xx, y, 6, row - 10); }
     const ink = on ? '#061a38' : '#fff';
     r.text(r.shirtNo(q.id), xx + 60, y + 48, { size: 34, weight: 900, align: 'center', colour: on ? '#061a38' : LIME });
-    r.text(`${q.name.toUpperCase()}${captain(q) ? '  (C)' : ''}`, xx + 120, y + 48, { size: 32, weight: 900, colour: ink });
+    c.save(); c.beginPath(); c.roundRect(xx, y, 950, row - 10, 12); c.clip(); portrait(r, q, colour, xx + 135, y + 28, 17, y + row - 10); c.restore();
+    r.text(`${q.name.toUpperCase()}${captain(q) ? '  (C)' : ''}`, xx + 180, y + 48, { size: 32, weight: 900, colour: ink });
     r.text(q.slot || q.position || '', xx + 920, y + 47, { size: 26, weight: 800, align: 'right', colour: on ? '#061a38' : 'rgba(255,255,255,.7)' });
     c.restore();
   });
@@ -98,10 +109,11 @@ function lineupCard(r, team, colour, local, dur) {
 
 // The walk-out: the two clubs in single file from the tunnel on the near touchline, behind the referee, to a line across the halfway line.
 const LINE_Y = 38;
-function linedUp(sides, side, i) { const k = sides[side].indexOf(i); return [52.5 + (side ? 1 : -1) * (3.2 + k * 1.7), LINE_Y]; }
+function linedUp(sides, side, i) { const k = sides[side].indexOf(i); return [52.5 + (side ? 1 : -1) * (4 + k * 1.7), LINE_Y]; }
+const officials = y => [[52.5 - 1.7, y], [52.5 + 1.7, y]];
 function walkPos(sides, i, u) {
   const side = sides[0].includes(i) ? 0 : 1, k = sides[side].indexOf(i), S = 2.6;
-  const a = [52.5 + (side ? 1 : -1) * 1.1, 76], b = [a[0], LINE_Y + 2.5], e = linedUp(sides, side, i);
+  const a = [52.5 + (side ? 1 : -1) * 2.6, 76], b = [a[0], LINE_Y + 2.5], e = linedUp(sides, side, i);
   const leg1 = a[1] - b[1], leg2 = Math.hypot(e[0] - b[0], e[1] - b[1]);
   const s = Math.max(0, (u - 1.5 - k * 1.05) * S);
   if (s < leg1) return [a[0], a[1] - s];
@@ -111,7 +123,8 @@ function walkPos(sides, i, u) {
 function walkout(r, local, dur, t0) {
   const sides = sideIdx(r), k = dur / 45, u = local / k, f = easeInOut(clamp(u / 34, 0, 1));
   const cam = makeCam(52.5, lerp(58, 36, f), lerp(30, 34, f), 24, 40);
-  pitchScene(r, cam, sides, (i, x) => walkPos(sides, i, x / k), local, { faces: [52.5, 90, 0], ref: [52.5, Math.max(LINE_Y, 76 - u * 2.6)] });
+  const oy = Math.max(LINE_Y, 76 - u * 2.6);
+  pitchScene(r, cam, sides, (i, x) => walkPos(sides, i, x / k), local, { faces: [52.5, 90, 0], ref: [52.5, oy], ars: officials(oy) });
   r.bug(t0);
   tag(r, 'WALK-OUT', `${r.home.name.toUpperCase()} AND ${r.away.name.toUpperCase()}`, seg01(local, 0.4, 1));
 }
@@ -140,8 +153,8 @@ const VERSE = ['Australians all let us rejoice,', 'For we are one and free;', 'W
   'Of beauty rich and rare;', 'In history\u2019s page, let every stage', 'Advance Australia Fair.', 'In joyful strains then let us sing,', 'Advance Australia Fair.'];
 function anthem(r, local, dur) {
   const sides = sideIdx(r), f = easeInOut(clamp(local / dur, 0, 1));
-  const cam = makeCam(lerp(36, 69, f), LINE_Y - 7, 24, 15, 36);
-  pitchScene(r, cam, sides, i => linedUp(sides, sides[0].includes(i) ? 0 : 1, i), local, { faces: [52.5, 90, 0], ref: [52.5, LINE_Y] });
+  const cam = makeCam(lerp(38, 67, f), LINE_Y - 7, 24, 15, 36);
+  pitchScene(r, cam, sides, i => linedUp(sides, sides[0].includes(i) ? 0 : 1, i), local, { faces: [52.5, 90, 0], ref: [52.5, LINE_Y], ars: officials(LINE_Y) });
   const a = seg01(local, 0.1, 0.5) * (1 - seg01(local, dur - 0.4, dur));
   const step = dur / VERSE.length, n = clamp(Math.floor(local / step), 0, VERSE.length - 1), u = local - n * step;
   r.c.save(); r.c.globalAlpha = a;
@@ -152,13 +165,37 @@ function anthem(r, local, dur) {
   r.c.restore();
 }
 
-// Into position: from the line to where each player kicks off, the camera settling on the broadcast's own shot, so the match follows on without a jump.
+// Handshakes: the two clubs pair off along the halfway line and shake hands, one pair after another, and the referee shakes hands with his assistants.
+const OFFICIALS_Y = LINE_Y + 4;
+const pairAt = (sides, side, i) => { const k = sides[side].indexOf(i); return [52.5 + (k - 5) * 3.1 + (side ? 0.55 : -0.55), LINE_Y]; };
+function shakeArms(r, cam, a, b, bob) {
+  const m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], p = cam.p(m[0], m[1], 1); if (!p) return;
+  const z = 1 + bob * 0.09, w = Math.max(3, p[2] * 0.13);
+  r.line(cam, [[a[0], a[1], 1.15], [m[0], m[1], z], [b[0], b[1], 1.15]], w, '#e8b894');
+  const q = cam.p(m[0], m[1], z);
+  if (q) { r.c.fillStyle = '#e8b894'; r.c.beginPath(); r.c.arc(q[0], q[1], w * 0.85, 0, TAU); r.c.fill(); }
+}
+function handshake(r, local, dur, t0) {
+  const sides = sideIdx(r), k = dur / 15, u = local / k, move = v => easeInOut(clamp(v / 2.5, 0, 1));
+  const pos = (i, x) => { const side = sides[0].includes(i) ? 0 : 1, a = linedUp(sides, side, i), b = pairAt(sides, side, i), f = move(x / k); return [lerp(a[0], b[0], f), lerp(a[1], b[1], f)]; };
+  const oy = lerp(LINE_Y, OFFICIALS_Y, move(u)), ars = officials(oy), refAt = [52.5, oy];
+  pitchScene(r, makeCam(52.5, LINE_Y - 3, 37, 21, 40), sides, pos, local, { faces: [52.5, 90, 0], ref: refAt, ars, after: cam => {
+    const n = Math.min(sides[0].length, sides[1].length);
+    for (let j = 0; j < n; j++) { const v = u - 2.8 - j * 0.75; if (v > 0 && v < 2.6) shakeArms(r, cam, pos(sides[0][j], local), pos(sides[1][j], local), Math.sin(v * 13)); }
+    const v = u - 3; if (v > 0 && v < 5) shakeArms(r, cam, refAt, ars[0], Math.sin(v * 13)); else if (v >= 5 && v < 10) shakeArms(r, cam, refAt, ars[1], Math.sin(v * 13));
+  } });
+  r.bug(t0);
+  tag(r, 'HANDSHAKES', `${r.home.code} AND ${r.away.code}`, seg01(local, 0.3, 0.8));
+}
+
+// Into position: from the handshakes to where each player kicks off, the camera settling on the broadcast's own shot, so the match follows on without a jump.
 function ready(r, local, dur, t0) {
   const sides = sideIdx(r), kick = r.fr.at(t0), span = dur * 0.85, f = easeInOut(clamp(local / span, 0, 1));
   const [cx, cy, cd] = r.camAt(t0);
-  const cam = makeCam(lerp(52.5, cx, f), lerp(LINE_Y + 2, cy, f), lerp(22, cd, f), 28, 40);
-  const pos = (i, u) => { const v = easeInOut(clamp(u / span, 0, 1)), a = linedUp(sides, sides[0].includes(i) ? 0 : 1, i), b = kick.players[i]; return [lerp(a[0], b[0], v), lerp(a[1], b[1], v)]; };
-  pitchScene(r, cam, sides, pos, local, { ball: [[kick.ball[0], kick.ball[1]]], faces: [kick.ball[0], kick.ball[1], 0], ref: [lerp(52.5, kick.ball[0], f), lerp(LINE_Y, kick.ball[1] + 6, f)] });
+  const cam = makeCam(lerp(52.5, cx, f), lerp(LINE_Y - 3, cy, f), lerp(37, cd, f), lerp(21, 28, f), 40);
+  const pos = (i, u) => { const v = easeInOut(clamp(u / span, 0, 1)), a = pairAt(sides, sides[0].includes(i) ? 0 : 1, i), b = kick.players[i]; return [lerp(a[0], b[0], v), lerp(a[1], b[1], v)]; };
+  const end = r.assistants(kick, t0), from = officials(OFFICIALS_Y), ars = from.map((a, n) => (end[n] ? [lerp(a[0], end[n].x, f), lerp(a[1], end[n].y, f)] : a));
+  pitchScene(r, cam, sides, pos, local, { ball: [[kick.ball[0], kick.ball[1]]], faces: [kick.ball[0], kick.ball[1], 0], ref: [lerp(52.5, kick.ball[0], f), lerp(OFFICIALS_Y, kick.ball[1] + 6, f)], ars });
   r.bug(t0);
   tag(r, 'KICK-OFF', r.look().big.toUpperCase(), seg01(local, 0.4, 1));
   const a = 1 - clamp(local / 0.4, 0, 1);
@@ -166,7 +203,7 @@ function ready(r, local, dur, t0) {
 }
 
 function preMatch(r, show, t0) {
-  const k = show.dur / 270;
+  const k = show.dur / 150;
   let at = show.local;
   for (const [scene, secs] of PRE) {
     const d = secs * k;
@@ -176,6 +213,7 @@ function preMatch(r, show, t0) {
     else if (scene === 'away') lineupCard(r, r.away, r.ac, at, d);
     else if (scene === 'walkout') walkout(r, at, d, t0);
     else if (scene === 'anthem') anthem(r, at, d);
+    else if (scene === 'handshake') handshake(r, at, d, t0);
     else ready(r, at, d, t0);
     if (scene !== 'ready') fade(r, at, d, 0.4);
     return;
@@ -259,7 +297,6 @@ function fullTime(r, show) {
 }
 
 export function drawShow(r, show, t) {
-  r._T = t;
   if (show.kind === 'pre') preMatch(r, show, r.t0);
   else if (show.kind === 'half') halfTime(r, show);
   else if (show.kind === 'goal') restart(r, show, t);

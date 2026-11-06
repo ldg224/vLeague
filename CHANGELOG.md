@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.34.0 (2026-11-06)
+
+Headlines: A shorter pre-match show, with handshakes and faces | Scoreboard effects at the right speed
+
+Released together with 1.33.1 below, which wasn't released on its own.
+**Changed (S-34):** the pre-match show is now 2:30: warm-ups 20 seconds, the starting XIs 22 seconds each, the walk-out 25 seconds, the anthem 36 seconds, handshakes 15 seconds and 10 seconds to take positions. The time saved goes to the full-time show.
+**Added (S-34):** the starting XIs show each player's face. The two assistant referees walk out and stand alongside the referee. The clubs shake hands after the anthem, and the referee shakes hands with his assistants.
+**Fixed:** the effects on the scoreboard ran at the match's speed, so they were too fast while a match played at live speed or was fast-forwarded. They now run at normal speed.
+Database change: none.
+
 ## 1.33.1 (2026-11-06)
 
 Headlines: Shorter warm-ups, a longer anthem

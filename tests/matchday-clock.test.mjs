@@ -31,13 +31,13 @@ test('the clock never runs backwards and ends on the whistle at 60 minutes', () 
 test('the show runs in order and the score waits for the football', () => {
   const f = fixture([goal(1000)]);
   assert.equal(liveShow(f, season, at(10)).kind, 'pre');
-  assert.equal(liveSimTime(f, season, at(269)), 0);
-  assert.equal(shownScore(f, season, at(269)).home, 0);
-  assert.equal(liveShow(f, season, at(280)), null);
-  const goalReal = 270 + 1022 / (5900 / 2700);
+  assert.equal(liveSimTime(f, season, at(149)), 0);
+  assert.equal(shownScore(f, season, at(149)).home, 0);
+  assert.equal(liveShow(f, season, at(160)), null);
+  const goalReal = 150 + 1022 / (5900 / 2700);
   assert.equal(liveShow(f, season, at(goalReal + 5)).kind, 'goal');
   assert.equal(shownScore(f, season, at(goalReal + 5)).home, 1);
-  const halfReal = 270 + 40 + 2900 / (5900 / 2700);
+  const halfReal = 150 + 40 + 2900 / (5900 / 2700);
   assert.equal(liveShow(f, season, at(halfReal + 60)).kind, 'half');
   assert.equal(liveShow(f, season, at(halfReal + 125)), null);
   assert.equal(liveShow(f, season, at(3590)).kind, 'end');

@@ -92,7 +92,7 @@ export function status(fx, s, now = new Date()) {
 // A live match fills a one-hour slot (S-34): 45 minutes of football and 15 of matchday show. The football runs at one steady rate whatever the
 // result, so the speed gives nothing away. The show holds the match clock still: the pre-match show, half-time and a restart after each goal, with what
 // is left of the 15 minutes going to the full-time show. Seconds are for a 60-minute slot, and scale with it. KEEP live_minutes IN STEP with stakes_match_over.
-const SHOW = { football: 2700, pre: 270, half: 120, restart: 40, restartAfter: 22, endMin: 120 };
+const SHOW = { football: 2700, pre: 150, half: 120, restart: 40, restartAfter: 22, endMin: 120 };
 function warp(fx, s) {
   const goals = fx.result.goals || [], key = (s.live_minutes || 10) + ':' + fx.result.duration_t + ':' + goals.length;
   if (fx._warp?.key === key) return fx._warp;

@@ -104,7 +104,10 @@ export class MatchPlayer {
     const have = this.r[view];
     if (have) { have.setScale(this.scale); return have; }   // a quality change only resizes the picture, it never rebuilds the camera plans
     const opts = { season: this.S, fixture: this.FX, assets: this.assets, scale: this.scale, kitArt: this.kitArt };
-    return (this.r[view] = view === 'highlights' ? new this.hl.HighlightsRenderer(this.data, opts) : new this.bc.BroadcastRenderer(this.data, opts));
+    if (view === 'highlights') return (this.r[view] = new this.hl.HighlightsRenderer(this.data, opts));
+    const r = new this.bc.BroadcastRenderer(this.data, opts);
+    r.fxClock = () => performance.now() / 1000;   // the score bug's effects run on real time, whatever speed the match is playing at
+    return (this.r[view] = r);
   }
   range() {   // [min, max] of the current view's time
     if (this.view === 'highlights') return [0, this.renderer('highlights').duration];

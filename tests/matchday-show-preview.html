@@ -19,13 +19,15 @@ const fx = { id: 'test', week: 5, look, home: teams[0].code, away: teams[1].code
 const r = new BroadcastRenderer(data, { season, fixture: fx, assets, scale: 1, kitArt: null });
 const g = r.goals[0], end = data.periods[0].end_t;
 const shots = [
-  ['warm-up', { kind: 'pre', local: 15, dur: 270 }, 0],
-  ['home', { kind: 'pre', local: 55, dur: 270 }, 0],
-  ['away', { kind: 'pre', local: 100, dur: 270 }, 0],
-  ['walk-in', { kind: 'pre', local: 132, dur: 270 }, 0],
-  ['walk-end', { kind: 'pre', local: 162, dur: 270 }, 0],
-  ['anthem', { kind: 'pre', local: 215, dur: 270 }, 0],
-  ['ready', { kind: 'pre', local: 264, dur: 270 }, 0],
+  ['warm-up', { kind: 'pre', local: 10, dur: 150 }, 0],
+  ['home', { kind: 'pre', local: 31, dur: 150 }, 0],
+  ['away', { kind: 'pre', local: 53, dur: 150 }, 0],
+  ['walk-in', { kind: 'pre', local: 72, dur: 150 }, 0],
+  ['walk-end', { kind: 'pre', local: 87, dur: 150 }, 0],
+  ['anthem', { kind: 'pre', local: 108, dur: 150 }, 0],
+  ['handshake', { kind: 'pre', local: 130, dur: 150 }, 0],
+  ['handshake-2', { kind: 'pre', local: 136, dur: 150 }, 0],
+  ['ready', { kind: 'pre', local: 145, dur: 150 }, 0],
   ['half', { kind: 'half', local: 30, dur: 120 }, end],
   ['goal', { kind: 'goal', local: 8, dur: 40, goal: g }, g ? g.t + 22 : 0],
   ['restart', { kind: 'goal', local: 35, dur: 40, goal: g }, g ? g.t + 22 : 0],
