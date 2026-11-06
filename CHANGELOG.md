@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.33.1 (2026-11-06)
+
+Headlines: Shorter warm-ups, a longer anthem
+
+**Changed (S-34):** warm-ups are now 30 seconds and the anthem 95 seconds, with the first verse shown line by line while the camera moves along the teams (still no sound). Kick-off in the show comes at the same time.
+Database change: none.
+
 ## 1.33.0 (2026-11-06)
 
 Headlines: One-hour matchday broadcasts | Pre-match show, half-time and full-time shows

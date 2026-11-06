@@ -19,12 +19,12 @@ const fx = { id: 'test', week: 5, look, home: teams[0].code, away: teams[1].code
 const r = new BroadcastRenderer(data, { season, fixture: fx, assets, scale: 1, kitArt: null });
 const g = r.goals[0], end = data.periods[0].end_t;
 const shots = [
-  ['warm-up', { kind: 'pre', local: 40, dur: 270 }, 0],
-  ['home', { kind: 'pre', local: 145, dur: 270 }, 0],
-  ['away', { kind: 'pre', local: 190, dur: 270 }, 0],
-  ['walk-in', { kind: 'pre', local: 222, dur: 270 }, 0],
-  ['walk-end', { kind: 'pre', local: 252, dur: 270 }, 0],
-  ['anthem', { kind: 'pre', local: 257.5, dur: 270 }, 0],
+  ['warm-up', { kind: 'pre', local: 15, dur: 270 }, 0],
+  ['home', { kind: 'pre', local: 55, dur: 270 }, 0],
+  ['away', { kind: 'pre', local: 100, dur: 270 }, 0],
+  ['walk-in', { kind: 'pre', local: 132, dur: 270 }, 0],
+  ['walk-end', { kind: 'pre', local: 162, dur: 270 }, 0],
+  ['anthem', { kind: 'pre', local: 215, dur: 270 }, 0],
   ['ready', { kind: 'pre', local: 264, dur: 270 }, 0],
   ['half', { kind: 'half', local: 30, dur: 120 }, end],
   ['goal', { kind: 'goal', local: 8, dur: 40, goal: g }, g ? g.t + 22 : 0],

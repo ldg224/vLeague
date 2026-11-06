@@ -5,7 +5,7 @@
 import { W, H, makeCam, clamp, lerp, easeOut, easeInOut, seg01, lastName, LIME } from './highlights.js';
 
 const TAU = Math.PI * 2;
-const PRE = [['warmup', 120], ['home', 45], ['away', 45], ['walkout', 45], ['anthem', 5], ['ready', 10]];   // seconds of the 270 before kick-off
+const PRE = [['warmup', 30], ['home', 45], ['away', 45], ['walkout', 45], ['anthem', 95], ['ready', 10]];   // seconds of the 270 before kick-off
 
 function fade(r, local, dur, len = 0.45) {
   const a = Math.max(1 - clamp(local / len, 0, 1), seg01(local, dur - len, dur));
@@ -136,16 +136,19 @@ function flag(r, x, y, w) {
   for (const [fx, fy] of [[0.75, 0.83], [0.625, 0.47], [0.75, 0.17], [0.87, 0.39]]) star(c, x + w * fx, y + h * fy, h * 0.075, 7);
   star(c, x + w * 0.81, y + h * 0.56, h * 0.045, 5);
 }
+const VERSE = ['Australians all let us rejoice,', 'For we are one and free;', 'We\u2019ve golden soil and wealth for toil;', 'Our home is girt by sea;', 'Our land abounds in nature\u2019s gifts',
+  'Of beauty rich and rare;', 'In history\u2019s page, let every stage', 'Advance Australia Fair.', 'In joyful strains then let us sing,', 'Advance Australia Fair.'];
 function anthem(r, local, dur) {
-  const sides = sideIdx(r), f = local / dur;
-  const cam = makeCam(lerp(47, 58, f), LINE_Y - 7, 24, 15, 36);
+  const sides = sideIdx(r), f = easeInOut(clamp(local / dur, 0, 1));
+  const cam = makeCam(lerp(36, 69, f), LINE_Y - 7, 24, 15, 36);
   pitchScene(r, cam, sides, i => linedUp(sides, sides[0].includes(i) ? 0 : 1, i), local, { faces: [52.5, 90, 0], ref: [52.5, LINE_Y] });
   const a = seg01(local, 0.1, 0.5) * (1 - seg01(local, dur - 0.4, dur));
+  const step = dur / VERSE.length, n = clamp(Math.floor(local / step), 0, VERSE.length - 1), u = local - n * step;
   r.c.save(); r.c.globalAlpha = a;
   flag(r, W - 420, 70, 340);
   r.text('AUSTRALIAN NATIONAL ANTHEM', W / 2, H - 215, { size: 40, weight: 900, align: 'center', spacing: 6, shadow: 16 });
   r.pill(W / 2 - 560, H - 190, 1120, 86, 'rgba(6,26,56,0.88)', 14);
-  r.text('Australians all let us rejoice, for we are one and free', W / 2, H - 134, { size: 36, weight: 700, align: 'center' });
+  r.text(VERSE[n], W / 2, H - 134, { size: 36, weight: 700, align: 'center', alpha: seg01(u, 0, 0.4) * (1 - seg01(u, step - 0.4, step)) });
   r.c.restore();
 }
 
