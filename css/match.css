@@ -40,7 +40,7 @@
 /* The score or kick-off: a white block leaning with the stripes, underlined in the two clubs' colours */
 .has-look .mh-score, .has-look .mh-ko {
   padding: 10px 30px 14px; color: #0b1f3f;
-  background: linear-gradient(90deg, var(--ha, #0b1f3f) 50%, var(--aa, #0b1f3f) 50%) bottom / 100% 6px no-repeat, linear-gradient(#ffffff, #dfe6f0);
+  background: linear-gradient(rgba(11,31,63,.35), rgba(11,31,63,.35)) left 0 bottom 6px / 100% 1px no-repeat, linear-gradient(90deg, var(--ha, #0b1f3f) 50%, var(--aa, #0b1f3f) 50%) bottom / 100% 6px no-repeat, linear-gradient(#ffffff, #dfe6f0);
   clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
 }
 .has-look .mh-score i { color: #6a7a92; }

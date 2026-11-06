@@ -33,7 +33,7 @@ import { shotMapCard, shotMapClick } from './match-shotmap.js';
 import { goalMark } from './match-marks.js';
 import { liveReactions } from './reactions.js';
 import { playerCard, MatchPlayer } from './viewer/player.js';
-import { loadKits, matchKits } from './kits-data.js';
+import { loadKits, loadFixtureKits, matchKits } from './kits-data.js';
 import { loadHistory } from './history-data.js';
 import { resolveLook, boardOf, artOf, artInk, isEventLook, SCENES, stageName } from './looks.js';
 import { startPageLook } from './look-page.js';
@@ -246,16 +246,23 @@ function start() {
     return { main, chance: chanceCard(season, fx, sctx), venue: venueCard(fx, sctx), extra };
   };
 
-  const acc = code => {
-    const c = club(code)?.colour || teamOf(season, code).colour, theme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
-    return isHex(c) ? accentFor(c, theme) : '';
-  };
+  const accentOf = c => (isHex(c) ? accentFor(c, document.documentElement.dataset.theme === 'light' ? 'light' : 'dark') : '');
+  const clubColour = code => club(code)?.colour || teamOf(season, code)?.colour;
+  const acc = code => accentOf(clubColour(code));
+  // What each side wears in this match: the Editor's choice, else the team's locked sheet, else a test match's kit; none = automatic (matchKits).
+  let kitsAll = null, editorKits = {};
+  const pickOf = side => editorKits[fx[side]] || lineups?.[side]?.sheet?.kit || file?.test_kits?.[fx[side]];
+  const wear = () => matchKits(kitsAll || {}, fx.home, fx.away, { [fx.home]: clubColour(fx.home), [fx.away]: clubColour(fx.away) }, { [fx.home]: pickOf('home'), [fx.away]: pickOf('away') });
   const shotMap = { sel: null, period: 'all' };   // the shot map's picks, kept across redraws
   const draw = () => {
     const s = state();
     document.title = `${nameOf(home)} v ${nameOf(away)} | vLeague`;
     const ha = acc(fx.home), aa = acc(fx.away), page = document.getElementById('mh'), b = body(s);
     if (ha) page.style.setProperty('--ha', ha); if (aa) page.style.setProperty('--aa', aa);
+    // The header is the match's scoreboard, so it wears this match's shirts. The cards under it keep the clubs' own colours.
+    const worn = wear(), head = document.getElementById('mh-head'), hw = accentOf(worn.home.field?.main), aw = accentOf(worn.away.field?.main);
+    if (hw) head.style.setProperty('--ha', hw); else head.style.removeProperty('--ha');
+    if (aw) head.style.setProperty('--aa', aw); else head.style.removeProperty('--aa');
     // Header, content and side column are painted apart, so a pill or a tab only redraws what it changes: the header's colour washes keep drifting and the
     // other cards keep their silk instead of starting their fade again.
     const at = id => document.getElementById(id);
@@ -282,13 +289,11 @@ function start() {
     if (viewerKey === key) return;
     if (!file) { needFile(); return; }
     if (!file.frames?.data?.length) return;   // a demo match has no ball frames
+    if (!lineups || !kitsAll) return;   // the kits decide the shirts and the score bug's colours, and the viewer is only built once; draw() comes back when they're in
     viewerKey = key;
     viewer?.destroy();
-    const colour = code => club(code)?.colour || teamOf(season, code)?.colour;
-    const wear = matchKits(await loadKits(), fx.home, fx.away, { [fx.home]: colour(fx.home), [fx.away]: colour(fx.away) }, { [fx.home]: lineups?.home?.sheet?.kit || file.test_kits?.[fx.home], [fx.away]: lineups?.away?.sheet?.kit || file.test_kits?.[fx.away] });
-    if (viewerKey !== key) return;
     slot.innerHTML = playerCard(s.st);
-    viewer = new MatchPlayer({ S: season, FX: fx, st: s.st, data: file, timeline: null, kits: wear });
+    viewer = new MatchPlayer({ S: season, FX: fx, st: s.st, data: file, timeline: null, kits: wear() });
     document.documentElement.classList.add('mp-watching');   // the page's drifting silk and contour lines hold still while the picture plays (they re-blend the whole page every frame)
   }
   const tickCountdown = () => {
@@ -303,6 +308,7 @@ function start() {
     startPageLook(look,document.documentElement.dataset.theme === 'light' ? 'light' : 'dark', { paused: () => Boolean(viewer?.playing || viewer?.tactical?.playing) });
   }
   loadLineups(fx, season, rows, { fake: preview && q.has('fake'), mine: mine?.code || null }).then(l => { lineups = l; draw(); }).catch(() => { lineups = { home: { sheet: null, locked: false }, away: { sheet: null, locked: false }, kits: {} }; draw(); });
+  Promise.all([loadKits(), loadFixtureKits(fx.id, fx.home, fx.away)]).then(([k, e]) => { kitsAll = k; editorKits = e; draw(); });
   loadChanceSheets().then(x => { chanceSheets = x; draw(); });
   loadHistory().then(h => { history = h; draw(); }).catch(() => {});   // the league's past seasons, for the Insights
   addEventListener('hashchange', draw);

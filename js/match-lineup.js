@@ -12,7 +12,7 @@
 // BOOSTED CAPTAIN (S-33, the user, 4 Nov 2026): a club sees its own boost as soon as it submits, read from its own submitted sheet. Everyone else, the office included, sees it from the lock.
 import { db } from './auth.js';
 import { FORMATIONS, DEFAULT_FORMATION, autoLineup } from './pitch.js';
-import { loadKits, matchKits } from './kits-data.js';
+import { loadKits, loadFixtureKits, matchKits } from './kits-data.js';
 import { kitSprite, kitChest, startDesign } from './kit.js';
 import { onColour } from './club-colour.js';
 import { esc } from './member.js';
@@ -31,12 +31,13 @@ export const withOwnBoost = (row, own, mine) => (row && mine && row.club === min
 // mine: the viewer's club code, for withOwnBoost.
 export async function loadLineups(fx, season, rows, { fake = false, mine = null } = {}) {
   const c = await db(), now = new Date();
-  const [dl, ws, sub, kits, own] = await Promise.all([
+  const [dl, ws, sub, kits, own, editorKits] = await Promise.all([
     c.from('deadlines').select('week, locks_at, locked_at').eq('week', fx.week).maybeSingle().then(r => r.data || null).catch(() => null),
     c.from('week_sheets').select('club, formation, captain, lineup, kit, submitted, random, boost').eq('week', fx.week).in('club', [fx.home, fx.away]).then(r => r.data || []).catch(() => []),
     c.rpc('submitted_lineups', { p_week: fx.week, p_clubs: [fx.home, fx.away] }).then(r => r.data || []).catch(() => []),   // submitted, not yet locked
     loadKits(),
     mine && [fx.home, fx.away].includes(mine) ? c.from('submitted_sheets').select('club, sheet').eq('week', fx.week).eq('club', mine).maybeSingle().then(r => r.data || null).catch(() => null) : null,
+    loadFixtureKits(fx.id, fx.home, fx.away),
   ]);
   const open = Boolean(dl && (dl.locked_at || new Date(dl.locks_at) <= now));   // the week's line-ups have locked
   const known = new Set((season.players || []).map(p => String(p.id)));
@@ -46,7 +47,7 @@ export async function loadLineups(fx, season, rows, { fake = false, mine = null 
     ? { home: season.demoSheets[fx.home] || null, away: season.demoSheets[fx.away] || null }
     : { home: sheetOf(fx.home) || (fake ? made(fx.home, '4-4-2') : null), away: sheetOf(fx.away) || (fake ? made(fx.away, '4-3-3') : null) };
   const colours = { [fx.home]: rows.find(r => r.code === fx.home)?.colour, [fx.away]: rows.find(r => r.code === fx.away)?.colour };
-  const wear = matchKits(kits, fx.home, fx.away, colours, { [fx.home]: sides.home?.kit, [fx.away]: sides.away?.kit });
+  const wear = matchKits(kits, fx.home, fx.away, colours, { [fx.home]: sides.home?.kit, [fx.away]: sides.away?.kit, ...editorKits });   // the Editor's choice for this match wins over a team's own pick
   const pics = {};
   await Promise.all(['home', 'away'].map(async side => {
     pics[side] = {};

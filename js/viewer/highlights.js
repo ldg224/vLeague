@@ -291,7 +291,7 @@ export class HighlightsRenderer {
     this.kitArt = kitArt;
     this.d = data; this.fr = new Frames(data); this.efx = buildEffects(data, this.fr); this.season = season; this.fx = fixture; this.A = assets;
     this.home = data.teams.home; this.away = data.teams.away;
-    this.hc = safeColour(this.home.colour); this.ac = safeColour(this.away.colour);
+    this.hc = safeColour(kitArt?.home?.field?.main || this.home.colour); this.ac = safeColour(kitArt?.away?.field?.main || this.away.colour);   // the shirt each side wears in this match; a club with no kit uses its colour
     this.nHome = this.home.lineup.length;
     this.names = Object.fromEntries(data.players.map(p => [p.id, p.name]));
     this.clips = planHighlights(data);
@@ -1403,7 +1403,7 @@ export class HighlightsRenderer {
     if (th && !pre) drawLookFx(c, x, y, w, h, th, this._T || 0);
     else if (key === 'grand_final' && !pre) drawLookFx(c, x, y, w, h, { fx: ['shine', 'sparkle'], score: ['#ffe566', '#ffd700'] }, this._T || 0);
     const slant = (bx, by, bw, bh, s) => { c.beginPath(); c.moveTo(bx + s, by); c.lineTo(bx + bw, by); c.lineTo(bx + bw - s, by + bh); c.lineTo(bx, by + bh); c.closePath(); };
-    const clubBar = (bx, colour) => { c.save(); c.shadowColor = colour; c.shadowBlur = 12; slant(bx, y + 10, 10, 44, 4); c.fillStyle = colour; c.fill(); c.restore(); };
+    const clubBar = (bx, colour) => { c.save(); c.shadowColor = colour; c.shadowBlur = 12; slant(bx, y + 10, 10, 44, 4); c.fillStyle = colour; c.fill(); c.shadowBlur = 0; c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 1.5; c.stroke(); c.restore(); };   // the outline keeps a near-black kit visible on the dark board
     // contents
     if (this.A.league) this.leagueFit((x + 12) + (44) / 2, (y + 10) + (44) / 2, 44, 44);
     clubBar(x + 68, this.hc);
@@ -1411,7 +1411,7 @@ export class HighlightsRenderer {
     // The score: a white block leaning with the stripes, underlined in the two clubs' colours.
     c.save(); c.shadowColor = 'rgba(0,0,0,.45)'; c.shadowBlur = 10; c.shadowOffsetY = 2; slant(x + 182, y + 9, 128, 46, 10);
     const paper = c.createLinearGradient(0, y + 9, 0, y + 55); paper.addColorStop(0, '#ffffff'); paper.addColorStop(1, '#dfe6f0'); c.fillStyle = paper; c.fill(); c.restore();
-    c.save(); slant(x + 182, y + 9, 128, 46, 10); c.clip(); c.fillStyle = this.hc; c.fillRect(x + 182, y + 51, 64, 4); c.fillStyle = this.ac; c.fillRect(x + 246, y + 51, 64, 4); c.restore();
+    c.save(); slant(x + 182, y + 9, 128, 46, 10); c.clip(); c.fillStyle = this.hc; c.fillRect(x + 182, y + 51, 64, 4); c.fillStyle = this.ac; c.fillRect(x + 246, y + 51, 64, 4); c.fillStyle = 'rgba(11,31,63,.35)'; c.fillRect(x + 182, y + 50, 128, 1); c.restore();   // the hairline keeps a white kit visible on the white block
     if (th?.fx.includes('moustache')) {   // Movember: a moustache for the dash
       this.text(`${sc[0]}`, x + 246 - 26, y + 44, { size: 32, weight: 900, align: 'right', colour: DARK });
       this.text(`${sc[1]}`, x + 246 + 26, y + 44, { size: 32, weight: 900, align: 'left', colour: DARK });
