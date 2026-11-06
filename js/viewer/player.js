@@ -4,7 +4,7 @@
 // plays them onto the page. Nothing here runs until a match is live or finished.
 
 import { logoUrl } from '../dashboard-data.js';
-import { liveSimTime, liveSpeed, clockAt, addedAt } from './data.js';
+import { liveSimTime, liveSpeed, liveShow, clockAt, addedAt } from './data.js';
 import { esc, statusPill } from './ui.js';
 import { Replay } from './replay.js';
 import { icon } from '../icons.js';
@@ -339,7 +339,8 @@ export class MatchPlayer {
     if (!this.dirty) return;
     this.dirty = false;
     const r = this.renderer(this.view), t0 = performance.now();
-    const src = r.frame(this.t);
+    const show = this.view === 'broadcast' && this.follow && this.st === 'live' ? liveShow(this.FX, this.S) : null;   // the matchday show (S-34), for whoever is watching live
+    const src = show ? r.showFrame(show, this.t) : r.frame(this.t);
     this.g.drawImage(src, 0, 0, this.cv.width, this.cv.height);
     const cost = performance.now() - t0;
     this.adapt(cost);

@@ -64,7 +64,7 @@ async function run() {
   const duration = () => data?.frames?.data?.length ? data.frames.data[data.frames.data.length - 1][0] / 10 : fx.result?.duration_t || 0;
   // How far the match has got: live matches follow the broadcast clock, finished ones are complete.
   const horizon = () => (st() === 'ft' ? duration() : live() ? liveSimTime(fx, season, new Date()) : 0);
-  const pace = () => ((duration() || 5400) / ((season.live_minutes || 45) * 60));   // match seconds per real second at the broadcast's pace
+  const pace = () => ((duration() || 5400) / ((season.live_minutes || 60) * 45));   // the football is three quarters of the slot (S-34); match seconds per real second at the broadcast's pace
 
   // The shirt (singlet) number comes from the player list; a test match's made-up players have none.
   const shirt = id => (season.players || []).find(p => String(p.id) === String(id))?.number ?? (fx.test ? String(Number(String(id).slice(-2))) : undefined);   // a test match's ids end in the shirt number

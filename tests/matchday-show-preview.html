@@ -1,0 +1,44 @@
+<!doctype html>
+<meta charset="utf-8">
+<base href="/">
+<title>Matchday show preview (localhost)</title>
+<style>body{margin:0;background:#111;color:#fff;font:14px sans-serif}canvas{display:block;width:960px;height:540px;margin:4px;float:left}</style>
+<body>
+<script type="module">
+// Draws one frame of each part of the matchday show (S-34) from a match file given as ?file=<url>.
+import { BroadcastRenderer, } from '/js/viewer/broadcast.js';
+import { loadAssets, HighlightsRenderer } from '/js/viewer/highlights.js';
+const q = new URLSearchParams(location.search);
+const data = await (await fetch(q.get('file'))).json();
+data.byId = Object.fromEntries(data.players.map(p => [p.id, p]));
+const teams = [data.teams.home, data.teams.away];
+const assets = await loadAssets(teams);
+const look = q.get('look') || 'opening_week';
+const season = { teams, players: [], rounds: { 5: { name: 'Opening Week', numbered: true, no: 1, look } }, looks: {} };
+const fx = { id: 'test', week: 5, look, home: teams[0].code, away: teams[1].code };
+const r = new BroadcastRenderer(data, { season, fixture: fx, assets, scale: 1, kitArt: null });
+const g = r.goals[0], end = data.periods[0].end_t;
+const shots = [
+  ['warm-up', { kind: 'pre', local: 40, dur: 270 }, 0],
+  ['home', { kind: 'pre', local: 145, dur: 270 }, 0],
+  ['away', { kind: 'pre', local: 190, dur: 270 }, 0],
+  ['walk-in', { kind: 'pre', local: 222, dur: 270 }, 0],
+  ['walk-end', { kind: 'pre', local: 252, dur: 270 }, 0],
+  ['anthem', { kind: 'pre', local: 257.5, dur: 270 }, 0],
+  ['ready', { kind: 'pre', local: 264, dur: 270 }, 0],
+  ['half', { kind: 'half', local: 30, dur: 120 }, end],
+  ['goal', { kind: 'goal', local: 8, dur: 40, goal: g }, g ? g.t + 22 : 0],
+  ['restart', { kind: 'goal', local: 35, dur: 40, goal: g }, g ? g.t + 22 : 0],
+  ['ft', { kind: 'end', local: 12, dur: 300 }, r.t1],
+  ['motm', { kind: 'end', local: 40, dur: 300 }, r.t1],
+  ['bye', { kind: 'end', local: 290, dur: 300 }, r.t1],
+  ['kick', null, 0.2],
+];
+const errs = [];
+for (const [name, show, t] of shots) {
+  const cv = document.createElement('canvas'); cv.width = 960; cv.height = 540; cv.title = name; document.body.append(cv);
+  try { const src = show ? r.showFrame(show, t) : r.frame(t); cv.getContext('2d').drawImage(src, 0, 0, 960, 540); }
+  catch (e) { errs.push(name + ': ' + e.message); console.error(name, e); }
+}
+const pre = document.createElement('pre'); pre.textContent = 'errors: ' + (errs.join(' | ') || 'none'); pre.style.clear = 'both'; pre.style.fontSize = '30px'; document.body.append(pre);
+</script>

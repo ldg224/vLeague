@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.33.0 (2026-11-06)
+
+Headlines: One-hour matchday broadcasts | Pre-match show, half-time and full-time shows
+
+**Added (S-34):** a live match now fills a one-hour slot: 45 minutes of football, at the same pace as before, and 15 minutes of matchday show on the broadcast. From kick-off time: warm-ups, each club's starting XI with every player introduced, the walk-out, the Australian anthem for 5 seconds (no sound) and the teams taking their positions. Then a 2-minute half-time with first-half stats only, a 40-second restart after each goal with another look at it, and at the end the final stats, player of the match and a goodbye.
+**Changed:** the match header says Pre-match, Half-time or Full time during those parts of the show. Full time, the table, Stakes and highlights now arrive 60 minutes after kick-off, not 45. Someone who rewinds a live match watches the football without the show. The show is live only, on the Broadcast view: Tactical holds still during it, and the highlights and full match replay don't include it.
+**Fixed:** the highlights' team screen said "WEEK 5" for Round 1. It now says the round's name and number.
+Database change: 0085 (Stakes settles 60 minutes after kick-off), applied with this release.
+
 ## 1.32.0 (2026-11-05)
 
 Headlines: Fewer red cards | Penalties look right

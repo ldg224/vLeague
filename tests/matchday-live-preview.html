@@ -1,0 +1,30 @@
+<!doctype html>
+<meta charset="utf-8">
+<base href="/">
+<title>Matchday show, live player preview (localhost)</title>
+<link rel="stylesheet" href="css/site.css"><link rel="stylesheet" href="css/viewer.css">
+<body style="margin:0;background:#111">
+<div id="slot" style="width:1280px"></div>
+<pre id="out" style="color:#fff;font-size:22px"></pre>
+<script type="module">
+// The real match player, following the live clock, ?ago=<minutes> after kick-off, on a match file given as ?file=<url>.
+import { playerCard, MatchPlayer } from '/js/viewer/player.js';
+import { status, liveShow, liveSimTime, shownScore } from '/js/dashboard-data.js';
+const out = document.getElementById('out'), log = s => { out.textContent += s + '\n'; };
+addEventListener('error', e => log('ERROR ' + e.message));
+addEventListener('unhandledrejection', e => log('REJECT ' + e.reason));
+const q = new URLSearchParams(location.search);
+const data = await (await fetch(q.get('file'))).json();
+data.byId = Object.fromEntries(data.players.map(p => [p.id, p]));
+const k = new Date(Date.now() - (+q.get('ago')) * 60000), pad = n => String(n).padStart(2, '0');
+const teams = [data.teams.home, data.teams.away];
+const goals = data.events.filter(e => e.type === 'goal').map(g => ({ t: g.t, team: g.team, minute: g.minute, scorer: g.scorer }));
+const FX = { id: 'test', week: 5, look: 'opening_week', home: teams[0].code, away: teams[1].code, date: `${k.getFullYear()}-${pad(k.getMonth() + 1)}-${pad(k.getDate())}`, time: `${pad(k.getHours())}:${pad(k.getMinutes())}`,
+  result: { home: data.result.home, away: data.result.away, duration_t: data.periods[1].end_t, periods: data.periods, goals } };
+const S = { live_minutes: 60, teams, players: [], fixtures: [FX], rounds: { 5: { name: 'Opening Week', numbered: true, no: 1 } }, looks: {} };
+const st = status(FX, S);
+document.getElementById('slot').innerHTML = playerCard(st);
+const v = new MatchPlayer({ S, FX, st, data, timeline: null });
+await v.ready;
+setTimeout(() => log(`status=${st} show=${liveShow(FX, S)?.kind ?? 'football'} simT=${liveSimTime(FX, S).toFixed(1)} score=${JSON.stringify(shownScore(FX, S))} view=${v.view} follow=${v.follow} playing=${v.playing} t=${v.t.toFixed(1)}`), 2500);
+</script>

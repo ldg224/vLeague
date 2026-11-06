@@ -10,7 +10,7 @@ import { chrome, esc, clubs, crestUrl } from './member.js';
 import { currentUser, myProfile } from './auth.js';
 import { paintClub, startSilk, styleCards } from './shell.js';
 import { mountSubFrame } from './frame.js';
-import { loadSeason, kickoff, status, shownScore, shownGoals, liveMinute, liveState, liveSimTime, finished, matchUrl } from './dashboard-data.js';
+import { loadSeason, kickoff, status, shownScore, shownGoals, liveMinute, liveShow, liveState, liveSimTime, finished, matchUrl } from './dashboard-data.js';
 import { countedFixtures, totals } from './season-stats.js';
 import { demoMatchSeason } from './demo-match.js';
 import { crest, teamOf, nameOf, fullNameOf, useClubs, time } from './places.js';
@@ -144,7 +144,7 @@ function start() {
       const reds = side => (live ? live.reds[side] : redsOf(side === 'home' ? fx.home : fx.away));
       const mark = n => (n ? `<span class="mh-reds" aria-label="${n === 1 ? 'Sent off' : `${n} sent off`}">${'<i></i>'.repeat(Math.min(n, 3))}</span>` : '<span></span>');
       return `${reds('home') || reds('away') ? `<span class="mh-redrow">${mark(reds('home'))}${mark(reds('away'))}</span>` : ''}<strong class="mh-score${live ? ' is-live' : ''}"><b>${sc.home}</b><i>–</i><b>${sc.away}</b></strong>
-        <span class="mh-sub${live ? ' is-live' : ''}">${live ? `LIVE ${liveMinute(fx, season, now) ?? ''}′` : 'Full time'}</span>`;
+        <span class="mh-sub${live ? ' is-live' : ''}">${live ? ({ pre: 'Pre-match', half: 'Half-time', end: 'Full time' }[liveShow(fx, season, now)?.kind] || `LIVE ${liveMinute(fx, season, now) ?? ''}′`) : 'Full time'}</span>`;
     }
     if (st === 'postponed') return '<strong class="mh-ko">Postponed</strong>';
     const k = kickoff(fx);

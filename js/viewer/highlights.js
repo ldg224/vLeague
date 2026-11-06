@@ -493,7 +493,7 @@ export class HighlightsRenderer {
     c.restore();
     const k0 = kickoff(this.fx || {});
     const when = k0 ? k0.toLocaleString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' }) : '';
-    this.text(`WEEK ${this.fx?.week ?? ''}${when ? '  ·  ' + when.toUpperCase() : ''}`, W / 2, H - 90, { size: 30, weight: 800, align: 'center', spacing: 4, alpha: easeOut((t - 0.8) / 0.6) });
+    this.text(`${[this.look().big, this.look().small].filter(Boolean).join('  ·  ').toUpperCase()}${when ? '  ·  ' + when.toUpperCase() : ''}`, W / 2, H - 90, { size: 30, weight: 800, align: 'center', spacing: 4, alpha: easeOut((t - 0.8) / 0.6) });
   }
 
   stripes(t, alpha) {

@@ -59,7 +59,7 @@ export async function loadSeason() {
   const lookOf = f => f.look || windowLook.get(f.window_id) || rounds.get(f.week)?.look || 'classic';   // the match's own look, else its window's, else its round's (1.17)
   return {
     looks, rounds: Object.fromEntries([...labels].map(([w, l]) => [w, { label: l.label, short: l.short, code: l.code, numbered: l.numbered, no: l.no, name: l.name, ...(rounds.get(w)?.kind === 'preseason' ? { preseason: true } : {}) }])),
-    season: 1, league: 'vLeague', live_minutes: 45, points: { win: 3, draw: 1, loss: 0 }, news: [], players,
+    season: 1, league: 'vLeague', live_minutes: 60, points: { win: 3, draw: 1, loss: 0 }, news: [], players,
     teams: cl.data.map(x => ({ code: x.code, name: x.name, short_name: x.short_name, colour: x.colour || '#475569', manager: x.manager_name || '',
       ...(x.status === 'withdrawn' || x.status === 'pending' ? { withdrawn: true } : {}) })),
     fixtures: fx.data.map(f => ({ id: f.id, week: f.week, ...(f.week === 99 ? { test: true } : {}), look: lookOf(f), round: labels.get(f.week).label, ...(rounds.get(f.week)?.counts_for_ladder === false || rounds.get(f.week)?.kind === 'preseason' ? { exhibition: true } : {}), ...(rounds.get(f.week)?.kind === 'preseason' ? { preseason: true } : {}), ...(labels.get(f.week).name ? { round_name: labels.get(f.week).name } : {}), home: f.home, away: f.away, ...(f.starts_at ? melbParts(f.starts_at) : {}),
@@ -89,25 +89,47 @@ export function status(fx, s, now = new Date()) {
   return 'ft';
 }
 
-// While live, the match plays out over live_minutes at one steady rate, so the speed never changes ahead of a goal or card and
-// gives nothing away. Cached per fixture and window.
+// A live match fills a one-hour slot (S-34): 45 minutes of football and 15 of matchday show. The football runs at one steady rate whatever the
+// result, so the speed gives nothing away. The show holds the match clock still: the pre-match show, half-time and a restart after each goal, with what
+// is left of the 15 minutes going to the full-time show. Seconds are for a 60-minute slot, and scale with it. KEEP live_minutes IN STEP with stakes_match_over.
+const SHOW = { football: 2700, pre: 270, half: 120, restart: 40, restartAfter: 22, endMin: 120 };
 function warp(fx, s) {
-  const key = (s.live_minutes || 10) + ':' + fx.result.duration_t;
+  const goals = fx.result.goals || [], key = (s.live_minutes || 10) + ':' + fx.result.duration_t + ':' + goals.length;
   if (fx._warp?.key === key) return fx._warp;
-  const periods = fx.result.periods || [], t0 = periods.length ? periods[0].start_t : 0, t1 = fx.result.duration_t, B = (s.live_minutes || 10) * 60;
-  return fx._warp = { key, B, segs: [{ s0: t0, s1: t1, w0: 0, w1: B, r: (t1 - t0) / B }] };
+  const periods = fx.result.periods || [], t0 = periods.length ? periods[0].start_t : 0, t1 = fx.result.duration_t, B = (s.live_minutes || 10) * 60, k = B / 3600;
+  const r = (t1 - t0) / (SHOW.football * k) || 1, spare = (3600 - SHOW.football - SHOW.pre - SHOW.half - SHOW.endMin) * k;
+  const restart = goals.length ? Math.min(SHOW.restart * k, spare / goals.length) : 0;
+  const endOfPeriod = t => periods.find(p => p.end_t >= t)?.end_t ?? t1;
+  const holds = [{ t: t0, d: SHOW.pre * k, kind: 'pre' }];
+  if (periods.length > 1) holds.push({ t: periods[0].end_t, d: SHOW.half * k, kind: 'half' });
+  for (const g of goals) if (g.t != null) holds.push({ t: Math.min(g.t + SHOW.restartAfter, endOfPeriod(g.t), t1), d: restart, kind: 'goal', goal: g });
+  holds.sort((a, b) => a.t - b.t);
+  const segs = [];
+  let w = 0, at = t0;
+  const run = to => { if (to > at) { const w1 = w + (to - at) / r; segs.push({ s0: at, s1: to, w0: w, w1, r }); w = w1; at = to; } };
+  for (const h of holds) { run(h.t); segs.push({ s0: h.t, s1: h.t, w0: w, w1: w + h.d, r: 0, hold: h }); w += h.d; }
+  run(t1);
+  segs.push({ s0: t1, s1: t1, w0: w, w1: Math.max(B, w), r: 0, hold: { kind: 'end' } });
+  return fx._warp = { key, B, r, segs };
 }
+const liveSeg = (W, fx, now) => {
+  const w = Math.min(W.B, Math.max(0, (now - kickoff(fx)) / 1000));
+  return { w, g: W.segs.find(g => w <= g.w1) || W.segs[W.segs.length - 1] };
+};
 // Seconds into the live window -> match-file time.
 export function liveSimTime(fx, s, now = new Date()) {
-  const W = warp(fx, s), w = Math.min(W.B, Math.max(0, (now - kickoff(fx)) / 1000));
-  const g = W.segs.find(g => w <= g.w1) || W.segs[W.segs.length - 1];
+  const { w, g } = liveSeg(warp(fx, s), fx, now);
   return g.s0 + (w - g.w0) * g.r;
 }
-// How fast the picture must run at match-file time t to stay on the live clock.
-export function liveSpeed(fx, s, t) {
-  const W = warp(fx, s);
-  if (t == null) t = liveSimTime(fx, s);
-  return (W.segs.find(g => t <= g.s1) || W.segs[W.segs.length - 1]).r;
+// What the show is doing right now, or null while the football is on: { kind: 'pre' | 'half' | 'goal' | 'end', local (seconds in), dur, goal }.
+export function liveShow(fx, s, now = new Date()) {
+  if (status(fx, s, now) !== 'live') return null;
+  const { w, g } = liveSeg(warp(fx, s), fx, now);
+  return g.hold ? { ...g.hold, local: w - g.w0, dur: g.w1 - g.w0 } : null;
+}
+// How fast the picture runs to stay with the football (someone who has rewound watches the football without the show).
+export function liveSpeed(fx, s) {
+  return warp(fx, s).r;
 }
 // The match clock at match-file time t ("37:12"), and the added time announced once the 45 minutes are up (else 0).
 export function clockAt(periods, t) {

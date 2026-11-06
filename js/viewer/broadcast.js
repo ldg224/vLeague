@@ -12,6 +12,7 @@
 // `markers` lists goals, cards, half-time and full-time for a seek bar.
 
 import { HighlightsRenderer, RED_AT, SECOND_EXTRA, W, H, makeCam, makeCamAt, clamp, lerp, easeOut, easeInOut, seg01, lastName, LIME, DARK } from './highlights.js';
+import { drawShow } from './matchday-show.js';
 
 const REF_DT = 0.2;        // referee path sample step (sim seconds)
 const CAM_DT = 0.1;        // camera path sample step
@@ -320,6 +321,14 @@ export class BroadcastRenderer extends HighlightsRenderer {
     this.drawScene(cam, ts);
     if (sh?.kind === 'refcam') this.drawRefCamOverlay(t - sh.from);
     this.overlays(t, sh);
+    return this.cv;
+  }
+
+  // The matchday show on the live broadcast (js/viewer/matchday-show.js).
+  showFrame(show, t) {
+    this.c.setTransform(this.scale, 0, 0, this.scale, 0, 0);
+    this.c.clearRect(0, 0, W, H);
+    drawShow(this, show, t);
     return this.cv;
   }
 
