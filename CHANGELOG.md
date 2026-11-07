@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.34.2 (2026-11-08)
+
+Headlines: Smoother match video, with fewer freezes
+
+**Fixed (B-36):** the match video froze for a moment every so often, often in the build-up to a goal or foul. It was making a lot of throwaway memory each frame, and the browser stopped to clear it up. It now makes about a third as much, so these pauses are far rarer and shorter.
+**Fixed (B-36):** the video is lighter to draw: crests are drawn once instead of every frame, advertising boards out of shot are skipped, and the pitch markings, stands and goals are worked out once. The picture is capped at 60 frames a second, or 30 on a device that can't keep up.
+**Changed (B-36):** the video's quality now follows how smoothly it is really playing, and each device remembers the quality it managed last time. If the browser closed during a match, the next match starts at a lower quality and climbs back up if it plays smoothly. If Chrome's graphics fail, the video carries on with a simpler picture instead of breaking.
+**Changed:** the match controls update a few times a second instead of every frame, and the header's moving background holds still while the video plays.
+Database change: none.
+
 ## 1.34.1 (2026-11-07)
 
 Headlines: The scoreboard wears each team's kit for the match
