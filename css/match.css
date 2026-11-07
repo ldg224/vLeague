@@ -182,4 +182,4 @@ canvas.lg-prop { filter: none; }
 #mh-player .ctl.live.behind { background: var(--res-l); color: #fff; }
 
 /* While a match plays, the page's slow background animations stand still: they blend over the whole page and made the video stutter. Paused, not removed, so nothing jumps. */
-.mp-watching .lg::before, .mp-watching .lg-card, .mp-watching .lg-card::before, .mp-watching .lg-tabs::before, .mp-watching .lg-backbar::before { animation-play-state: paused !important; }
+.mp-watching .mh-band, .mp-watching .lg::before, .mp-watching .lg-card,.mp-watching .lg-card::before, .mp-watching .lg-tabs::before, .mp-watching .lg-backbar::before { animation-play-state: paused !important; }

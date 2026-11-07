@@ -40,10 +40,11 @@ const lastName = n => String(n || '').split(' ').slice(-1)[0];
 // Catmull-Rom through four samples (k = 0..1 between the middle two): smooth paths from frames written five times a second.
 const cr = (p0, p1, p2, p3, k) => 0.5 * (2 * p1 + (p2 - p0) * k + (2 * p0 - 5 * p1 + 4 * p2 - p3) * k * k + (3 * p1 - p0 - 3 * p2 + p3) * k * k * k);
 // Is the ball's path through these steps one smooth movement (no kick, bounce or deflection in the middle)?
-const smoothSteps = (u, v) => {
-  const lu = Math.hypot(u[0], u[1], u[2]), lv = Math.hypot(v[0], v[1], v[2]);
+const smoothSteps = (p, q, s) => {   // three frames in a row
+  const ux = q[1] - p[1], uy = q[2] - p[2], uz = q[3] - p[3], vx = s[1] - q[1], vy = s[2] - q[2], vz = s[3] - q[3];
+  const lu = Math.sqrt(ux * ux + uy * uy + uz * uz), lv = Math.sqrt(vx * vx + vy * vy + vz * vz);
   if (lu < 8 || lv < 8) return true;
-  const dot = (u[0] * v[0] + u[1] * v[1] + u[2] * v[2]) / (lu * lv), r = lv / lu;
+  const dot = (ux * vx + uy * vy + uz * vz) / (lu * lv), r = lv / lu;
   return dot > 0.8 && r > 0.4 && r < 2.5;
 };
 
@@ -97,8 +98,8 @@ class Frames {
     const k = b[0] > a[0] && !cross ? clamp((t * 10 - a[0]) / (b[0] - a[0]), 0, 1) : 0;
     let x = (a[1] + (b[1] - a[1]) * k) / sc, y = (a[2] + (b[2] - a[2]) * k) / sc, z = (a[3] + (b[3] - a[3]) * k) / sc;
     if (a[5] && b[5] && !cross && i > 0 && i + 2 < n && f[i - 1][5] && f[i + 2][5] && this.sameHalf(i)) {
-      const a0 = f[i - 1], b2 = f[i + 2], v = (p, q) => [q[1] - p[1], q[2] - p[2], q[3] - p[3]];
-      if (smoothSteps(v(a0, a), v(a, b)) && smoothSteps(v(a, b), v(b, b2))) {
+      const a0 = f[i - 1], b2 = f[i + 2];
+      if (smoothSteps(a0, a, b) && smoothSteps(a, b, b2)) {
         x = cr(a0[1], a[1], b[1], b2[1], k) / sc; y = cr(a0[2], a[2], b[2], b2[2], k) / sc; z = Math.max(0, cr(a0[3], a[3], b[3], b2[3], k) / sc);
       }
     }
@@ -156,9 +157,37 @@ function makeCamAt(C, T, fovDeg) {
     return [v0 * r[0] + v1 * r[1] + v2 * r[2], v0 * u[0] + v1 * u[1] + v2 * u[2], v0 * f[0] + v1 * f[1] + v2 * f[2]];
   };
   const proj = ([xc, yc, zc]) => [W / 2 + focal * xc / zc, H / 2 - focal * yc / zc, focal / zc];
+  // B-36: the calls a frame makes thousands of times work in plain numbers. Making small arrays for each point came to about 15 MB of rubbish a second, and clearing it up
+  // froze the picture every so often.
+  const [C0, C1, C2] = C, [r0, r1] = r, [u0, u1, u2] = u, [f0, f1, f2] = f, cx = W / 2, cy = H / 2;
   return {
     focal, C,
-    p(x, y, z = 0) { const q = toCam(x, y, z); return q[2] < NEAR ? null : proj(q); },
+    p(x, y, z = 0) {
+      const a = x - C0, b = y - C1, d = z - C2, zc = a * f0 + b * f1 + d * f2;
+      if (zc < NEAR) return null;
+      const s = focal / zc;
+      return [cx + s * (a * r0 + b * r1), cy - s * (a * u0 + b * u1 + d * u2), s];
+    },
+    // Adds the line a to b to the context's path, clipped against the near plane.
+    addSeg(c, a, b) {
+      const a0 = a[0] - C0, a1 = a[1] - C1, a2 = (a.length > 2 ? a[2] : 0) - C2, b0 = b[0] - C0, b1 = b[1] - C1, b2 = (b.length > 2 ? b[2] : 0) - C2;
+      let ax = a0 * r0 + a1 * r1, ay = a0 * u0 + a1 * u1 + a2 * u2, az = a0 * f0 + a1 * f1 + a2 * f2, bx = b0 * r0 + b1 * r1, by = b0 * u0 + b1 * u1 + b2 * u2, bz = b0 * f0 + b1 * f1 + b2 * f2;
+      if (az < NEAR && bz < NEAR) return;
+      if (az < NEAR) { const t = (NEAR - az) / (bz - az); ax += (bx - ax) * t; ay += (by - ay) * t; az = NEAR; }
+      else if (bz < NEAR) { const t = (NEAR - bz) / (az - bz); bx += (ax - bx) * t; by += (ay - by) * t; bz = NEAR; }
+      const sa = focal / az, sb = focal / bz;
+      c.moveTo(cx + sa * ax, cy - sa * ay); c.lineTo(cx + sb * bx, cy - sb * by);
+    },
+    // Adds a polygon to the context's path. False (nothing added) if any corner is behind the camera: poly() clips that case.
+    addPoly(c, pts) {
+      const n = pts.length;
+      for (let i = 0; i < n; i++) { const q = pts[i]; if ((q[0] - C0) * f0 + (q[1] - C1) * f1 + ((q.length > 2 ? q[2] : 0) - C2) * f2 < NEAR) return false; }
+      for (let i = 0; i < n; i++) {
+        const q = pts[i], a = q[0] - C0, b = q[1] - C1, d = (q.length > 2 ? q[2] : 0) - C2, s = focal / (a * f0 + b * f1 + d * f2), sx = cx + s * (a * r0 + b * r1), sy = cy - s * (a * u0 + b * u1 + d * u2);
+        if (i) c.lineTo(sx, sy); else c.moveTo(sx, sy);
+      }
+      return true;
+    },
     // The way a player at (x, y) facing (hx, hy) turns to this camera: 0 = his front to the camera, PI = his back, PI/2 = he faces the right of the screen.
     turn(x, y, hx, hy) { const a = toCam(x, y, 0), b = toCam(x + hx, y + hy, 0); return Math.atan2(b[0] - a[0], -(b[2] - a[2])); },
     // Polygon clipped against the near plane (so shapes partly behind the camera still draw).
@@ -181,6 +210,34 @@ function makeCamAt(C, T, fovDeg) {
     },
   };
 }
+
+// ---------------------------------------------------------------- what never moves
+// The pitch's markings, stands and goals in metres, worked out once. (They were made again for every frame.)
+const arcPts = (cx, cy, r, a0, a1, n = 40) => { const out = []; for (let i = 0; i <= n; i++) { const a = a0 + (a1 - a0) * i / n; out.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]); } return out; };
+const GRASS = [[-7, -6], [112, -6], [112, 74], [-7, 74]];
+const MOW = Array.from({ length: 12 }, (_, i) => [[i * 8.75, 0], [(i + 1) * 8.75, 0], [(i + 1) * 8.75, 68], [i * 8.75, 68]]);
+const TOUCHLINES = [[0, 0], [105, 0], [105, 68], [0, 68]], HALFWAY = [[52.5, 0], [52.5, 68]], CENTRE_CIRCLE = arcPts(52.5, 34, 9.15, 0, Math.PI * 2, 60);
+const spotRing = (x, y) => ({ x, y, ring: arcPts(x, y, 0.3, 0, Math.PI * 2, 18) });
+const CENTRE_SPOT = spotRing(52.5, 34), ARC_A = Math.acos(5.5 / 9.15);
+const BOXES = [[0, 1], [105, -1]].map(([x0, s]) => ({
+  big: [[x0, 13.84], [x0 + s * 16.5, 13.84], [x0 + s * 16.5, 54.16], [x0, 54.16]],
+  small: [[x0, 24.84], [x0 + s * 5.5, 24.84], [x0 + s * 5.5, 43.16], [x0, 43.16]],
+  arc: arcPts(x0 + s * 11, 34, 9.15, s > 0 ? -ARC_A : Math.PI - ARC_A, s > 0 ? ARC_A : Math.PI + ARC_A, 24),
+  spot: spotRing(x0 + s * 11, 34),
+}));
+const STANDS = [
+  [[-12, -6, 0], [117, -6, 0], [117, -26, 14], [-12, -26, 14]],     // far side
+  [[-12, 74, 0], [117, 74, 0], [117, 94, 14], [-12, 94, 14]],        // near side
+  [[-7, -12, 0], [-7, 80, 0], [-27, 80, 12], [-27, -12, 12]],        // left end
+  [[112, -12, 0], [112, 80, 0], [132, 80, 12], [132, -12, 12]],      // right end
+];
+const goalLines = gx => {
+  const s = gx === 0 ? -1 : 1, d = 2, net = [];
+  for (let i = 0; i <= 6; i++) { const y = GOAL_Y1 + (GOAL_Y2 - GOAL_Y1) * i / 6; net.push([[gx, y, GOAL_H], [gx + s * d, y, GOAL_H * 0.7], [gx + s * d, y, 0]]); }
+  for (let i = 0; i <= 4; i++) { const z = GOAL_H * i / 4; net.push([[gx + s * d, GOAL_Y1, z * 0.7], [gx + s * d, GOAL_Y2, z * 0.7]]); }
+  return { net, frame: [[gx, GOAL_Y1, 0], [gx, GOAL_Y1, GOAL_H], [gx, GOAL_Y2, GOAL_H], [gx, GOAL_Y2, 0]] };
+};
+const GOALS = new Map([[0, goalLines(0)], [105, goalLines(105)]]);
 
 // ---------------------------------------------------------------- highlight selection
 
@@ -989,46 +1046,46 @@ export class HighlightsRenderer {
   }
 
   quad(cam, pts, fill) {
-    const P = cam.poly(pts); if (P.length < 3) return;
-    const c = this.c; c.beginPath(); c.moveTo(P[0][0], P[0][1]); for (let i = 1; i < P.length; i++) c.lineTo(P[i][0], P[i][1]); c.closePath(); c.fillStyle = fill; c.fill();
+    const c = this.c; c.beginPath();
+    if (!cam.addPoly(c, pts)) {   // part of it is behind the camera: clip it
+      const P = cam.poly(pts); if (P.length < 3) return;
+      c.moveTo(P[0][0], P[0][1]); for (let i = 1; i < P.length; i++) c.lineTo(P[i][0], P[i][1]);
+    }
+    c.closePath(); c.fillStyle = fill; c.fill();
   }
   line(cam, pts, width = 3, colour = 'rgba(255,255,255,0.85)', close = false) {
-    const c = this.c; c.beginPath();
-    const list = close ? [...pts, pts[0]] : pts;
-    for (let i = 0; i + 1 < list.length; i++) {
-      const s = cam.seg(list[i], list[i + 1]); if (!s) continue;
-      c.moveTo(s[0][0], s[0][1]); c.lineTo(s[1][0], s[1][1]);
-    }
+    const c = this.c, n = pts.length; c.beginPath();
+    for (let i = 0; i + 1 < n; i++) cam.addSeg(c, pts[i], pts[i + 1]);
+    if (close) cam.addSeg(c, pts[n - 1], pts[0]);
     c.lineWidth = width; c.lineCap = 'round'; c.strokeStyle = colour; c.stroke();
   }
-  arc(cx, cy, r, a0, a1, n = 40) { const out = []; for (let i = 0; i <= n; i++) { const a = a0 + (a1 - a0) * i / n; out.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]); } return out; }
 
   // A penalty or centre spot, painted on the grass: it grows with the camera, and stays a visible dot when the camera is far away (B-34).
-  spot(cam, x, y) {
+  spot(cam, { x, y, ring }) {
     const c = this.c, p = cam.p(x, y); if (!p) return;
-    this.quad(cam, this.arc(x, y, 0.3, 0, Math.PI * 2, 18), 'rgba(255,255,255,.85)');
+    this.quad(cam, ring, 'rgba(255,255,255,.85)');
     c.fillStyle = 'rgba(255,255,255,.85)'; c.beginPath(); c.arc(p[0], p[1], 3, 0, Math.PI * 2); c.fill();
   }
 
   drawPitch(cam) {
     const c = this.c;
-    const sky = c.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, '#05070a'); sky.addColorStop(1, '#0b1410');
-    c.fillStyle = sky; c.fillRect(0, 0, W, H);
+    if (!this.sky) { this.sky = c.createLinearGradient(0, 0, 0, H); this.sky.addColorStop(0, '#05070a'); this.sky.addColorStop(1, '#0b1410'); }
+    c.fillStyle = this.sky; c.fillRect(0, 0, W, H);
     this.drawStands(cam);
-    this.quad(cam, [[-7, -6], [112, -6], [112, 74], [-7, 74]], '#1d5a2a');
-    for (let i = 0; i < 12; i++) this.quad(cam, [[i * 8.75, 0], [(i + 1) * 8.75, 0], [(i + 1) * 8.75, 68], [i * 8.75, 68]], i % 2 ? '#2d7a3b' : '#327f40');
+    this.quad(cam, GRASS, '#1d5a2a');
+    for (let i = 0; i < 12; i++) this.quad(cam, MOW[i], i % 2 ? '#2d7a3b' : '#327f40');
     const lw = 3;
-    this.line(cam, [[0, 0], [105, 0], [105, 68], [0, 68]], lw, undefined, true);
-    this.line(cam, [[52.5, 0], [52.5, 68]], lw);
-    this.line(cam, this.arc(52.5, 34, 9.15, 0, Math.PI * 2, 60), lw);
-    for (const [x0, s] of [[0, 1], [105, -1]]) {
-      this.line(cam, [[x0, 13.84], [x0 + s * 16.5, 13.84], [x0 + s * 16.5, 54.16], [x0, 54.16]], lw);
-      this.line(cam, [[x0, 24.84], [x0 + s * 5.5, 24.84], [x0 + s * 5.5, 43.16], [x0, 43.16]], lw);
-      const a = Math.acos(5.5 / 9.15);
-      this.line(cam, this.arc(x0 + s * 11, 34, 9.15, s > 0 ? -a : Math.PI - a, s > 0 ? a : Math.PI + a, 24), lw);
-      this.spot(cam, x0 + s * 11, 34);
+    this.line(cam, TOUCHLINES, lw, undefined, true);
+    this.line(cam, HALFWAY, lw);
+    this.line(cam, CENTRE_CIRCLE, lw);
+    for (let i = 0; i < 2; i++) {
+      const b = BOXES[i];
+      this.line(cam, b.big, lw);
+      this.line(cam, b.small, lw);
+      this.line(cam, b.arc, lw);
+      this.spot(cam, b.spot);
     }
-    this.spot(cam, 52.5, 34);
+    this.spot(cam, CENTRE_SPOT);
     this.drawBoards(cam);
   }
 
@@ -1044,6 +1101,9 @@ export class HighlightsRenderer {
   // One panel's artwork, drawn in thin vertical strips; each strip is an affine map of the image
   // onto the projected board, which together give the perspective.
   boardPanel(cam, xa, xb, y, z, label, colour, back = DARK) {
+    // A panel off the side of the picture isn't drawn: the boards were a quarter of the cost of a frame, and about half of them are out of shot on the usual camera (B-36).
+    const ends = [cam.p(xa, y, z), cam.p(xb, y, z), cam.p(xa, y, 0), cam.p(xb, y, 0)];
+    if (ends.every(Boolean) && (ends.every(q => q[0] < -40) || ends.every(q => q[0] > W + 40))) return;
     const art = this.boardArt(label, colour, (xb - xa) / z, back), c = this.c, N = 14, sw = art.width / N;
     for (let k = 0; k < N; k++) {
       const x = xa + (xb - xa) * k / N, x2 = xa + (xb - xa) * (k + 1) / N;
@@ -1080,13 +1140,7 @@ export class HighlightsRenderer {
       for (let i = 0; i < 260; i++) { g.fillStyle = cols[(Math.random() * cols.length) | 0]; g.globalAlpha = 0.35 + Math.random() * 0.5; g.fillRect(Math.random() * 64, Math.random() * 64, 2, 2); }
       this.crowd = c.createPattern(s, 'repeat');
     }
-    const faces = [
-      [[-12, -6, 0], [117, -6, 0], [117, -26, 14], [-12, -26, 14]],     // far side
-      [[-12, 74, 0], [117, 74, 0], [117, 94, 14], [-12, 94, 14]],        // near side
-      [[-7, -12, 0], [-7, 80, 0], [-27, 80, 12], [-27, -12, 12]],        // left end
-      [[112, -12, 0], [112, 80, 0], [132, 80, 12], [132, -12, 12]],      // right end
-    ];
-    for (const f of faces) {
+    for (const f of STANDS) {
       const P = cam.poly(f);
       if (P.length < 3) continue;
       c.beginPath(); c.moveTo(P[0][0], P[0][1]); for (let i = 1; i < P.length; i++) c.lineTo(P[i][0], P[i][1]); c.closePath();
@@ -1098,11 +1152,9 @@ export class HighlightsRenderer {
   }
 
   drawGoal(cam, gx) {
-    const s = gx === 0 ? -1 : 1, d = 2;
-    const net = 'rgba(255,255,255,0.35)';
-    for (let i = 0; i <= 6; i++) { const y = GOAL_Y1 + (GOAL_Y2 - GOAL_Y1) * i / 6; this.line(cam, [[gx, y, GOAL_H], [gx + s * d, y, GOAL_H * 0.7], [gx + s * d, y, 0]], 1, net); }
-    for (let i = 0; i <= 4; i++) { const z = GOAL_H * i / 4; this.line(cam, [[gx + s * d, GOAL_Y1, z * 0.7], [gx + s * d, GOAL_Y2, z * 0.7]], 1, net); }
-    this.line(cam, [[gx, GOAL_Y1, 0], [gx, GOAL_Y1, GOAL_H], [gx, GOAL_Y2, GOAL_H], [gx, GOAL_Y2, 0]], 5, '#ffffff');
+    const g = GOALS.get(gx);
+    for (let i = 0; i < g.net.length; i++) this.line(cam, g.net[i], 1, 'rgba(255,255,255,0.35)');
+    this.line(cam, g.frame, 5, '#ffffff');
   }
 
   // The shirt number on a player's disc: the league's real number, or for a test match's made-up players the last two digits of the id.
@@ -1162,8 +1214,7 @@ export class HighlightsRenderer {
     const theta = cam.turn(it.x, it.y, fx, fy), turn = turnIndex(theta);
     // The shirt as the kit editor draws it (pattern, crest, logo or whole-kit design), turned to the camera, with this player's own print:
     // the small chest number at the front, his surname and big number at the back.
-    c.save(); c.beginPath(); c.roundRect(bx - bw / 2, top + bh * 0.28, bw, bh * 0.72, bw / 2); c.clip();
-    c.drawImage(this.bodyOf(it, kit, col, turn), bx - bw / 2, top + bh * 0.28, bw, bh * 0.72); c.restore();
+    c.drawImage(this.bodyOf(it, kit, col, turn), bx - bw / 2, top + bh * 0.28, bw, bh * 0.72);   // already cut to shape (bodyOf)
     this.drawHead(bx, top + bh * 0.16, bw * 0.34, TURNS[turn]);
     if (holder) { c.lineWidth = 3; c.strokeStyle = '#fff'; c.beginPath(); c.ellipse(p[0], p[1], r * 1.5, r * 0.6, 0, 0, Math.PI * 2); c.stroke(); }
     const pl = this.d.players[it.i];
@@ -1187,6 +1238,8 @@ export class HighlightsRenderer {
       b = document.createElement('canvas'); b.width = src.width; b.height = src.height;
       const g = b.getContext('2d'); g.drawImage(src, 0, 0);
       drawPrint(g, { name: lastName(pl.name).toUpperCase(), number: this.shirtNo(pl.id), ink: kit?.ink || onColour(kit?.main || col) }, 0, 0, b.width, b.height, TURNS[turn]);
+      // The capsule the body is drawn in, cut once here: cutting it for 22 players every frame is slow to paint.
+      g.globalCompositeOperation = 'destination-in'; g.beginPath(); g.roundRect(0, 0, b.width, b.height, b.width / 2); g.fill();
       if (cache.size > 900) cache.clear();
       cache.set(key, b);
     }
@@ -1477,13 +1530,23 @@ function shade(hex, k) {
 
 // ---------------------------------------------------------------- assets
 
+// A crest drawn once into a canvas (longest side 512 px, its own shape kept). The score bug and the boards draw these every frame: an SVG was
+// rasterised again each time and a PNG could be thrown out of the browser's decoded-image cache and decoded again mid-match (B-36).
+function bake(img, side = 512) {
+  if (!img) return null;
+  const w = img.naturalWidth || img.width || side, h = img.naturalHeight || img.height || side, s = side / Math.max(w, h);
+  const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(w * s)); cv.height = Math.max(1, Math.round(h * s));
+  try { cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); } catch { return img; }
+  return cv;
+}
+
 export async function loadAssets(teams) {
   const logos = {}, logosAlt = {};
   await Promise.all(teams.map(async t => {
-    logos[t.code] = await loadImg(logoPath(t.code));
-    logosAlt[t.code] = await loadImg(logoPath(t.code, true));
+    logos[t.code] = bake(await loadImg(logoPath(t.code)));
+    logosAlt[t.code] = bake(await loadImg(logoPath(t.code, true)));
   }));
-  const [league, title] = await Promise.all([loadImg('assets/brand/crest.svg'), loadImg('assets/img/stadium-dusk.jpg')]);
+  const [league, title] = await Promise.all([loadImg('assets/brand/crest.svg').then(i => bake(i)), loadImg('assets/img/stadium-dusk.jpg')]);
   await Promise.all(['500 40px Oswald', '700 40px Oswald', '700 40px Figtree'].map(f => document.fonts.load(f).catch(() => {})));
   return { logos, logosAlt, league, title };
 }

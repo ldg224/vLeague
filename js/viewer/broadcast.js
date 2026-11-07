@@ -350,8 +350,8 @@ export class BroadcastRenderer extends HighlightsRenderer {
     // Ball trail: where the ball was over the last 0.3s (worked out from t, so it's the same on every call).
     this.trail = [];
     if (st.inPlay) for (let i = 7; i >= 1; i--) {
-      const q = this.fr.at(t - i * 0.04); if (!q.inPlay) continue;
-      const p = cam.p(q.ball[0], q.ball[1], q.ball[2] + 0.11); if (p) this.trail.push(p);
+      const q = this.fr.ballState(t - i * 0.04); if (q.dead) continue;   // just the ball: asking for the whole match state made all 22 players again, seven times a frame
+      const p = cam.p(q.x, q.y, q.z + 0.11); if (p) this.trail.push(p);
     }
     const bd = cam.p(st.ball[0], st.ball[1])?.[2] ?? 0;
     let ballDrawn = false;

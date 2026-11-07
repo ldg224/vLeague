@@ -19,6 +19,12 @@ function startScale() {
   const need = ((box?.width || innerWidth) * Math.min(devicePixelRatio || 1, 2)) / W;
   return LADDER.filter(s => s >= Math.min(1, need)).pop() ?? 1;
 }
+// What this device managed last time, so a weak one starts at a picture it can play (B-36). `open` is set while a match plays and cleared when the page closes:
+// still set next time means the browser died or was killed mid-match, so it starts low to be safe. Either way the picture climbs back if frames are fast.
+const QKEY = 'vleague-video-quality', SAFE_SCALE = 0.58;
+const recall = () => { try { return JSON.parse(localStorage.getItem(QKEY) || '{}') || {}; } catch { return {}; } };
+const remember = v => { try { localStorage.setItem(QKEY, JSON.stringify({ ...recall(), ...v })); } catch { /* private window: it just isn't kept */ } };
+const FRAME_60 = 1000 / 60, FRAME_30 = 1000 / 30, UI_MS = 200;   // the picture is capped at 60 frames a second (30 on a device that can't keep up); the controls follow it 5 times a second
 
 export function playerCard(st) {
   const tabs = st === 'ft' ? [['highlights', 'Highlights'], ['broadcast', 'Full match'], ['tactical', 'Tactical']] : [['broadcast', 'Broadcast'], ['tactical', 'Tactical']];
@@ -72,7 +78,11 @@ export class MatchPlayer {
     this.el.classList.toggle('mp-live', this.st === 'live');   // a live match can be rewound, paused and jumped back to live, but has no speed control
     this.cv = this.$('#mp-canvas'); this.g = this.cv.getContext('2d');
     this.view = null; this.r = {}; this.playing = false; this.t = 0; this.speed = 1;
-    this.scale = this.bestScale = startScale(); this.cost = []; this.slow = this.fast = 0; this.holdUntil = performance.now() + 3000; this.dirty = true; this.exporting = false;
+    const kept = recall();
+    this.bestScale = startScale();
+    this.scale = Math.min(this.bestScale, kept.scale || 1, kept.open ? SAFE_SCALE : 1);
+    this.cost = []; this.gaps = []; this.fast = 0; this.minGap = FRAME_60; this.want = FRAME_60; this.trial = null; this.raisedAt = 0;
+    this.holdUntil = performance.now() + 3000; this.dirty = true; this.exporting = false;
     this.names = Object.fromEntries(this.data.players.map(p => [p.id, p.name]));
     this.wire();
     this.ready = this.load();
@@ -93,10 +103,11 @@ export class MatchPlayer {
     if (!this.hl) this.el.querySelector('[data-view="highlights"]')?.setAttribute('hidden', '');
     const first = [...this.el.querySelectorAll('[data-view]')].find(b => !b.hidden)?.dataset.view || 'tactical';
     this.show(first);
+    remember({ open: true });
     this._raf = requestAnimationFrame(ts => this.loop(ts));
   }
 
-  destroy() { cancelAnimationFrame(this._raf); this.tactical?.destroy(); this.ro?.disconnect(); if (this._keys) document.removeEventListener('keydown', this._keys); }
+  destroy() { cancelAnimationFrame(this._raf); clearTimeout(this._idle); this.tactical?.destroy(); this.ro?.disconnect(); this._off?.abort(); remember({ open: false }); }
 
   // ---------- renderers ----------
 
@@ -108,6 +119,11 @@ export class MatchPlayer {
     const r = new this.bc.BroadcastRenderer(this.data, opts);
     r.fxClock = () => performance.now() / 1000;   // the score bug's effects run on real time, whatever speed the match is playing at
     return (this.r[view] = r);
+  }
+  // The browser threw the picture away (its graphics process crashed or ran out of memory): carry on with much less to draw, here and next time.
+  contextLost() {
+    this.minGap = this.want = FRAME_30; this.trial = null; this.bestScale = Math.min(this.bestScale, SAFE_SCALE);
+    this.setQuality(Math.min(this.scale, 0.46));
   }
   range() {   // [min, max] of the current view's time
     if (this.view === 'highlights') return [0, this.renderer('highlights').duration];
@@ -152,7 +168,7 @@ export class MatchPlayer {
       kitArt: this.kitArt,
       onFrame: t => {
         if (this.view !== 'tactical' || !this.tactical) return;   // the first frame is drawn inside the constructor
-        this.t = t; if (this.st === "live") this.tactical.speed = liveSpeed(this.FX, this.S, t); this.syncUi();
+        this.t = t; if (this.st === "live") this.tactical.speed = liveSpeed(this.FX, this.S, t); this.tickUi();
         const recent = shown.filter(e => e.t <= t && t - e.t < 4).pop();
         cap.classList.toggle('show', !!recent);
         if (recent) cap.textContent = `${recent.minute}' ${label(recent)}`;
@@ -197,19 +213,30 @@ export class MatchPlayer {
     const sent = new Set(this.data.events.filter(e => e.type === 'card' && e.card === 'second_yellow').map(e => e.player));
     return this.data.events.filter(e => (e.type === 'goal' || e.type === 'card') && !(e.card === 'yellow' && sent.has(e.player))).map(e => ({ t: e.t, type: e.type, card: e.card === 'second_yellow' ? 'second_yellow' : e.card === 'red' ? 'red' : undefined, label: e.type === 'goal' ? `${e.minute}' ${this.names[e.scorer] || ''}` : `${e.minute}' ${this.names[e.player] || ''}` }));
   }
+  // The controls while the picture runs: a few times a second, not every frame.
+  tickUi() {
+    const now = performance.now();
+    if (now - (this._uiAt || 0) < UI_MS) return;
+    this._uiAt = now;
+    this.syncUi();
+  }
+  // Each part of the page is only touched when what it shows has changed (B-36: this ran every frame and rebuilt the big button's icon each time).
   syncUi() {
     this.drawMarks();
     const [a, b] = this.fullRange(), playing = this.view === 'tactical' ? this.tactical?.playing : this.playing;
-    this.$('#mp-play').textContent = playing ? 'Pause' : 'Play';
-    this.$('#mp-seek').value = this.t;
+    const text = (el, v) => { if (el.textContent !== v) el.textContent = v; };
+    text(this.$('#mp-play'), playing ? 'Pause' : 'Play');
+    const seek = this.$('#mp-seek');
+    seek.value = this.t;
     const extra = addedAt(this.data.periods, this.t);
-    this.$('#mp-time').textContent = this.view === 'highlights' ? `${mmss(this.t)} / ${mmss(b)}` : `${clockAt(this.data.periods, this.t)}${extra ? ` +${extra}` : ''}`;
-    const big = this.$('#mp-big');
-    big.hidden = playing || this.view === 'tactical';
-    big.innerHTML = this.view === 'highlights' && this.t >= b - 0.05 ? icon('rotate-cw') : icon('play');
+    text(this.$('#mp-time'), this.view === 'highlights' ? `${mmss(this.t)} / ${mmss(b)}` : `${clockAt(this.data.periods, this.t)}${extra ? ` +${extra}` : ''}`);
+    const big = this.$('#mp-big'), mark = this.view === 'highlights' && this.t >= b - 0.05 ? 'rotate-cw' : 'play', off = playing || this.view === 'tactical';
+    if (big.hidden !== off) big.hidden = off;
+    if (this._bigIcon !== mark) { this._bigIcon = mark; big.innerHTML = icon(mark); }
     const lv = this.$('#mp-live');
-    if (lv) { const behind = liveSimTime(this.FX, this.S) - this.t > 5; lv.classList.toggle('behind', behind); lv.textContent = behind ? '● Jump to live' : '● Live'; }
-    this.$('#mp-seek').style.setProperty('--pos', `${((this.t - a) / (b - a || 1)) * 100}%`);
+    if (lv) { const behind = liveSimTime(this.FX, this.S) - this.t > 5; lv.classList.toggle('behind', behind); text(lv, behind ? '● Jump to live' : '● Live'); }
+    const pos = `${(((this.t - a) / (b - a || 1)) * 100).toFixed(2)}%`;
+    if (this._seekPos !== pos) { this._seekPos = pos; seek.style.setProperty('--pos', pos); }
   }
 
   play() {
@@ -238,6 +265,11 @@ export class MatchPlayer {
   }
 
   wire() {
+    this._off = new AbortController();   // everything added outside the player goes when it does (a finished live match builds a new player)
+    const out = { signal: this._off.signal };
+    this.cv.addEventListener('contextlost', () => this.contextLost());
+    addEventListener('pagehide', () => remember({ open: false }), out);
+    addEventListener('pageshow', () => { if (this._raf) remember({ open: true }); }, out);
     this.el.addEventListener('click', e => {
       const v = e.target.closest('[data-view]');
       if (v) { this.pause(); return this.show(v.dataset.view); }
@@ -256,21 +288,20 @@ export class MatchPlayer {
     this.ro = new ResizeObserver(() => this.resize());
     this.ro.observe(this.$('#mp-stage'));
     const onFs = () => this.setFs(!!(document.fullscreenElement || document.webkitFullscreenElement));
-    document.addEventListener('fullscreenchange', onFs);
-    document.addEventListener('webkitfullscreenchange', onFs);
+    document.addEventListener('fullscreenchange', onFs, out);
+    document.addEventListener('webkitfullscreenchange', onFs, out);
     // Controls fade while playing full screen; any movement, touch or key brings them back.
     const scr = this.$('#mp-screen');
     scr.addEventListener('pointerdown', () => { this._tapWoke = this.fsWake(); }, { passive: true });
     for (const ev of ['pointermove', 'keydown']) scr.addEventListener(ev, () => this.fsWake(), { passive: true });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && this.fsFake) this.setFs(false); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && this.fsFake) this.setFs(false); }, out);
     // Keys (S-28): the left and right arrows go 10 seconds of video back and forward (more match time at a faster speed), F is full screen. Not while typing, or on a control that uses the keys itself.
-    this._keys = e => {
+    document.addEventListener('keydown', e => {
       if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented || e.target.closest?.('input, select, textarea, [contenteditable]')) return;
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); this.seek(this.t + (e.key === 'ArrowLeft' ? -10 : 10) * this.videoRate()); }
       else if (e.key === ' ' && !e.target.closest?.('button, a, summary')) { e.preventDefault(); (this.view === 'tactical' ? this.tactical?.playing : this.playing) ? this.pause() : this.play(); }
       else if (e.key === 'f' || e.key === 'F') { e.preventDefault(); this.fullscreen(); }
-    };
-    document.addEventListener('keydown', this._keys);
+    }, out);
   }
 
   // Full screen covers the picture and the controls (#mp-screen). Where the Fullscreen API
@@ -327,7 +358,9 @@ export class MatchPlayer {
 
   loop(ts) {
     this._raf = requestAnimationFrame(t => this.loop(t));
-    const dt = Math.min(0.25, ((ts - (this._last || ts)) / 1000)); this._last = ts;
+    // No more frames than the cap, however fast the screen (a 144 Hz monitor was drawing 144 whole pictures a second). A little slack, so a 60 Hz screen's own jitter doesn't drop frames.
+    if (this._last && ts - this._last < this.minGap - 3) return;
+    const gap = ts - (this._last || ts), dt = Math.min(0.25, gap / 1000); this._last = ts;
     if (this.view === 'tactical' || !this.hl) return;
     if (this.playing) {
       const [, b] = this.range();
@@ -346,26 +379,38 @@ export class MatchPlayer {
     const src = show ? r.showFrame(show, this.t) : r.frame(this.t);
     this.g.drawImage(src, 0, 0, this.cv.width, this.cv.height);
     const cost = performance.now() - t0;
-    this.adapt(cost);
-    this.syncUi();
+    this.adapt(cost, gap);
+    this.tickUi();
   }
-  // Quality follows how the frames are really coping. One hiccup (a garbage collection, a seek, a switch of view, a hidden tab) never
-  // counts: it takes a stretch of about half a second of slow frames to step down (two steps at once if they are very slow, so a weak
-  // computer reaches a picture it can play within a second or two), and three fast stretches to step back up, never above what the screen needs.
-  adapt(ms) {
-    if (!this.playing || document.hidden) { this.cost = []; return; }
-    if (performance.now() < this.holdUntil) return;
-    this.cost.push(ms);
+  // Quality follows how the frames are really coping. The time spent in frame() isn't enough: it only records the drawing, and the browser paints it afterwards (about 1 ms
+  // recorded against about 38 ms painted, B-36), so a struggling computer looked fine and never stepped down. The time between frames is the real measure.
+  // One hiccup (a memory clean-up, a seek, a switch of view, a hidden tab) never counts: it takes about half a second of slow frames to step down, and three fast stretches to
+  // step back up, never above what the screen needs. A step down that gains nothing means the frames were never the problem (the screen or Chrome's energy saver holds it at this rate):
+  // the picture goes back and that rate becomes the target. Near the bottom of the ladder it halves the frame rate before it blurs the picture any more.
+  adapt(ms, gap) {
+    if (!this.playing || document.hidden) { this.cost = []; this.gaps = []; return; }
+    if (performance.now() < this.holdUntil || gap > 250 || !gap) return;
+    this.cost.push(ms); this.gaps.push(gap);
     if (this.cost.length < 30) return;
-    const s = [...this.cost].sort((a, b) => a - b), p75 = s[Math.floor(s.length * 0.75)];
-    this.cost = [];
-    const i = Math.max(0, LADDER.findIndex(q => Math.abs(q - this.scale) < 1e-6));
-    if (p75 > 20 && i < LADDER.length - 1) { this.slow++; this.fast = 0; this.setQuality(LADDER[Math.min(LADDER.length - 1, i + (p75 > 40 ? 2 : 1))]); }
-    else if (p75 < 9 && i > 0 && LADDER[i - 1] <= this.bestScale + 1e-6) { this.fast++; this.slow = 0; if (this.fast >= 3) this.setQuality(LADDER[i - 1]); }
-    else this.slow = this.fast = 0;
+    const p75 = list => [...list].sort((a, b) => a - b)[Math.floor(list.length * 0.75)], js = p75(this.cost), g = p75(this.gaps);
+    this.cost = []; this.gaps = [];
+    if (this.trial) {
+      const t = this.trial; this.trial = null;
+      if (js <= 20 && g > t.gap * 0.9) { this.want = g; this.setQuality(t.from); return; }
+    }
+    const i = Math.max(0, LADDER.findIndex(q => Math.abs(q - this.scale) < 1e-6)), last = LADDER.length - 1, now = performance.now();
+    if (js > 20 || g > this.want * 1.6) {
+      this.fast = 0;
+      if (now - this.raisedAt < 6000 && i < last) { this.bestScale = LADDER[i + 1]; return this.setQuality(LADDER[i + 1]); }   // it can't hold the step it just climbed: stay below it this visit
+      if (i >= 3 && this.minGap < FRAME_30) { this.minGap = this.want = FRAME_30; this.holdUntil = now + 2000; return; }
+      if (i < last) { this.trial = { from: this.scale, gap: g }; this.setQuality(LADDER[Math.min(last, i + 2)]); }   // two steps halve what there is to paint, enough to show on a screen that only shows whole frames
+    } else if (js < 9 && g < this.want * 1.2 && i > 0 && LADDER[i - 1] <= this.bestScale + 1e-6 && this.minGap < FRAME_30) {
+      if (++this.fast >= 3) { this.raisedAt = now; this.setQuality(LADDER[i - 1]); }
+    } else this.fast = 0;
   }
   setQuality(s) {
-    this.scale = s; this.slow = this.fast = 0; this.holdUntil = performance.now() + 2000;
+    this.scale = s; this.fast = 0; this.holdUntil = performance.now() + 2000; this.cost = []; this.gaps = [];
+    remember({ scale: s });
     for (const r of Object.values(this.r)) r.setScale?.(s);
     this.resize(); this.dirty = true;
   }
