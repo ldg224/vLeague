@@ -128,24 +128,28 @@ export class BroadcastRenderer extends HighlightsRenderer {
     for (let i = 0; i < n; i++) { const [x, y, d] = this.camTarget(tAt(i)); X[i] = x; Y[i] = y; D[i] = d; }
     smooth(X, 0.6, 1); smooth(Y, 0.9, 1); smooth(D, 1.4, 1);   // forwards only (B-35): a little quicker than before, as it no longer gets a head start
     // Keep the actual ball inside the frame.
-    const keep = () => {
+    const keep = (m = 1) => {
       for (let i = 0; i < n; i++) {
         const t = tAt(i), fi = this.fr.f[this.fr.idx(t)];
         if (!fi[5]) continue;   // ball dead (being placed for a restart): let the camera pan there smoothly
-        const b = this.fr.ball(t), z = D[i] / 36;
+        const b = this.fr.ball(t), z = D[i] / 36 * m;
         X[i] = clamp(X[i], b[0] - KEEP_X * z, b[0] + KEEP_X * z);
         Y[i] = clamp(Y[i], b[1] - KEEP_NEAR * z, b[1] + KEEP_FAR * z);
       }
     };
-    keep();
-    smooth(X, 0.25, 1); smooth(Y, 0.25, 1);
-    keep();
+    // B-33: held a little inside the frame, then smoothed twice (so a pan starts and stops gently instead of jolting when the ball nears the edge), with a
+    // last, roomier hold so the ball still never leaves the picture.
+    keep(0.85);
+    smooth(X, 0.3, 1); smooth(Y, 0.3, 1);
+    smooth(X, 0.15, 1); smooth(Y, 0.15, 1);
+    keep(1.1);
     // Moments where the assistant referee must be in the picture (a flag up for offside, the sign for a throw-in, goal kick or corner): the camera
     // opens out and moves to a spot that holds the assistant, his flag and the place the play restarts, then eases back (1.18). Done last, so the smoothing
     // above can't water it down, and while the ball is dead (so it never fights the keep-the-ball-in-frame rule).
     for (const w of this.framings()) {
       for (let i = Math.max(0, Math.floor((w.from - this.t0) / CAM_DT)); i < n && tAt(i) < w.to; i++) {
-        const t = tAt(i), a = easeInOut(seg01(t, w.from, w.from + 1.2)) * (1 - easeInOut(seg01(t, w.to - 1.2, w.to)));
+        const ez = Math.min(2.2, (w.to - w.from) / 2.4);   // B-33: from the gantry these moves are longer, so they ease in and out over up to 2.2 s (was 1.2), not jolting
+        const t = tAt(i), a = easeInOut(seg01(t, w.from, w.from + ez)) * (1 - easeInOut(seg01(t, w.to - ez, w.to)));
         X[i] = lerp(X[i], w.x, a); Y[i] = lerp(Y[i], w.y, a); D[i] = lerp(D[i], w.d, a);
       }
     }

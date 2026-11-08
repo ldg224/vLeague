@@ -259,11 +259,13 @@ const BOXES = [[0, 1], [105, -1]].map(([x0, s]) => ({
   arc: arcPts(x0 + s * 11, 34, 9.15, s > 0 ? -ARC_A : Math.PI - ARC_A, s > 0 ? ARC_A : Math.PI + ARC_A, 24),
   spot: spotRing(x0 + s * 11, 34),
 }));
+// B-33: a full bowl. The stands rise to about 30 m and wrap round the corners, so a camera panning towards a corner or an end sees crowd, not empty dark
+// (the old ones were 12 to 14 m high and stopped at the corners). The near side, where the gantry sits, stays low: it is under and behind the cameras.
 const STANDS = [
-  [[-12, -6, 0], [117, -6, 0], [117, -26, 14], [-12, -26, 14]],     // far side
-  [[-12, 74, 0], [117, 74, 0], [117, 94, 14], [-12, 94, 14]],        // near side
-  [[-7, -12, 0], [-7, 80, 0], [-27, 80, 12], [-27, -12, 12]],        // left end
-  [[112, -12, 0], [112, 80, 0], [132, 80, 12], [132, -12, 12]],      // right end
+  [[-50, -6, 0], [155, -6, 0], [155, -48, 32], [-50, -48, 32]],     // far side
+  [[-7, -48, 0], [-7, 116, 0], [-50, 116, 30], [-50, -48, 30]],      // left end
+  [[112, -48, 0], [112, 116, 0], [155, 116, 30], [155, -48, 30]],    // right end
+  [[-50, 74, 0], [155, 74, 0], [155, 94, 14], [-50, 94, 14]],        // near side
 ];
 const goalLines = gx => {
   const s = gx === 0 ? -1 : 1, d = 2, net = [];
