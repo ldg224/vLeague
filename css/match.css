@@ -24,10 +24,7 @@
 .has-look .mh-band {
   position: relative; isolation: isolate;
   --text-strong: var(--l-ink); --text-soft: color-mix(in oklab, var(--l-ink) 82%, transparent); --muted: color-mix(in oklab, var(--l-ink) 68%, transparent); --faint: color-mix(in oklab, var(--l-ink) 55%, transparent);
-  background:
-    radial-gradient(var(--hs) 100% at var(--hx) var(--hy), color-mix(in oklab, var(--ha, transparent) 28%, transparent), transparent 78%),
-    radial-gradient(var(--as) 100% at var(--ax) var(--ay), color-mix(in oklab, var(--aa, transparent) 28%, transparent), transparent 78%),
-    linear-gradient(var(--l-bg1), var(--l-bg2));
+  background: linear-gradient(var(--l-bg1), var(--l-bg2));   /* the clubs' washes are the band's layers above it (B-33) */
 }
 .mh-art, .mh-fire { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; pointer-events: none; }
 .has-look .mh-band > :not(.mh-art, .mh-fire) { position: relative; z-index: 1; }
@@ -77,11 +74,20 @@ canvas.lg-prop { filter: none; }
 @property --as { syntax: "<percentage>"; inherits: false; initial-value: 60%; }
 @keyframes mh-drift-h { from { --hx: -6%; --hy: 35%; --hs: 52%; } to { --hx: 12%; --hy: 80%; --hs: 68%; } }
 @keyframes mh-drift-a { from { --ax: 106%; --ay: 75%; --as: 54%; } to { --ax: 88%; --ay: 30%; --as: 68%; } }
-.mh-band {
-  background:
-    radial-gradient(var(--hs) 100% at var(--hx) var(--hy), color-mix(in oklab, var(--ha, transparent) 28%, transparent), transparent 78%),
-    radial-gradient(var(--as) 100% at var(--ax) var(--ay), color-mix(in oklab, var(--aa, transparent) 28%, transparent), transparent 78%);
-  animation: mh-drift-h 17s ease-in-out infinite alternate, mh-drift-a 23s ease-in-out -9s infinite alternate;
+/* B-33 (performance): each wash is its own layer (the band's ::before and ::after), drawn once where it starts, and the layer is what slides and widens
+   (translate, scale), which the graphics chip does. Animating the gradients' centres (--hx ... --as) restyled and repainted the page every frame: an idle
+   match page kept a laptop 94% busy. Same washes, same paths, same speeds. */
+@keyframes mh-wash-h { from { translate: 0 0; scale: 1 1; } to { translate: 18% 45%; scale: 1.31 1; } }
+@keyframes mh-wash-a { from { translate: 0 0; scale: 1 1; } to { translate: -18% -45%; scale: 1.26 1; } }
+.mh-band { position: relative; isolation: isolate; overflow: clip; }
+.mh-band::before, .mh-band::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.mh-band::before {
+  background: radial-gradient(52% 100% at -6% 35%, color-mix(in oklab, var(--ha, transparent) 28%, transparent), transparent 78%);
+  transform-origin: -6% 35%; animation: mh-wash-h 17s ease-in-out infinite alternate;
+}
+.mh-band::after {
+  background: radial-gradient(54% 100% at 106% 75%, color-mix(in oklab, var(--aa, transparent) 28%, transparent), transparent 78%);
+  transform-origin: 106% 75%; animation: mh-wash-a 23s ease-in-out -9s infinite alternate;
 }
 .mh-teams {
   position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, auto) minmax(0, 1fr); align-items: center; gap: 0 24px;
@@ -166,7 +172,7 @@ canvas.lg-prop { filter: none; }
   .mh-scorers .is-home, .mh-scorers .is-away { padding-inline: 0; }
   .mh-tabs { padding: 0 6px; }
 }
-@media (prefers-reduced-motion: reduce) { .mh * { transition: none; animation: none; } .mh-band { animation: none; --hx: 0%; --hy: 55%; --ax: 100%; --ay: 55%; --hs: 60%; --as: 60%; } }
+@media (prefers-reduced-motion: reduce) { .mh * { transition: none; animation: none; } .mh-band::before, .mh-band::after { animation: none; } }
 
 /* The match viewer (WR-41), right under the header: the old Game centre's player (css/viewer.css) set into a league-page card */
 #mh-player:not(:empty) { margin-bottom: 16px; }
@@ -181,8 +187,9 @@ canvas.lg-prop { filter: none; }
 #mh-player .ctl.live { border: 1.5px solid var(--res-l); background: color-mix(in oklab, var(--res-l) 12%, var(--surface)); color: var(--res-l); font-weight: 800; }
 #mh-player .ctl.live.behind { background: var(--res-l); color: #fff; }
 
-/* While a match plays, the page's slow background animations stand still: they blend over the whole page and made the video stutter. Paused, not removed, so nothing jumps. */
-.mp-watching .mh-band, .mp-watching .lg::before, .mp-watching .lg-card,.mp-watching .lg-card::before, .mp-watching .lg-tabs::before, .mp-watching .lg-backbar::before { animation-play-state: paused !important; }
+/* While a video is actually playing (js/viewer/player.js marks .mp-playing), the page's slow background effects stand still, so all the graphics go to the picture.
+   Paused, not removed, so nothing jumps. (B-33: they used to stop as soon as the player was on the page, playing or not; they are cheap now, so they move until you press play.) */
+.mp-playing .mh-band::before, .mp-playing .mh-band::after, .mp-playing .lg-card::after, .mp-playing .lg::before, .mp-playing .lg-card,.mp-playing .lg-card::before, .mp-playing .lg-tabs::before, .mp-playing .lg-backbar::before { animation-play-state: paused !important; }
 
 /* Lite mode and reduced motion: the header's glow stays where it is (moving it restyled the page every frame). */
-.lite .mh-band, .reduce-motion .mh-band { animation: none; }
+.lite .mh-band::before, .lite .mh-band::after, .reduce-motion .mh-band::before, .reduce-motion .mh-band::after { animation: none; }

@@ -191,11 +191,19 @@
 @property --gy { syntax: "<percentage>"; inherits: false; initial-value: 20%; }
 /* The splash wanders between two random spots on each card, at the card's own speed (js/league.js sets --gx0..--gy1, --sd and --sp). */
 @keyframes lg-splash { from { --gx: var(--gx0, 20%); --gy: var(--gy0, 20%); } to { --gx: var(--gx1, 80%); --gy: var(--gy1, 80%); } }
-:root:not([data-theme="light"]) .lg-card {
-  animation: lg-splash var(--sd, 30s) ease-in-out var(--sp, 0s) infinite alternate;
-  --sheen:
-    radial-gradient(75% 60% at var(--gx, 20%) var(--gy, 20%), color-mix(in oklab, var(--blue-400, #42a5f5) 11%, transparent), transparent 72%),
-    linear-gradient(transparent, transparent);
+/* B-33 (performance): the splash is its own layer, the card's ::after, three times the card's size with the glow drawn once in its middle, and it is the layer
+   that moves (translate), so the graphics chip slides it and nothing is restyled or repainted. It used to move the glow inside the card's background by
+   animating --gx and --gy, which made the browser restyle every card, and everything in it, and repaint it, every frame: an idle league page kept a laptop
+   97% busy. Same glow, same two spots, same speeds. The card clips it (overflow: clip), dark theme only, where the splash is. */
+@keyframes lg-splash-move {
+  from { translate: calc((var(--gx0, 20%) - 50%) / 3) calc((var(--gy0, 20%) - 50%) / 3); }
+  to { translate: calc((var(--gx1, 80%) - 50%) / 3) calc((var(--gy1, 80%) - 50%) / 3); }
+}
+:root:not([data-theme="light"]) .lg-card { overflow: clip; }
+:root:not([data-theme="light"]) .lg-card::after {
+  content: ""; position: absolute; inset: -100%; z-index: -2; pointer-events: none;
+  background: radial-gradient(25% 20% at 50% 50%, color-mix(in oklab, var(--blue-400, #42a5f5) 11%, transparent), transparent 72%);
+  animation: lg-splash-move var(--sd, 30s) ease-in-out var(--sp, 0s) infinite alternate;
 }
 .lg-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .lg-card-head h2 {
@@ -292,7 +300,10 @@
 .lg.topo-ready::before { opacity: var(--topo-o, .08); }   /* js/shell.js topoFor: .13 on a near-black club colour (SKS navy) down to .06 on a bright one */
 :root[data-theme="light"] .lg.topo-ready::before { opacity: .3; }
 @keyframes lg-topo-breathe { from { transform: scale(1) rotate(0deg); } to { transform: scale(1.06) rotate(.6deg); } }
-@keyframes lg-topo-drift { to { background-position: 700px 350px; } }
+/* B-33 (performance): the drift slides the layer itself (translate), which the graphics chip does, instead of the picture inside it (background-position), which
+   repainted the whole screen every frame. The layer reaches 700 px further left and 350 px further up to cover the slide. Same path, same speed. */
+@keyframes lg-topo-drift { from { translate: 0 0; } to { translate: 700px 350px; } }
+.lg::before { inset: calc(-12% - 350px) -12% -12% calc(-12% - 700px); }
 @media (prefers-reduced-motion: reduce) { .lg::before { animation: none; } .lg::before { transition: none; } }
 
 /* White silk in every dark card (user, 11 Oct 2026): the picture is a bit bigger than the card and slowly slides the opposite way to the
@@ -329,7 +340,23 @@
 
 @keyframes lg-silk-slide { from { background-position: 100% 100%; } to { background-position: 0% 0%; } }
 @keyframes lg-silk-breathe { from { background-size: 135% 135%; } to { background-size: 150% 150%; } }
-@media (prefers-reduced-motion: reduce) { .lg.topo-ready .lg-card::before { animation: none; background-position: 50% 50%; } :root:not([data-theme="light"]) .lg-card { animation: none; --gx: var(--gx0, 20%); --gy: var(--gy0, 20%); } }
+/* B-33 (performance): in the dark theme the silk is a layer a little bigger than the card that slides (translate) and swells (scale), which the graphics chip
+   does without repainting; moving the picture inside the layer (background-position, background-size) repainted every card every frame. The same slide,
+   up and to the left, and the same breathing, at the same speeds and starting points. */
+@keyframes lg-silk-drift { from { translate: 10% 10%; } to { translate: -10% -10%; } }
+@keyframes lg-silk-swell { from { scale: 1; } to { scale: 1.1; } }
+:root:not([data-theme="light"]) .lg-card::before { inset: -22%; background: var(--fabric) 50% 50% / cover no-repeat; }
+:root:not([data-theme="light"]) .lg.topo-ready .lg-card::before {
+  animation: lg-silk-in 2.6s cubic-bezier(.22, .61, .36, 1) var(--fdl, 0s) backwards, lg-silk-drift 56s ease-in-out var(--fph, 0s) infinite alternate, lg-silk-swell 24s ease-in-out var(--fph2, 0s) infinite alternate-reverse;
+}
+:root:not([data-theme="light"]) .lg.topo-ready.silk-seen .lg-card::before { animation: lg-silk-drift 56s ease-in-out var(--fph, 0s) infinite alternate, lg-silk-swell 24s ease-in-out var(--fph2, 0s) infinite alternate-reverse; }
+:root:not([data-theme="light"]) .lg-tabs, :root:not([data-theme="light"]) .lg-backbar { overflow: clip; }
+:root:not([data-theme="light"]) .lg-tabs::before, :root:not([data-theme="light"]) .lg-backbar::before { inset: -22%; background: var(--fabric) 50% 50% / cover no-repeat; }
+:root:not([data-theme="light"]) .lg.topo-ready .lg-tabs::before, :root:not([data-theme="light"]) .lg.topo-ready .lg-backbar::before {
+  animation: lg-silk-in 2.6s cubic-bezier(.22, .61, .36, 1) backwards, lg-silk-drift 56s ease-in-out -20s infinite alternate, lg-silk-swell 24s ease-in-out -8s infinite alternate-reverse;
+}
+:root:not([data-theme="light"]) .lg.topo-ready.silk-seen .lg-tabs::before, :root:not([data-theme="light"]) .lg.topo-ready.silk-seen .lg-backbar::before { animation: lg-silk-drift 56s ease-in-out -20s infinite alternate, lg-silk-swell 24s ease-in-out -8s infinite alternate-reverse; }
+@media (prefers-reduced-motion: reduce) { .lg.topo-ready .lg-card::before, :root .lg.topo-ready .lg-card::before { animation: none; background-position: 50% 50%; } :root:not([data-theme="light"]) .lg-card::after { animation: none; translate: calc((var(--gx0, 20%) - 50%) / 3) calc((var(--gy0, 20%) - 50%) / 3); } }
 
 /* ---------- The pages behind the header buttons (WR-26): My club, Settings, Kits ----------
    The same header card; the page's name sits under the wordmark, the button of the page you are on is marked, and a back row replaces the tabs. */
@@ -428,5 +455,6 @@
 .lite .lg::before { display: none; }
 .reduce-motion .lg::before { animation: none; transition: none; }
 .lite .lg-card, .reduce-motion .lg-card { animation: none !important; --gx: var(--gx0, 20%); --gy: var(--gy0, 20%); }
-.lite .lg-card::before, .lite .lg-tabs::before, .lite .lg-backbar::before, .lite .lu-silk,
-.reduce-motion .lg-card::before, .reduce-motion .lg-tabs::before, .reduce-motion .lg-backbar::before, .reduce-motion .lu-silk { animation: none !important; }
+.lite .lg-card::after, .reduce-motion .lg-card::after { animation: none !important; translate: calc((var(--gx0, 20%) - 50%) / 3) calc((var(--gy0, 20%) - 50%) / 3); }
+:root.lite .lg-card::before, :root.lite .lg-tabs::before, :root.lite .lg-backbar::before, .lite .lu-silk,
+:root.reduce-motion .lg-card::before, :root.reduce-motion .lg-tabs::before, :root.reduce-motion .lg-backbar::before, .reduce-motion .lu-silk { animation: none !important; }

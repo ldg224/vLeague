@@ -107,7 +107,7 @@ export class MatchPlayer {
     this._raf = requestAnimationFrame(ts => this.loop(ts));
   }
 
-  destroy() { cancelAnimationFrame(this._raf); clearTimeout(this._idle); this.tactical?.destroy(); this.ro?.disconnect(); this._off?.abort(); remember({ open: false }); }
+  destroy() { document.documentElement.classList.remove('mp-playing'); this._napping = false; clearTimeout(this._nap); cancelAnimationFrame(this._raf); clearTimeout(this._idle); this.tactical?.destroy(); this.ro?.disconnect(); this._off?.abort(); remember({ open: false }); }
 
   // ---------- renderers ----------
 
@@ -230,6 +230,7 @@ export class MatchPlayer {
     const [a, b] = this.fullRange(), playing = this.view === 'tactical' ? this.tactical?.playing : this.playing;
     const text = (el, v) => { if (el.textContent !== v) el.textContent = v; };
     text(this.$('#mp-play'), playing ? 'Pause' : 'Play');
+    document.documentElement.classList.toggle('mp-playing', !!playing);   // the page's background effects hold still while a video plays (css/match.css)
     const seek = this.$('#mp-seek');
     seek.value = this.t;
     const extra = addedAt(this.data.periods, this.t);
@@ -247,7 +248,7 @@ export class MatchPlayer {
     if (this.view === 'tactical') { this.tactical.play(); return this.syncUi(); }
     const [, b] = this.range();
     if (this.t >= b - 0.05 && this.view === 'highlights') this.t = 0;
-    this.playing = true;
+    this.playing = true; this.wake();
     this.follow = this.st === 'live' && this.view !== 'highlights' && this.t >= liveSimTime(this.FX, this.S) - 2;   // resuming at the live edge locks back on to live
     this.syncUi();
   }
@@ -360,7 +361,13 @@ export class MatchPlayer {
 
   // ---------- frame loop ----------
 
+  // B-33: with nothing to draw (paused, picture up to date) the loop naps and checks back 4 times a second, instead of asking for a frame 60 times a second;
+  // every one of those frames made the browser run a full style pass for the whole page. Anything that needs drawing (dirty, play) wakes it at once.
+  get dirty() { return this._dirty; }
+  set dirty(v) { this._dirty = v; if (v) this.wake(); }
+  wake() { if (!this._napping) return; this._napping = false; clearTimeout(this._nap); this._raf = requestAnimationFrame(t => this.loop(t)); }
   loop(ts) {
+    if (!this.playing && !this._dirty) { this._last = 0; this._napping = true; this._nap = setTimeout(() => this.wake(), 250); return; }
     this._raf = requestAnimationFrame(t => this.loop(t));
     // No more frames than the cap, however fast the screen (a 144 Hz monitor was drawing 144 whole pictures a second). A little slack, so a 60 Hz screen's own jitter doesn't drop frames.
     if (this._last && ts - this._last < this.minGap - 3) return;
