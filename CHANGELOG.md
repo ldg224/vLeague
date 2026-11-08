@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.34.3 (2026-11-08)
+
+Headlines: A tester page for new player designs
+
+**Added:** a page for managers to try four possible new looks for the players (player-designs.html, reached only by its link and hidden from search engines). Each look has arms and legs and wears the club's real kit; managers can play moves (running, shooting, headers, celebrations, a keeper's dive), turn the camera and bend the joints. Nothing in the matches changes.
+Database change: none.
+
 ## 1.34.2 (2026-11-08)
 
 Headlines: Smoother match video, with fewer freezes

@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Player designs · vLeague</title>
+<link rel="icon" href="assets/brand/crest.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Oswald:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #161616; --surface: #222; --sunk: #1b1b1b; --line: #333; --text: #f2f2f2; --muted: #a0a0a0; --faint: #7a7a7a;
+    --brand: #64b5f6; --brand-strong: #1e88e5; --r-sm: 8px; --r-lg: 16px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 400 14px/1.45 Archivo, system-ui, sans-serif; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); }
+  header.card { padding: 16px; margin-bottom: 16px; }
+  h1 { margin: 0; font: 900 16px/1.2 Archivo; font-stretch: 125%; text-transform: uppercase; letter-spacing: .02em; }
+  .sub { color: var(--muted); font-size: 13px; margin: 4px 0 0; }
+  .controls { position: sticky; top: 0; z-index: 2; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 12px 16px; margin-bottom: 16px; display: grid; gap: 12px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .label { color: var(--faint); font-size: 12px; font-weight: 600; min-width: 74px; }
+  button.pill, .seg button { height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--text); font: 600 13px Archivo; cursor: pointer; }
+  button.pill[aria-pressed="true"], .seg button[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+  button.pill.primary { background: var(--brand-strong); border-color: var(--brand-strong); color: #fff; }
+  @media (hover: hover) { button.pill:hover, .seg button:hover { border-color: #555; } }
+  button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  select, input[type=text] { height: 32px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--sunk); color: var(--text); font: 500 13px Archivo; padding: 0 8px; }
+  input[type=range] { accent-color: var(--brand); width: 140px; }
+  .val { color: var(--muted); font-size: 12px; min-width: 34px; font-variant-numeric: tabular-nums; }
+  .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  @media (min-width: 992px) { .grid { grid-template-columns: 1fr 1fr; } }
+  .design { overflow: hidden; }
+  .design .top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .design h2 { margin: 0; font: 900 16px Archivo; font-stretch: 125%; text-transform: uppercase; }
+  .design .num { color: var(--faint); font-weight: 700; font-size: 13px; }
+  .design p { margin: 0; padding: 8px 16px 12px; color: var(--muted); font-size: 13px; }
+  .design canvas { display: block; width: 100%; aspect-ratio: 4 / 3; touch-action: none; cursor: default; }
+  .design canvas.grab { cursor: grab; }
+  .design canvas.grabbing { cursor: grabbing; }
+  .hint { color: var(--muted); font-size: 12px; }
+  .note { font-size: 12px; color: var(--faint); margin-top: 16px; }
+  .controls > *, .grid > *, .row > * { min-width: 0; }
+  .row > .seg { flex: 1 1 auto; }
+  @media (max-width: 640px) {
+    .wrap { padding: 12px; } .label { min-width: 100%; }
+    .controls { position: static; }   /* on a phone the controls would cover the screen: they scroll away with the page */
+    input[type=range] { width: 110px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="card">
+    <h1>Player designs</h1>
+    <p class="sub">Four looks for our players, on one skeleton. Pick a move, turn the camera, change the kit, or turn on <b>Bend joints</b> and drag any node: elbows and knees only bend the way a body does. Every design wears the real kit template.</p>
+  </header>
+
+  <section class="controls" aria-label="Controls">
+    <div class="row"><span class="label">Move</span><div class="seg row" id="anims"></div></div>
+    <div class="row">
+      <span class="label">Playback</span>
+      <button class="pill" id="play" aria-pressed="true">Playing</button>
+      <input type="range" id="speed" min="0.1" max="2" step="0.05" value="1" aria-label="Speed"><span class="val" id="speedV">1×</span>
+      <button class="pill" id="bend" aria-pressed="false">Bend joints</button>
+      <button class="pill" id="reset">Reset pose</button>
+      <button class="pill" id="copy">Copy pose</button>
+      <span class="hint" id="hint"></span>
+    </div>
+    <div class="row">
+      <span class="label">Camera</span>
+      <span class="hint">Turn</span><input type="range" id="turn" min="0" max="360" step="1" value="20" aria-label="Turn"><span class="val" id="turnV">20°</span>
+      <button class="pill" id="spin" aria-pressed="false">Spin</button>
+      <span class="hint">Height</span><input type="range" id="elev" min="0" max="60" step="1" value="14" aria-label="Camera height"><span class="val" id="elevV">14°</span>
+      <div class="seg row" id="size"><button data-v="close" aria-pressed="true">Close up</button><button data-v="match" aria-pressed="false">Match size</button></div>
+      <button class="pill" id="bones" aria-pressed="false">Skeleton</button>
+    </div>
+    <div class="row">
+      <span class="label">Kit</span>
+      <select id="club" aria-label="Club"></select><select id="slot" aria-label="Kit"></select>
+      <span class="hint">Shorts</span><select id="shorts" aria-label="Shorts colour"><option value="third">Third colour</option><option value="main">Main</option><option value="second">Second</option></select>
+      <span class="hint">Socks</span><select id="socks" aria-label="Socks colour"><option value="main">Main</option><option value="second">Second</option><option value="third">Third</option></select>
+      <input type="text" id="name" value="PLAYER" aria-label="Name on the back" size="9"><input type="text" id="number" value="10" aria-label="Number" size="3">
+    </div>
+    <div class="row">
+      <span class="label">Player</span>
+      <span class="hint">Skin</span><select id="skin" aria-label="Skin tone"></select>
+      <span class="hint">Hair</span><select id="hair" aria-label="Hair colour"></select>
+    </div>
+  </section>
+
+  <div class="grid" id="grid"></div>
+  <p class="note">A tester: none of these looks are in the matches yet. Kits load from the league; without a connection it uses sample kits.</p>
+</div>
+
+<script type="module">
+import { DESIGNS, ANIMS, animate, restPose, clonePose, mixPose, drawPlayer, dragTo, makeView, HANDLES, SKINS, HAIRS, solveSkeleton } from './js/player-rig.js';
+import { cleanDesign, kitName, FIELD_SLOTS } from './js/kit.js';
+
+const $ = id => document.getElementById(id);
+const state = { anim: 'idle', t: 0, speed: 1, playing: true, bend: false, edit: null, from: null, fromT: 0, theta: 20 * Math.PI / 180, spin: false, elev: 14 * Math.PI / 180, size: 'close', bones: false,
+  look: { skin: SKINS[0], hair: HAIRS[0], shorts: 'third', socks: 'main', print: { name: 'PLAYER', number: '10', ink: '#fff' } } };
+
+// ---- kits: the league's own, else samples
+const SAMPLES = {
+  Samples: {
+    stripes: { design: cleanDesign({ pattern: 'stripes', colours: ['#c8102e', '#ffffff', '#111111'] }), imgs: {} },
+    hoops: { design: cleanDesign({ pattern: 'hoops', colours: ['#0b6e4f', '#ffffff', '#0b2a20'] }), imgs: {} },
+    sash: { design: cleanDesign({ pattern: 'sash', colours: ['#ffffff', '#1e3a8a', '#1e3a8a'] }), imgs: {} },
+    plain: { design: cleanDesign({ pattern: 'plain', colours: ['#f5c400', '#111111', '#111111'] }), imgs: {} },
+  },
+};
+let KITS = SAMPLES, kit = SAMPLES.Samples.stripes;
+const loadImg = url => new Promise(res => { if (!url) return res(null); const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
+async function loadLeague() {
+  try {
+    const [{ loadKits }, { logoPath }] = await Promise.all([import('./js/kits-data.js'), import('./js/viewer/ui.js')]);
+    const k = await loadKits();
+    if (!Object.keys(k).length) return;
+    KITS = {};
+    for (const [club, slots] of Object.entries(k)) KITS[club] = Object.fromEntries(Object.entries(slots).map(([slot, v]) => [slot, { ...v, crestUrl: logoPath(club) }]));
+    Object.assign(KITS, SAMPLES);
+    fillClubs(); await pickKit();
+  } catch (e) { console.warn('kits not loaded', e); }
+}
+function fillClubs() {
+  $('club').innerHTML = Object.keys(KITS).map(c => `<option>${c}</option>`).join('');
+  fillSlots();
+}
+function fillSlots() {
+  const slots = Object.keys(KITS[$('club').value] || {});
+  $('slot').innerHTML = slots.map(s => `<option value="${s}">${FIELD_SLOTS.includes(s) || s === 'gk' ? kitName(s, KITS[$('club').value][s].design) : s}</option>`).join('');
+}
+async function pickKit() {
+  const k = KITS[$('club').value]?.[$('slot').value];
+  if (!k) return;
+  if (!k.imgs) { const [crest, logo, art] = await Promise.all([loadImg(k.crestUrl), loadImg(k.logoUrl), loadImg(k.artUrl)]); k.imgs = { crest, logo, art }; k.design = { ...k.design, text: { name: '', number: '', colour: k.design.text?.colour || '' } }; }
+  kit = k;
+  state.look.print.ink = k.design.text?.colour || inkFor(k.design.colours[0]);
+}
+const inkFor = hex => { const n = parseInt(hex.slice(1), 16), l = (0.299 * (n >> 16) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)); return l > 150 ? '#111' : '#fff'; };
+
+// ---- controls
+$('anims').innerHTML = ANIMS.map(([k, l]) => `<button data-a="${k}" aria-pressed="${k === state.anim}">${l}</button>`).join('');
+$('anims').addEventListener('click', e => {
+  const b = e.target.closest('[data-a]'); if (!b) return;
+  state.from = state.edit || animate(state.anim, state.t); state.fromT = 0;   // blend from where he is into the new move
+  state.anim = b.dataset.a; state.t = 0; state.edit = null; state.playing = true; syncButtons();
+});
+const syncButtons = () => {
+  for (const b of $('anims').children) b.setAttribute('aria-pressed', b.dataset.a === state.anim);
+  $('play').setAttribute('aria-pressed', state.playing); $('play').textContent = state.playing ? 'Playing' : 'Paused';
+  $('bend').setAttribute('aria-pressed', state.bend); $('spin').setAttribute('aria-pressed', state.spin); $('bones').setAttribute('aria-pressed', state.bones);
+  $('hint').textContent = state.bend ? (state.edit ? 'Holding your pose. Pick a move or Reset pose to carry on.' : 'Drag a white node to bend him.') : '';
+  for (const cv of document.querySelectorAll('.design canvas')) cv.classList.toggle('grab', state.bend);
+};
+$('play').onclick = () => { state.playing = !state.playing; if (state.playing) state.edit = null; syncButtons(); };
+$('speed').oninput = e => { state.speed = +e.target.value; $('speedV').textContent = `${state.speed}×`; };
+$('bend').onclick = () => { state.bend = !state.bend; syncButtons(); };
+$('reset').onclick = () => { state.edit = null; state.playing = true; syncButtons(); };
+$('copy').onclick = async () => { const p = state.edit || animate(state.anim, state.t); try { await navigator.clipboard.writeText(JSON.stringify(p, (k, v) => (typeof v === 'number' ? +v.toFixed(3) : v))); $('copy').textContent = 'Copied'; setTimeout(() => ($('copy').textContent = 'Copy pose'), 1200); } catch { $('copy').textContent = 'Copy failed'; } };
+$('turn').oninput = e => { state.theta = +e.target.value * Math.PI / 180; $('turnV').textContent = `${e.target.value}°`; };
+$('spin').onclick = () => { state.spin = !state.spin; syncButtons(); };
+$('elev').oninput = e => { state.elev = +e.target.value * Math.PI / 180; $('elevV').textContent = `${e.target.value}°`; };
+$('size').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; state.size = b.dataset.v; for (const x of $('size').children) x.setAttribute('aria-pressed', x === b); });
+$('bones').onclick = () => { state.bones = !state.bones; syncButtons(); };
+$('club').onchange = () => { fillSlots(); pickKit(); };
+$('slot').onchange = pickKit;
+$('shorts').onchange = e => (state.look.shorts = e.target.value);
+$('socks').onchange = e => (state.look.socks = e.target.value);
+$('name').oninput = e => (state.look.print.name = e.target.value.toUpperCase());
+$('number').oninput = e => (state.look.print.number = e.target.value.replace(/\D/g, '').slice(0, 2));
+$('skin').innerHTML = SKINS.map((c, i) => `<option value="${c}">Tone ${i + 1}</option>`).join('');
+$('hair').innerHTML = HAIRS.map((c, i) => `<option value="${c}">${['Dark brown', 'Black', 'Brown', 'Light brown', 'Blond', 'Jet black'][i]}</option>`).join('');
+$('skin').onchange = e => (state.look.skin = e.target.value);
+$('hair').onchange = e => (state.look.hair = e.target.value);
+
+// ---- the four cards
+const cards = DESIGNS.map((d, i) => {
+  const el = document.createElement('section'); el.className = 'card design';
+  el.innerHTML = `<div class="top"><h2>${d.name}</h2><span class="num">${i + 1} of 4</span></div><canvas aria-label="${d.name} player"></canvas><p>${d.note}</p>`;
+  $('grid').appendChild(el);
+  const cv = el.querySelector('canvas');
+  const card = { d, cv, c: cv.getContext('2d'), view: null, drag: null, hover: null };
+  cv.addEventListener('pointerdown', e => {
+    if (!state.bend || !card.view) return;
+    const j = nearest(card, e); if (!j) return;
+    if (!state.edit) state.edit = clonePose(currentPose());
+    state.playing = false; card.drag = j; cv.setPointerCapture(e.pointerId); cv.classList.add('grabbing'); syncButtons();
+  });
+  cv.addEventListener('pointermove', e => {
+    if (!state.bend || !card.view) return;
+    const [x, y] = local(card, e);
+    if (card.drag) dragTo(state.edit, card.drag, x, y, card.view, card.d.dims);
+    else card.hover = nearest(card, e);
+  });
+  const end = () => { card.drag = null; cv.classList.remove('grabbing'); };
+  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end); cv.addEventListener('pointerleave', () => (card.hover = null));
+  return card;
+});
+const local = (card, e) => { const r = card.cv.getBoundingClientRect(); return [(e.clientX - r.left) * card.cv.width / r.width, (e.clientY - r.top) * card.cv.height / r.height]; };
+function nearest(card, e) {
+  const [x, y] = local(card, e), J = solveSkeleton(currentPose(), card.d.dims);
+  let best = null, bd = 22 * devicePixelRatio;
+  for (const k of Object.keys(HANDLES)) { const p = card.view.p(J[k]); const dd = Math.hypot(p[0] - x, p[1] - y); if (dd < bd) { bd = dd; best = k; } }
+  return best;
+}
+function currentPose() {
+  if (state.edit) return state.edit;
+  const p = animate(state.anim, state.t);
+  return state.from && state.fromT < 0.3 ? mixPose(state.from, p, state.fromT / 0.3) : p;
+}
+
+// ---- drawing
+function pitch(c, w, h, horizon) {
+  c.fillStyle = '#1f6a30'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 9; i++) { c.fillStyle = i % 2 ? '#2a7d3a' : '#2f8440'; c.fillRect(0, horizon + (h - horizon) * (i / 9) ** 1.4, w, (h - horizon) * (((i + 1) / 9) ** 1.4 - (i / 9) ** 1.4) + 1); }
+  const g = c.createLinearGradient(0, 0, 0, horizon); g.addColorStop(0, '#0b1410'); g.addColorStop(1, '#1d4f28'); c.fillStyle = g; c.fillRect(0, 0, w, horizon);
+}
+function bones(c, view, J) {
+  const L = [['pelvis', 'chest'], ['chest', 'neck'], ['neck', 'head'], ['lSh', 'lEl'], ['lEl', 'lWr'], ['rSh', 'rEl'], ['rEl', 'rWr'], ['lHip', 'lKn'], ['lKn', 'lAn'], ['rHip', 'rKn'], ['rKn', 'rAn'], ['lAn', 'lToe'], ['rAn', 'rToe'], ['lSh', 'rSh'], ['lHip', 'rHip']];
+  c.strokeStyle = 'rgba(100,181,246,0.95)'; c.lineWidth = 2 * devicePixelRatio;
+  for (const [a, b] of L) { const p = view.p(J[a]), q = view.p(J[b]); c.beginPath(); c.moveTo(p[0], p[1]); c.lineTo(q[0], q[1]); c.stroke(); }
+}
+let last = performance.now();
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (state.playing) { state.t += dt * state.speed; state.fromT += dt; }
+  if (state.spin) { state.theta = (state.theta + dt * 0.6) % (Math.PI * 2); $('turn').value = Math.round(state.theta * 180 / Math.PI); $('turnV').textContent = `${$('turn').value}°`; }
+  const pose = currentPose();
+  for (const card of cards) {
+    const cv = card.cv, r = cv.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1), w = Math.round(r.width * dpr), h = Math.round(r.height * dpr);
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    const c = card.c, close = state.size === 'close';
+    const scale = close ? h * 0.36 : 60 * dpr, ground = h * (close ? 0.86 : 0.7);
+    pitch(c, w, h, h * 0.18);
+    card.view = makeView({ theta: state.theta, elev: state.elev, scale, ox: w / 2, oy: ground });
+    const J = drawPlayer(c, card.d, pose, card.view, kit, state.look, { nodes: state.bend, hover: card.drag || card.hover });
+    if (state.bones) bones(c, card.view, J);
+  }
+}
+// The address can set things up: ?anim=kick&t=0.85&turn=90&elev=20&size=match&bend=1&pause=1&bones=1
+const Q = new URLSearchParams(location.search);
+if (Q.get('anim')) state.anim = Q.get('anim');
+if (Q.get('t')) state.t = +Q.get('t');
+if (Q.get('turn')) { $('turn').value = Q.get('turn'); $('turn').oninput({ target: $('turn') }); }
+if (Q.get('elev')) { $('elev').value = Q.get('elev'); $('elev').oninput({ target: $('elev') }); }
+if (Q.get('size')) $('size').querySelector(`[data-v="${Q.get('size')}"]`)?.click();
+if (Q.has('bend')) state.bend = true;
+if (Q.has('pause')) state.playing = false;
+if (Q.has('bones')) state.bones = true;
+syncButtons(); fillClubs(); pickKit(); requestAnimationFrame(frame);
+loadLeague();
+</script>
+</body>
+</html>
