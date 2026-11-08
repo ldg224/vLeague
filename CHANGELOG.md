@@ -5,10 +5,11 @@ Every published version of the vLeague app. Newest first. How versions work and 
 
 ## 1.35.1 (2026-11-08)
 
-Headlines: The New Year's Day Round is on New Year's Day again
+Headlines: The New Year's Day and Australia Day Rounds are on their days
 
 **Fixed (S-37):** 1.35.0 moved the New Year's Day Round to Wednesday 30 December to keep two days before Round 13. It is back on Friday 1 January, 12:00 to 4:00 pm, as before: a round named for its day is an exception to the two-day gap, so Round 13 follows the next day. Line-ups lock at 11:00 am.
-Database change: yes, migration 0088 (already applied).
+**Changed (S-37):** the Australia Day Round is all on Australia Day, Tuesday 26 January, 12:00 to 4:00 pm, one game an hour (1.35.0 had it across Tuesday and Wednesday evening). Line-ups lock at 11:00 am.
+Database change: yes, migrations 0088 and 0089 (already applied).
 
 ## 1.35.0 (2026-11-08)
 
