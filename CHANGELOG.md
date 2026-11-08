@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.36.0 (2026-11-08)
+
+Headlines: A new match camera | Lite mode | A lighter site
+
+**Changed (B-33):** the match camera is rebuilt around real camera positions: a main gantry camera that pans and zooms smoothly, plus goal-end, low 18-yard, reverse, cable, pitchside and set-piece cameras for corners, penalties and free kicks. Players stay the same size whenever the view is a normal wide one; only close-ups are close. Cuts never hide a shot, and no camera gives a goal away before it happens. The stadium now wraps all the way round, so there is no dark gap towards the ends.
+**New:** Lite mode, in Settings > Display. Automatic (the default) turns it on for phones, tablets and slower computers; you can also set it On or Off. It keeps every page's look, including the club header, but holds the backgrounds still (no contour lines, still silk and card light, still header glow, no event confetti, no 3D kit spin, no Stakes reveals) and draws a lighter match video. On a phone, an idle page goes from using most of the processor to almost none.
+**Changed:** with Lite mode off, the moving backgrounds look the same but cost far less (an idle League page on a laptop went from 99% of a processor core to almost nothing), and they pause only while a match video plays.
+Database change: none.
+
 ## 1.35.1 (2026-11-08)
 
 Headlines: The camera no longer gives the play away | The New Year's Day and Australia Day Rounds are on their days
