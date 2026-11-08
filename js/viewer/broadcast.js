@@ -196,8 +196,11 @@ export class BroadcastRenderer extends HighlightsRenderer {
   // ball is placed and back to the gantry a fixed time after the kick, whatever happens, so the cut gives nothing away.
   setPieceCam(sh, t) {
     const e = sh.e, gx = sh.goalX;
-    const cam = sh.angle === 'kicker' ? RIG.kicker(e.x, e.y, gx) : RIG.goalHigh(gx, lerp(e.x, gx, 0.55) + (gx ? -9 : 9), lerp(e.y, 34, 0.75), 40);
-    return cam;
+    // Both follow the ball where it is now (never ahead of it). A free kick: from behind the taker, turning with the ball once it's struck.
+    // A corner: from behind the goal, leaning towards the box, so the taker, the cross and the box are all in shot.
+    const b = this.fr.ball(t);
+    if (sh.angle === 'kicker') return RIG.kicker(e.x, e.y, gx, b[0], b[1]);
+    return RIG.goalHigh(gx, lerp(b[0], gx ? 94 : 11, 0.45), lerp(b[1], 34, 0.45), 44);
   }
   camAt(t) {
     const { X, Y, D } = this.cam, u = clamp((t - this.t0) / CAM_DT, 0, this.camN - 1), i = Math.floor(u), j = Math.min(i + 1, this.camN - 1), k = j === this.camHalf ? 0 : u - i;
@@ -286,6 +289,14 @@ export class BroadcastRenderer extends HighlightsRenderer {
         shots.push({ kind: 'setpiece', angle: 'kicker', prio: 4, from: e.t - 0.25, to: e.t + 4.5, e: { ...e, x, y }, goalX: gx });
       }
     }
+    // ...or until the ball leaves that camera's picture (a short free kick, a clearance), whichever comes first. That only uses where the ball is at that moment,
+    // which the viewer can see, so it gives nothing away either.
+    for (const sp of shots.filter(x => x.kind === 'setpiece')) {
+      for (let t = sp.e.t + 0.4; t < sp.to; t += 0.1) {
+        const st = this.fr.at(t), q = this.setPieceCam(sp, t).p(st.ball[0], st.ball[1], st.ball[2]);
+        if (!q || q[0] < 60 || q[0] > W - 60 || q[1] < 60 || q[1] > H - 60) { sp.to = t; break; }
+      }
+    }
     // Back-to-back moments (a save then the rebound goal) in one stoppage, at the same end, play as one continuous replay
     // rather than two with a wipe between them (B-28). If the stoppage is too short, the lead-in is trimmed, never the second moment.
     const reps = shots.filter(s => s.kind === 'replay').sort((a, b) => a.stop.from - b.stop.from || a.r0 - b.r0);
@@ -307,7 +318,27 @@ export class BroadcastRenderer extends HighlightsRenderer {
     // The half-time and full-time scorelines own their moments.
     const P = d.periods, placed = [{ kind: 'panel', from: this.t1 - 4.5, to: this.t1 + 1 }];
     if (P.length > 1) placed.push({ kind: 'panel', from: P[0].end_t - 4.5, to: P[0].end_t + 2 });
-    for (const s of shots.sort((a, b) => a.prio - b.prio || a.from - b.from)) {
+    // Set pieces go on first (B-33), so whether one gets its camera never depends on what happens after the kick (a goal, a save, a card): a later shot
+    // can only cut it short from the moment that shot starts, which is after the event. (When they were placed last, a penalty about to be scored lost its
+    // camera to the celebration and one about to be missed kept it, giving the result away at the run-up.) Only the half-time and full-time scorelines,
+    // fixed by the clock, come before them.
+    const setPieces = shots.filter(s => s.kind === 'setpiece').sort((a, b) => a.from - b.from);
+    for (const sp of setPieces) {
+      const prev = placed.filter(p => p.kind === 'setpiece').pop();
+      if (prev && prev.to > sp.from - 0.3) prev.to = sp.from - 0.3;   // the next set piece takes over
+      const panel = placed.find(p => p.kind === 'panel' && sp.to > p.from - 0.5 && sp.from < p.to + 0.5);
+      if (panel) { if (sp.from >= panel.from - 0.8) continue; sp.to = panel.from - 0.5; }
+      placed.push(sp);
+    }
+    const trim = s => {   // a later shot cuts a set piece short; one that started before it (a card for the foul) pushes its start back
+      for (const sp of placed) {
+        if (sp.kind !== 'setpiece' || !(s.from < sp.to + 0.3 && s.to > sp.from - 0.3)) continue;
+        if (s.from > sp.from + 0.3) sp.to = Math.min(sp.to, s.from - 0.3);
+        else sp.from = Math.max(sp.from, s.to + 0.3);
+      }
+      for (let i = placed.length - 1; i >= 0; i--) if (placed[i].kind === 'setpiece' && placed[i].to - placed[i].from < 0.3) placed.splice(i, 1);
+    };
+    for (const s of shots.filter(x => x.kind !== 'setpiece').sort((a, b) => a.prio - b.prio || a.from - b.from)) {
       if (s.to - s.from < 1.5) continue;
       // Fill the stoppage: if a replay clashes with one already placed, move it to just after that one, shortening its lead-in
       // to fit, as long as it still ends inside its own stoppage.
@@ -316,7 +347,8 @@ export class BroadcastRenderer extends HighlightsRenderer {
         if (s.r1 - r0 < 2.5) break;
         Object.assign(s, { from, to: from + (s.r1 - r0) / REPLAY_RATE, r0, path: path(r0 - 1, s.r1 + 1, t => fr.ball(t)) });
       }
-      if (placed.some(p => s.from < p.to + 0.5 && s.to > p.from - 0.5)) continue;
+      trim(s);
+      if (placed.some(p => p.kind !== 'setpiece' && s.from < p.to + 0.5 && s.to > p.from - 0.5)) continue;
       placed.push(s);
     }
     this.shots = placed.filter(s => s.kind !== 'panel').sort((a, b) => a.from - b.from);

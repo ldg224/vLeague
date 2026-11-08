@@ -142,7 +142,7 @@ function makeCam(tx, ty, dist, elevDeg, fovDeg) {
 }
 
 // Camera at any position C looking at target T.
-function makeCamAt(C, T, fovDeg) {
+function makeCamAt(C, T, fovDeg, capMul = 1.9) {
   let f = [T[0] - C[0], T[1] - C[1], T[2] - C[2]]; const fl = Math.hypot(...f); f = f.map(v => v / fl);
   // r = up x f with up = (0,0,1)  ->  (-f1, f0, 0), normalised
   const rl = Math.hypot(f[1], f[0]) || 1;
@@ -154,7 +154,7 @@ function makeCamAt(C, T, fovDeg) {
   // B-33: the tallest anyone may be drawn in this shot: a little under twice a player standing where the camera is looking. Closer than that (a keeper
   // under a camera behind the goal, someone walking past a touchline camera) he is held at this size and fades out of shot, as on TV, instead of
   // filling the screen.
-  const cap = Math.max(MIN_PLAYER * 1.35, 1.9 * focal * 1.85 / Math.max(1, fl));
+  const cap = Math.max(MIN_PLAYER * 1.35, capMul * focal * 1.85 / Math.max(1, fl));   // capMul: how much bigger than that a camera allows (the free-kick camera lets the taker loom)
   // World point -> camera space [right, up, depth].
   const toCam = (x, y, z = 0) => {
     const v0 = x - C[0], v1 = y - C[1], v2 = z - C[2];
@@ -220,7 +220,7 @@ function makeCamAt(C, T, fovDeg) {
 // (which looked flat, and let anyone near a low camera fill the screen). width: how many metres across the picture is where it looks.
 const GANTRY = [52.5, 91, 20];    // the main camera: on the halfway line, at the front of the main stand's upper tier, 23 m back from the touchline and 20 m up
 const fovFor = (C, T, width) => 2 * Math.atan(width / 2 / Math.max(1, Math.hypot(T[0] - C[0], T[1] - C[1], T[2] - C[2]))) * 180 / Math.PI;
-const aim = (C, T, width) => makeCamAt(C, T, fovFor(C, T, width));
+const aim = (C, T, width, capMul) => makeCamAt(C, T, fovFor(C, T, width), capMul);
 const RIG = {
   // the main camera, panning from the gantry
   gantry: (tx, ty, width = 34) => aim(GANTRY, [tx, ty, 0], width),
@@ -235,8 +235,9 @@ const RIG = {
   // a close-up from the touchline on the camera's side, on a long lens (a celebration, the referee, a tackle): the same framing as a camera standing near
   // the players, but from far enough back that nobody between it and them fills the screen. width: metres across the picture at the subject; z: the height it looks at.
   pitchside: (tx, ty, width = 16, z = 1.1) => aim([clamp(tx, -5, 110), 78, 9], [tx, ty, z], width),
-  // behind a free kick taker, looking at the goal over the wall
-  kicker: (bx, by, gx) => { const dx = bx - gx, dy = by - 34, d = Math.hypot(dx, dy) || 1; return aim([bx + dx / d * 10, by + dy / d * 10, 4], [gx, 34, 1.2], Math.max(26, d * 0.9)); },
+  // behind a free kick taker, looking over the ball and the wall at the goal: far enough back and aimed low enough that the ball, the wall and the goal are all in the picture
+  // (ex, ey: the kick; bx, by: where the ball is now, which it turns to follow once the kick is taken)
+  kicker: (ex, ey, gx, bx = ex, by = ey) => { const dx = ex - gx, dy = ey - 34, d = Math.hypot(dx, dy) || 1; return aim([ex + dx / d * 14, ey + dy / d * 14, 3.6], [lerp(bx, gx, 0.45), lerp(by, 34, 0.45), 0.6], 26, 3.2); },   // the taker, close to the lens, is the shot: he looms large rather than fading
 };
 // A blend between two cameras (position, aim and zoom), for moves from one to another without a cut.
 function lerpCam(A, B, k) {
@@ -723,8 +724,9 @@ export class HighlightsRenderer {
     for (let i = 0; i < shots.length; i++) {
       const sh = shots[i], len = sh.to - sh.from;
       if (len > 8 && !['celebrate', 'refcam'].includes(sh.angle)) {
-        const alt = { main: 'wide', wide: 'main', corner: 'main', high: 'wide', spider: 'main', endcam: 'main', tight: 'main' }[sh.angle] || 'main';
+        const alt = { main: 'wide', wide: 'main', corner: 'main', high: 'wide', spider: 'main', endcam: 'main', tight: 'main', cable: 'main', goalHigh: 'low18', low18: 'goalHigh' }[sh.angle] || 'main';
         const mid = sh.to - Math.min(6, len / 2);
+        if (!card && mid > shotL - 3 - 1e-6 && mid < shotL + 2) continue;   // B-33: never a cut in the 3 s before the shot or while the ball travels
         shots.splice(i, 1, { from: sh.from, to: mid, angle: alt }, { from: mid, to: sh.to, angle: sh.angle });
         i++;
       }
@@ -883,8 +885,8 @@ export class HighlightsRenderer {
       }
       case 'low18':  // B-33: low on the main stand at the 18-yard line, across the box
         cam = RIG.low18(goalX, lerp(bx, goalX, 0.25), lerp(by, 34, 0.3), clamp(18 + toGoal * 0.5, 26, 40)); break;
-      case 'spider': // overhead cable camera following the ball
-        cam = makeCam(clamp(bx, 10, 95), clamp(by, 10, 58), 30, 72, 52); break;
+      case 'spider': // overhead cable camera following the ball (B-33: right to the touchlines; it used to stop 10 m short and lose a ball out wide)
+        cam = makeCam(clamp(bx, 3, 102), clamp(by, 3, 65), 30, 72, 52); break;
       case 'refcam': { // close on the referee, slowly pushing in (B-33: from the touchline on a long lens)
         const k = clamp((local - sh.from) / Math.max(1, sh.to - sh.from), 0, 1);
         cam = RIG.pitchside(bx, by, lerp(11, 8.5, easeInOut(k)), 1.5); break;
@@ -1033,7 +1035,11 @@ export class HighlightsRenderer {
     c.fillStyle = K.shorts; c.fillRect(bx - bw / 2 + 1, top + bh * 0.72, bw - 2, bh * 0.28);                          // shorts
     c.fillStyle = K.trim; c.fillRect(bx - bw / 2, top + bh * 0.3, bw, Math.max(2, bh * 0.04));                        // collar trim
     c.fillStyle = '#e8b894'; c.beginPath(); c.arc(bx, top + bh * 0.16, bw * 0.34, 0, Math.PI * 2); c.fill();
-    if (it.flag?.kind === 'point') return this.drawPointFlag(cam, it, bx, top, bh, bw);
+    if (it.flag?.kind === 'point') {   // B-33: his arm and flag at the same scale as his (capped) body
+      if (fg.k >= 0.999) return this.drawPointFlag(cam, it, bx, top, bh, bw);
+      const k = fg.k, sc = { ...cam, p: (...a) => { const q = cam.p(...a); return q && [p[0] + (q[0] - p[0]) * k, p[1] + (q[1] - p[1]) * k, q[2] * k]; } };
+      return this.drawPointFlag(sc, it, bx, top, bh, bw);
+    }
     const f = it.flag, k = f ? easeOut(f.k) : 0, shoulder = [bx + bw * 0.35, top + bh * 0.34], hip = [bx + bw * 0.5, top + bh * 0.66];
     const tip = [bx + bw * 0.5, top - bh * 0.34 * k];                       // the flag raised straight up
     const hand = f ? [lerp(hip[0], tip[0], k) + (f.kind === 'wave' ? Math.sin(f.phase) * bw * 0.5 * k : 0), lerp(hip[1], tip[1] + bh * 0.1, k)] : hip;
@@ -1081,8 +1087,10 @@ export class HighlightsRenderer {
     const a = it.lying.ang, hx = it.x + Math.cos(a) * 0.95, hy = it.y + Math.sin(a) * 0.95, fx = it.x - Math.cos(a) * 0.85, fy = it.y - Math.sin(a) * 0.85;
     const H0 = cam.p(hx, hy, 0.18), F0 = cam.p(fx, fy, 0.15), M = cam.p(it.x, it.y, 0.2);
     if (!H0 || !F0 || !M) return;
-    const fg = this.figure(cam, M, it.x, it.y); if (fg.alpha < 0.02) return;   // B-33: the same limit as a standing player
+    const G = cam.p(it.x, it.y); if (!G) return;
+    const fg = this.figure(cam, G, it.x, it.y); if (fg.alpha < 0.02) return;   // B-33: the same limit as a standing player, length and width
     c.globalAlpha *= fg.alpha;
+    for (const Q of [H0, F0]) { Q[0] = M[0] + (Q[0] - M[0]) * fg.k; Q[1] = M[1] + (Q[1] - M[1]) * fg.k; }
     const w = Math.max(8, M[2] * 0.5) * fg.k;
     c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(M[0], M[1] + w * 0.3, Math.abs(H0[0] - F0[0]) / 2 + w, w * 0.6, 0, 0, Math.PI * 2); c.fill();
     c.strokeStyle = col; c.lineWidth = w; c.lineCap = 'round';
