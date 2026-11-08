@@ -3,6 +3,8 @@
 // late sees the same picture as everyone else, and nothing here looks past the moment the match has reached.
 //   drawShow(r, show, t): r is the BroadcastRenderer; show is { kind: 'pre' | 'half' | 'goal' | 'end', local, dur, goal }; t is the match-file time.
 import { W, H, makeCam, clamp, lerp, easeOut, easeInOut, seg01, lastName, LIME } from './highlights.js';
+import { kickoff } from './data.js';
+import { safeColour, onColour } from './ui.js';
 
 const TAU = Math.PI * 2;
 const PRE = [['warmup', 20], ['home', 22], ['away', 22], ['walkout', 25], ['anthem', 36], ['handshake', 15], ['ready', 10]];   // seconds of the 150 before kick-off
@@ -278,22 +280,73 @@ function restart(r, show, t) {
   if (left < 9) r.momentPanel('BACK FOR THE RESTART', r.scoreAt(g.t + 0.01), seg01(9 - left, 0, 0.5) * (1 - seg01(9 - left, 8.5, 9)), false);
 }
 
-// Full time: the final score and the match stats, the player of the match, then goodbye.
+// Full time (B-37): the full stats, the player of the match, both teams' next games, then goodbye, once each. Then the match is over on the site.
+const END = [['stats', 26], ['motm', 18], ['next', 15], ['bye', 7]];   // seconds of the 66 (js/dashboard-data.js SHOW.end)
 function fullTime(r, show) {
-  const left = show.dur - show.local, bye = Math.min(20, show.dur * 0.25);
-  if (left <= bye) {
-    const u = bye - left, k = easeOut(u / 0.8);
-    r.bg(0.9);
-    if (r.A.league) { r.c.save(); r.c.globalAlpha = k; r.leagueFit(W / 2, 330, 240, 240); r.c.restore(); }
-    r.text('THANKS FOR WATCHING', W / 2, 560, { size: 76, weight: 900, align: 'center', spacing: 4, alpha: k });
-    r.text(`${r.home.name.toUpperCase()} ${r.d.result.home}-${r.d.result.away} ${r.away.name.toUpperCase()}`, W / 2, 640, { size: 34, weight: 800, align: 'center', colour: 'rgba(255,255,255,.8)', alpha: easeOut((u - 0.4) / 0.6) });
-    r.text('HIGHLIGHTS AND THE FULL MATCH ARE COMING UP', W / 2, 710, { size: 30, weight: 900, align: 'center', colour: LIME, spacing: 3, alpha: easeOut((u - 0.8) / 0.6) });
-    fade(r, u, bye, 0.8);
+  const k = show.dur / 66;
+  let at = show.local;
+  for (const [scene, secs] of END) {
+    const d = secs * k;
+    if (at > d && scene !== 'bye') { at -= d; continue; }
+    if (scene === 'stats') fullStats(r, at);
+    else if (scene === 'motm') r.drawMotm(at);
+    else if (scene === 'next') nextGames(r, at);
+    else bye(r, at, d);
+    fade(r, at, d, 0.4);
     return;
   }
-  const cycle = 50, u = show.local % cycle;
-  if (u < 32) { r.drawFulltime(u); fade(r, u, 32, 0.4); }
-  else { r.drawMotm(u - 32); fade(r, u - 32, cycle - 32, 0.4); }
+}
+
+// The final score, the scorers, and every team number the match file has.
+function fullStats(r, t) {
+  const st = r.d.stats.teams, k = easeOut(t / 0.6);
+  r.bg(0.88); r.stripes(t, 0.4);
+  r.text('FULL-TIME', W / 2, 105, { size: 46, weight: 900, align: 'center', colour: LIME, spacing: 12, alpha: k });
+  r.scoreLine([r.d.result.home, r.d.result.away], 300, k);
+  const list = side => r.goals.filter(g => (g.team === (side ? r.away.code : r.home.code)) !== !!g.own_goal).map(g => `${lastName(r.names[g.scorer])} ${g.minute}'${g.own_goal ? ' (OG)' : ''}`);
+  const a = easeOut((t - 0.6) / 0.6);
+  list(0).slice(0, 5).forEach((s, i) => r.scorerLine(s, W / 2 - 700, 450 + i * 38, { alpha: a }));
+  list(1).slice(0, 5).forEach((s, i) => r.scorerLine(s, W / 2 + 700, 450 + i * 38, { alpha: a }));
+  const both = key => [+st.home[key] || 0, +st.away[key] || 0];
+  const rows = [['POSSESSION %', both('possession')], ['xG', both('xg')], ['SHOTS', both('shots')], ['ON TARGET', both('shots_on_target')], ['CORNERS', both('corners')],
+    ['PASS ACCURACY %', both('pass_accuracy')], ['FOULS', both('fouls')], ['YELLOW CARDS', both('yellow_cards')], ['RED CARDS', both('red_cards')], ['SAVES', both('saves')]];
+  statBars(r, rows, 478, 58, t);
+}
+
+// Each team's next game: who, where and when.
+function nextGames(r, t) {
+  const c = r.c, S = r.season, now = kickoff(r.fx) || new Date(0), k = easeOut(t / 0.6);
+  r.bg(0.88); r.stripes(t, 0.4);
+  r.text('NEXT UP', W / 2, 150, { size: 50, weight: 900, align: 'center', colour: LIME, spacing: 12, alpha: k });
+  const teamOf = code => S?.teams?.find(x => x.code === code) || { code, name: code, colour: '#1e88e5' };
+  const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'], MON = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+  const when = d => { const h = d.getHours(), m = d.getMinutes(); return `${DAYS[d.getDay()]} ${d.getDate()} ${MON[d.getMonth()]}  ·  ${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; };
+  [r.home, r.away].forEach((team, i) => {
+    const y = 330 + i * 330, b = easeOut((t - 0.3 - i * 0.25) / 0.6);
+    const next = (S?.fixtures || []).filter(f => !f.test && !f.postponed && (f.home === team.code || f.away === team.code) && kickoff(f) > now).sort((x, z) => kickoff(x) - kickoff(z))[0];
+    c.save(); c.globalAlpha = b;
+    r.pill(W / 2 - 760, y, 1520, 250, 'rgba(6,26,56,0.82)', 24);
+    c.fillStyle = safeColour(team.colour); c.fillRect(W / 2 - 760, y, 12, 250);
+    r.logoAt(team, W / 2 - 600, y + 125, 170);
+    r.text(team.name.toUpperCase(), W / 2 - 470, y + 95, { size: 46, weight: 900 });
+    if (next) {
+      const opp = teamOf(next.home === team.code ? next.away : next.home), home = next.home === team.code;
+      r.text(`${home ? 'HOME TO' : 'AWAY AT'}  ${opp.name.toUpperCase()}`, W / 2 - 470, y + 160, { size: 36, weight: 800, colour: 'rgba(255,255,255,.85)' });
+      r.text(`${next.round ? `${String(next.round).toUpperCase()}  ·  ` : ''}${when(kickoff(next))}`, W / 2 - 470, y + 212, { size: 28, weight: 800, colour: LIME, spacing: 2 });
+      c.fillStyle = safeColour(opp.colour); c.beginPath(); c.arc(W / 2 + 640, y + 125, 56, 0, TAU); c.fill();
+      r.text(opp.code, W / 2 + 640, y + 138, { size: 34, weight: 900, align: 'center', colour: onColour(safeColour(opp.colour)) });
+    } else r.text('SEASON OVER', W / 2 - 470, y + 170, { size: 36, weight: 800, colour: 'rgba(255,255,255,.7)' });
+    c.restore();
+  });
+}
+
+function bye(r, u, d) {
+  const k = easeOut(u / 0.6);
+  r.bg(0.9);
+  if (r.A.league) { r.c.save(); r.c.globalAlpha = k; r.leagueFit(W / 2, 330, 240, 240); r.c.restore(); }
+  r.text('THANKS FOR WATCHING', W / 2, 560, { size: 76, weight: 900, align: 'center', spacing: 4, alpha: k });
+  r.text(`${r.home.name.toUpperCase()} ${r.d.result.home}-${r.d.result.away} ${r.away.name.toUpperCase()}`, W / 2, 640, { size: 34, weight: 800, align: 'center', colour: 'rgba(255,255,255,.8)', alpha: easeOut((u - 0.4) / 0.6) });
+  r.text('HIGHLIGHTS AND THE FULL MATCH ARE UP NEXT', W / 2, 710, { size: 30, weight: 900, align: 'center', colour: LIME, spacing: 3, alpha: easeOut((u - 0.8) / 0.6) });
 }
 
 export function drawShow(r, show, t) {

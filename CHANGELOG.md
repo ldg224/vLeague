@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.35.0 (2026-11-08)
+
+Headlines: Two days between rounds | A short full-time show
+
+**Changed (S-37):** there are now at least two days between rounds, for Goal of the Week, line-ups and Stakes. From Round 3, weekend rounds are on Saturday at 10:30 am, 2:00 pm and 5:30 pm and Sunday at 10:30 am and 2:00 pm (a Saturday 2 pm game is added and Sunday 5:30 pm dropped). Midweek rounds are on Tuesday at 5:30 and 7:00 pm and Wednesday at 4:00, 5:30 and 7:00 pm, instead of one game a day Monday to Friday. The New Year's round moves from Friday 1 January to Wednesday 30 December, same times. Line-ups still lock an hour before each round's first game. The season still ends in early February.
+**Fixed (B-37):** the full-time show went on too long, filling whatever was left of the hour with the stats and player of the match on repeat. It now shows the full stats (ten team numbers), the player of the match, both teams' next games, and goodbye, once each, about a minute in all. Then the match is over and the highlights and full match are ready, a few minutes sooner than before. Stakes still settle an hour after kick-off.
+Database change: yes, migration 0087 (the new kick-off times and line-up deadlines, already applied).
+
 ## 1.34.4 (2026-11-08)
 
 Headlines: Fewer straight red cards | Player design tester removed

@@ -1,4 +1,5 @@
-// The one-hour match slot (S-34): 45 minutes of football, 15 of show, whatever the result.
+// The match slot (S-34): 45 minutes of football and the show around it. Since B-37 the full-time show is 66 seconds, played once, so a match is live
+// for a little under the hour (more goals, more restarts, longer), never over it.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 globalThis.location = new URL('http://localhost/');
@@ -11,20 +12,25 @@ const fixture = goals => ({ id: 'x', date: '2026-11-06', time: '17:30', home: 'A
   result: { home: 0, away: 0, duration_t: 5900, periods, goals } });
 const at = s => new Date(KICK.getTime() + s * 1000);
 const goal = (t, team = 'A') => ({ t, team, minute: '10', scorer: 'p' });
+// How long a match is live: pre-match 150 s, football 2700, half-time 120, a restart for each goal (40 s, less when there are many), full-time 66.
+const liveFor = n => 150 + 2700 + 120 + n * Math.min(40, 510 / Math.max(1, n)) + 66;
 
 test('the football rate is the same whatever the score', () => {
   assert.equal(liveSpeed(fixture([]), season), 5900 / 2700);
   assert.equal(liveSpeed(fixture([goal(100), goal(4000), goal(5000)]), season), 5900 / 2700);
 });
 
-test('the clock never runs backwards and ends on the whistle at 60 minutes', () => {
+test('the clock never runs backwards, ends on the whistle, and the match is over when the full-time show ends (within the hour)', () => {
   for (const goals of [[], [goal(100)], [goal(2895)], [goal(5895)], Array.from({ length: 12 }, (_, i) => goal(300 + i * 400))]) {
     const f = fixture(goals);
     let last = -1;
     for (let s = 0; s <= 3600; s += 2) { const t = liveSimTime(f, season, at(s)); assert.ok(t >= last - 1e-9, `backwards at ${s}`); last = t; }
     assert.ok(Math.abs(last - 5900) < 1e-6);
-    assert.equal(status(f, season, at(3599)), 'live');
-    assert.equal(status(f, season, at(3601)), 'ft');
+    const end = liveFor(goals.length);
+    assert.ok(end <= 3600);
+    assert.equal(liveShow(f, season, at(end - 60)).kind, 'end');
+    assert.equal(status(f, season, at(end - 1)), 'live');
+    assert.equal(status(f, season, at(end + 1)), 'ft');
   }
 });
 
@@ -40,7 +46,7 @@ test('the show runs in order and the score waits for the football', () => {
   const halfReal = 150 + 40 + 2900 / (5900 / 2700);
   assert.equal(liveShow(f, season, at(halfReal + 60)).kind, 'half');
   assert.equal(liveShow(f, season, at(halfReal + 125)), null);
-  assert.equal(liveShow(f, season, at(3590)).kind, 'end');
+  assert.equal(liveShow(f, season, at(liveFor(1) - 10)).kind, 'end');
 });
 
 test('there is always time for a full-time show, even with a lot of goals', () => {

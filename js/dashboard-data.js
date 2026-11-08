@@ -85,14 +85,16 @@ export function status(fx, s, now = new Date()) {
   if (!k) return 'tba';
   if (now < k) return 'upcoming';
   if (!fx.result) return 'awaiting';
-  if (now - k < liveMs(s)) return 'live';
+  if (now - k < (fx.result.duration_t ? warp(fx, s).B * 1000 : liveMs(s))) return 'live';   // live until its full-time show ends (B-37)
   return 'ft';
 }
 
 // A live match fills a one-hour slot (S-34): 45 minutes of football and 15 of matchday show. The football runs at one steady rate whatever the
 // result, so the speed gives nothing away. The show holds the match clock still: the pre-match show, half-time and a restart after each goal, with what
 // is left of the 15 minutes going to the full-time show. Seconds are for a 60-minute slot, and scale with it. KEEP live_minutes IN STEP with stakes_match_over.
-const SHOW = { football: 2700, pre: 150, half: 120, restart: 40, restartAfter: 22, endMin: 120 };
+// end: the full-time show (B-37): the full stats, the player of the match, both teams' next games and goodbye, once each; then it's full time.
+// endMin is still kept back when sharing the spare time between the goal restarts, so a match with many goals stays inside the hour.
+const SHOW = { football: 2700, pre: 150, half: 120, restart: 40, restartAfter: 22, endMin: 120, end: 66 };
 function warp(fx, s) {
   const goals = fx.result.goals || [], key = (s.live_minutes || 10) + ':' + fx.result.duration_t + ':' + goals.length;
   if (fx._warp?.key === key) return fx._warp;
@@ -109,8 +111,8 @@ function warp(fx, s) {
   const run = to => { if (to > at) { const w1 = w + (to - at) / r; segs.push({ s0: at, s1: to, w0: w, w1, r }); w = w1; at = to; } };
   for (const h of holds) { run(h.t); segs.push({ s0: h.t, s1: h.t, w0: w, w1: w + h.d, r: 0, hold: h }); w += h.d; }
   run(t1);
-  segs.push({ s0: t1, s1: t1, w0: w, w1: Math.max(B, w), r: 0, hold: { kind: 'end' } });
-  return fx._warp = { key, B, r, segs };
+  segs.push({ s0: t1, s1: t1, w0: w, w1: w + SHOW.end * k, r: 0, hold: { kind: 'end' } });
+  return fx._warp = { key, B: w + SHOW.end * k, r, segs };   // B: how long this match is live (under the hour; Stakes still waits the full hour, which is after it)
 }
 const liveSeg = (W, fx, now) => {
   const w = Math.min(W.B, Math.max(0, (now - kickoff(fx)) / 1000));
