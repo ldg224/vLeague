@@ -5,8 +5,9 @@ Every published version of the vLeague app. Newest first. How versions work and 
 
 ## 1.35.1 (2026-11-08)
 
-Headlines: The New Year's Day and Australia Day Rounds are on their days
+Headlines: The camera no longer gives the play away | The New Year's Day and Australia Day Rounds are on their days
 
+**Fixed (B-35):** the broadcast camera moved towards where the ball was about to go before it went, so its position could hint that a shot was going in or a ball was going out. It now follows only where the ball is and has been, like a camera operator; it keeps the ball in shot as well as before. Every match, played or not.
 **Fixed (S-37):** 1.35.0 moved the New Year's Day Round to Wednesday 30 December to keep two days before Round 13. It is back on Friday 1 January, 12:00 to 4:00 pm, as before: a round named for its day is an exception to the two-day gap, so Round 13 follows the next day. Line-ups lock at 11:00 am.
 **Changed (S-37):** the Australia Day Round is all on Australia Day, Tuesday 26 January, 12:00 to 4:00 pm, one game an hour (1.35.0 had it across Tuesday and Wednesday evening). Line-ups lock at 11:00 am.
 Database change: yes, migrations 0088 and 0089 (already applied).

@@ -105,11 +105,12 @@ export class BroadcastRenderer extends HighlightsRenderer {
   }
 
   // ------------------------------------------------ main camera
-  // Broadcast wide angle from the main stand: follows the ball (slightly ahead of it), wide in
-  // midfield and tighter, leaning towards the goal, near the box. Smoothed forwards and
-  // backwards over the whole match (no lag), then held so the ball stays well inside the frame.
+  // Broadcast wide angle from the main stand: follows the ball, wide in midfield and tighter, leaning towards the goal, near the box,
+  // then held so the ball stays well inside the frame. B-35: it only ever uses where the ball is now and has been, like a camera operator
+  // following play. It used to aim 0.4 s ahead and smooth the path backwards in time as well as forwards, so the picture started moving
+  // towards where the ball was about to go and could give away a goal or a ball going out before it happened.
   camTarget(t) {
-    const b = this.fr.ball(Math.min(t + 0.4, this.t1));
+    const b = this.fr.ball(t);
     const gx = b[0] > 52.5 ? 105 : 0, k = clamp(1 - Math.hypot(b[0] - gx, b[1] - 34) / 34, 0, 0.35);
     return [clamp(lerp(b[0], gx, k), 18, 87), clamp(lerp(b[1], 34, k * 0.6), 20, 48), lerp(50, 40, k / 0.35)];   // was 60 to 44: players looked tiny when far out (B-06)
   }
@@ -123,7 +124,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
     };
     this.camN = n; this.camHalf = Math.round((this.half2 - this.t0) / CAM_DT);
     for (let i = 0; i < n; i++) { const [x, y, d] = this.camTarget(tAt(i)); X[i] = x; Y[i] = y; D[i] = d; }
-    for (const dir of [1, -1]) { smooth(X, 0.8, dir); smooth(Y, 1.1, dir); smooth(D, 1.6, dir); }
+    smooth(X, 0.6, 1); smooth(Y, 0.9, 1); smooth(D, 1.4, 1);   // forwards only (B-35): a little quicker than before, as it no longer gets a head start
     // Keep the actual ball inside the frame.
     const keep = () => {
       for (let i = 0; i < n; i++) {
@@ -135,7 +136,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
       }
     };
     keep();
-    for (const dir of [1, -1]) { smooth(X, 0.25, dir); smooth(Y, 0.25, dir); }
+    smooth(X, 0.25, 1); smooth(Y, 0.25, 1);
     keep();
     // Moments where the assistant referee must be in the picture (a flag up for offside, the sign for a throw-in, goal kick or corner): the camera
     // opens out and moves to a spot that holds the assistant, his flag and the place the play restarts, then eases back (1.18). Done last, so the smoothing
