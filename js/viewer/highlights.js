@@ -10,6 +10,7 @@ import { drawLookArt, drawLookFx, drawLookSpill, drawMoustache } from './look-ca
 import { kickoff } from './data.js';
 import { buildEffects } from './effects.js';
 import { kitSprite, cleanDesign, drawPrint, TURNS, turnIndex } from '../kit.js';
+import { possPair } from '../possession.js';
 
 export const W = 1920, H = 1080, FPS = 30;
 const MIN_PLAYER = 110;   // px at 1920 x 1080: how tall a player where the camera is looking is drawn on a wide shot (highlights were showing tiny players on high and wide shots)
@@ -652,10 +653,10 @@ export class HighlightsRenderer {
     const rows = [['POSSESSION %', 'possession'], ['xG', 'xg'], ['SHOTS', 'shots'], ['ON TARGET', 'shots_on_target'], ['PASS ACCURACY %', 'pass_accuracy']];
     rows.forEach(([label, key], i) => {
       const y = 530 + i * 102, b = easeOut((t - 1.1 - i * 0.15) / 0.7);
-      const h = +st.home[key] || 0, aw = +st.away[key] || 0, tot = h + aw || 1;
+      const [h, aw] = key === 'possession' ? possPair(st.home[key], st.away[key]) : [+st.home[key] || 0, +st.away[key] || 0], tot = h + aw || 1;   // B-39: possession adds up to 100
       this.text(label, W / 2, y, { size: 22, weight: 800, align: 'center', colour: 'rgba(255,255,255,.65)', spacing: 3, alpha: b });
-      this.text(String(st.home[key]), W / 2 - 330, y + 38, { size: 32, weight: 900, align: 'right', alpha: b });
-      this.text(String(st.away[key]), W / 2 + 330, y + 38, { size: 32, weight: 900, alpha: b });
+      this.text(String(key === 'possession' ? h : st.home[key]), W / 2 - 330, y + 38, { size: 32, weight: 900, align: 'right', alpha: b });
+      this.text(String(key === 'possession' ? aw : st.away[key]), W / 2 + 330, y + 38, { size: 32, weight: 900, alpha: b });
       const bw = 560 * b;
       this.pill(W / 2 - 290, y + 16, 580, 16, 'rgba(255,255,255,0.08)');
       c.fillStyle = this.hc; c.beginPath(); c.roundRect(W / 2 - bw / 2, y + 16, bw * h / tot, 16, 8); c.fill();

@@ -5,6 +5,7 @@
 import { W, H, makeCam, lerpCam, clamp, lerp, easeOut, easeInOut, seg01, lastName, LIME } from './highlights.js';
 import { kickoff } from './data.js';
 import { safeColour, onColour } from './ui.js';
+import { possPair } from '../possession.js';
 
 const TAU = Math.PI * 2;
 const PRE = [['warmup', 20], ['home', 22], ['away', 22], ['walkout', 25], ['anthem', 36], ['handshake', 15], ['ready', 10]];   // seconds of the 150 before kick-off
@@ -306,7 +307,7 @@ function fullStats(r, t) {
   list(0).slice(0, 5).forEach((s, i) => r.scorerLine(s, W / 2 - 700, 450 + i * 38, { alpha: a }));
   list(1).slice(0, 5).forEach((s, i) => r.scorerLine(s, W / 2 + 700, 450 + i * 38, { alpha: a }));
   const both = key => [+st.home[key] || 0, +st.away[key] || 0];
-  const rows = [['POSSESSION %', both('possession')], ['xG', both('xg')], ['SHOTS', both('shots')], ['ON TARGET', both('shots_on_target')], ['CORNERS', both('corners')],
+  const rows = [['POSSESSION %', possPair(st.home.possession, st.away.possession)], ['xG', both('xg')], ['SHOTS', both('shots')], ['ON TARGET', both('shots_on_target')], ['CORNERS', both('corners')],
     ['PASS ACCURACY %', both('pass_accuracy')], ['FOULS', both('fouls')], ['YELLOW CARDS', both('yellow_cards')], ['RED CARDS', both('red_cards')], ['SAVES', both('saves')]];
   statBars(r, rows, 478, 58, t);
 }

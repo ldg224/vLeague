@@ -10,6 +10,7 @@
 // Events: the goals (score after, assist, penalty, own goal), cards and woodwork in a timeline, the minute in a round badge in the middle, the home side's events on
 // the left and the away side's on the right, "+4 minutes added" and "HT 1 - 0" between. Only what the engine really records: no substitutions, VAR or injuries exist. An own goal and a penalty saved or missed wear the red football.
 import { esc } from './member.js';
+import { possPair } from './possession.js';
 import { icon } from './icons.js';
 import { goalMark, cardMark, redBallMark } from './match-marks.js';
 import { onColour } from './club-colour.js';
@@ -80,8 +81,9 @@ function topStats(fx, file, ctx) {
     const cell = (v, code, lead) => `<b class="ts-v${lead ? ' is-lead' : ''}"${lead ? ' ' + pillOf(code) : ''}>${f(v)}</b>`;
     return `<li>${cell(l, fx.home, l > r)}<span>${label}</span>${cell(r, fx.away, r > l)}</li>`;
   }).join('');
+  const [hp, ap] = possPair(h.possession, a.possession);   // B-39: always adds up to 100
   const poss = !ctx.live && h.possession != null && a.possession != null
-    ? `<div class="ts-poss"><p>Ball possession</p><div class="ts-bar" role="img" aria-label="Possession: home ${Math.round(h.possession)} percent, away ${Math.round(a.possession)} percent"><i class="is-h" style="width:${h.possession}%;${ctx.accent(fx.home) ? `background:${esc(ctx.accent(fx.home))};color:${esc(onColour(ctx.accent(fx.home)))}` : ''}">${Math.round(h.possession)}%</i><i class="is-a" style="width:${a.possession}%;${ctx.accent(fx.away) ? `background:${esc(ctx.accent(fx.away))};color:${esc(onColour(ctx.accent(fx.away)))}` : ''}">${Math.round(a.possession)}%</i></div></div>` : '';
+    ? `<div class="ts-poss"><p>Ball possession</p><div class="ts-bar" role="img" aria-label="Possession: home ${hp} percent, away ${ap} percent"><i class="is-h" style="width:${hp}%;${ctx.accent(fx.home) ? `background:${esc(ctx.accent(fx.home))};color:${esc(onColour(ctx.accent(fx.home)))}` : ''}">${hp}%</i><i class="is-a" style="width:${ap}%;${ctx.accent(fx.away) ? `background:${esc(ctx.accent(fx.away))};color:${esc(onColour(ctx.accent(fx.away)))}` : ''}">${ap}%</i></div></div>` : '';
   return `${poss}<ul class="ts-rows">${rows}</ul>`;
 }
 

@@ -13,6 +13,7 @@ import { loadSeason, kickoff, status, shownScore, liveSimTime, liveMinute, liveS
 import { crest, teamOf, nameOf, fullNameOf, useClubs, day } from './places.js';
 import { prefs, fmtTime, spoilerHidden, revealScore } from './prefs.js';
 import { clubSummary, percents } from './match-model.js';
+import { possPair } from './possession.js';
 import { loadChanceSheets, chanceOf } from './win-chance.js';
 import { lookInfo, scoreboard } from './scoreboard.js';
 import { playerCard, MatchPlayer } from './viewer/player.js';
@@ -239,7 +240,7 @@ async function run() {
   // ---------------------------------------------------------------- stats
   function statsSection() {
     const t = horizon(), full = st() === 'ft', S = full ? finalStats() : statsAt(t), h = S[fx.home], a = S[fx.away];
-    const tot = (h.hold || 0) + (a.hold || 0), ph = full ? h.poss : tot ? Math.round(100 * h.hold / tot) : 50, pa = full ? a.poss : 100 - ph;
+    const tot = (h.hold || 0) + (a.hold || 0), [ph, pa] = full ? possPair(h.poss, a.poss) : possPair(h.hold, a.hold);   // B-39: always adds up to 100
     const pct = (d, n) => (n ? Math.round(100 * d / n) : 0);
     const R = [['Possession', ph, pa, '%'], ['Expected goals (xG)', +h.xg.toFixed(2), +a.xg.toFixed(2)], ['Shots', h.shots, a.shots], ['Shots on target', h.sot, a.sot],
       ['Passes', h.passes, a.passes], ['Pass accuracy', pct(h.done, h.passes), pct(a.done, a.passes), '%'], ['Corners', h.corners, a.corners], ['Tackles won', h.tackles, a.tackles],

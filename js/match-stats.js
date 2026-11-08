@@ -5,6 +5,7 @@
 //   statsView(fx, file, ctx) -> html. ctx = { team(code), club(code), crest(team, px), accent(code) -> '#rrggbb' | '', horizon, live }
 // Under each row a split bar shows the share of the two values: the better side in its club's colour, the other muted, so a glance down the card shows who had the match.
 import { esc } from './member.js';
+import { possPair } from './possession.js';
 import { onColour } from './club-colour.js';
 import { xgSplit } from './match-shotmap.js';
 
@@ -41,7 +42,7 @@ export function statsView(fx, file, ctx) {
   const num = (v, dp, unit) => `${dp ? Number(v).toFixed(dp) : Math.round(Number(v))}${unit || ''}`;
   const groups = GROUPS.map(([title, rows]) => {
     const list = rows.filter(([, key]) => h[key] != null && a[key] != null).map(([label, key, dp, unit = '', low]) => {
-      const l = Number(h[key]), r = Number(a[key]), better = l === r ? 0 : (l > r) !== Boolean(low) ? 1 : -1;
+      const [l, r] = key === 'possession' ? possPair(h[key], a[key]) : [Number(h[key]), Number(a[key])], better = l === r ? 0 : (l > r) !== Boolean(low) ? 1 : -1;
       const cell = (v, code, lead) => `<b class="ts-v${lead ? ' is-lead' : ''}"${lead ? pill(code) : ''}>${num(v, dp, unit)}</b>`;
       const total = l + r, share = total ? 100 * l / total : 50, bar = `<i class="st-bar" aria-hidden="true"><em class="is-h${better === 1 ? ' is-lead' : ''}" style="width:${share.toFixed(1)}%${better === 1 && ctx.accent(fx.home) ? `;background:${esc(ctx.accent(fx.home))}` : ''}"></em><em class="is-a${better === -1 ? ' is-lead' : ''}"${better === -1 && ctx.accent(fx.away) ? ` style="background:${esc(ctx.accent(fx.away))}"` : ''}></em></i>`;
       return `<li>${cell(l, fx.home, better === 1)}<span>${esc(label)}</span>${cell(r, fx.away, better === -1)}${bar}</li>`;
