@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.35.1 (2026-11-08)
+
+Headlines: The New Year's Day Round is on New Year's Day again
+
+**Fixed (S-37):** 1.35.0 moved the New Year's Day Round to Wednesday 30 December to keep two days before Round 13. It is back on Friday 1 January, 12:00 to 4:00 pm, as before: a round named for its day is an exception to the two-day gap, so Round 13 follows the next day. Line-ups lock at 11:00 am.
+Database change: yes, migration 0088 (already applied).
+
 ## 1.35.0 (2026-11-08)
 
 Headlines: Two days between rounds | A short full-time show
