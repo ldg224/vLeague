@@ -154,7 +154,7 @@ function makeCamAt(C, T, fovDeg, capMul = 1.9) {
   // B-33: the tallest anyone may be drawn in this shot: a little under twice a player standing where the camera is looking. Closer than that (a keeper
   // under a camera behind the goal, someone walking past a touchline camera) he is held at this size and fades out of shot, as on TV, instead of
   // filling the screen.
-  const cap = Math.max(MIN_PLAYER * 1.35, capMul * focal * 1.85 / Math.max(1, fl));   // capMul: how much bigger than that a camera allows (the free-kick camera lets the taker loom)
+  const cap = Math.max(MIN_PLAYER * 1.25, capMul * focal * 1.85 / Math.max(1, fl));   // capMul: how much bigger than that a camera allows (the free-kick camera lets the taker loom)
   // World point -> camera space [right, up, depth].
   const toCam = (x, y, z = 0) => {
     const v0 = x - C[0], v1 = y - C[1], v2 = z - C[2];
@@ -400,6 +400,16 @@ export class HighlightsRenderer {
   }
 
   // Change the drawing resolution without rebuilding anything (the camera and director plans don't depend on it).
+  // Lite drawing (B-33, for slow phones): the player turns it on for touch devices and for anything struggling to keep up. The stands are plain colour with
+  // tier lines instead of the crowd texture (the texture over the whole bowl cost about 30 ms a frame on a slow phone), the advertising boards are drawn in
+  // fewer slices, and no shadow is blurred (each blur is a costly pass on a phone's graphics). The picture is the same, a little plainer.
+  setLite(on) {
+    on = !!on; if (on === this.lite) return;
+    this.lite = on;
+    const c = this.c, proto = Object.getPrototypeOf(c), d = Object.getOwnPropertyDescriptor(proto, 'shadowBlur');
+    if (on && d) Object.defineProperty(c, 'shadowBlur', { configurable: true, get: () => d.get.call(c), set: v => d.set.call(c, 0) });
+    else delete c.shadowBlur;
+  }
   setScale(s) {
     s = clamp(+s || 1, 0.1, 2);
     if (s === this.scale) return;
@@ -1125,7 +1135,7 @@ export class HighlightsRenderer {
   drawPitch(cam) {
     const c = this.c;
     if (!this.sky) { this.sky = c.createLinearGradient(0, 0, 0, H); this.sky.addColorStop(0, '#05070a'); this.sky.addColorStop(1, '#0b1410'); }
-    c.fillStyle = this.sky; c.fillRect(0, 0, W, H);
+    c.fillStyle = this.lite ? '#080d0e' : this.sky; c.fillRect(0, 0, W, H);   // lite: a plain sky (a full-screen gradient cost about 11 ms a frame on a slow phone)
     this.drawStands(cam);
     this.quad(cam, GRASS, '#1d5a2a');
     for (let i = 0; i < 12; i++) this.quad(cam, MOW[i], i % 2 ? '#2d7a3b' : '#327f40');
@@ -1159,7 +1169,7 @@ export class HighlightsRenderer {
     // A panel off the side of the picture isn't drawn: the boards were a quarter of the cost of a frame, and about half of them are out of shot on the usual camera (B-36).
     const ends = [cam.p(xa, y, z), cam.p(xb, y, z), cam.p(xa, y, 0), cam.p(xb, y, 0)];
     if (ends.every(Boolean) && (ends.every(q => q[0] < -40) || ends.every(q => q[0] > W + 40))) return;
-    const art = this.boardArt(label, colour, (xb - xa) / z, back), c = this.c, N = 14, sw = art.width / N;
+    const art = this.boardArt(label, colour, (xb - xa) / z, back), c = this.c, N = this.lite ? 6 : 14, sw = art.width / N;
     for (let k = 0; k < N; k++) {
       const x = xa + (xb - xa) * k / N, x2 = xa + (xb - xa) * (k + 1) / N;
       const tl = cam.p(x, y, z), tr = cam.p(x2, y, z), bl = cam.p(x, y, 0);
@@ -1199,6 +1209,11 @@ export class HighlightsRenderer {
       const P = cam.poly(f);
       if (P.length < 3) continue;
       c.beginPath(); c.moveTo(P[0][0], P[0][1]); for (let i = 1; i < P.length; i++) c.lineTo(P[i][0], P[i][1]); c.closePath();
+      if (this.lite) {   // plain colour, and the tiers of seats as lines across it
+        c.fillStyle = '#161c27'; c.fill();
+        for (let k = 1; k < 5; k++) { const u = k / 5, a = [lerp(f[0][0], f[3][0], u), lerp(f[0][1], f[3][1], u), lerp(f[0][2], f[3][2], u)], b = [lerp(f[1][0], f[2][0], u), lerp(f[1][1], f[2][1], u), lerp(f[1][2], f[2][2], u)]; this.line(cam, [a, b], 2, 'rgba(120,135,160,0.22)'); }
+        continue;
+      }
       c.fillStyle = this.crowd; c.fill();
       const g = c.createLinearGradient(0, Math.min(...P.map(p => p[1])), 0, Math.max(...P.map(p => p[1])));
       g.addColorStop(0, 'rgba(5,7,10,0.75)'); g.addColorStop(1, 'rgba(5,7,10,0.15)');

@@ -115,14 +115,18 @@ export class MatchPlayer {
     const have = this.r[view];
     if (have) { have.setScale(this.scale); return have; }   // a quality change only resizes the picture, it never rebuilds the camera plans
     const opts = { season: this.S, fixture: this.FX, assets: this.assets, scale: this.scale, kitArt: this.kitArt };
-    if (view === 'highlights') return (this.r[view] = new this.hl.HighlightsRenderer(this.data, opts));
+    if (view === 'highlights') { const h = new this.hl.HighlightsRenderer(this.data, opts); h.setLite?.(this.lite()); return (this.r[view] = h); }
     const r = new this.bc.BroadcastRenderer(this.data, opts);
     r.fxClock = () => performance.now() / 1000;   // the score bug's effects run on real time, whatever speed the match is playing at
+    r.setLite?.(this.lite());
     return (this.r[view] = r);
   }
+  // Lite drawing (B-33): on a phone or tablet, or once this device has shown it can't keep up (dropped to 30 frames a second, or lost its picture).
+  lite() { return this.minGap >= FRAME_30 || (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches); }
+  applyLite() { const on = this.lite(); for (const r of Object.values(this.r)) r.setLite?.(on); }
   // The browser threw the picture away (its graphics process crashed or ran out of memory): carry on with much less to draw, here and next time.
   contextLost() {
-    this.minGap = this.want = FRAME_30; this.trial = null; this.bestScale = Math.min(this.bestScale, SAFE_SCALE);
+    this.minGap = this.want = FRAME_30; this.trial = null; this.bestScale = Math.min(this.bestScale, SAFE_SCALE); this.applyLite();
     this.setQuality(Math.min(this.scale, 0.46));
   }
   range() {   // [min, max] of the current view's time
@@ -402,7 +406,7 @@ export class MatchPlayer {
     if (js > 20 || g > this.want * 1.6) {
       this.fast = 0;
       if (now - this.raisedAt < 6000 && i < last) { this.bestScale = LADDER[i + 1]; return this.setQuality(LADDER[i + 1]); }   // it can't hold the step it just climbed: stay below it this visit
-      if (i >= 3 && this.minGap < FRAME_30) { this.minGap = this.want = FRAME_30; this.holdUntil = now + 2000; return; }
+      if (i >= 3 && this.minGap < FRAME_30) { this.minGap = this.want = FRAME_30; this.holdUntil = now + 2000; this.applyLite(); return; }
       if (i < last) { this.trial = { from: this.scale, gap: g }; this.setQuality(LADDER[Math.min(last, i + 2)]); }   // two steps halve what there is to paint, enough to show on a screen that only shows whole frames
     } else if (js < 9 && g < this.want * 1.2 && i > 0 && LADDER[i - 1] <= this.bestScale + 1e-6 && this.minGap < FRAME_30) {
       if (++this.fast >= 3) { this.raisedAt = now; this.setQuality(LADDER[i - 1]); }
