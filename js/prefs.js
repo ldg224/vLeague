@@ -1,7 +1,7 @@
 // Settings (0.7). Two kinds:
 // - synced: what follows the account to every device (Supabase user_settings): spoiler-free results and the
 //   matches already revealed, Inbox posts read and cleared, clock, email choices. prefs() loads them once per page (cached).
-// - device: how the app looks on this screen (localStorage 'vleague-device'): theme, text size, reduced motion. Applied by
+// - device: how the app looks on this screen (localStorage 'vleague-device'): theme, text size, reduced motion, lite mode. Applied by
 //   a one-line script in each page's <head> before the page paints, and again by setDevice().
 import { db, currentUser } from './auth.js';
 import { status } from './dashboard-data.js';
@@ -12,7 +12,10 @@ const DEFAULTS = {
 };
 const CACHE = 'vleague-prefs';
 const DEVICE = 'vleague-device';
-const DEVICE_DEFAULTS = { text: '100', motion: 'system', theme: 'dark' };
+const DEVICE_DEFAULTS = { text: '100', motion: 'system', theme: 'dark', lite: 'auto' };
+// Lite mode (B-33): lighter drawing for phones and slower computers. 'auto' turns it on for a touch screen, four processor cores or fewer, or data saver.
+// The same test is in the one-line script in each page's <head>, so a phone never starts the heavy effects at all: KEEP THE TWO IN STEP.
+export const liteOn = (d = device()) => d.lite === 'on' || (d.lite !== 'off' && (matchMedia('(pointer: coarse)').matches || (navigator.hardwareConcurrency || 8) <= 4 || !!navigator.connection?.saveData));
 
 const store = {
   get(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } },
@@ -75,6 +78,7 @@ export function applyDevice(d = device()) {
   const root = document.documentElement;
   root.style.fontSize = d.text === '100' ? '' : `${Number(d.text) || 100}%`;
   root.classList.toggle('reduce-motion', d.motion === 'reduce');
+  root.classList.toggle('lite', liteOn(d));
 }
 export function setDevice(key, value) {
   const d = { ...device(), [key]: value };

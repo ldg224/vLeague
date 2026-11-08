@@ -192,3 +192,6 @@
 .sc-pfc { position: absolute; right: -6px; bottom: -3px; display: grid; place-items: center; padding: 1px; border-radius: 50%; background: var(--surface); box-shadow: 0 0 0 1.5px var(--surface); line-height: 0; }
 .sp-banner .sc-pf { margin-right: 6px; }
 .sp-banner .sc-pfc { background: color-mix(in oklab, var(--c) 85%, #000); box-shadow: 0 0 0 2px var(--c); }
+
+/* Lite mode and reduced motion: the leader card's ring and light hold still. */
+.lite .is-pinned .sc.has-lead, .reduce-motion .is-pinned .sc.has-lead { animation: none; }

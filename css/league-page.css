@@ -419,3 +419,14 @@
   }
 }
 @media (prefers-reduced-motion: reduce) { .lu-pop { animation: none; } }
+
+/* Lite mode (B-33, Settings > Display > Lite mode; on by itself on phones, tablets and slower computers: the `lite` class on <html>). The slow effects
+   behind the page kept a phone's processor busy all the time, even with nobody touching it (85 to 99% on the league page and My club): the light drifting
+   across each card made the browser restyle the whole page every frame, and the silk and contour lines made it repaint. In lite mode the contour lines go,
+   and the silk and the light stay where they are, so the cards look the same, just still. "Reduced motion" now stills them too (it only followed the
+   device's own setting before). */
+.lite .lg::before { display: none; }
+.reduce-motion .lg::before { animation: none; transition: none; }
+.lite .lg-card, .reduce-motion .lg-card { animation: none !important; --gx: var(--gx0, 20%); --gy: var(--gy0, 20%); }
+.lite .lg-card::before, .lite .lg-tabs::before, .lite .lg-backbar::before, .lite .lu-silk,
+.reduce-motion .lg-card::before, .reduce-motion .lg-tabs::before, .reduce-motion .lg-backbar::before, .reduce-motion .lu-silk { animation: none !important; }

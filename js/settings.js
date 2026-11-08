@@ -20,9 +20,10 @@ const CHOICES = {
   theme: [['dark', 'Dark'], ['light', 'Light'], ['system', 'Same as this device']],
   text: [['100', 'Default'], ['112', 'Large'], ['125', 'Larger'], ['140', 'Largest']],
   motion: [['system', 'Same as this device'], ['reduce', 'Reduced']],
+  lite: [['auto', 'Automatic', 'On for phones, tablets and slower computers'], ['on', 'On', 'Still backgrounds and a lighter match video'], ['off', 'Off', 'Every effect, on any device']],
   clock: [['12', '12-hour'], ['24', '24-hour']],
 };
-const DEVICE_KEYS = new Set(['theme', 'text', 'motion']);
+const DEVICE_KEYS = new Set(['theme', 'text', 'motion', 'lite']);
 const labelOf = (key, v) => (CHOICES[key].find(([k]) => k === String(v)) || CHOICES[key][0])[1];
 const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
@@ -97,6 +98,7 @@ if (ctx) {
         { kind: 'menu', id: 'theme', label: 'Theme', value: labelOf('theme', dev.theme) },
         { kind: 'menu', id: 'text', label: 'Text size', value: labelOf('text', dev.text) },
         { kind: 'menu', id: 'motion', label: 'Motion', value: labelOf('motion', dev.motion) },
+        { kind: 'menu', id: 'lite', label: 'Lite mode', value: labelOf('lite', dev.lite) },   // B-33: lighter drawing; Automatic = on for phones, tablets and slower computers
         strip('Every device', 'Follows your account'),
         { kind: 'menu', id: 'clock', label: 'Clock', value: labelOf('clock', p.clock) },
         { kind: 'switch', id: 'spoilers', label: 'Hide results', on: p.spoilers },
@@ -180,7 +182,7 @@ if (ctx) {
     const row = rowsFor().find(r => r.id === key);
     const now = DEVICE_KEYS.has(key) ? dev[key] : key.startsWith('email.') ? p.email[key.slice(6)] : p[key];
     $('#dlg-pick-t', main).textContent = row.label;
-    $('#pick-list', main).innerHTML = CHOICES[key].map(([v, l]) => `<li><button type="button" class="pk-row" data-v="${esc(v)}" aria-pressed="${String(now) === v}">${key === 'theme' ? `<i class="set-swatch" style="--a:${SWATCH[v][0]};--b:${SWATCH[v][1]}" aria-hidden="true"></i>` : ''}<span class="pk-name">${esc(l)}</span></button></li>`).join('');
+    $('#pick-list', main).innerHTML = CHOICES[key].map(([v, l, hint]) => `<li><button type="button" class="pk-row" data-v="${esc(v)}" aria-pressed="${String(now) === v}">${key === 'theme' ? `<i class="set-swatch" style="--a:${SWATCH[v][0]};--b:${SWATCH[v][1]}" aria-hidden="true"></i>` : ''}<span class="pk-name">${esc(l)}${hint ? `<small>${esc(hint)}</small>` : ''}</span></button></li>`).join('');
     openDlg($('#dlg-pick', main));
     $('#pick-list [aria-pressed="true"]', main)?.focus();
   }

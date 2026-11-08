@@ -45,7 +45,7 @@ export function startPageLook(look, theme, { paused = () => false } = {}) {
     document.body.append(cv); c = cv.getContext('2d');
   }
   const props = document.querySelector('.lg-props');
-  const still = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('reduce-motion');
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('reduce-motion') || document.documentElement.classList.contains('lite');   // lite mode (B-33): the event's confetti and props hold still
   let t = 3, last = 0;
   const draw = () => {
     if (c) {

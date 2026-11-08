@@ -102,3 +102,6 @@
 
 /* A kick-off time (not a score) is smaller, so it clears the state label and any divider (0.40.1) */
 .sb .sb-mid strong.ko { font-size: clamp(1.7rem, 6vw, 2.5rem); }
+
+/* Lite mode: the event looks' shine, snow, lights and sparkles on the scoreboard hold still. */
+.lite .fx-shine, .lite .fx-snow, .lite .fx-lights i, .lite .fx-sparkle i, .lite .sb-board::after, .lite .sb-board::before { animation: none !important; }

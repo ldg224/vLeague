@@ -122,7 +122,7 @@ export class MatchPlayer {
     return (this.r[view] = r);
   }
   // Lite drawing (B-33): on a phone or tablet, or once this device has shown it can't keep up (dropped to 30 frames a second, or lost its picture).
-  lite() { return this.minGap >= FRAME_30 || (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches); }
+  lite() { return this.minGap >= FRAME_30 || document.documentElement.classList.contains('lite'); }   // the site's lite mode (Settings > Display), or this device struggling
   applyLite() { const on = this.lite(); for (const r of Object.values(this.r)) r.setLite?.(on); }
   // The browser threw the picture away (its graphics process crashed or ran out of memory): carry on with much less to draw, here and next time.
   contextLost() {

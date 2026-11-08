@@ -229,7 +229,7 @@ export const introHtml = () => `<div class="st-intro" aria-hidden="true"><div cl
   <svg class="st-coin" viewBox="0 0 64 64"><defs><linearGradient id="st-cg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--blue-300)"/><stop offset="1" stop-color="var(--blue-700)"/></linearGradient></defs>
     <circle cx="32" cy="32" r="29" fill="url(#st-cg)"/><circle cx="32" cy="32" r="22.5" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2" stroke-dasharray="3 3"/><text x="32" y="42" text-anchor="middle" class="st-coinmark">S</text><path class="st-glint" d="M10 52L52 8" /></svg>
   <div class="st-word">${[...WORD].map((ch, i) => `<span style="--i:${i}">${ch}</span>`).join('')}</div></div></div>`;
-const reducedMotion = () => document.documentElement.classList.contains('reduce-motion') || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+const reducedMotion = () => document.documentElement.classList.contains('reduce-motion') || document.documentElement.classList.contains('lite') || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);   // lite mode (B-33): no reveal animations
 // Plays the intro over `root`; resolves when it is gone. `app` then gets the staggered rise of its cards for a moment.
 function playIntro(root, app) {
   if (reducedMotion()) return Promise.resolve();

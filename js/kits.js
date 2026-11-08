@@ -15,7 +15,7 @@ const THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module
 const LOGO_MAX = 384, LOGO_BYTES = 240 * 1024, ART_BYTES = 1400 * 1024;
 const kitLogoUrl = path => (path ? `${SUPABASE_URL}/storage/v1/object/public/kits/${path}` : '');
 const image = url => new Promise(res => { if (!url) return res(null); const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
-const reduceMotion = () => document.documentElement.classList.contains('reduce-motion') || matchMedia('(prefers-reduced-motion: reduce)').matches;
+const reduceMotion = () => document.documentElement.classList.contains('reduce-motion') || document.documentElement.classList.contains('lite') || matchMedia('(prefers-reduced-motion: reduce)').matches;   // lite mode (B-33) too: the 3D kit doesn't turn by itself
 const STATUS = {
   pending: ['wait', 'Saved. It shows everywhere the next time anyone loads a page.'],
   approved: ['ok', 'Your logo is live. Everyone can see it.'],
