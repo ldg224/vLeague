@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.36.1 (2026-11-08)
+
+Headlines: Everyone on the pitch drawn to scale
+
+**Fixed (B-33):** on the main camera's wide shots, people on the far side of the pitch were drawn as big as those on the near side, so the assistant referee on the far touchline looked about three times life size next to the boards. Now everyone in a shot is enlarged by the same amount, so the far side is smaller than the near side, as it should be. Every camera follows the same rule, and a new test checks every camera angle for it before each release (it runs only while we make changes, not on your device).
+Database change: none.
+
 ## 1.36.0 (2026-11-08)
 
 Headlines: A new match camera | Lite mode | A lighter site
