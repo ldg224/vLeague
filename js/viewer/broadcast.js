@@ -11,7 +11,7 @@
 // (celebrations, REF CAM, replays in the next stoppage), so live viewers never get a spoiler.
 // `markers` lists goals, cards, half-time and full-time for a seek bar.
 
-import { HighlightsRenderer, RED_AT, SECOND_EXTRA, W, H, makeCam, makeCamAt, clamp, lerp, easeOut, easeInOut, seg01, lastName, LIME, DARK } from './highlights.js';
+import { HighlightsRenderer, RED_AT, SECOND_EXTRA, W, H, makeCam, makeCamAt, RIG, lerpCam, clamp, lerp, easeOut, easeInOut, seg01, lastName, LIME, DARK } from './highlights.js';
 import { drawShow } from './matchday-show.js';
 
 const REF_DT = 0.2;        // referee path sample step (sim seconds)
@@ -112,7 +112,9 @@ export class BroadcastRenderer extends HighlightsRenderer {
   camTarget(t) {
     const b = this.fr.ball(t);
     const gx = b[0] > 52.5 ? 105 : 0, k = clamp(1 - Math.hypot(b[0] - gx, b[1] - 34) / 34, 0, 0.35);
-    return [clamp(lerp(b[0], gx, k), 18, 87), clamp(lerp(b[1], 34, k * 0.6), 20, 48), lerp(50, 40, k / 0.35)];   // was 60 to 44: players looked tiny when far out (B-06)
+    // B-33: the main camera is the gantry (RIG.gantry), panning and zooming from the halfway line; the third value is how many metres across the picture is
+    // (36 in midfield, 29 near the box: the players the same size on screen as the old 50 to 40 m camera, B-06).
+    return [clamp(lerp(b[0], gx, k), 12, 93), clamp(lerp(b[1], 34, k * 0.6), 14, 52), lerp(36, 29, k / 0.35)];
   }
   buildCamera() {
     const n = Math.ceil((this.t1 - this.t0) / CAM_DT) + 1, X = new Float32Array(n), Y = new Float32Array(n), D = new Float32Array(n);
@@ -130,7 +132,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
       for (let i = 0; i < n; i++) {
         const t = tAt(i), fi = this.fr.f[this.fr.idx(t)];
         if (!fi[5]) continue;   // ball dead (being placed for a restart): let the camera pan there smoothly
-        const b = this.fr.ball(t), z = D[i] / 50;
+        const b = this.fr.ball(t), z = D[i] / 36;
         X[i] = clamp(X[i], b[0] - KEEP_X * z, b[0] + KEEP_X * z);
         Y[i] = clamp(Y[i], b[1] - KEEP_NEAR * z, b[1] + KEEP_FAR * z);
       }
@@ -149,16 +151,16 @@ export class BroadcastRenderer extends HighlightsRenderer {
     }
     this.cam = { X, Y, D };
   }
-  // The windows that need the assistant referee in shot: { from, to, x, y, d } (the camera's target and distance). Each is the closest view, from
+  // The windows that need the assistant referee in shot: { from, to, x, y, d } (the camera's target and the picture's width). Each is the closest view, from
   // the usual angle, that has every point that matters (the assistant from his boots to the raised flag, and where the play is) inside the picture
   // and clear of the score box. Nothing is tighter than the normal wide shot, so nobody is zoomed in on.
   framings() {
     const ev = this.d.events, out = [];
     const fit = (pts, tx) => {
-      for (let d = 50; d <= 92; d += 3) {
+      for (let d = 36; d <= 68; d += 2) {   // d: the picture's width in metres (B-33: the gantry camera)
         const ok = [];
-        for (let ty = 6; ty <= 70; ty++) {
-          const cam = makeCam(tx, ty, d, 28, 40);
+        for (let ty = 6; ty <= 66; ty += 2) {
+          const cam = RIG.gantry(tx, ty, d);
           if (pts.every(([x, y, z]) => { const p = cam.p(x, y, z); return p && p[1] > 130 && p[1] < H - 70 && p[0] > 90 && p[0] < W - 90; })) ok.push(ty);
         }
         if (ok.length) return [tx, ok[Math.floor(ok.length / 2)], d];
@@ -180,6 +182,23 @@ export class BroadcastRenderer extends HighlightsRenderer {
   }
   // A hard cut in the camera path: the second-half kick-off (everyone is back in position).
   cutBefore(i) { return i === this.camHalf; }
+  // The main camera at match time t: the gantry, at the planned aim and width.
+  mainCam(t) { const [x, y, w] = this.camAt(t); return RIG.gantry(x, y, w); }
+  // A replay's camera (B-33): replays take turns between the high camera behind the goal, the 18-yard-line camera and the reverse angle, so they
+  // aren't the same shot every time and never the live picture again. Each looks at the ball, leaning towards the goal.
+  replayCam(sh, bx, by) {
+    const gx = sh.goalX, tx = lerp(bx, gx, 0.3), ty = lerp(by, 34, 0.3), toGoal = Math.hypot(bx - gx, by - 34);
+    if (sh.angle === 'low18') return RIG.low18(gx, tx, ty, clamp(18 + toGoal * 0.5, 26, 40));
+    if (sh.angle === 'reverse') return RIG.reverse(tx, ty, clamp(22 + toGoal * 0.5, 30, 44));
+    return RIG.goalHigh(gx, tx, ty, clamp(20 + toGoal * 0.6, 28, 44));
+  }
+  // A set piece's camera (B-33): a corner from high behind the goal, showing the box; a free kick near goal from behind the taker. It cuts in as the
+  // ball is placed and back to the gantry a fixed time after the kick, whatever happens, so the cut gives nothing away.
+  setPieceCam(sh, t) {
+    const e = sh.e, gx = sh.goalX;
+    const cam = sh.angle === 'kicker' ? RIG.kicker(e.x, e.y, gx) : RIG.goalHigh(gx, lerp(e.x, gx, 0.55) + (gx ? -9 : 9), lerp(e.y, 34, 0.75), 40);
+    return cam;
+  }
   camAt(t) {
     const { X, Y, D } = this.cam, u = clamp((t - this.t0) / CAM_DT, 0, this.camN - 1), i = Math.floor(u), j = Math.min(i + 1, this.camN - 1), k = j === this.camHalf ? 0 : u - i;
     return [X[i] + (X[j] - X[i]) * k, Y[i] + (Y[j] - Y[i]) * k, D[i] + (D[j] - D[i]) * k];
@@ -252,6 +271,21 @@ export class BroadcastRenderer extends HighlightsRenderer {
       if (!stop || stop[0] - f.t > 3) continue;   // the whistle that stops play
       replay(f, 3, 3, 1.5, { from: Math.max(stop[0] + 0.8, card ? card.t + 3.4 : 0), to: stop[1] - 0.8 }, true);
     }
+    // Set pieces (B-33): corners, penalties and free kicks within about 32 m of the goal they're aimed at get their own camera, from just before the kick
+    // to a fixed 4.5 s after it, whatever happens (the length never depends on the outcome). Replays have first call on the stoppage before them.
+    const attacking = (team, t) => {
+      const p = [...d.periods].reverse().find(q => q.start_t <= t + 1e-6) || d.periods[0];
+      const right = (team === this.home.code) === (p.home_attacks !== 'left');
+      return right ? 105 : 0;
+    };
+    for (const e of d.events) {
+      if (e.type === 'corner') shots.push({ kind: 'setpiece', angle: 'goalHigh', prio: 4, from: e.t - 0.25, to: e.t + 4.5, e, goalX: (e.x ?? 0) > 52.5 ? 105 : 0 });
+      else if (e.type === 'penalty' || e.type === 'free_kick') {
+        const gx = attacking(e.team, e.t), x = e.x ?? (gx ? 94 : 11), y = e.y ?? 34;
+        if (e.type === 'free_kick' && (Math.hypot(x - gx, y - 34) > 32 || Math.abs(y - 34) > 24)) continue;
+        shots.push({ kind: 'setpiece', angle: 'kicker', prio: 4, from: e.t - 0.25, to: e.t + 4.5, e: { ...e, x, y }, goalX: gx });
+      }
+    }
     // Back-to-back moments (a save then the rebound goal) in one stoppage, at the same end, play as one continuous replay
     // rather than two with a wipe between them (B-28). If the stoppage is too short, the lead-in is trimmed, never the second moment.
     const reps = shots.filter(s => s.kind === 'replay').sort((a, b) => a.stop.from - b.stop.from || a.r0 - b.r0);
@@ -286,6 +320,9 @@ export class BroadcastRenderer extends HighlightsRenderer {
       placed.push(s);
     }
     this.shots = placed.filter(s => s.kind !== 'panel').sort((a, b) => a.from - b.from);
+    // Replays take turns between the three replay cameras (B-33), so two in a row are never the same shot.
+    const ANGLES = ['goalHigh', 'low18', 'reverse'];
+    this.shots.filter(s => s.kind === 'replay' && !s.wide).forEach((s, i) => { s.angle = ANGLES[i % ANGLES.length]; });
     this.kickoffs = d.events.filter(e => e.type === 'period_start');
   }
   shotAt(t) {
@@ -307,17 +344,15 @@ export class BroadcastRenderer extends HighlightsRenderer {
     if (sh?.kind === 'replay') {
       ts = sh.r0 + (t - sh.from) * REPLAY_RATE;
       const [bx, by] = this.pathAt(sh.path, ts), gs = sh.goalX === 105 ? 1 : -1;
-      if (sh.wide) { const [x, y, dist] = this.camAt(ts); cam = makeCam(x, y, dist, 28, 40); } else
-      cam = makeCamAt([sh.goalX + gs * 13, clamp(lerp(34, by, 0.35), 24, 44), 7.5], [lerp(bx, sh.goalX, 0.3), lerp(by, 34, 0.3), 0.5], 48);
+      cam = sh.wide ? this.mainCam(ts) : this.replayCam(sh, bx, by);
     } else if (sh?.kind === 'celebrate') {
       const [x, y] = this.pathAt(sh.path, t);
-      cam = makeCam(clamp(x, 4, 101), clamp(y, 6, 62), 15, 12, 34);
+      cam = RIG.pitchside(clamp(x, 4, 101), clamp(y, 6, 62), 18);   // B-33: from the touchline on a long lens
     } else if (sh?.kind === 'refcam') {
-      const [x, y] = this.refPos(t), k = seg01(t, sh.from, sh.to), dist = lerp(12.5, 9.5, easeInOut(k)), e = 10 * Math.PI / 180;
-      cam = makeCamAt([x, y + dist * Math.cos(e), 1.7 + dist * Math.sin(e)], [x, y, 1.75], 36);
+      const [x, y] = this.refPos(t), k = seg01(t, sh.from, sh.to);
+      cam = RIG.pitchside(x, y, lerp(11, 8.5, easeInOut(k)), 1.5);   // B-33: from the touchline on a long lens
     } else {
-      const [x, y, dist] = this.camAt(t);
-      cam = makeCam(x, y, dist, 28, 40);
+      cam = sh?.kind === 'setpiece' ? this.setPieceCam(sh, t) : this.mainCam(t);
     }
     this.drawScene(cam, ts);
     if (sh?.kind === 'refcam') this.drawRefCamOverlay(t - sh.from);

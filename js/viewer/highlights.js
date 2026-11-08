@@ -151,6 +151,10 @@ function makeCamAt(C, T, fovDeg) {
   const u = [f[1] * r[2] - f[2] * r[1], f[2] * r[0] - f[0] * r[2], f[0] * r[1] - f[1] * r[0]];
   const focal = (W / 2) / Math.tan(fovDeg * Math.PI / 360);
   const NEAR = 0.5;
+  // B-33: the tallest anyone may be drawn in this shot: a little under twice a player standing where the camera is looking. Closer than that (a keeper
+  // under a camera behind the goal, someone walking past a touchline camera) he is held at this size and fades out of shot, as on TV, instead of
+  // filling the screen.
+  const cap = Math.max(MIN_PLAYER * 1.35, 1.9 * focal * 1.85 / Math.max(1, fl));
   // World point -> camera space [right, up, depth].
   const toCam = (x, y, z = 0) => {
     const v0 = x - C[0], v1 = y - C[1], v2 = z - C[2];
@@ -161,7 +165,7 @@ function makeCamAt(C, T, fovDeg) {
   // froze the picture every so often.
   const [C0, C1, C2] = C, [r0, r1] = r, [u0, u1, u2] = u, [f0, f1, f2] = f, cx = W / 2, cy = H / 2;
   return {
-    focal, C,
+    focal, C, T, fov: fovDeg, cap,
     p(x, y, z = 0) {
       const a = x - C0, b = y - C1, d = z - C2, zc = a * f0 + b * f1 + d * f2;
       if (zc < NEAR) return null;
@@ -209,6 +213,35 @@ function makeCamAt(C, T, fovDeg) {
       return [proj(A), proj(B)];
     },
   };
+}
+
+// ---------------------------------------------------------------- camera rigs (B-33)
+// Cameras where a TV crew puts them. They stay put and pan, tilt and zoom to follow play, instead of sliding along beside it at one height
+// (which looked flat, and let anyone near a low camera fill the screen). width: how many metres across the picture is where it looks.
+const GANTRY = [52.5, 91, 20];    // the main camera: on the halfway line, at the front of the main stand's upper tier, 23 m back from the touchline and 20 m up
+const fovFor = (C, T, width) => 2 * Math.atan(width / 2 / Math.max(1, Math.hypot(T[0] - C[0], T[1] - C[1], T[2] - C[2]))) * 180 / Math.PI;
+const aim = (C, T, width) => makeCamAt(C, T, fovFor(C, T, width));
+const RIG = {
+  // the main camera, panning from the gantry
+  gantry: (tx, ty, width = 34) => aim(GANTRY, [tx, ty, 0], width),
+  // low on the main stand at the 18-yard line nearest the play: looks across the box at an angle
+  low18: (gx, tx, ty, width = 30) => aim([gx === 0 ? 16.5 : 88.5, 90, 9], [tx, ty, 0.8], width),
+  // high behind the goal, well back (the keeper is never under the lens)
+  goalHigh: (gx, tx, ty, width = 34) => { const s = gx === 105 ? 1 : -1; return aim([gx + s * 30, 34 + (ty - 34) * 0.25, 15], [tx, ty, 0.5], width); },
+  // the reverse angle, from high in the far stand (replays only: left and right swap, as on TV)
+  reverse: (tx, ty, width = 34) => aim([clamp(tx, 20, 85), -34, 19], [tx, ty, 0], width),
+  // the cable camera, above and behind the attack, looking the way it goes
+  cable: (bx, by, dir) => aim([clamp(bx - dir * 16, -5, 110), clamp(by + 4, 4, 64), 17], [clamp(bx + dir * 9, 0, 105), by, 0], 34),
+  // a close-up from the touchline on the camera's side, on a long lens (a celebration, the referee, a tackle): the same framing as a camera standing near
+  // the players, but from far enough back that nobody between it and them fills the screen. width: metres across the picture at the subject; z: the height it looks at.
+  pitchside: (tx, ty, width = 16, z = 1.1) => aim([clamp(tx, -5, 110), 78, 9], [tx, ty, z], width),
+  // behind a free kick taker, looking at the goal over the wall
+  kicker: (bx, by, gx) => { const dx = bx - gx, dy = by - 34, d = Math.hypot(dx, dy) || 1; return aim([bx + dx / d * 10, by + dy / d * 10, 4], [gx, 34, 1.2], Math.max(26, d * 0.9)); },
+};
+// A blend between two cameras (position, aim and zoom), for moves from one to another without a cut.
+function lerpCam(A, B, k) {
+  const L = (a, b) => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
+  return makeCamAt(L(A.C, B.C), L(A.T, B.T), lerp(A.fov, B.fov, k));
 }
 
 // ---------------------------------------------------------------- what never moves
@@ -664,10 +697,13 @@ export class HighlightsRenderer {
       const b = this.fr.at(s.t0 + l).ball;
       if (Math.hypot(b[0] - goalX, b[1] - 34) < 30) { tA = l; break; }
     }
-    if (tA == null) tA = evL - 3;
-    tA = clamp(tA, Math.min(2.5, evL - 1.5), Math.max(0, evL - 2.2));
-    const opening = ['main', 'wide', 'corner', 'high', 'spider'][idx % 5];
-    const climax = clip.kind === 'save' ? 'endcam' : ['endcam', 'tight', 'corner', 'endcam', 'main'][idx % 5];
+    // B-33: the camera never changes in the 3 s before the shot is struck, nor until the ball has got there (it used to cut as late as the shot itself,
+    // so the moment that mattered was lost in the cut). If the attack is too quick for that, the whole clip is on the finishing camera.
+    const shotL = ((clip.kind === 'goal' ? clip.shot?.t : ev.t) ?? clip.t) - s.t0;
+    if (tA == null) tA = shotL - 3;
+    tA = Math.min(tA, shotL - 3);
+    const opening = ['main', 'cable', 'wide', 'main', 'spider'][idx % 5];
+    const climax = clip.kind === 'save' ? 'goalHigh' : ['goalHigh', 'low18', 'main', 'low18', 'goalHigh'][idx % 5];
     const shots = [];
     const card = clip.kind === 'yellow' || clip.kind === 'red';
     if (card) {
@@ -677,8 +713,8 @@ export class HighlightsRenderer {
       shots.push({ from: shots.length ? foulL - 2.5 : 0, to: refFrom, angle: 'tight' });
       shots.push({ from: refFrom, to: dur, angle: 'refcam' });
     } else {
-      if (tA >= 2) shots.push({ from: 0, to: tA, angle: opening });
-      const after = evL + (clip.kind === 'goal' ? 1.2 : 0.9);
+      if (tA >= 1.5) shots.push({ from: 0, to: tA, angle: opening });
+      const after = clip.kind === 'goal' ? evL + 1.2 : Math.max(evL, shotL) + 1.8;   // a goal: once it's in; a save or a miss: once the ball has got there
       shots.push({ from: shots.length ? tA : 0, to: Math.min(dur, after), angle: climax });
       if (dur - after >= 1.6) shots.push({ from: after, to: dur, angle: clip.kind === 'goal' ? 'celebrate' : 'main' });
       else shots[shots.length - 1].to = dur;
@@ -840,28 +876,30 @@ export class HighlightsRenderer {
         const cy = by < 34 ? -16 : 84;
         cam = makeCamAt([goalX + gs * 16, cy, 21], [lerp(bx, goalX, 0.25), lerp(by, 34, 0.3), 0], 42); break;
       }
+      case 'cable':  // B-33: the cable camera, above and behind the attack
+        cam = RIG.cable(bx, by, gs); break;
+      case 'goalHigh': case 'endcam': {   // B-33: high behind the goal, well back (it used to sit 13 m back at 7.5 m, so the keeper filled the screen)
+        cam = RIG.goalHigh(goalX, lerp(bx, goalX, 0.3), lerp(by, 34, 0.3), clamp(20 + toGoal * 0.6, 28, 44)); break;
+      }
+      case 'low18':  // B-33: low on the main stand at the 18-yard line, across the box
+        cam = RIG.low18(goalX, lerp(bx, goalX, 0.25), lerp(by, 34, 0.3), clamp(18 + toGoal * 0.5, 26, 40)); break;
       case 'spider': // overhead cable camera following the ball
         cam = makeCam(clamp(bx, 10, 95), clamp(by, 10, 58), 30, 72, 52); break;
-      case 'refcam': { // close on the referee, slowly pushing in
+      case 'refcam': { // close on the referee, slowly pushing in (B-33: from the touchline on a long lens)
         const k = clamp((local - sh.from) / Math.max(1, sh.to - sh.from), 0, 1);
-        const dist = lerp(12.5, 9.5, easeInOut(k)), e = 10 * Math.PI / 180;
-        cam = makeCamAt([bx, by + dist * Math.cos(e), 1.7 + dist * Math.sin(e)], [bx, by, 1.75], 36); break;
+        cam = RIG.pitchside(bx, by, lerp(11, 8.5, easeInOut(k)), 1.5); break;
       }
-      case 'wide':   // high and far: shows the team shapes
-        cam = makeCam(clamp(lerp(bx, 52.5, 0.4), 30, 75), 34 + (by - 34) * 0.3, 46, 44, 38); break;   // 46 m (74, then 54): players stay readable (B-06)
+      case 'wide':   // the gantry, wide: shows the team shapes
+        cam = RIG.gantry(clamp(lerp(bx, 52.5, 0.4), 25, 80), 34 + (by - 34) * 0.3, 54); break;
       case 'high':   // steep from the gantry, following play
         cam = makeCam(clamp(bx, 14, 91), clamp(by, 18, 50), 40, 58, 40); break;
-      case 'tight':  // low on the touchline, close to the ball
-        cam = makeCam(clamp(bx, 4, 101), clamp(by, 6, 62), 19, 15, 36); break;
-      case 'celebrate':
-        cam = makeCam(clamp(bx, 4, 101), clamp(by, 6, 62), 15, 12, 34); break;
-      case 'endcam': { // behind the goal, looking out at the attack: ball and goal both in shot
-        const tx = lerp(bx, goalX, 0.3), ty = lerp(by, 34, 0.3);
-        cam = makeCamAt([goalX + gs * 13, clamp(lerp(34, by, 0.35), 24, 44), 7.5], [tx, ty, 0.5], 48); break;
-      }
-      default: {     // main broadcast camera; leans towards the goal as play gets close
+      case 'tight':  // close to the ball, from the touchline (B-33: on a long lens)
+        cam = RIG.pitchside(clamp(bx, 4, 101), clamp(by, 6, 62), 22); break;
+      case 'celebrate':   // B-33: from the touchline on a long lens
+        cam = RIG.pitchside(clamp(bx, 4, 101), clamp(by, 6, 62), 18); break;
+      default: {     // the main camera (B-33: the gantry, as on the broadcast), leaning towards the goal as play gets close
         const k = clamp(1 - toGoal / 34, 0, 0.45);
-        cam = makeCam(clamp(lerp(bx, goalX, k), 10, 95), clamp(lerp(by, 34, k * 0.6), 14, 54), 36, 27, 38);
+        cam = RIG.gantry(clamp(lerp(bx, goalX, k), 10, 95), clamp(lerp(by, 34, k * 0.6), 14, 54), lerp(34, 27, k / 0.45));
       }
     }
     return { cam, tSim, cut: local - sh.from < 1 / FPS, angle: sh.angle, plan };
@@ -942,11 +980,13 @@ export class HighlightsRenderer {
   }
 
   // Referee: the officials' kit; runs in after a foul and holds the card up, with its colour shown above his head.
-  drawReferee(cam, it, tSim) {
+  drawReferee(cam, it, tSim) { const c = this.c; c.save(); try { this.drawRefereeBody(cam, it, tSim); } finally { c.restore(); } }
+  drawRefereeBody(cam, it, tSim) {
     const c = this.c, p = cam.p(it.x, it.y); if (!p) return;
-    const head = cam.p(it.x, it.y, 1.85); if (!head) return;
-    const bh = p[1] - head[1], bw = Math.max(12, bh * 0.42), bx = p[0], top = head[1];
-    const r = Math.max(10, p[2] * 0.6);
+    const fg = this.figure(cam, p, it.x, it.y); if (fg.alpha < 0.02) return;
+    c.globalAlpha *= fg.alpha;
+    const bh = fg.h, bw = Math.max(12, bh * 0.42), bx = p[0], top = p[1] - bh;
+    const r = Math.max(10, p[2] * 0.6) * fg.k;
     c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(bx + r * 0.4, p[1], r * 1.05, r * 0.42, 0, 0, Math.PI * 2); c.fill();
     const K = this.officialsKit();
     c.fillStyle = K.shirt; c.beginPath(); c.roundRect(bx - bw / 2, top + bh * 0.28, bw, bh * 0.5, bw / 2); c.fill();   // top
@@ -980,11 +1020,13 @@ export class HighlightsRenderer {
   }
 
   // An assistant referee: the referee's build and kit, with a checked flag (down by his side, straight up for an offside, waving for a foul).
-  drawAssistant(cam, it) {
+  drawAssistant(cam, it) { const c = this.c; c.save(); try { this.drawAssistantBody(cam, it); } finally { c.restore(); } }
+  drawAssistantBody(cam, it) {
     const c = this.c, p = cam.p(it.x, it.y); if (!p) return;
-    const head = cam.p(it.x, it.y, 1.85); if (!head) return;
-    const bh = p[1] - head[1], bw = Math.max(12, bh * 0.42), bx = p[0], top = head[1];
-    const r = Math.max(10, p[2] * 0.6);
+    const fg = this.figure(cam, p, it.x, it.y); if (fg.alpha < 0.02) return;
+    c.globalAlpha *= fg.alpha;
+    const bh = fg.h, bw = Math.max(12, bh * 0.42), bx = p[0], top = p[1] - bh;
+    const r = Math.max(10, p[2] * 0.6) * fg.k;
     c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(bx + r * 0.4, p[1], r * 1.05, r * 0.42, 0, 0, Math.PI * 2); c.fill();
     const K = this.officialsKit();
     c.fillStyle = K.shirt; c.beginPath(); c.roundRect(bx - bw / 2, top + bh * 0.28, bw, bh * 0.5, bw / 2); c.fill();   // top, the referee's
@@ -1030,7 +1072,8 @@ export class HighlightsRenderer {
   kitOf(it) { const A = this.kitArt?.[it.i < this.nHome ? 'home' : 'away']; return A ? (this.gkIdx.has(it.i) ? A.gk : A.field) || null : null; }
 
   // A fouled player lying on the grass.
-  drawLying(cam, it) {
+  drawLying(cam, it) { const c = this.c; c.save(); try { this.drawLyingBody(cam, it); } finally { c.restore(); } }
+  drawLyingBody(cam, it) {
     const c = this.c, side = it.i < this.nHome ? 0 : 1;
     let col = side ? this.ac : this.hc;
     if (this.gkIdx.has(it.i)) col = side ? '#a855f7' : '#f5b042';
@@ -1038,7 +1081,9 @@ export class HighlightsRenderer {
     const a = it.lying.ang, hx = it.x + Math.cos(a) * 0.95, hy = it.y + Math.sin(a) * 0.95, fx = it.x - Math.cos(a) * 0.85, fy = it.y - Math.sin(a) * 0.85;
     const H0 = cam.p(hx, hy, 0.18), F0 = cam.p(fx, fy, 0.15), M = cam.p(it.x, it.y, 0.2);
     if (!H0 || !F0 || !M) return;
-    const w = Math.max(8, M[2] * 0.5);
+    const fg = this.figure(cam, M, it.x, it.y); if (fg.alpha < 0.02) return;   // B-33: the same limit as a standing player
+    c.globalAlpha *= fg.alpha;
+    const w = Math.max(8, M[2] * 0.5) * fg.k;
     c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(M[0], M[1] + w * 0.3, Math.abs(H0[0] - F0[0]) / 2 + w, w * 0.6, 0, 0, Math.PI * 2); c.fill();
     c.strokeStyle = col; c.lineWidth = w; c.lineCap = 'round';
     c.beginPath(); c.moveTo(F0[0], F0[1]); c.lineTo(H0[0], H0[1]); c.stroke();
@@ -1182,17 +1227,26 @@ export class HighlightsRenderer {
     const r = size / fs;
     this.c.drawImage(spr.cv, x - spr.w * r / 2, y - spr.h * r / 2, spr.w * r, spr.h * r);
   }
-  drawPlayer(cam, it, holder) {
+  // B-33: every figure on the pitch (players, the referee, his assistants, a player on the ground) is sized by one rule. His real height at this
+  // distance, never shorter than 1.85 m at the camera's scale (steep cameras) nor than MIN_PLAYER px (far shots), and never taller than the shot's
+  // limit (cam.cap): someone right by the lens is held at that size and fades out of shot, instead of filling the screen.
+  figure(cam, p, x, y) {
+    const head = cam.p(x, y, 1.85), h = Math.max(head ? p[1] - head[1] : Math.max(10, p[2] * 0.6) * 2, 1.85 * p[2], MIN_PLAYER);
+    const k = Math.min(1, cam.cap / h);
+    return { h: h * k, k, alpha: clamp(1 - (h / cam.cap - 1.25) / 0.75, 0, 1) };
+  }
+  drawPlayer(cam, it, holder) { const c = this.c; c.save(); try { this.drawPlayerBody(cam, it, holder); } finally { c.restore(); } }
+  drawPlayerBody(cam, it, holder) {
     const c = this.c, p = cam.p(it.x, it.y); if (!p) return;
+    const fg = this.figure(cam, p, it.x, it.y); if (fg.alpha < 0.02) return;
+    c.globalAlpha *= fg.alpha;
     const side = it.i < this.nHome ? 0 : 1;
     let col = side ? this.ac : this.hc;
     if (this.gkIdx.has(it.i)) col = side ? '#a855f7' : '#f5b042';
     const kit = this.kitOf(it); if (kit) col = kit.main;
-    const r = Math.max(10, p[2] * 0.6);
-    // How tall he is drawn: his real height at this distance (1.85 m x the camera's scale), whatever the camera's tilt. The projected height alone shrank players to
-    // slivers on steep cameras (the cable cam, the gantry, the corner), so he is never drawn shorter than that, nor than MIN_PLAYER pixels on a far shot.
-    const head = cam.p(it.x, it.y, 1.85);
-    const top = p[1] - Math.max(head ? p[1] - head[1] : r * 2, 1.85 * p[2], MIN_PLAYER);
+    const r = Math.max(10, p[2] * 0.6) * fg.k;
+    // How tall he is drawn: see figure().
+    const top = p[1] - fg.h;
     // shadow
     c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(p[0] + r * 0.4, p[1], r * 1.05, r * 0.42, 0, 0, Math.PI * 2); c.fill();
     // A diving keeper (S-10): the whole figure tips over from his feet towards the way he goes (as it looks from this camera), off the ground, arms out.
@@ -1551,4 +1605,4 @@ export async function loadAssets(teams) {
   return { logos, logosAlt, league, title };
 }
 
-export { Frames, makeCam, makeCamAt, shade, clamp, lerp, easeOut, easeInOut, seg01, lastName, LIME, LIME2, YEL, DARK, FONT };
+export { Frames, makeCam, makeCamAt, RIG, lerpCam, shade, clamp, lerp, easeOut, easeInOut, seg01, lastName, LIME, LIME2, YEL, DARK, FONT };

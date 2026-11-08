@@ -2,7 +2,7 @@
 // clock holds still (js/dashboard-data.js, liveShow) and these scenes are drawn instead. Everything is worked out from the time alone, so someone arriving
 // late sees the same picture as everyone else, and nothing here looks past the moment the match has reached.
 //   drawShow(r, show, t): r is the BroadcastRenderer; show is { kind: 'pre' | 'half' | 'goal' | 'end', local, dur, goal }; t is the match-file time.
-import { W, H, makeCam, clamp, lerp, easeOut, easeInOut, seg01, lastName, LIME } from './highlights.js';
+import { W, H, makeCam, lerpCam, clamp, lerp, easeOut, easeInOut, seg01, lastName, LIME } from './highlights.js';
 import { kickoff } from './data.js';
 import { safeColour, onColour } from './ui.js';
 
@@ -193,8 +193,7 @@ function handshake(r, local, dur, t0) {
 // Into position: from the handshakes to where each player kicks off, the camera settling on the broadcast's own shot, so the match follows on without a jump.
 function ready(r, local, dur, t0) {
   const sides = sideIdx(r), kick = r.fr.at(t0), span = dur * 0.85, f = easeInOut(clamp(local / span, 0, 1));
-  const [cx, cy, cd] = r.camAt(t0);
-  const cam = makeCam(lerp(52.5, cx, f), lerp(LINE_Y - 3, cy, f), lerp(37, cd, f), lerp(21, 28, f), 40);
+  const cam = lerpCam(makeCam(52.5, LINE_Y - 3, 37, 21, 40), r.mainCam(t0), f);   // ends on the broadcast's own camera (B-33: the gantry), so the match follows on without a jump
   const pos = (i, u) => { const v = easeInOut(clamp(u / span, 0, 1)), a = pairAt(sides, sides[0].includes(i) ? 0 : 1, i), b = kick.players[i]; return [lerp(a[0], b[0], v), lerp(a[1], b[1], v)]; };
   const end = r.assistants(kick, t0), from = officials(OFFICIALS_Y), ars = from.map((a, n) => (end[n] ? [lerp(a[0], end[n].x, f), lerp(a[1], end[n].y, f)] : a));
   pitchScene(r, cam, sides, pos, local, { ball: [[kick.ball[0], kick.ball[1]]], faces: [kick.ball[0], kick.ball[1], 0], ref: [lerp(52.5, kick.ball[0], f), lerp(OFFICIALS_Y, kick.ball[1] + 6, f)], ars });
@@ -271,8 +270,7 @@ function restart(r, show, t) {
   const g = r.goals.find(e => show.goal && Math.abs(e.t - show.goal.t) < 0.5);
   if (!g) { r.frame(t); return; }
   const loop = 15, u = show.local % loop, ts = Math.min(g.t - 8 + u, t);
-  const [x, y, dist] = r.camAt(ts);
-  r.drawScene(makeCam(x, y, dist, 28, 40), ts);
+  r.drawScene(r.mainCam(ts), ts);
   r.bug(t);
   r.replayTag(u, { e: g });
   fade(r, u, loop, 0.3);
