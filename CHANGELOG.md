@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.36.2 (2026-11-09)
+
+Headlines: Possession adds up to 100
+
+**Fixed (B-39):** a match's possession could add up to 101% (LAU v LKY showed 48% and 53%), because each team's figure was rounded on its own. Now the home team's share is rounded and the away team has the rest, so it always adds up to 100. This applies to Top stats, the Stats tab, the game page, and the full-time boards in the highlights and the matchday show (which showed figures like 47.5).
+Database change: none.
+
 ## 1.36.1 (2026-11-08)
 
 Headlines: Everyone on the pitch drawn to scale
