@@ -12,7 +12,9 @@ import { buildEffects } from './effects.js';
 import { kitSprite, cleanDesign, drawPrint, TURNS, turnIndex } from '../kit.js';
 
 export const W = 1920, H = 1080, FPS = 30;
-const MIN_PLAYER = 110;   // px at 1920 x 1080: the smallest a player is drawn, however far the camera (highlights were showing tiny players on high and wide shots)
+const MIN_PLAYER = 110;   // px at 1920 x 1080: how tall a player where the camera is looking is drawn on a wide shot (highlights were showing tiny players on high and wide shots)
+const MAX_BOOST = 1.8;    // the most a shot enlarges its figures to get there
+const MIN_FIGURE = 40;    // px at 1920 x 1080: the smallest anyone is drawn, however far away
 const GOAL_Y1 = 30.34, GOAL_Y2 = 37.66, GOAL_H = 2.44;
 // vLeague brand (docs/BRAND.md): Material Blue ramp, white as the accent, navy background. The old
 // names stay so the graphics code reads the same: LIME = Blue 300 (accent text), YEL -> LIME2 = the
@@ -154,7 +156,11 @@ function makeCamAt(C, T, fovDeg, capMul = 1.9) {
   // B-33: the tallest anyone may be drawn in this shot: a little under twice a player standing where the camera is looking. Closer than that (a keeper
   // under a camera behind the goal, someone walking past a touchline camera) he is held at this size and fades out of shot, as on TV, instead of
   // filling the screen.
-  const cap = Math.max(MIN_PLAYER * 1.25, capMul * focal * 1.85 / Math.max(1, fl));   // capMul: how much bigger than that a camera allows (the free-kick camera lets the taker loom)
+  // How much bigger than life every figure in this shot is drawn: one number for the whole shot, so the player at the aim point is about MIN_PLAYER
+  // tall on a wide shot and perspective holds (someone on the far touchline stays smaller than someone on the near one). It used to be a floor per
+  // figure, which drew everyone on the far side of a wide shot at the same size as the near side, up to three times too big next to the boards.
+  const aimH = focal * 1.85 / Math.max(1, fl), boost = clamp(MIN_PLAYER / aimH, 1, MAX_BOOST);
+  const cap = Math.max(MIN_PLAYER * 1.25, capMul * aimH * boost);   // capMul: how much bigger than that a camera allows (the free-kick camera lets the taker loom)
   // World point -> camera space [right, up, depth].
   const toCam = (x, y, z = 0) => {
     const v0 = x - C[0], v1 = y - C[1], v2 = z - C[2];
@@ -165,7 +171,7 @@ function makeCamAt(C, T, fovDeg, capMul = 1.9) {
   // froze the picture every so often.
   const [C0, C1, C2] = C, [r0, r1] = r, [u0, u1, u2] = u, [f0, f1, f2] = f, cx = W / 2, cy = H / 2;
   return {
-    focal, C, T, fov: fovDeg, cap,
+    focal, C, T, fov: fovDeg, cap, boost,
     p(x, y, z = 0) {
       const a = x - C0, b = y - C1, d = z - C2, zc = a * f0 + b * f1 + d * f2;
       if (zc < NEAR) return null;
@@ -1253,10 +1259,10 @@ export class HighlightsRenderer {
     this.c.drawImage(spr.cv, x - spr.w * r / 2, y - spr.h * r / 2, spr.w * r, spr.h * r);
   }
   // B-33: every figure on the pitch (players, the referee, his assistants, a player on the ground) is sized by one rule. His real height at this
-  // distance, never shorter than 1.85 m at the camera's scale (steep cameras) nor than MIN_PLAYER px (far shots), and never taller than the shot's
+  // distance times the shot's boost (cam.boost), never shorter than 1.85 m at the camera's scale (steep cameras) nor than MIN_FIGURE px, and never taller than the shot's
   // limit (cam.cap): someone right by the lens is held at that size and fades out of shot, instead of filling the screen.
   figure(cam, p, x, y) {
-    const head = cam.p(x, y, 1.85), h = Math.max(head ? p[1] - head[1] : Math.max(10, p[2] * 0.6) * 2, 1.85 * p[2], MIN_PLAYER);
+    const b = cam.boost ?? 1, head = cam.p(x, y, 1.85), h = Math.max((head ? p[1] - head[1] : Math.max(10, p[2] * 0.6) * 2) * b, 1.85 * p[2] * b, MIN_FIGURE);
     const k = Math.min(1, cam.cap / h);
     return { h: h * k, k, alpha: clamp(1 - (h / cam.cap - 1.25) / 0.75, 0, 1) };
   }
