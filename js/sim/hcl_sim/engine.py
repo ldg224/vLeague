@@ -1097,7 +1097,7 @@ class Match:
         card = None
         if o.yellow == 0 and dogso and rng.random() < 0.45:
             card = 'red'
-        elif rng.random() < 0.006:
+        elif rng.random() < 0.003:   # a straight red out of nowhere: about one game in 16 (0.006 gave one in 8; 1.34.4)
             card = 'red'
         elif rng.random() < self._booking_chance(o, behind, dogso):
             card = 'yellow' if o.yellow == 0 else 'second_yellow'

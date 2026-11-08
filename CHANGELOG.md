@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.34.4 (2026-11-08)
+
+Headlines: Fewer straight red cards | Player design tester removed
+
+**Changed:** a foul is now half as likely to be a straight red out of nowhere, so about one game in 16 has one instead of one in 8. Reds for denying a clear goal-scoring chance, and second yellows, are unchanged. Together with 1.32.0's fewer second yellows, that's roughly one sending-off every five games, close to real football. This applies to matches simulated from now on (engine 0.3.2), starting with Round 2; matches already played keep their results.
+**Removed:** the tester page for new player designs (from 1.34.3). The players keep their current look.
+Database change: none.
+
 ## 1.34.3 (2026-11-08)
 
 Headlines: A tester page for new player designs
