@@ -3,6 +3,15 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.37.0 (2026-11-10)
+
+Headlines: Close-ups as attacks arrive | True-size players in 2D
+
+**Added:** on the full match video, the camera zooms in close on the ball as an attack arrives near the box, for a few seconds, then goes back to the wide shot. It only goes on where the ball is, never on what happens next, so a close-up doesn't give away a shot or a goal when you watch live. At most one every 45 seconds.
+**Changed:** the 2D match view draws players and the ball at their real size against the pitch (players 0.5 m across, the ball a small dot), with each player's position written under the marker.
+**Changed:** players on the match video stand on the grass, with a dark shadow right under their feet and a softer one around it (plainer on Lite mode).
+Database change: none.
+
 ## 1.36.2 (2026-11-09)
 
 Headlines: Possession adds up to 100

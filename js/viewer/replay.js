@@ -1,9 +1,12 @@
 // 2D top-down match replay drawn from a vLeague match file (see the simulator's OUTPUT_FORMAT.md).
 // In live mode playback is locked to real time, so viewers can't skip ahead of the "broadcast".
 
-import { onColour, safeColour } from './ui.js';
+import { safeColour } from './ui.js';
 
 const PAD = 30, SC = 10;   // canvas pixels: margin, per metre
+// True scale on the 105 x 68 m pitch: a player is 0.5 m across the shoulders (R 0.25 m). The ball is really 0.22 m; it is drawn 0.5 m (R 2.5 px) because a
+// true 1 px dot can't be followed. (Used to be players 2.4 m and the ball 1.1 m across, so the pitch looked tiny.)
+const PLAYER_R = 0.25 * SC, BALL_R = 2.5;
 
 export class Replay {
   constructor(canvas, data, { onFrame, kitArt = null } = {}) {
@@ -86,25 +89,25 @@ export class Replay {
     this.d.players.forEach((p, k) => {
       const kit = this.kitArt?.[k < this.nHome ? 'home' : 'away']?.[p.slot === 'GK' ? 'gk' : 'field'];
       const x = lerp(6 + 2 * k) * SC, y = lerp(7 + 2 * k) * SC, col = kit?.main || this.cols[k < this.nHome ? 0 : 1];
-      c.beginPath(); c.arc(x, y, 12, 0, Math.PI * 2);
-      const g = c.createRadialGradient(x - 4, y - 4, 2, x, y, 12);
-      g.addColorStop(0, col); g.addColorStop(1, shade(col));
-      c.fillStyle = g; c.fill();
-      c.lineWidth = holder === k ? 3.5 : 1.5; c.strokeStyle = holder === k ? '#ffffff' : col; c.stroke();
-      c.fillStyle = onColour(col); c.font = '800 9px Figtree, system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.fillText(p.slot.slice(0, 3), x, y + 0.5);
+      c.beginPath(); c.arc(x, y, PLAYER_R, 0, Math.PI * 2);
+      c.fillStyle = col; c.fill();
+      c.lineWidth = holder === k ? 2 : 1; c.strokeStyle = holder === k ? '#ffffff' : shade(col); c.stroke();
+      // Too small to hold a label, so the position is written just below the marker, with a dark halo to read on the grass.
+      c.font = '700 8px Figtree, system-ui'; c.textAlign = 'center'; c.textBaseline = 'top';
+      c.lineWidth = 2.5; c.strokeStyle = 'rgba(0,0,0,.65)'; c.strokeText(p.slot.slice(0, 3), x, y + PLAYER_R + 1.5);
+      c.fillStyle = 'rgba(255,255,255,.9)'; c.fillText(p.slot.slice(0, 3), x, y + PLAYER_R + 1.5);
       if (holder === k) {
-        c.font = '700 12px Figtree, system-ui'; c.fillStyle = '#fff';
+        c.font = '700 12px Figtree, system-ui'; c.textBaseline = 'alphabetic'; c.fillStyle = '#fff';
         c.shadowColor = 'rgba(0,0,0,.8)'; c.shadowBlur = 4;
-        c.fillText(p.name.split(' ').slice(-1)[0], x, y - 22);
+        c.fillText(p.name.split(' ').slice(-1)[0], x, y - PLAYER_R - 5);
         c.shadowBlur = 0;
       }
     });
     const inPlay = a[5] && b[5];
     const bx = (inPlay ? lerp(1) : a[1] / sc) * SC, by = (inPlay ? lerp(2) : a[2] / sc) * SC, bz = inPlay ? lerp(3) : 0;
     c.globalAlpha = a[5] ? 1 : 0.3;
-    c.fillStyle = 'rgba(0,0,0,.4)'; c.beginPath(); c.ellipse(bx + bz * 3, by + bz * 3, 5.5, 3.5, 0, 0, Math.PI * 2); c.fill();
-    c.fillStyle = '#fff'; c.beginPath(); c.arc(bx, by - bz * 2, 5.5 + bz * 0.8, 0, Math.PI * 2); c.fill();
+    c.fillStyle = 'rgba(0,0,0,.4)'; c.beginPath(); c.ellipse(bx + bz * 3, by + bz * 3, BALL_R, BALL_R * 0.65, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#fff'; c.beginPath(); c.arc(bx, by - bz * 2, BALL_R + bz * 0.5, 0, Math.PI * 2); c.fill();
     c.strokeStyle = '#111'; c.lineWidth = 1; c.stroke(); c.globalAlpha = 1;
     c.restore();
     if (this.onFrame) this.onFrame(this.t);

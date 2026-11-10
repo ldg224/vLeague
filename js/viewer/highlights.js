@@ -1279,8 +1279,19 @@ export class HighlightsRenderer {
     const r = Math.max(10, p[2] * 0.6) * fg.k;
     // How tall he is drawn: see figure().
     const top = p[1] - fg.h;
-    // shadow
-    c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(p[0] + r * 0.4, p[1], r * 1.05, r * 0.42, 0, 0, Math.PI * 2); c.fill();
+    // Shadow, so he stands on the grass rather than touching it at one point: a dark contact shadow right under the feet, as wide as the body and centred
+    // on it, with a softer, wider one cast a little to the side. Lite drawing keeps two plain ellipses (gradients cost too much on a slow phone).
+    const sw = Math.max(12, fg.h * 0.42), sy = p[1] - sw * 0.1;
+    if (this.lite) {
+      c.fillStyle = 'rgba(0,0,0,0.22)'; c.beginPath(); c.ellipse(p[0] + sw * 0.3, sy, sw * 1.3, sw * 0.4, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = 'rgba(0,0,0,0.45)'; c.beginPath(); c.ellipse(p[0], sy, sw * 0.7, sw * 0.24, 0, 0, Math.PI * 2); c.fill();
+    } else {
+      c.save(); c.translate(p[0], sy); c.scale(1, 0.3);
+      const wide = c.createRadialGradient(sw * 0.35, 0, 0, sw * 0.35, 0, sw * 1.7); wide.addColorStop(0, 'rgba(0,0,0,0.30)'); wide.addColorStop(1, 'rgba(0,0,0,0)');
+      c.fillStyle = wide; c.beginPath(); c.arc(sw * 0.35, 0, sw * 1.7, 0, Math.PI * 2); c.fill();
+      const core = c.createRadialGradient(0, 0, 0, 0, 0, sw * 0.95); core.addColorStop(0, 'rgba(0,0,0,0.70)'); core.addColorStop(0.65, 'rgba(0,0,0,0.5)'); core.addColorStop(1, 'rgba(0,0,0,0)');
+      c.fillStyle = core; c.beginPath(); c.arc(0, 0, sw * 0.95, 0, Math.PI * 2); c.fill(); c.restore();
+    }
     // A diving keeper (S-10): the whole figure tips over from his feet towards the way he goes (as it looks from this camera), off the ground, arms out.
     const dv = it.dive;
     let tilt = 0;

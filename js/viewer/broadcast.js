@@ -203,6 +203,10 @@ export class BroadcastRenderer extends HighlightsRenderer {
     // Both follow the ball where it is now (never ahead of it). A free kick: from behind the taker, turning with the ball once it's struck.
     // A corner: from behind the goal, leaning towards the box, so the taker, the cross and the box are all in shot.
     const b = this.fr.ball(t);
+    if (sh.angle === 'close') {   // the gantry zoomed in to about 22 m across, a little behind the ball, never letting it out of the middle of the picture
+      const [px, py] = this.pathAt(sh.path, t);
+      return RIG.gantry(clamp(px, b[0] - 6, b[0] + 6), clamp(py, b[1] - 4, b[1] + 4), 22);
+    }
     if (sh.angle === 'kicker') return RIG.kicker(e.x, e.y, gx, b[0], b[1]);
     return RIG.goalHigh(gx, lerp(b[0], gx ? 94 : 11, 0.45), lerp(b[1], 34, 0.45), 44);
   }
@@ -291,6 +295,26 @@ export class BroadcastRenderer extends HighlightsRenderer {
         const gx = attacking(e.team, e.t), x = e.x ?? (gx ? 94 : 11), y = e.y ?? 34;
         if (e.type === 'free_kick' && (Math.hypot(x - gx, y - 34) > 32 || Math.abs(y - 34) > 24)) continue;
         shots.push({ kind: 'setpiece', angle: 'kicker', prio: 4, from: e.t - 0.25, to: e.t + 4.5, e: { ...e, x, y }, goalX: gx });
+      }
+    }
+    // Close-ups (like TV cutting in as an attack arrives): when the ball, in play, comes within 24 m of a goal from further out, the gantry camera zooms in
+    // on it for 4.5 s. It goes only on where the ball is now and has been, never on whether a shot or a goal follows, so it gives nothing away (B-35); at
+    // most one every 45 s. It runs as a set piece does: placed before anything that happens later, and cut short only from the moment a later shot starts.
+    {
+      // The camera trails the ball, smoothed forwards only (each moment uses where the ball is and has been; the shared path() also smooths backwards).
+      const ahead = (from, to) => {
+        const pts = [], a = 1 - Math.exp(-CAM_DT / 0.45); let x = null, y = null;
+        for (let q = from; q <= to + CAM_DT; q += CAM_DT) { const b = fr.ball(q); if (x == null) { x = b[0]; y = b[1]; } x = lerp(x, b[0], a); y = lerp(y, b[1], a); pts.push([x, y]); }
+        return { from, pts };
+      };
+      let last = -99, wasIn = true;
+      for (let t = this.t0 + 5; t < this.t1 - 8; t += CAM_DT) {
+        const fi = fr.f[fr.idx(t)], b = fr.ball(t), gx = b[0] > 52.5 ? 105 : 0, near = Math.hypot(b[0] - gx, b[1] - 34) < 24;
+        if (fi[5] && near && !wasIn && t > last + 45) {
+          shots.push({ kind: 'setpiece', angle: 'close', prio: 4, from: t, to: t + 4.5, e: { t, x: b[0], y: b[1] }, goalX: gx, path: ahead(t - 1, t + 5) });
+          last = t;
+        }
+        wasIn = !fi[5] || near;   // a restart inside that area (a goal kick, a corner) doesn't count as arriving
       }
     }
     // ...or until the ball leaves that camera's picture (a short free kick, a clearance), whichever comes first. That only uses where the ball is at that moment,
