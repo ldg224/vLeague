@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.37.1 (2026-11-11)
+
+Headlines: No more chance close-ups
+
+**Removed:** the close-up as an attack nears the box (added in 1.37.0). Zooming in hinted that a chance was coming, and a real broadcast crew can't know that. The match video stays on the wide shot through open play, cutting away only after something has happened (celebrations, REF CAM, replays) or at a set piece once the ball is placed.
+Database change: none.
+
 ## 1.37.0 (2026-11-10)
 
 Headlines: Close-ups as attacks arrive | True-size players in 2D
