@@ -23,7 +23,7 @@ const REPLAY_RATE = 1;     // replays run at real time (no slow motion)
 
 // Keep the ball inside this box around the camera target (metres at the widest zoom): the
 // broadcast view never loses the ball, however fast play (or the playback) moves.
-const KEEP_X = 13, KEEP_NEAR = 9, KEEP_FAR = 22;
+const KEEP_PX = 70, KEEP_TOP = 150, KEEP_WIDEST = 70;   // B-40: the closest the live ball comes to the picture's sides and bottom, and to its top (under the score box), in px at 1920 x 1080
 
 export class BroadcastRenderer extends HighlightsRenderer {
   constructor(data, opts = {}) {
@@ -127,22 +127,17 @@ export class BroadcastRenderer extends HighlightsRenderer {
     this.camN = n; this.camHalf = Math.round((this.half2 - this.t0) / CAM_DT);
     for (let i = 0; i < n; i++) { const [x, y, d] = this.camTarget(tAt(i)); X[i] = x; Y[i] = y; D[i] = d; }
     smooth(X, 0.6, 1); smooth(Y, 0.9, 1); smooth(D, 1.4, 1);   // forwards only (B-35): a little quicker than before, as it no longer gets a head start
-    // Keep the actual ball inside the frame.
-    const keep = (m = 1) => {
-      for (let i = 0; i < n; i++) {
-        const t = tAt(i), fi = this.fr.f[this.fr.idx(t)];
-        if (!fi[5]) continue;   // ball dead (being placed for a restart): let the camera pan there smoothly
-        const b = this.fr.ball(t), z = D[i] / 36 * m;
-        X[i] = clamp(X[i], b[0] - KEEP_X * z, b[0] + KEEP_X * z);
-        Y[i] = clamp(Y[i], b[1] - KEEP_NEAR * z, b[1] + KEEP_FAR * z);
-      }
-    };
-    // B-33: held a little inside the frame, then smoothed twice (so a pan starts and stops gently instead of jolting when the ball nears the edge), with a
-    // last, roomier hold so the ball still never leaves the picture.
-    keep(0.85);
-    smooth(X, 0.3, 1); smooth(Y, 0.3, 1);
-    smooth(X, 0.15, 1); smooth(Y, 0.15, 1);
-    keep(1.1);
+    // Keep the actual ball inside the picture. B-40: measured on the picture itself, in pixels, with the real gantry camera. It used to be a box in
+    // metres around where the camera aims, but from the gantry the picture is narrower in metres near the near touchline than in midfield, so a fast long
+    // ball or a switch could slip up to 150 px off the edge. Only where the ball is at that moment is used (no looking ahead, B-35).
+    const live = i => this.fr.f[this.fr.idx(tAt(i))][5];   // ball dead (being placed for a restart): let the camera pan there smoothly
+    const keep = (mx, mTop, mBot) => { for (let i = 0; i < n; i++) if (live(i) || (i && live(i - 1))) this.keepBall(X, Y, D, i, tAt(i), mx, mTop, mBot); };   // (and the moment it goes out, so it can't slip off on the way)
+    // B-33: held well inside the picture, then smoothed twice (so a pan starts and stops gently instead of jolting when the ball nears the edge), with a
+    // last, tighter hold so the ball never leaves the picture.
+    keep(460, 400, 340);   // B-40: starts the catch-up well before the edge, so it is gentle
+    smooth(X, 0.3, 1); smooth(Y, 0.3, 1); smooth(D, 0.4, 1);
+    smooth(X, 0.15, 1); smooth(Y, 0.15, 1); smooth(D, 0.2, 1);
+    keep(KEEP_PX, KEEP_TOP, KEEP_PX);
     // Moments where the assistant referee must be in the picture (a flag up for offside, the sign for a throw-in, goal kick or corner): the camera
     // opens out and moves to a spot that holds the assistant, his flag and the place the play restarts, then eases back (1.18). Done last, so the smoothing
     // above can't water it down, and while the ball is dead (so it never fights the keep-the-ball-in-frame rule).
@@ -153,7 +148,28 @@ export class BroadcastRenderer extends HighlightsRenderer {
         X[i] = lerp(X[i], w.x, a); Y[i] = lerp(Y[i], w.y, a); D[i] = lerp(D[i], w.d, a);
       }
     }
+    keep(KEEP_PX, KEEP_TOP, KEEP_PX);   // B-40: a framing that runs on after the restart is taken still keeps the ball in the picture
     this.cam = { X, Y, D };
+  }
+  // B-40: moves the camera's aim at sample i just enough that the ball, where it is at time t, is at least mx px from the picture's sides, mTop from its
+  // top (clear of the score box) and mBot from its bottom: first by panning (a few Newton steps on the real projection, the aim kept over the pitch),
+  // then, if that is not enough (a ball high over the far side, or going out over the goal line), by widening the shot, as an operator zooms out.
+  keepBall(X, Y, D, i, t, mx, mTop, mBot) {
+    const b = this.fr.ballState(t), z = b.z || 0;
+    const off = () => {
+      const p = RIG.gantry(X[i], Y[i], D[i]).p(b.x, b.y, z); if (!p) return null;
+      return [p[0] < mx ? p[0] - mx : p[0] > W - mx ? p[0] - (W - mx) : 0, p[1] < mTop ? p[1] - mTop : p[1] > H - mBot ? p[1] - (H - mBot) : 0, p];
+    };
+    for (let step = 0; step < 4; step++) {
+      const e = off(); if (!e) return; const [ex, ey, p] = e;
+      if (!ex && !ey) return;
+      // how far the ball moves on the picture when the aim moves 1 m along x or y (the ball moves the other way)
+      const px = RIG.gantry(X[i] + 1, Y[i], D[i]).p(b.x, b.y, z), py = RIG.gantry(X[i], Y[i] + 1, D[i]).p(b.x, b.y, z); if (!px || !py) return;
+      const jx = px[0] - p[0], jy = py[1] - p[1];
+      if (ex && Math.abs(jx) > 1e-3) X[i] = clamp(X[i] - ex / jx * 1.05, 2, 103);
+      if (ey && Math.abs(jy) > 1e-3) Y[i] = clamp(Y[i] - ey / jy * 1.05, 4, 64);
+    }
+    for (let k = 0; k < 12; k++) { const e = off(); if (!e || (!e[0] && !e[1])) return; D[i] = Math.min(KEEP_WIDEST, D[i] * 1.08); }
   }
   // The windows that need the assistant referee in shot: { from, to, x, y, d } (the camera's target and the picture's width). Each is the closest view, from
   // the usual angle, that has every point that matters (the assistant from his boots to the raised flag, and where the play is) inside the picture
