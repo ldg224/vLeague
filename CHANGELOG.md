@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.37.2 (2026-11-11)
+
+Headlines: Tidier player stats
+
+**Changed (S-38):** Minutes played is no longer one of the pinned player stats.
+**Changed (S-39):** each player stat only offers the position filters that make sense. Goalkeeping stats (clean sheets, save percentage, saves and goals conceded per 90) list only keepers, so they have no filter. Goals, assists, attack and defence stats no longer offer Goalkeepers. Top rated and the discipline stats keep every position. An old link to a filter that was removed shows the full list.
+Database change: none.
+
 ## 1.37.1 (2026-11-11)
 
 Headlines: No more chance close-ups
