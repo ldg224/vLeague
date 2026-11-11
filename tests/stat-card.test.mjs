@@ -111,14 +111,13 @@ test('a club without a logo gets a colour disc, with its code only when it is bi
 });
 
 test('with a position picked the banner says so: five main stats name it in the sentence, the others lead with "Among"', () => {
-  const rating = PLAYER_CARDS.find(c => c.id === 'rating'), kp = PLAYER_CARDS.find(c => c.id === 'kp'), minutes = PLAYER_CARDS.find(c => c.id === 'minutes');
+  const rating = PLAYER_CARDS.find(c => c.id === 'rating'), kp = PLAYER_CARDS.find(c => c.id === 'kp');
   const rows = [{ ...player('Ryan Zane', 0), ratingSum: 15.4, apps: 2, min: 180, kp: 3 }];
   const page = (card, position) => statPage(card, rank(rows, card), ctx, { ...pageOpts, position });
   assert.ok(page(rating, 'MID').includes('<b>Ryan Zane</b> is the top rated midfielder, with an average rating of 7.7'));
   assert.ok(page(rating, 'all').includes('is the top rated player, with an average rating of 7.7'));
   assert.ok(statPage(scorers, rank([player('Ana', 5)], scorers), ctx, { ...pageOpts, position: 'FWD' }).includes('<b>Ana</b> is the top scoring forward, with 5 goals'));
   assert.ok(page(kp, 'DEF').includes('Among defenders, <b>Ryan Zane</b> has created the most chances with 3'));
-  assert.ok(page(minutes, 'GK').includes('has played the most minutes of any goalkeeper, 180'));
 });
 
 test('a tie names the position too, and a club banner never does', () => {
@@ -154,4 +153,17 @@ test('a player name opens his page; a club name does not', () => {
   assert.ok(html.includes('<span class="plk" role="link" tabindex="0" data-pid="Ana">Ana</span>'));
   const tc = TEAM_CARDS.find(c => c.id === 'tgoals');
   assert.ok(!linkedPage(tc, rank([{ code: 'RED', p: 2, gf: 4 }], tc), ctx, { kind: 'team', title: 'Team stats', cards: TEAM_CARDS }).includes('plk'));
+});
+
+test('S-38: no Minutes played card; S-39: each stat only offers positions that make sense', async () => {
+  const { positionsFor } = await import('../js/season-stats.js');
+  assert.ok(!PLAYER_CARDS.some(c => c.id === 'minutes'));
+  const keys = id => positionsFor(PLAYER_CARDS.find(c => c.id === id)).map(([k]) => k).join(',');
+  for (const c of PLAYER_CARDS.filter(c => c.group === 'Goalkeeping')) assert.equal(keys(c.id), '', c.id);   // keepers only: no filter
+  for (const id of ['scorers', 'assists', 'ga', 'g90', 'xg', 'kp', 'tk90', 'clr90']) assert.equal(keys(id), 'all,FWD,MID,DEF', id);
+  for (const id of ['rating', 'fl90', 'yc', 'rc']) assert.equal(keys(id), 'all,FWD,MID,DEF,GK', id);
+  const sv = PLAYER_CARDS.find(c => c.id === 'savepct');
+  assert.ok(!statPage(sv, [], ctx, pageOpts).includes('sp-pills'));
+  const g90 = PLAYER_CARDS.find(c => c.id === 'g90'), html = statPage(g90, [], ctx, pageOpts);
+  assert.ok(html.includes('Defenders') && !html.includes('Goalkeepers'));
 });

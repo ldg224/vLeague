@@ -12,7 +12,7 @@
 // Look: FotMob's stat pages in vLeague's own style (css/stat-card.css): on the full page a banner in the leader's club colour says who
 // leads, and every player is shown in their club's kit with the club crest on the corner.
 import { onColour, isHex, accentFor } from './club-colour.js';
-import { format, matchesOf, POSITIONS, POSITION_WORD } from './season-stats.js';
+import { format, matchesOf, positionsFor, POSITION_WORD } from './season-stats.js';
 import { plink } from './player-link.js';
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -72,8 +72,8 @@ const list = names => (names.length < 2 ? names[0] : `${names.slice(0, -1).join(
 
 // A tie at the top, in words that mean something and vary a little so the lists don't all read the same. Which wording a list gets depends only on the stat and
 // the names, so it never changes between redraws.
-const TIE_PLURAL = { scorers: 'goals', assists: 'assists', ga: 'goals and assists', rating: 'average ratings', trating: 'average ratings', minutes: 'minutes played' };
-const TIE_METRIC = { scorers: 'goals', assists: 'assists', ga: 'goals and assists', rating: 'average rating', minutes: 'minutes played', savepct: 'save percentage' };
+const TIE_PLURAL = { scorers: 'goals', assists: 'assists', ga: 'goals and assists', rating: 'average ratings', trating: 'average ratings' };
+const TIE_METRIC = { scorers: 'goals', assists: 'assists', ga: 'goals and assists', rating: 'average rating', savepct: 'save percentage' };
 const metricOf = card => TIE_METRIC[card.id] || card.title.replace(/^([A-Z])(?=[a-z])/, c => c.toLowerCase());
 function tieSentence(card, names, value, plural) {
   const m = metricOf(card), among = plural ? ` among ${plural}` : '', pl = TIE_PLURAL[card.id];
@@ -127,8 +127,9 @@ function switcher(card, cards) {
 
 // opts: kind, title ('Player stats'), back ('#stats'), cards (all cards of this kind), position ('all' | 'FWD'...).
 export function statPage(card, ranked, ctx, { kind = 'player', title = 'Stats', back = '#stats', cards = [card], position = 'all' } = {}) {
-  const pills = kind === 'player'
-    ? `<nav class="sp-pills" aria-label="Position">${POSITIONS.map(([key, label]) => `<a href="${listAddress(card, key)}"${key === position ? ' aria-current="true"' : ''}>${esc(label)}</a>`).join('')}</nav>`
+  const shown = kind === 'player' ? positionsFor(card) : [];   // S-39: only the positions that make sense for this stat
+  const pills = shown.length
+    ? `<nav class="sp-pills" aria-label="Position">${shown.map(([key, label]) => `<a href="${listAddress(card, key)}"${key === position ? ' aria-current="true"' : ''}>${esc(label)}</a>`).join('')}</nav>`
     : '';
   const rows = ranked.length
     ? `<ol class="sc-rows is-full">${ranked.map(x => {

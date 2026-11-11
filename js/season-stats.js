@@ -25,6 +25,10 @@ const NOTE_MIN = `Players with at least ${MIN_MINUTES} minutes played`, NOTE_GK 
 // Where a player plays: from the formation slot he was last picked in (GK, LB, LCB, CDM, LCM, LW, ST...).
 export const lineOf = slot => (slot === KEEPER ? 'GK' : /B$/.test(slot || '') ? 'DEF' : /(^|[LR])ST$|^[LR]W$|^CF$/.test(slot || '') ? 'FWD' : 'MID');
 export const POSITIONS = [['all', 'All'], ['FWD', 'Forwards'], ['MID', 'Midfielders'], ['DEF', 'Defenders'], ['GK', 'Goalkeepers']];
+// S-39: the positions a stat can be filtered by. Goalkeeping stats list only keepers, so they have no filter; goals, assists, attack and defence
+// stats have no Goalkeepers option; the rating and discipline lists offer every position.
+const EVERY_POSITION = new Set(['rating', 'fl90', 'yc', 'rc']);
+export const positionsFor = card => (card.group === 'Goalkeeping' ? [] : EVERY_POSITION.has(card.id) ? POSITIONS : POSITIONS.filter(([k]) => k !== 'GK'));
 
 export const countedFixtures = (list, scope = 'season') => list.filter(f => f.result?.players && inStats(f, scope));
 
@@ -100,7 +104,6 @@ export const PLAYER_CARDS = [
   count('assists', 'Pinned', 'Top assists', 'a'),
   { id: 'ga', group: 'Pinned', title: 'Goals + assists', value: r => r.g + r.a, dp: 0 },
   { id: 'rating', group: 'Pinned', title: 'Top rated', value: rating, dp: 1, qualifies: r => r.min >= MIN_MINUTES, note: NOTE_MIN },
-  count('minutes', 'Pinned', 'Minutes played', 'min'),
 
   rate90('g90', 'Attack', 'Goals per 90', 'g', { dp: 2 }),
   { id: 'xg', group: 'Attack', title: 'xG', value: r => r.xg, dp: 2 },
@@ -165,7 +168,7 @@ export const POSITION_WORD = { FWD: ['forward', 'forwards'], MID: ['midfielder',
 const SAY = {
   scorers: (v, p) => `is the top ${p ? `scoring ${p}` : 'scorer'}, with ${pl(v, 'goal')}`, assists: (v, p) => `is the top ${p ? `assisting ${p}` : 'assist provider'}, with ${pl(v, 'assist')}`,
   ga: (v, p) => `is the top ${p ? `contributing ${p}` : 'goal contributor'}, with ${v} ${Number(v) === 1 ? 'goal' : 'goals'} and assists`, rating: (v, p) => `is the top rated ${p || 'player'}, with an average rating of ${v}`,
-  minutes: (v, p) => `has played the most minutes${p ? ` of any ${p}` : ''}, ${v}`, g90: v => `scores the most goals per 90 minutes with ${v}`,
+  g90: v => `scores the most goals per 90 minutes with ${v}`,
   xg: v => `has the highest xG with ${v}`, xg90: v => `has the highest xG per 90 minutes with ${v}`,
   sh90: v => `takes the most shots per 90 minutes with ${v}`, sot90: v => `has the most shots on target per 90 minutes with ${v}`,
   kp: v => `has created the most chances with ${v}`, pc90: v => `completes the most passes per 90 minutes with ${v}`,
@@ -189,7 +192,7 @@ const SUB = {
   scorers: r => `${(r.xg || 0).toFixed(1)} xG`, assists: r => pl(r.kp || 0, 'chance created', 'chances created'),
   ga: r => `${pl(r.g || 0, 'goal')}, ${pl(r.a || 0, 'assist')}`,
 };
-const SAYS_POSITION = new Set(['scorers', 'assists', 'ga', 'rating', 'minutes']);   // these name the position inside the sentence
+const SAYS_POSITION = new Set(['scorers', 'assists', 'ga', 'rating']);   // these name the position inside the sentence
 for (const c of [...PLAYER_CARDS, ...TEAM_CARDS]) { c.say = SAY[c.id]; c.sayPos = SAYS_POSITION.has(c.id); c.sub = SUB[c.id]; }
 export const matchesOf = r => pl(r.apps ?? r.p ?? 0, 'match', 'matches');
 
