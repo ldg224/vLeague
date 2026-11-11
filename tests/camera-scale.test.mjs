@@ -4,8 +4,9 @@
 //      referee three times life size on a wide shot, 1.36.0).
 //   2. Perspective holds: someone farther from the camera is never drawn taller than someone nearer.
 //   3. No shot enlarges its figures more than MAX_BOOST times life (beyond that they tower over the boards and goals).
-//   4. The normal views (main camera, behind the goal, low 18-yard, reverse, cable) draw a player where they look at much the same size, so a cut
-//      between them never makes the players jump in size. Close-ups (pitchside, the free-kick taker) are meant to be big and are left out of rule 4.
+//   4. The normal views (main camera, behind the goal, low 18-yard, reverse, cable) draw a player where they look within a TV-like range, so a cut
+//      between them never makes the players jump wildly in size. Since 1.37.2 everyone is true size, so the range follows the zoom: about 5% of the
+//      picture's height on the widest shot to 13% on the tightest (it was 85-140 px while shots could enlarge players up to 1.8x). Close-ups (pitchside, the free-kick taker) are meant to be big and are left out of rule 4.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -13,7 +14,7 @@ globalThis.location ??= { hostname: 'localhost', search: '', href: 'http://local
 globalThis.document ??= { documentElement: { classList: { contains: () => false } } };
 const { W, H, makeCam, makeCamAt, RIG, lerpCam, HighlightsRenderer } = await import('../js/viewer/highlights.js');
 const figure = HighlightsRenderer.prototype.figure;
-const MAX_BOOST = 1.8, MIN_FIGURE = 40;
+const MAX_BOOST = 1.0, MIN_FIGURE = 40;   // true size everywhere since 1.37.2 (was 1.8)
 
 // Everyone who can be on the pitch: a grid over it, plus both touchlines' assistant positions, plus behind each goal line.
 const SPOTS = [];
@@ -80,5 +81,5 @@ test('the normal views draw a player where they look at much the same size (no s
   }
   const all = Object.values(sizes).flat(), lo = Math.min(...all), hi = Math.max(...all);
   const report = Object.entries(sizes).map(([n, v]) => `${n} ${Math.min(...v).toFixed(0)}-${Math.max(...v).toFixed(0)}`).join(', ');
-  assert.ok(lo >= 85 && hi <= 140, `a player where the camera looks: ${report} px (want 85-140 at 1080p)`);
+  assert.ok(lo >= 50 && hi <= 140, `a player where the camera looks: ${report} px (want 50-140 at 1080p)`);
 });
