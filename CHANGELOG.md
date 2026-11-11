@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.37.3 (2026-11-11)
+
+Headlines: The ball stays in the picture
+
+**Fixed (B-40):** on the full match video, the main camera kept losing the ball: off the edge on fast long balls and switches of play, off the top on high balls, and behind the score box. It now checks where the ball is on the picture itself, widens the shot a little when panning isn't enough (a high ball over the far side), and keeps the ball clear of the score box. Across six test matches the ball never left the picture in live play (it used to, around 50 times a match). The camera still only follows where the ball is, never where it is going, so it gives nothing away.
+Database change: none.
+
 ## 1.37.2 (2026-11-11)
 
 Headlines: Tidier player stats
