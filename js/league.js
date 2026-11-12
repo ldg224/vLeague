@@ -13,7 +13,7 @@ import { finished, logoUrl } from './dashboard-data.js';
 import { crest as crestHtml, useClubs } from './places.js';
 import { loadKits } from './kits-data.js';
 import { kitSprite, kitChest, startDesign } from './kit.js';
-import { countedFixtures, withoutHidden, totals, rank, PLAYER_CARDS, TEAM_CARDS } from './season-stats.js';
+import { countedFixtures, withoutHidden, totals, rank, positionsFor, PLAYER_CARDS, TEAM_CARDS } from './season-stats.js';
 import { statCard, hiddenLine, statPage, wireStatPage, initialsCrest } from './stat-card.js';
 import { demoSeason } from './demo-season.js';
 import { counts, inStats } from './scope.js';
@@ -141,10 +141,11 @@ if (ctx) {
   };
   const stats = (sub, picked) => {
     const { seen, hiddenCount } = visible(), data = totals(seen), hid = hiddenLine(hiddenCount);
-    const [cardId, position = 'all'] = sub.split('/');
+    const [cardId, asked = 'all'] = sub.split('/');
     const found = ['player', 'team'].map(kind => [kind, KINDS[kind].find(c => c.id === cardId)]).find(x => x[1]);
     if (found) {
-      const [kind, c] = found, rows = kind === 'team' ? data.teams : data.players;
+      const [kind, c] = found, position = kind === 'player' && positionsFor(c).some(([k]) => k === asked) ? asked : 'all';   // S-39: an old link to a position this stat no longer offers shows everyone
+      const rows = kind === 'team' ? data.teams : data.players;
       return hid + statPage(c, rank(kind === 'team' || position === 'all' ? rows : rows.filter(r => r.pos === position), c), sctx, {
         kind, title: kind === 'team' ? 'Team stats' : 'Player stats', back: '#stats', cards: KINDS[kind], position,
       });
