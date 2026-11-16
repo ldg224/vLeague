@@ -3,6 +3,21 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.39.0 (2026-11-16)
+
+Headlines: The Office: wages, the cap, signings and trades
+
+**Added (S-35):** the Office, a new button in the header next to Club and Settings. Each club has a wage bill (every player's wage is his value) and a $125,000 cap, shown as a budget bar along the top. Inside are five tabs:
+- **Squad:** release a player (free, 2 per transfer window).
+- **Market:** sign a free agent (first come, first served).
+- **Trade:** build a trade with another club. The value meter shows what each side gives and gets and what it does to both clubs' bills. You can offer, accept, reject, counter or withdraw.
+- **Clubs:** every club's squad and bill.
+- **History:** every move in the league.
+
+A club over the cap can only make moves that bring its bill down. Moves only happen while the office has a transfer window open, never between a round's line-up lock and its last game, and never during a draft. A player who leaves is taken out of his old club's unlocked team sheets. Editor > Office opens and closes the window, sets the cap and the release limit, lists clubs short of the squad rules, and can undo a move.
+The window starts closed, so nothing moves until the office opens one.
+Database change: yes, 0091_office.sql (applied).
+
 ## 1.38.0 (2026-11-16)
 
 Headlines: Season stats and Ratings on the line-ups
