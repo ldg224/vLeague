@@ -497,7 +497,7 @@ class Match:
         """Seconds from the strike to the keeper's first move: his reflexes, plus a little longer to read and jump for a ball going high."""
         return TUNING['gk_reaction'] + 0.15 * (1 - gk.a('reflexes')) + (TUNING['gk_high_delay'] if z > 1.5 else 0.0)
 
-    def _shot_height(self, p, header, gk, gx):
+    def _shot_height(self, p, header, gk, gx, calm=0.0):
         """Where up the goal this shot is aimed (metres at the line). Headers keep their old spread. A footed shot is a low drive along the
         ground, a drive at keeper height, or (more often from a good finisher or a good long-range shot) placed high into the top corner.
         Higher shots are harder to keep on target, so they are only taken where the shooter has the quality for them."""
@@ -506,6 +506,7 @@ class Match:
             return rng.choice((rng.uniform(0.15, 0.6), rng.uniform(0.3, 2.1)))
         quality = 0.5 * p.a('finishing') + 0.5 * p.a('long_shots')
         high = TUNING['shot_high_base'] + TUNING['shot_high_skill'] * quality
+        high *= 1.0 - 0.6 * calm   # B-45: one on one, a finisher with time passes it low past the keeper rather than smashing it at the top corner
         mid = TUNING['shot_mid_share']
         r = rng.random()
         if r < high:
@@ -586,7 +587,9 @@ class Match:
         aim_y = side + inset if side == GOAL_Y1 else side - inset
         if penalty and rng.random() < 0.12:
             aim_y = 34 + rng.uniform(-0.8, 0.8)
-        aim_z = self._shot_height(p, header, gk, gx)
+        d_goal = math.hypot(gx - b.x, 34 - b.y)
+        calm = (not header and not penalty and d_goal < 16.0) * (1.0 - clamp(pressure, 0.0, 1.0))   # B-45: time and space close in
+        aim_z = self._shot_height(p, header, gk, gx, calm)
         keeper_guess = None
         power = 0.55 + 0.45 * rng.random() * (0.5 + 0.5 * finishing)
         speed = (11 + 5 * finishing) if header else (19 + 13 * power * (0.7 + 0.3 * finishing))
@@ -635,6 +638,7 @@ class Match:
             sigma *= 0.55
         elif aim_z > 1.5 and not header:
             sigma *= TUNING['shot_high_error']   # going for the top corner: more shots miss, so it pays off only for the good finisher
+        sigma *= 1.0 - TUNING['shot_clear_calm'] * calm   # B-45: an unhurried finish close in is placed, not snatched
         if forced or (self.only_script_goals and not penalty and not header):
             sigma = 0.0
         sigma *= 1 + max(0.0, d - 18) / 40
@@ -659,7 +663,7 @@ class Match:
         ax, ay = T.to_att(b.x, b.y)
         opps = [(*T.to_att(o.x, o.y), 0, o) for o in self.other(T).active()]
         xg = decisions.expected_goals(ax, ay, header=header, pressure=pressure,
-                                      blockers=decisions.blockers_in_cone(ax, ay, opps), penalty=penalty)
+                                      blockers=decisions.blockers_in_cone(ax, ay, opps), penalty=penalty, rate=True)
         assist = None
         last = self.last_pass_to.get(p.id)
         if last and last[1] == self.poss_id:
@@ -1502,19 +1506,33 @@ class Match:
             # Mark the nearest dangerous opponent near our zone, staying goal-side.
             opp = self.other(team)
             best = None
+            tracking = False
             for o in opp.active():
                 if o.is_gk:
                     continue
                 oax, oay = team.to_att(o.x, o.y)
                 d = dist(oax, oay, ax, ay)
-                if d < 11 and (best is None or d < best[0]):
-                    best = (d, oax, oay)
+                # B-45: a defender (or holding midfielder) picks up a runner in behind further from his own spot and goes with him, instead of
+                # letting him go once he has run more than a few metres out of the zone; a better reader of the game picks the run up more often.
+                run = o.run_until > t and (p.line == 'DEF' or p.slot in ('CDM', 'LDM', 'RDM')) and oax < pax + 6 and d < TUNING['track_run_range']
+                key = d - (6.0 if run else 0.0)
+                if (d < 11 or run) and (best is None or key < best[0]):
+                    best = (key, oax, oay, run, o)
             if best:
                 w = 0.65 * p.a('marking') + 0.2
                 gx, gy, _ = unit(0 - best[1], 34 - best[2])
                 mx, my = best[1] + gx * 1.6, best[2] + gy * 1.6
+                if best[3]:
+                    o = best[4]
+                    ovx, ovy = (o.vx, o.vy) if team.direction == 1 else (-o.vx, -o.vy)
+                    # Goal-side of where the runner is going, not where he is now.
+                    mx, my = best[1] + ovx * 0.6 + gx * 1.2, best[2] + ovy * 0.6 + gy * 1.2
+                    w = clamp(TUNING['track_run_weight'] * (0.5 + 0.5 * p.a('marking')) + 0.3 * p.a('positioning'), 0.0, 0.95)
+                    tracking = True
                 ax, ay = ax + (mx - ax) * w, ay + (my - ay) * w
-            if pax > bx + 4 and p.line != 'FWD':
+            if tracking:
+                urgency = 3
+            elif pax > bx + 4 and p.line != 'FWD':
                 urgency = 3          # caught upfield: recover goal-side at full speed
             elif dist(pax, pay, ax, ay) > 6:
                 urgency = 2

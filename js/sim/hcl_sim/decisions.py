@@ -40,11 +40,16 @@ def goal_angle(ax, ay):
     return abs(a)
 
 
-def expected_goals(ax, ay, header=False, pressure=0.0, blockers=0, penalty=False):
+def expected_goals(ax, ay, header=False, pressure=0.0, blockers=0, penalty=False, rate=False):
+    """Chance a shot from here scores. `rate`: the figure recorded on the shot (with the B-45 clean-chance term); decisions use the plain model."""
     if penalty:
         return 0.76
     d = math.hypot(PITCH_LENGTH - ax, ay - 34)
     logit = -0.35 - 0.11 * d + 1.4 * goal_angle(ax, ay) - 0.55 * pressure - 0.45 * blockers
+    if rate and blockers == 0 and not header:
+        # B-45: clean through on goal (nobody between him and the posts, close in and not crowded) is a big chance in any real model
+        # (0.35-0.5 one on one from 8-14 m), well above a shot from the same spot through a crowd.
+        logit += TUNING['xg_clear_bonus'] * clamp((20.0 - d) / 8.0, 0.0, 1.0) * (1.0 - clamp(pressure, 0.0, 1.0))
     if header:
         logit -= 0.9
     return sigmoid(logit)
@@ -248,10 +253,11 @@ def _shot_option(c, penalty=False, header=False, force=False, free_kick=False):
     blockers = 0 if free_kick else blockers_in_cone(ax, ay, c.opps)
     xg = expected_goals(ax, ay, header=header, pressure=min(c.pressure, 1.5), blockers=blockers, penalty=penalty)
     long_shots = c.p.a('long_shots')
-    if d > 20 and xg < 0.03 and not penalty and not force and not free_kick:
+    if d > 20 and xg < TUNING['long_shot_min_xg'] and not penalty and not force and not free_kick:
         return None     # speculative efforts from distance are rare
-    # Players with a good long shot back themselves from distance when they have a sight of goal.
-    appetite = TUNING['shot_appetite'] * (0.7 + 0.7 * long_shots if d > 18 else 1.0)
+    # Players with a good long shot back themselves from distance when they have a sight of goal (S-40: less than they did, since too many
+    # shots came from outside the box).
+    appetite = TUNING['shot_appetite'] * (TUNING['long_shot_appetite'] + 0.6 * long_shots if d > 18 else 1.0)
     utility = xg * appetite * 1.15 - (1 - xg) * 0.004
     return {'kind': 'shoot', 'xg': xg, 'utility': utility, 'windup': 0.3 if not penalty else 1.0,
             'target': c.to_pitch(PITCH_LENGTH, 34), 'receiver': None, 'p': xg, 'subtype': 'penalty' if penalty else 'open'}
@@ -267,6 +273,8 @@ def _dribble_options(c):
     gx, gy, _ = unit(PITCH_LENGTH - c.ax, 34 - c.ay)
     dribbling = c.p.a('dribbling')
     step = 5.0
+    d_now = math.hypot(PITCH_LENGTH - c.ax, c.ay - 34)
+    through = not c.restart and 10.0 < d_now < 22.0 and blockers_in_cone(c.ax, c.ay, c.opps) == 0
     for ang in (0, 35, -35, 75, -75):
         ux, uy = rotate(gx, gy, math.radians(ang))
         ex, ey = c.ax + ux * step, c.ay + uy * step
@@ -276,6 +284,16 @@ def _dribble_options(c):
         space = min((math.hypot(ox - ex, oy - ey) - ov * t_drib * 0.7 for ox, oy, ov, _ in c.opps), default=20)
         p_keep = sigmoid((space + 1.2) / 1.1 + (dribbling - 0.5) * 2.2 - c.pressure * 0.7)
         value = threat(ex, ey)
+        if through and ang in (0, 35, -35):
+            # B-45: a player through on goal carries it on into a better shooting spot instead of snatching at it from the edge of the box:
+            # the drive in is worth the shot he would have from there (until the keeper or a defender is on him).
+            d_there = math.hypot(PITCH_LENGTH - ex, ey - 34)
+            if 9.0 < d_there < 20.0:
+                bl = blockers_in_cone(ex, ey, c.opps)
+                if bl == 0:
+                    press_there = pressure_on(ex, ey, c.opps)
+                    xg_there = expected_goals(ex, ey, pressure=min(press_there, 1.5), blockers=0)
+                    value = max(value, TUNING['carry_in_value'] * xg_there * TUNING['shot_appetite'] * 1.15)
         danger = threat(PITCH_LENGTH - c.ax, PITCH_WIDTH - c.ay)
         utility = p_keep * value - (1 - p_keep) * danger * TUNING['risk_aversion']
         utility -= 0.0015 * c.team.tactic('tempo') + _urgency(c)
