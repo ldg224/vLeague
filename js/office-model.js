@@ -1,0 +1,124 @@
+// The Office's sums (S-35): plain functions with no page or database, so the tests can run them. They mirror the database's own checks
+// (supabase/migrations/0091_office.sql, office_check) so a button can say why it is off before anyone presses it; the database checks again either way.
+//   money(n) -> "$7,450"                        short(n) -> "$7.5k"
+//   bill(squad) -> the sum of the squad's wages  rosterOf(squad, rules) -> { GK: { min, max, count }, ... } and short
+//   check({ squad, cap, rules, out, in, code }) -> null when the move is allowed, else a plain sentence why not
+//   after({ squad, cap, out, in }) -> { bill, room, over }
+//   windowText(window, now) -> "Window open, closes Fri 5:30 pm" / "Window closed" ...
+//   windowFromSettings(settings row, now) -> { status, ... } for pages with no office_state()
+//   keepPicks(ids, squad) -> the trade builder's picks still at that club
+//   tradeView({ mine, theirs, give, get, cap, rules, me, them }) -> the value meter's numbers and both clubs' checks
+
+export const POSITIONS = ['GK', 'DEF', 'MID', 'FWD'];
+export const POS_NAME = { GK: 'Goalkeepers', DEF: 'Defenders', MID: 'Midfielders', FWD: 'Forwards' };
+export const DEFAULT_RULES = { GK: { min: 2, max: 2 }, DEF: { min: 5, max: 5 }, MID: { min: 5, max: 5 }, FWD: { min: 4, max: 4 } };
+
+export const money = n => `${n < 0 ? '−' : ''}$${Math.abs(Math.round(Number(n) || 0)).toLocaleString('en-AU')}`;
+export const short = n => {
+  const v = Math.abs(Number(n) || 0), s = n < 0 ? '−' : '';
+  return v >= 1000 ? `${s}$${(v / 1000).toFixed(v % 1000 ? 1 : 0)}k` : `${s}$${v}`;
+};
+export const wageOf = p => Number(p?.wage ?? p?.value ?? 0) || 0;
+export const bill = squad => (squad || []).reduce((t, p) => t + wageOf(p), 0);
+
+// The roster rules from office_state().roster.positions ({ GK: { min, max, count } }) or the draft's defaults.
+export const rulesFrom = roster => {
+  const out = {};
+  for (const pos of POSITIONS) { const r = roster?.positions?.[pos]; out[pos] = r ? { min: Number(r.min), max: Number(r.max) } : { ...DEFAULT_RULES[pos] }; }
+  return out;
+};
+export function rosterOf(squad, rules = DEFAULT_RULES) {
+  const positions = {};
+  let shortBy = 0, overBy = 0;
+  for (const pos of POSITIONS) {
+    const count = (squad || []).filter(p => p.position === pos).length, r = rules[pos] || DEFAULT_RULES[pos];
+    positions[pos] = { min: r.min, max: r.max, count };
+    shortBy += Math.max(0, r.min - count); overBy += Math.max(0, count - r.max);
+  }
+  return { positions, short: shortBy, over: overBy };
+}
+
+const ids = list => new Set((list || []).map(p => (typeof p === 'object' ? p.id : p)));
+// The squad after `out` leave and `inn` join (players as objects).
+export const squadAfter = (squad, out = [], inn = []) => { const gone = ids(out); return [...(squad || []).filter(p => !gone.has(p.id)), ...inn]; };
+
+export function after({ squad, cap, out = [], inn = [] }) {
+  const b = bill(squadAfter(squad, out, inn));
+  return { bill: b, room: cap - b, over: b > cap };
+}
+
+// Why a club may not make this move, in a plain sentence, or null if it may. `name` is how the club is called in the sentence ("You", "CCF").
+export function check({ squad, cap, rules = DEFAULT_RULES, out = [], inn = [], name = 'You' }) {
+  const you = name === 'You';
+  const b0 = bill(squad), next = squadAfter(squad, out, inn), b1 = bill(next);
+  if (b1 > cap && b1 >= b0) {
+    return b0 > cap
+      ? `${you ? 'You are' : `${name} is`} over the cap, so ${you ? 'you' : 'they'} can only make moves that lower the wage bill.`
+      : `${you ? 'Your' : `${name}’s`} wage bill would be ${money(b1)}, ${money(b1 - cap)} over the ${money(cap)} cap.`;
+  }
+  const r0 = rosterOf(squad, rules), r1 = rosterOf(next, rules);
+  // Any position over its maximum that the move makes bigger (as the database: not the total over, which a swap could leave the same).
+  const pos = POSITIONS.find(p => r1.positions[p].count > r1.positions[p].max && r1.positions[p].count > r0.positions[p].count);
+  if (pos) {
+    return `${you ? 'You' : name} would have too many ${POS_NAME[pos].toLowerCase()} (${r1.positions[pos].max} at most).`;
+  }
+  if (r1.short > Math.max(1, r0.short)) {
+    return `${you ? 'You' : name} would be ${r1.short} players short. A squad can be one short at most: sign or trade for a player first.`;
+  }
+  return null;
+}
+
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+export const clock = d => { const h = d.getHours(), m = d.getMinutes(); return `${h % 12 || 12}${m ? `:${String(m).padStart(2, '0')}` : ''} ${h < 12 ? 'am' : 'pm'}`; };
+// "Fri 5:30 pm" within a week, "Fri 27 Nov, 5:30 pm" further out.
+export function when(iso, now = new Date()) {
+  const d = new Date(iso), days = (d - now) / 86400000;
+  return days >= -1 && days < 6 ? `${DAYS[d.getDay()]} ${clock(d)}` : `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}, ${clock(d)}`;
+}
+export function windowText(w, now = new Date()) {
+  const st = w?.status || 'closed';
+  if (st === 'open') return w.closes_at ? `Window open, closes ${when(w.closes_at, now)}` : 'Window open';
+  if (st === 'round') return `Window paused while ${w.round_week ? `round ${w.round_week}` : 'a round'} is played`;
+  if (st === 'not_yet') return w.opens_at ? `Window opens ${when(w.opens_at, now)}` : 'Window opens soon';
+  return 'Window closed';
+}
+// The window from the office_settings row, for a page that has no office_state() (the office, an account with no club): the switch and the dates,
+// as office_window_status() reads them (it cannot know about a round being played or a draft).
+export function windowFromSettings(set, now = new Date()) {
+  if (!set) return { status: 'closed' };
+  const t = iso => (iso ? new Date(iso).getTime() : null), o = t(set.opens_at), c = t(set.closes_at), n = now.getTime();
+  const status = !set.window_open || (c != null && c <= n) ? 'closed' : o != null && o > n ? 'not_yet' : 'open';
+  return { status, open: status === 'open', window_open: Boolean(set.window_open), opens_at: set.opens_at || null, closes_at: set.closes_at || null };
+}
+// Picks in the trade builder that still stand after the squads changed: only ids of players still at that club, in the order picked.
+export const keepPicks = (ids, squad) => { const at = new Set((squad || []).map(p => p.id)); return (ids || []).filter(id => at.has(id)); };
+// Why nothing can be done now, or null when the window is open.
+export function windowReason(w) {
+  const st = w?.status || 'closed';
+  if (st === 'open') return null;
+  if (st === 'round') return 'No moves while a round is being played.';
+  if (st === 'not_yet') return 'The transfer window is not open yet.';
+  return 'The transfer window is closed.';
+}
+
+// The value meter: what each side puts in, the difference, and how both wage bills move, with each club's check.
+export function tradeView({ mine, theirs, give = [], get = [], cap, rules = DEFAULT_RULES, them = 'They' }) {
+  const g = (mine || []).filter(p => give.includes(p.id)), t = (theirs || []).filter(p => get.includes(p.id));
+  const giveTotal = bill(g), getTotal = bill(t);
+  const me = after({ squad: mine, cap, out: g, inn: t }), other = after({ squad: theirs, cap, out: t, inn: g });
+  const empty = !g.length && !t.length;
+  return {
+    give: g, get: t, giveTotal, getTotal, diff: getTotal - giveTotal, empty,
+    me: { before: bill(mine), ...me, why: empty ? null : check({ squad: mine, cap, rules, out: g, inn: t, name: 'You' }) },
+    them: { before: bill(theirs), ...other, why: empty ? null : check({ squad: theirs, cap, rules, out: t, inn: g, name: them }) },
+  };
+}
+// How even a deal is, for the meter's needle: -1 (you give far more) to 1 (you get far more); 0 is even.
+export const balance = (giveTotal, getTotal) => (giveTotal + getTotal ? (getTotal - giveTotal) / Math.max(giveTotal, getTotal) : 0);
+export function fairness(giveTotal, getTotal) {
+  if (!giveTotal && !getTotal) return '';
+  const b = balance(giveTotal, getTotal);
+  if (Math.abs(b) < 0.08) return 'An even deal';
+  if (b > 0) return b > 0.35 ? 'You get a lot more value' : 'You get more value';
+  return b < -0.35 ? 'You give a lot more value' : 'You give more value';
+}
