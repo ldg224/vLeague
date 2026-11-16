@@ -38,6 +38,7 @@ import { openDraft, phase as draftPhase } from './draft-data.js';
 import { db } from './auth.js';
 import { loadChanceSheets, chanceOf } from './win-chance.js';
 import { VERSION } from './version.js';
+import { mountOfficeAlert } from './office-alert.js';
 import { portrait } from './portrait.js';
 import { sheen, pinClock } from './silk.js';
 
@@ -105,6 +106,13 @@ if (ctx) {
     }
   }
   const teamOf = code => season?.teams.find(t => t.code === code) || { code, name: code, colour: '#64748b' };
+  // The Office notice (trade offers waiting, answers to yours, the transfer window open): a floating card, once, when the page opens on the Overview.
+  // ?preview&mine=TUR&alert (localhost) shows it with made-up offers.
+  if ((!location.hash || location.hash === '#overview') && ctx.club?.code && demo == null) {
+    const now = new Date(), inHours = h => new Date(now.getTime() + h * 3600000).toISOString();
+    mountOfficeAlert({ club: ctx.club.code, nameOf: c => teamOf(c).name || c,
+      data: preview ? (params.has('alert') ? { incoming: [{ id: 1, from_club: 'CCF' }, { id: 2, from_club: 'LFC' }], answered: [{ id: 3, to_club: 'SKS', status: 'accepted' }, { id: 4, to_club: 'NGY', status: 'rejected' }], window: { status: 'open', closes_at: inHours(50) } } : { incoming: [], answered: [], window: null }) : null });
+  }
   // Each club's real kit on its players' portraits in the Draft tab: the chest of its home kit, and of its goalkeeper kit (drawn once, when the tab first opens).
   let kitChests = null;
   const imageOf = url => new Promise(res => { if (!url) return res(null); const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
