@@ -19,6 +19,19 @@
 --   office_apply_cap_penalties()  office only; returns the rows it recorded
 --   office_undo_cap_penalties()   office only; returns how many rows it undid
 
+-- Fix to 0091 (found while testing 0092): a test match (week 99, the site's test week) counted as "a round being played" and held the transfer window
+-- shut while it ran. Test matches never hold the window now.
+create or replace function public.office_round_live() returns int
+language sql stable security definer set search_path = public as $$
+  select min(d.week) from public.deadlines d
+  where d.week <> 99
+    and coalesce(d.locked_at, d.locks_at) <= now()
+    and exists (select 1 from public.fixtures f where f.week = d.week and f.starts_at is not null and not f.postponed
+                and (not public.stakes_match_over(f.starts_at, f.postponed)
+                     or (f.starts_at <= now() and not exists (select 1 from public.results r where r.fixture = f.id))))
+$$;
+revoke all on function public.office_round_live() from public, anon, authenticated;
+
 alter table public.office_settings add column if not exists over_limit int not null default 30000;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'office_settings_over_limit_range') then

@@ -113,5 +113,13 @@ begin
   perform pg_temp.act('tur');
   perform pg_temp.err('settings: a manager cannot change over_limit', 'select public.office_save_settings(''{"over_limit": 1}'')', 'Only the league office');
   perform pg_temp.act('su');
+
+  -- ---- a test match (week 99) being played never holds the window (fix to 0091)
+  update public.fixtures set postponed = true where week <> 99 and starts_at <= now() and starts_at > now() - interval '3 hours';
+  insert into public.deadlines (week, locks_at, locked_at) values (99, now() - interval '30 minutes', now() - interval '30 minutes')
+    on conflict (week) do update set locks_at = excluded.locks_at, locked_at = excluded.locked_at;
+  insert into public.fixtures (id, week, home, away, starts_at, postponed) values ('t99-office-check', 99, 'TUR', 'LAU', now() - interval '10 minutes', false);
+  perform pg_temp.ok('window: a test match being played (week 99) does not count as a round', public.office_round_live() is distinct from 99,
+    coalesce(public.office_round_live()::text, 'none'));
 end $$;
 select name, ok, detail from t_log order by n;
