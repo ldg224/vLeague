@@ -3,6 +3,20 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.40.0 (2026-11-16)
+
+Headlines: The Office in your club's colours, with a draft-style Market
+
+**Changed (S-35):**
+- **Club colour:** the Office is redesigned in your club's colour. The top panel, the budget bar, the main buttons, the active tab and the pills all use it, and each side of a trade shows in its own club's colour.
+- **Market:** now works like the draft board. It's a sortable table (Need, Pos, Player, OFF, DEF, OVR, Wage, Room after) with "Sorted by … Then by" levels, search, position filters, a maximum wage and a "Fits my squad" switch. The positions you're short of are listed first, and a player you can't sign says why on his row.
+- **Squad:** uses the same table, with Release on each row.
+- **Clubs:** shows each club's wage bar.
+- **History:** grouped by day.
+
+The draft board's table now shares the same code. It looks and works as before.
+Database change: none.
+
 ## 1.39.0 (2026-11-16)
 
 Headlines: The Office: wages, the cap, signings and trades
