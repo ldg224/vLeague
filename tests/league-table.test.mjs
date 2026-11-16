@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 globalThis.location ??= { hostname: '', search: '', href: 'http://localhost/' };   // dashboard-data.js reads location when it loads
-const { tableRows, tableCard, zonesFor, shield } = await import('../js/league-table.js');
+const { tableRows, tableCard, zonesFor, shield, capPenalties } = await import('../js/league-table.js');
 
 const NOW = new Date('2026-10-20T12:00:00');
 const team = (code, name) => ({ code, name, short_name: name.split(' ')[0], colour: '#336699' });
@@ -133,4 +133,37 @@ test('level clubs: fewest reds come first, then fewest yellows', () => {
   assert.equal(codes(one('AAA', 'BBB', [{ team: 'AAA', card: 'red' }])).slice(0, 2), 'BA');   // A took a red
   assert.equal(codes(one('AAA', 'BBB', [{ team: 'AAA', card: 'yellow' }])).slice(0, 2), 'BA');   // A took a yellow
   assert.equal(codes(one('AAA', 'BBB', [{ team: 'AAA', card: 'yellow' }, { team: 'BBB', card: 'red' }])).slice(0, 2), 'AB');   // reds come before yellows
+});
+
+// Cap penalty points (0092): pending beside PTS from the wage bills; once applied, counted in PTS and no longer shown as pending.
+const pl = (team, value) => ({ id: `${team}${value}`, team, value });
+const capped = extra => ({ ...games, cap: { cap: 125000, over_limit: 30000 }, players: [pl('AAA', 70000), pl('AAA', 61200), pl('BBB', 120000), pl('CCC', 125001), pl('', 90000)], ...extra });
+
+test('cap penalties: pending from the players’ wages, not counted in PTS', () => {
+  const pen = capPenalties(capped());
+  assert.deepEqual(pen.get('AAA'), { over: 6200, points: 3 });
+  assert.deepEqual(pen.get('CCC'), { over: 1, points: 1 });
+  assert.ok(!pen.has('BBB') && !pen.has(''));   // under the cap; free agents are nobody's bill
+  const rows = tableRows(capped(), { now: NOW });
+  const a = rows.find(r => r.team.code === 'AAA');
+  assert.equal(a.pts, 4); assert.deepEqual(a.pen, { over: 6200, points: 3 });
+  assert.equal(capPenalties(capped({ wage_bills: { DDD: 131000 } })).get('DDD').points, 3);   // given bills win over the players
+  assert.equal(capPenalties({ ...games, players: [pl('AAA', 200000)] }).size, 0);   // no cap known: nothing pending
+});
+
+test('cap penalties: once applied, counted in PTS and not pending', () => {
+  const s = capped({ adjustments: [{ team: 'AAA', points: -3, reason: 'Cap penalty' }] });
+  assert.equal(capPenalties(s).size, 0);
+  const rows = tableRows(s, { now: NOW });
+  assert.equal(rows.find(r => r.team.code === 'AAA').pts, 1);
+  assert.equal(rows.find(r => r.team.code === 'AAA').pen, undefined);
+  assert.equal(tableRows(s, { now: NOW, filter: 'home' }).find(r => r.team.code === 'AAA').pts, 3);   // adjustments count in the full table only
+});
+
+test('cap penalties: grey −n beside PTS and a line under the table', () => {
+  const html = tableCard(tableRows(capped(), { now: NOW }), ctx);
+  assert.match(html, /<td class="tb-pts"><span class="tb-ptsn">4<\/span><small class="tb-pen" title="Cap penalty: −3 at the end of the regular season \(\$6,200 over the cap\)"><span aria-hidden="true">−3<\/span>/);
+  assert.match(html, /class="tb-pennote".*Cap penalty: points a club over the wage cap loses, taken off at the end of the regular season/);
+  const none = tableCard(tableRows(games, { now: NOW }), ctx);
+  assert.doesNotMatch(none, /tb-pen/);
 });

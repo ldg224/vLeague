@@ -6,6 +6,11 @@
 //   shield(season, { now, hidden })               { winner } (club code) once every league match is played: the club top of the table wins the vLeague Shield (S-26); null while any is still to come
 //                                                  or hidden by the viewer (so the winner is never given away)
 //   FILTERS                                       [['all', 'All'], ['home', 'Home'], ['away', 'Away'], ['last5', 'Last 5']]
+//   capPenalties(season)                          Map code -> { over, points } of the pending cap penalties (0092): from each club's wage bill now
+//                                                  (season.wage_bills, else its players' values) against season.cap; empty once the office has applied them
+//                                                  (a 'Cap penalty' adjustment stands), as the table then counts them in PTS
+//
+// Points adjustments (season.adjustments, from points_adjustments) count in PTS in the full season table (not the Home / Away / Last 5 views).
 //
 // Which results count: league matches that have finished, with no Test, exhibition or finals matches (as ladder() in
 // dashboard-data.js). `hidden` is the set of fixture ids the viewer has chosen not to see yet (spoiler-free): they count as
@@ -13,6 +18,7 @@
 // ctx = { club(code) -> { name, short_name, colour }, crest(code, px) -> html, mine?: code }
 import { status, kickoff, byKickoff } from './dashboard-data.js';
 import { counts } from './scope.js';
+import { penaltyPoints } from './office-model.js';
 
 export const FILTERS = [['all', 'All'], ['home', 'Home'], ['away', 'Away'], ['last5', 'Last 5']];
 
@@ -26,6 +32,15 @@ const FORM = 5;
 export function zonesFor(n) {
   const finals = Math.min(4, Math.max(0, n - 2));
   return { finals, spoon: n >= 2, shield: n >= 2 };   // the vLeague Shield is first place (S-26), which is also in the finals
+}
+
+export function capPenalties(season) {
+  const out = new Map(), cap = Number(season?.cap?.cap);
+  if (!season?.cap || !Number.isFinite(cap) || (season.adjustments || []).some(a => a.reason === 'Cap penalty')) return out;
+  const bills = season.wage_bills || {};
+  if (!season.wage_bills) for (const p of season.players || []) if (p.team) bills[p.team] = (bills[p.team] || 0) + (Number(p.value) || 0);
+  for (const [code, b] of Object.entries(bills)) { const points = penaltyPoints(b - cap); if (points) out.set(code, { over: b - cap, points }); }
+  return out;
 }
 
 // scope: 'season' (the default) or 'preseason' (js/scope.js): which games the table is made from.
@@ -61,6 +76,7 @@ export function tableRows(season, { filter = 'all', now = new Date(), hidden = n
     delete r.games;
   }
   if (filter === 'all' && scope === 'season') for (const a of season.adjustments || []) if (rows[a.team]) rows[a.team].pts += a.points;
+  if (scope === 'season') for (const [code, x] of capPenalties(season)) if (rows[code]) rows[code].pen = x;   // pending: shown beside PTS, not counted
 
   // The next match for each club: its first league or finals match that isn't counted yet (not postponed, no Test or showcase games).
   const todo = season.fixtures.filter(f => !f.test && (scope === 'preseason' ? f.preseason : !f.exhibition) && !f.postponed && kickoff(f) && !(f.result && status(f, season, now) === 'ft' && !hidden.has(f.id))).sort(byKickoff);
@@ -118,6 +134,9 @@ export function woodenSpoon(season, { now = new Date(), hidden = new Set() } = {
 // ---------- the card ----------
 const signed = n => (n > 0 ? `+${n}` : String(n));
 const clubName = c => c?.short_name || c?.name || '';
+const money = n => `$${Math.round(n).toLocaleString('en-AU')}`;
+// A pending cap penalty beside PTS: grey, with what it is in its title (and for a screen reader).
+const penMark = x => `<small class="tb-pen" title="Cap penalty: −${x.points} at the end of the regular season (${money(x.over)} over the cap)"><span aria-hidden="true">−${x.points}</span><span class="sr-only">, cap penalty of ${x.points} point${x.points === 1 ? '' : 's'} at the end of the regular season</span></small>`;
 
 function chips(form) {
   if (!form.length) return '<span class="tb-none">–</span>';
@@ -132,6 +151,7 @@ export function tableCard(rows, ctx, { filter = 'all', filters = true, hiddenCou
   const pills = filters
     ? `<nav class="tb-pills sc-toggle" aria-label="Table filter">${FILTERS.map(([key, label]) => `<button type="button" data-tfilter="${key}"${key === filter ? ' aria-pressed="true"' : ' aria-pressed="false"'}>${esc(label)}</button>`).join('')}</nav>`
     : '';
+  const anyPen = rows.some(r => r.pen);   // a pending penalty anywhere: every PTS cell keeps a slot for it, so the points stay in line
   const body = rows.map(r => {
     const club = ctx.club(r.team.code), zone = zones.shield && r.rank === 1 ? 'shield' : r.rank <= zones.finals ? 'finals' : zones.spoon && r.rank === rows.length ? 'spoon' : '';
     const opp = r.next ? ctx.club(r.next.code) : null;
@@ -140,9 +160,11 @@ export function tableCard(rows, ctx, { filter = 'all', filters = true, hiddenCou
       + `<td class="tb-pos">${r.rank}</td>`
       + `<th scope="row" class="tb-club"><a class="cl" href="team.html?c=${esc(r.team.code)}">${ctx.crest(r.team.code, 24)}<b class="tb-full">${esc(club?.name || r.team.name)}</b><b class="tb-short">${esc(clubName(club) || r.team.name)}</b></a></th>`
       + `<td>${r.p}</td><td class="t-wdl">${r.w}</td><td class="t-wdl">${r.d}</td><td class="t-wdl">${r.l}</td>`
-      + `<td class="t-pm">${r.gf}-${r.ga}</td><td>${signed(r.gd)}</td><td class="tb-pts">${r.pts}</td>`
+      + `<td class="t-pm">${r.gf}-${r.ga}</td><td>${signed(r.gd)}</td><td class="tb-pts">${anyPen ? `<span class="tb-ptsn">${r.pts}</span>${r.pen ? penMark(r.pen) : '<small class="tb-pen"></small>'}` : r.pts}</td>`
       + `<td class="tb-formcell">${chips(r.form)}</td><td class="t-next">${next}</td></tr>`;
   }).join('');
+  const pending = rows.some(r => r.pen)
+    ? `<p class="tb-pennote"><span class="tb-pen" aria-hidden="true">−${rows.find(r => r.pen).pen.points}</span>Cap penalty: points a club over the wage cap loses, taken off at the end of the regular season</p>` : '';
   const key = rows.length && (zones.shield || zones.finals || zones.spoon)
     ? `<ul class="tb-key">${zones.shield ? '<li data-zone="shield">vLeague Shield</li>' : ''}${zones.finals ? '<li data-zone="finals">Finals</li>' : ''}${zones.spoon ? '<li data-zone="spoon">Wooden spoon</li>' : ''}</ul>`
     : '';
@@ -156,7 +178,7 @@ export function tableCard(rows, ctx, { filter = 'all', filters = true, hiddenCou
       + `<th scope="col" class="t-pm"><abbr title="Goals for and against">+/-</abbr></th><th scope="col"><abbr title="Goal difference">GD</abbr></th><th scope="col"><abbr title="Points">PTS</abbr></th>`
       + `<th scope="col">Form</th><th scope="col" class="t-next">Next</th></tr></thead><tbody>${body}</tbody></table></div>`
     : empty;
-  return `<section class="lg-card lg-table${pre ? ' is-pre' : ''}" aria-label="${esc(title)}"><div class="lg-card-head"><h2>${esc(title)}</h2>${scopeBar}</div>${pills}${hid}${table}${key}</section>`;
+  return `<section class="lg-card lg-table${pre ? ' is-pre' : ''}" aria-label="${esc(title)}"><div class="lg-card-head"><h2>${esc(title)}</h2>${scopeBar}</div>${pills}${hid}${table}${key}${pending}</section>`;
 }
 
 // ---------- the reshuffle (browser only) ----------

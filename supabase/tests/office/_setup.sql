@@ -16,7 +16,8 @@ update public.profiles set club = 'SKS' where id = '00000000-0000-4000-8000-0000
 update public.profiles set role = 'office', club = null where id = '00000000-0000-4000-8000-0000000f0004';
 
 -- A known starting point: window open (started a minute ago), cap 125,000, 2 releases. No round being played (checked below).
-update public.office_settings set cap = 125000, releases_per_window = 2, window_open = true, opens_at = null, closes_at = null, window_started_at = now() - interval '1 minute';
+-- over_limit 0: 01 to 03 test the cap as a hard limit (0091's rule); 04 tests the over-cap zone (0092) with its own limit.
+update public.office_settings set cap = 125000, over_limit = 0, releases_per_window = 2, window_open = true, opens_at = null, closes_at = null, window_started_at = now() - interval '1 minute';
 
 -- who: 'tur', 'lau', 'sks', 'office', 'noclub', 'anon', or 'su' (back to full rights)
 create function pg_temp.act(who text) returns void language plpgsql as $$
@@ -52,5 +53,14 @@ $$;
 create function pg_temp.club_of(p text) returns text language sql as $$ select club from public.players where id = p $$;
 create function pg_temp.wage(p text) returns int language sql as $$ select value from public.players where id = p $$;
 
+-- A real round (or a test match, week 99) being played on the live project right now would hold the window: inside this rolled-back
+-- transaction only, its games count as postponed so the tests can run at any time.
+do $$ declare w int; begin
+  loop
+    w := public.office_round_live();
+    exit when w is null;
+    update public.fixtures set postponed = true where week = w;
+  end loop;
+end $$;
 select pg_temp.ok('setup: no round being played now', public.office_round_live() is null, coalesce(public.office_round_live()::text, ''));
 select pg_temp.ok('setup: window open', public.office_window_status() = 'open', public.office_window_status());

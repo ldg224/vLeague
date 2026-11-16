@@ -17,7 +17,7 @@ import { icon } from './icons.js';
 import { portrait } from './portrait.js';
 import { plink } from './player-link.js';
 import { loadPlayers, forgetPlayers } from './players-data.js';
-import { POSITIONS, POS_NAME, NEED, money, bill, rulesFrom, rosterOf, check, after, need, windowText, windowReason, windowFromSettings, keepPicks, tradeView, fairness, when } from './office-model.js';
+import { POSITIONS, POS_NAME, NEED, money, bill, rulesFrom, rosterOf, check, after, need, windowText, windowReason, windowFromSettings, keepPicks, tradeView, fairness, when, penaltyPoints, penaltyChange, LADDER, pts, DEFAULT_LIMIT } from './office-model.js';
 import { sortRows, clickSort, sortHead, sortBar } from './sort-table.js';
 import { overall } from './names.js';
 import { accentFor, onColour, isHex } from './club-colour.js';
@@ -43,6 +43,7 @@ const clubName = code => clubRow(code)?.short_name || clubRow(code)?.name || cod
 const squadOf = code => S.players.filter(p => p.team === code);
 const playerById = id => S.players.find(p => p.id === id);
 const cap = () => Number(S.st?.cap ?? 125000);
+const limit = () => Number(S.st?.over_limit ?? DEFAULT_LIMIT);   // how far over the cap a club may go (0092)
 const rules = () => rulesFrom(S.st?.roster);
 const win = () => S.st?.window || { status: 'closed' };
 
@@ -77,7 +78,7 @@ async function load() {
   if (st?.error) {
     S.readOnly = st.error;
     const set = await api.settings?.().catch(() => null);
-    S.st = { cap: set?.cap ?? 125000, window: windowFromSettings(set), roster: null, offers_in: [], offers_out: [] };
+    S.st = { cap: set?.cap ?? 125000, over_limit: set?.over_limit ?? DEFAULT_LIMIT, window: windowFromSettings(set), roster: null, offers_in: [], offers_out: [] };
   } else { S.st = st; S.my = st.club; S.readOnly = ''; }
   tidyTrade();
 }
@@ -114,16 +115,26 @@ const noteAt = key => (ui.note?.key === key ? `<p class="of-ok" role="status">${
 const hint = (ic, text) => `<p class="of-hint">${icon(ic)}<span>${text}</span></p>`;
 const myRoster = () => rosterOf(squadOf(S.my), rules());
 
-// The budget bar: the wage bill against the cap, and a second shade for where a move would take it.
+// The budget bar: the wage bill against the cap, and a second shade for where a move would take it. Past the cap, a hatched zone up to the
+// limit (cap + over_limit) is where penalty points build up; the bar ends a little past the limit.
 function budgetBar(b, nextBill = null) {
-  const c = cap(), top = Math.max(c, b, nextBill ?? 0) * 1.04, pct = v => `${Math.min(100, v / top * 100).toFixed(2)}%`;
-  const capAt = pct(c), nb = nextBill ?? b;
+  const c = cap(), lim = c + limit(), top = Math.max(lim, b, nextBill ?? 0) * 1.03, pct = v => `${Math.min(100, v / top * 100).toFixed(2)}%`;
+  const nb = nextBill ?? b;
   const cls = b > c ? ' over' : '';
-  return `<div class="of-bar${cls}${nextBill != null ? ' has-next' : ''}" role="img" aria-label="Wage bill ${money(b)} of the ${money(c)} cap${nextBill != null ? `, ${money(nextBill)} after this move` : ''}">
+  return `<div class="of-bar${cls}${nextBill != null ? ' has-next' : ''}" role="img" aria-label="Wage bill ${money(b)} against the ${money(c)} cap (${money(lim)} at most)${nextBill != null ? `, ${money(nextBill)} after this move` : ''}">
+    ${lim > c ? `<i class="of-bar-zone" style="left:${pct(c)};width:${pct(lim - c)}"></i>` : ''}
     <i class="of-bar-fill" style="width:${pct(Math.min(b, nb))}"></i>
     ${nextBill != null && nb !== b ? `<i class="of-bar-delta ${nb > b ? 'up' : 'down'}" style="left:${pct(Math.min(b, nb))};width:${pct(Math.abs(nb - b))}"></i>` : ''}
-    <i class="of-bar-cap" style="left:${capAt}"><span>Cap ${money(c)}</span></i>
+    <i class="of-bar-cap" style="left:${pct(c)}"><span>Cap ${money(c)}</span></i>
+    ${lim > c ? `<i class="of-bar-cap of-bar-lim" style="left:${pct(lim)}"><span>Limit<small> ${money(lim)}</small></span></i>` : ''}
   </div>`;
+}
+// "Over by $6,200 · 3 penalty points at the end of the regular season" (or, once the office has applied them, that they are taken off).
+function penaltyNote(b) {
+  const over = b - cap(), p = penaltyPoints(over);
+  if (over <= 0) return '';
+  if (S.st?.penalties_applied) return `Over by ${money(over)} · cap penalties have been taken off the table`;
+  return `Over by ${money(over)} · <b>${p} penalty point${p === 1 ? '' : 's'}</b> at the end of the regular season`;
 }
 
 // What a pending confirm would do to the bill (for the header bar).
@@ -159,15 +170,19 @@ function headCard() {
       <div class="of-figs">
         <p><span>Wage bill</span><b>${money(b)}</b>${moved ? `<em class="${nb > b ? 'up' : 'down'}">${icon('arrow-right')}${money(nb)}</em>` : ''}</p>
         <p class="${b > c ? 'over' : ''}"><span>${b > c ? 'Over the cap by' : 'Room left'}</span><b>${money(Math.abs(c - b))}</b>${moved ? `<em class="${nb > c ? 'up' : 'down'}">${icon('arrow-right')}${nb > c ? `${money(nb - c)} over` : money(c - nb)}</em>` : ''}</p>
+        ${b > c || (moved && nb > c) ? `<p class="${b > c ? 'over' : ''}"><span>Penalty</span><b>${penaltyPoints(b - c)}<small> ${penaltyPoints(b - c) === 1 ? 'point' : 'points'}</small></b>${moved && penaltyPoints(nb - c) !== penaltyPoints(b - c) ? `<em class="${nb > b ? 'up' : 'down'}">${icon('arrow-right')}${pts(penaltyPoints(nb - c))}</em>` : ''}</p>` : ''}
         <p><span>Releases left</span><b>${r.left}<small> of ${r.limit}</small></b></p>
         <p class="of-figs-sq"><span>Squad · ${mine.length}</span>${rosterChips(rosterOf(mine, rules()))}</p>
       </div>
       ${budgetBar(b, nb)}
-      ${b > c && nb == null ? `<p class="of-hero-note">${icon('triangle-alert')}You are over the cap: until you are under it, you can only make moves that lower your wage bill.</p>` : ''}
+      ${b > c && nb == null ? `<p class="of-hero-note">${icon('triangle-alert')}<span>${penaltyNote(b)}.${b > c + limit() ? ` You are past the ${money(limit())} limit: you can only make moves that lower your wage bill.` : ''}</span></p>` : ''}
     </div>
     ${tabs}
   </section>`;
 }
+
+// The confirm steps' penalty sentence, with a space after it ('' when the move leaves you on or under the cap).
+const penaltyLine = (b0, b1) => { const t = penaltyChange(b0, b1, cap()); return t ? `<span class="of-pen">${esc(t)}</span> ` : ''; };
 
 const confirmInner = (key, title, lines, yes, data) => `<div><p><b>${title}</b></p><p>${lines}</p>${errAt(key)}</div>
     <div class="of-acts">${btn('Cancel', 'data-of="cancel"', { quiet: true })}${btn(yes, `${data} data-confirm`, { primary: true })}</div>`;
@@ -204,7 +219,7 @@ const CELL = {
   defense: p => `<td class="c-defense">${chip(p.defense)}</td>`,
   overall: p => `<td class="c-overall">${chip(overall(p), 1)}</td>`,
   value: p => `<td class="c-value">${money(p.value)}</td>`,
-  room: p => { const a = after({ squad: squadOf(S.my), cap: cap(), inn: [p] }); return `<td class="c-room${a.over ? ' over' : ''}">${a.over ? `−${money(a.bill - cap())}` : money(a.room)}</td>`; },
+  room: p => { const a = after({ squad: squadOf(S.my), cap: cap(), inn: [p] }); return `<td class="c-room${a.over ? ' over' : ''}">${a.over ? `−${money(a.bill - cap())}<small>${pts(a.points)}</small>` : money(a.room)}</td>`; },
 };
 // rows: [{ p, act, why, on, below }]; below is a full-width row under it (a confirm step or an error).
 function playerTable(t, rows, empty, withAct = true) {
@@ -219,13 +234,13 @@ const sortChips = t => sortBar({ t, levels: levelsFor(t), cols: colsFor(t), defa
 function squadTab() {
   if (!S.my) return `<section class="lg-card"><p class="of-empty">${esc(S.readOnly || 'Only a club manager has a squad here.')} Look at any club in <a href="#clubs">Clubs</a>.</p></section>`;
   const mine = squadOf(S.my), ro = rosterOf(mine, rules()), w = windowReason(win()), r = S.st.releases || { left: 0 };
-  const why = p => w || (r.left <= 0 ? `You have used all ${r.limit} releases for this window.` : check({ squad: mine, cap: cap(), rules: rules(), out: [p] }));
+  const why = p => w || (r.left <= 0 ? `You have used all ${r.limit} releases for this window.` : check({ squad: mine, cap: cap(), limit: limit(), rules: rules(), out: [p] }));
   const general = w || (r.left <= 0 ? 'x' : ro.short ? 'short' : '');
   const rows = sortRows(mine, levelsFor('squad'), colsFor('squad')).map(p => {
     if (ui.confirm?.kind === 'release' && ui.confirm.id === p.id) {
       const a = after({ squad: mine, cap: cap(), out: [p] });
       return { p, on: true, below: confirmBody(`rel-${p.id}`, `Release ${esc(p.name)}?`,
-        `He becomes a free agent. Your wage bill goes to <b>${money(a.bill)}</b>, ${a.over ? `<b class="of-over">${money(a.bill - cap())} over the cap</b>` : `<b>${money(a.room)}</b> room`}. ${r.left - 1} release${r.left - 1 === 1 ? '' : 's'} left after this.`,
+        `He becomes a free agent. Your wage bill goes to <b>${money(a.bill)}</b>, ${a.over ? `<b class="of-over">${money(a.bill - cap())} over the cap</b>` : `<b>${money(a.room)}</b> room`}. ${penaltyLine(bill(mine), a.bill)}${r.left - 1} release${r.left - 1 === 1 ? '' : 's'} left after this.`,
         'Release player', `data-of="release" data-id="${esc(p.id)}"`) };
     }
     const off = why(p);
@@ -253,33 +268,34 @@ function sideCard() {
     ${recent.length ? `<section class="lg-card"><div class="lg-card-head"><h2>Your moves</h2><a href="#history">History</a></div><ul class="of-hist">${recent.map(moveRow).join('')}</ul></section>` : ''}
     <section class="lg-card"><div class="lg-card-head"><h2>How it works</h2></div>
       <ul class="of-how">
-        <li>A player’s wage is his value. Your wage bill is your squad’s wages, and it must stay under the ${money(cap())} cap.</li>
-        <li>Over the cap, you can only make moves that bring your bill down.</li>
+        <li>A player’s wage is his value. Your wage bill is your squad’s wages, against the ${money(cap())} cap.</li>
+        <li>You may go up to ${money(limit())} over the cap, for penalty points taken off at the end of the regular season. Past that, you can only make moves that bring your bill down.</li>
         <li>Moves happen while the office has the transfer window open, never during a round.</li>
         <li>You may be one player short at most: release one, then sign or trade for one before the next.</li>
-      </ul></section>
+      </ul>
+      <table class="of-ladder"><caption>Penalty points</caption><thead><tr><th scope="col">Over the cap by</th><th scope="col">Points</th></tr></thead><tbody>${LADDER.slice(1).map(([top, p], i) => `<tr${S.my && penaltyPoints(bill(squadOf(S.my)) - cap()) === p ? ' class="on"' : ''}><td>${money(LADDER[i][0] + 1)} to ${money(top)}</td><td>${p}</td></tr>`).join('')}<tr><td>More than ${money(limit())}</td><td>Not allowed</td></tr></tbody></table></section>
   </aside>`;
 }
 
 // ---------------------------------------------------------------- Market
 function marketTab() {
   const f = ui.mkt, mine = S.my ? squadOf(S.my) : null, w = windowReason(win());
-  const rule = p => (S.my ? check({ squad: mine, cap: cap(), rules: rules(), inn: [p] }) : null);
+  const rule = p => (S.my ? check({ squad: mine, cap: cap(), limit: limit(), rules: rules(), inn: [p] }) : null);
   const why = p => (!S.my ? 'Only a club manager can sign players.' : w || rule(p));
   const all = S.players.filter(p => !p.team);
   const list = all.filter(p => (f.pos === 'ALL' || p.position === f.pos) && (!f.q || p.name.toLowerCase().includes(f.q.toLowerCase()))
     && (!+f.max || p.value <= +f.max) && (!f.fit || !rule(p)));
-  const blanket = !S.my || w || bill(mine) > cap();   // one reason for every row: said once above the table, not on each row
+  const blanket = !S.my || w || bill(mine) > cap() + limit();   // one reason for every row: said once above the table, not on each row
   const rows = sortRows(list, levelsFor('market'), colsFor('market')).map(p => {
     if (ui.confirm?.kind === 'sign' && ui.confirm.id === p.id) {
       const a = after({ squad: mine, cap: cap(), inn: [p] });
       return { p, on: true, below: confirmBody(`sign-${p.id}`, `Sign ${esc(p.name)}?`,
-        `His wage is ${money(p.value)}. Your wage bill goes to <b>${money(a.bill)}</b>, ${a.over ? `<b class="of-over">${money(a.bill - cap())} over the cap</b>` : `<b>${money(a.room)}</b> room left`}.`,
+        `His wage is ${money(p.value)}. Your wage bill goes to <b>${money(a.bill)}</b>, ${a.over ? `<b class="of-over">${money(a.bill - cap())} over the cap</b>` : `<b>${money(a.room)}</b> room left`}. ${penaltyLine(bill(mine), a.bill)}`,
         'Sign player', `data-of="sign" data-id="${esc(p.id)}"`) };
     }
     const off = why(p);
     // the row's own reason, short: the Room after column already shows the money, so a cap reason says just that
-    const fx = S.my && after({ squad: mine, cap: cap(), inn: [p] }), rowWhy = off && !blanket ? (fx?.over && /cap/.test(off) ? `Takes you ${money(fx.bill - cap())} over the cap` : off) : '';
+    const fx = S.my && after({ squad: mine, cap: cap(), inn: [p] }), rowWhy = off && !blanket ? (fx?.over && /cap/.test(off) ? `Takes you ${money(fx.bill - cap())} over the cap, past the ${money(limit())} limit` : off) : '';
     return { p, why: rowWhy, need: S.my ? needOf(p) : 0, act: S.my ? btn('Sign', `data-of="ask-sign" data-id="${esc(p.id)}"`, { off, primary: !off, label: `Sign ${p.name}` }) : '',
       below: ui.err?.key === `sign-${p.id}` ? errAt(`sign-${p.id}`) : '' };
   });
@@ -301,7 +317,8 @@ function marketTab() {
 // Why most Sign buttons are off, said once above the list.
 function marketHint(mine) {
   const ro = rosterOf(mine, rules()), full = POSITIONS.filter(p => ro.positions[p].count >= ro.positions[p].max), shortAt = POSITIONS.filter(p => ro.positions[p].count < ro.positions[p].min);
-  if (bill(mine) > cap()) return hint('triangle-alert', `You are over the cap, so you can’t sign anyone until your wage bill is under ${money(cap())}.`);
+  if (bill(mine) > cap() + limit()) return hint('triangle-alert', `You are more than ${money(limit())} over the cap, so you can’t sign anyone until your wage bill is under ${money(cap() + limit())}.`);
+  if (bill(mine) > cap()) return hint('triangle-alert', `${penaltyNote(bill(mine))}. A signing adds to it: Room after shows how far over it takes you.`);
   if (full.length === POSITIONS.length) return hint('triangle-alert', 'Your squad is full. Release a player in the Squad tab first, then sign one in his position.');
   if (shortAt.length) return hint('list-ordered', `You are short of ${shortAt.map(p => POS_NAME[p].toLowerCase()).join(' and ')}, so they are listed first.`);
   return '';
@@ -319,7 +336,8 @@ const pickList = (list, side, chosen) => `<ul class="of-picks">${POSITIONS.map(p
 
 function meter(tv, other) {
   const tot = tv.giveTotal + tv.getTotal, share = tot ? tv.giveTotal / tot * 100 : 50;
-  const fx = (label, x, c, code) => `<div class="of-fxrow of-k"${kStyle(code)}><span><i class="of-dot"></i>${label}</span><b>${money(x.before)} ${icon('arrow-right')} ${money(x.bill)}</b><small class="${x.over ? 'over' : ''}">${x.over ? `${money(x.bill - c)} over the cap` : `${money(x.room)} room`}</small></div>`;
+  const pen = x => (x.pointsBefore || x.points ? ` · ${x.pointsBefore === x.points ? pts(x.points) : `${x.pointsBefore} ${icon('arrow-right')} ${pts(x.points)}`}` : '');
+  const fx = (label, x, c, code) => `<div class="of-fxrow of-k"${kStyle(code)}><span><i class="of-dot"></i>${label}</span><b>${money(x.before)} ${icon('arrow-right')} ${money(x.bill)}</b><small class="${x.over ? 'over' : ''}">${x.over ? `${money(x.bill - c)} over the cap` : `${money(x.room)} room`}${pen(x)}</small></div>`;
   const status = (x, who) => (tv.empty ? '' : x.why ? `<p class="of-chk bad">${icon('x')}${esc(x.why)}</p>` : `<p class="of-chk ok">${icon('check')}${who}: cap and squad rules met</p>`);
   return `<div class="of-meter">
     <div class="of-sides"><div class="of-k"${kStyle(S.my)}><span>You give</span><b>${money(tv.giveTotal)}</b><small>${tv.give.length} player${tv.give.length === 1 ? '' : 's'}</small></div>
@@ -345,7 +363,7 @@ function offerRow(o, dir) {
   if (asked === 'accept') {
     const mine = squadOf(S.my), a = after({ squad: mine, cap: cap(), out: youGive, inn: youGet });
     confirm = confirmBody(key, `Accept ${esc(clubName(other))}’s offer?`,
-      `The players move now. Your wage bill goes from ${money(bill(mine))} to <b>${money(a.bill)}</b>, ${a.over ? `<b class="of-over">${money(a.bill - cap())} over the cap</b>` : `<b>${money(a.room)}</b> room`}.`,
+      `The players move now. Your wage bill goes from ${money(bill(mine))} to <b>${money(a.bill)}</b>, ${a.over ? `<b class="of-over">${money(a.bill - cap())} over the cap</b>` : `<b>${money(a.room)}</b> room`}. ${penaltyLine(bill(mine), a.bill)}`,
       'Accept trade', `data-of="accept" data-id="${o.id}"`);
   } else if (asked === 'reject') {
     confirm = confirmBody(key, `Reject ${esc(clubName(other))}’s offer?`, 'The offer closes and nobody moves. Your wage bill stays the same. To change the deal instead, use Counter.',
@@ -372,7 +390,7 @@ function tradeTab() {
   const picker = `<div class="of-clubpick" role="group" aria-label="Trade with">${others.map(c => `<button type="button" class="of-clubbtn of-k" data-of="trade-with" data-v="${esc(c.code)}" aria-pressed="${t.other === c.code}"${kStyle(c.code)}>${crestOf(c.code, 20)}<span>${esc(c.short_name || c.code)}</span></button>`).join('')}</div>`;
   if (!t.other) return `<section class="lg-card"><div class="lg-card-head"><h2>New trade</h2><span class="of-meta">Players only, no cash</span></div><p class="of-lead">Pick a club to trade with.</p>${picker}</section>${offersCard()}`;
   const mine = squadOf(S.my), theirs = squadOf(t.other);
-  const tv = tradeView({ mine, theirs, give: t.give, get: t.get, cap: cap(), rules: rules(), them: clubName(t.other) });
+  const tv = tradeView({ mine, theirs, give: t.give, get: t.get, cap: cap(), limit: limit(), rules: rules(), them: clubName(t.other) });
   const w = windowReason(win()), plain = w || (tv.empty ? 'Put at least one player in the deal.' : ''), off = plain || tv.me.why || tv.them.why;
   const counterOf = t.counter ? (S.st.offers_in || []).find(o => o.id === t.counter) : null;
   if (t.counter && !counterOf) t.counter = null;   // the offer it answered has closed: this is a new trade now
@@ -399,13 +417,13 @@ function clubsTab() {
   const sub = here().sub, sel = (clubRow(sub) ? sub : null) || S.my || S.clubs[0]?.code;
   const c = cap();
   const list = S.clubs.map(r => { const sq = squadOf(r.code); return { r, b: bill(sq), n: sq.length }; }).sort((a, b) => a.b - b.b);
-  const top = Math.max(c, ...list.map(x => x.b)) * 1.02;
+  const top = Math.max(c + limit(), ...list.map(x => x.b)) * 1.02;
   const rows = list.map(({ r, b, n }) => `<li><a class="of-clubrow of-k${r.code === sel ? ' on' : ''}${r.code === S.my ? ' mine' : ''}${b > c ? ' over' : ''}" href="#clubs/${esc(r.code)}"${kStyle(r.code)}${r.code === sel ? ' aria-current="true"' : ''}>
       ${crestOf(r.code, 28)}<span class="of-who"><b>${esc(r.name)}</b><span class="of-minibar"><i style="width:${(b / top * 100).toFixed(1)}%"></i><s style="left:${(c / top * 100).toFixed(1)}%"></s></span></span>
-      <span class="of-cb"><b>${money(b)}</b><small class="${b > c ? 'over' : ''}">${b > c ? `${money(b - c)} over` : `${money(c - b)} room`} · ${n}</small></span></a></li>`).join('');
+      <span class="of-cb"><b>${money(b)}</b><small class="${b > c ? 'over' : ''}">${b > c ? `${money(b - c)} over · ${pts(penaltyPoints(b - c))}` : `${money(c - b)} room · ${n}`}</small></span></a></li>`).join('');
   const sq = squadOf(sel), b = bill(sq);
   const detail = sel ? `<section class="lg-card of-list-card of-club of-k"${kStyle(sel)}>
-      <div class="of-clubhead">${crestOf(sel, 44)}<div><h2>${esc(clubRow(sel)?.name || sel)}</h2><p>${b > c ? `<b class="of-over">${money(b - c)} over the cap</b>` : `<b>${money(c - b)}</b> room`} · wage bill <b>${money(b)}</b> · ${sq.length} players</p></div>
+      <div class="of-clubhead">${crestOf(sel, 44)}<div><h2>${esc(clubRow(sel)?.name || sel)}</h2><p>${b > c ? `<b class="of-over">${money(b - c)} over the cap · ${pts(penaltyPoints(b - c))}</b>` : `<b>${money(c - b)}</b> room`} · wage bill <b>${money(b)}</b> · ${sq.length} players</p></div>
         ${S.my && sel !== S.my ? `<a class="of-btn primary of-k" href="#trade/${esc(sel)}"${kStyle(S.my)}>${icon('arrow-left-right')}<span>Make an offer</span></a>` : ''}</div>
       ${budgetBar(b)}
       ${rosterChips(rosterOf(sq, rules()))}
@@ -566,7 +584,7 @@ try {
   if (preview && q.get('theme')) document.documentElement.dataset.theme = q.get('theme');
   let prof = me.profile;
   if (preview) {
-    const demo = previewOffice({ mine: q.get('mine') || 'TUR', office: q.has('office'), window: q.get('window') || 'open', short: q.get('short') || 'DEF' });
+    const demo = previewOffice({ mine: q.get('mine') || 'TUR', office: q.has('office'), window: q.get('window') || 'open', short: q.get('short') || 'DEF', over: q.get('over'), applied: q.has('applied') });
     S.clubs = demo.clubs; api = demo.api; prof = { role: q.has('office') ? 'office' : 'manager', club: q.has('office') ? null : (q.get('mine') || 'TUR') };
   } else {
     S.clubs = await loadClubs().catch(() => []);

@@ -2,13 +2,28 @@
 // (supabase/migrations/0091_office.sql, office_check) so a button can say why it is off before anyone presses it; the database checks again either way.
 //   money(n) -> "$7,450"                        short(n) -> "$7.5k"
 //   bill(squad) -> the sum of the squad's wages  rosterOf(squad, rules) -> { GK: { min, max, count }, ... } and short
-//   check({ squad, cap, rules, out, in, code }) -> null when the move is allowed, else a plain sentence why not
-//   after({ squad, cap, out, in }) -> { bill, room, over }
+//   check({ squad, cap, limit, rules, out, in, code }) -> null when the move is allowed, else a plain sentence why not
+//   after({ squad, cap, out, in }) -> { bill, room, over, by, points }
+//   penaltyPoints(over) -> the cap penalty ladder (0092_cap_penalties.sql, office_penalty_points); LADDER its steps
+//   penaltyChange(b0, b1, cap) -> "Your cap penalty goes from 0 to 3 points." or '' when it stays at 0
 //   windowText(window, now) -> "Window open, closes Fri 5:30 pm" / "Window closed" ...
 //   windowFromSettings(settings row, now) -> { status, ... } for pages with no office_state()
 //   keepPicks(ids, squad) -> the trade builder's picks still at that club
 //   tradeView({ mine, theirs, give, get, cap, rules, me, them }) -> the value meter's numbers and both clubs' checks
 //   need(position, roster) -> 2 the club is short there, 1 it has room, 0 the position is full (the Market's smart order)
+
+// Cap penalty points (Admin Explains Ep. 02): a club may go over the cap up to the limit (office_settings.over_limit, $30,000), and gets points by how far
+// over it is. They are shown as pending through the season and taken off at the end of the regular season (Editor > Office, Apply cap penalties).
+// [the most over, in $, points]; past the last step the ladder stays at its top (as office_penalty_points).
+export const LADDER = [[0, 0], [5000, 1], [10000, 3], [15000, 6], [20000, 10], [25000, 15], [30000, 21]];
+export const DEFAULT_LIMIT = 30000;
+export function penaltyPoints(over) {
+  const o = Number(over) || 0;
+  if (o <= 0) return 0;
+  const step = LADDER.find(([top]) => o <= top);
+  return step ? step[1] : LADDER[LADDER.length - 1][1];
+}
+export const pts = n => `${n} point${n === 1 ? '' : 's'}`;
 
 export const POSITIONS = ['GK', 'DEF', 'MID', 'FWD'];
 export const POS_NAME = { GK: 'Goalkeepers', DEF: 'Defenders', MID: 'Midfielders', FWD: 'Forwards' };
@@ -53,17 +68,21 @@ export const squadAfter = (squad, out = [], inn = []) => { const gone = ids(out)
 
 export function after({ squad, cap, out = [], inn = [] }) {
   const b = bill(squadAfter(squad, out, inn));
-  return { bill: b, room: cap - b, over: b > cap };
+  return { bill: b, room: cap - b, over: b > cap, by: Math.max(0, b - cap), points: penaltyPoints(b - cap) };
 }
 
 // Why a club may not make this move, in a plain sentence, or null if it may. `name` is how the club is called in the sentence ("You", "CCF").
-export function check({ squad, cap, rules = DEFAULT_RULES, out = [], inn = [], name = 'You' }) {
-  const you = name === 'You';
+// `limit`: how far over the cap a club may go (office_settings.over_limit; 0 makes the cap a hard limit, as before 0092).
+export function check({ squad, cap, limit = 0, rules = DEFAULT_RULES, out = [], inn = [], name = 'You' }) {
+  const you = name === 'You', top = cap + (Number(limit) || 0);
   const b0 = bill(squad), next = squadAfter(squad, out, inn), b1 = bill(next);
-  if (b1 > cap && b1 >= b0) {
-    return b0 > cap
-      ? `${you ? 'You are' : `${name} is`} over the cap, so ${you ? 'you' : 'they'} can only make moves that lower the wage bill.`
-      : `${you ? 'Your' : `${name}’s`} wage bill would be ${money(b1)}, ${money(b1 - cap)} over the ${money(cap)} cap.`;
+  if (b1 > top && b1 >= b0) {
+    if (b0 > top) {
+      return limit
+        ? `${you ? 'You are' : `${name} is`} more than ${money(limit)} over the cap, so ${you ? 'you' : 'they'} can only make moves that lower the wage bill.`
+        : `${you ? 'You are' : `${name} is`} over the cap, so ${you ? 'you' : 'they'} can only make moves that lower the wage bill.`;
+    }
+    return `${you ? 'Your' : `${name}’s`} wage bill would be ${money(b1)}, ${money(b1 - cap)} over the ${money(cap)} cap${limit ? ` (${money(limit)} over at most)` : ''}.`;
   }
   const r0 = rosterOf(squad, rules), r1 = rosterOf(next, rules);
   // Any position over its maximum that the move makes bigger (as the database: not the total over, which a swap could leave the same).
@@ -110,16 +129,24 @@ export function windowReason(w) {
   return 'The transfer window is closed.';
 }
 
+// How a move changes a club's cap penalty, as a sentence for the confirm steps ('' when the club stays on or under the cap).
+export function penaltyChange(b0, b1, cap, who = 'Your') {
+  const p0 = penaltyPoints(b0 - cap), p1 = penaltyPoints(b1 - cap);
+  if (!p0 && !p1) return '';
+  if (p0 === p1) return `${who} cap penalty stays at ${pts(p1)}.`;
+  return `${who} cap penalty goes from ${p0} to ${pts(p1)}.`;
+}
+
 // The value meter: what each side puts in, the difference, and how both wage bills move, with each club's check.
-export function tradeView({ mine, theirs, give = [], get = [], cap, rules = DEFAULT_RULES, them = 'They' }) {
+export function tradeView({ mine, theirs, give = [], get = [], cap, limit = 0, rules = DEFAULT_RULES, them = 'They' }) {
   const g = (mine || []).filter(p => give.includes(p.id)), t = (theirs || []).filter(p => get.includes(p.id));
   const giveTotal = bill(g), getTotal = bill(t);
   const me = after({ squad: mine, cap, out: g, inn: t }), other = after({ squad: theirs, cap, out: t, inn: g });
   const empty = !g.length && !t.length;
   return {
     give: g, get: t, giveTotal, getTotal, diff: getTotal - giveTotal, empty,
-    me: { before: bill(mine), ...me, why: empty ? null : check({ squad: mine, cap, rules, out: g, inn: t, name: 'You' }) },
-    them: { before: bill(theirs), ...other, why: empty ? null : check({ squad: theirs, cap, rules, out: t, inn: g, name: them }) },
+    me: { before: bill(mine), pointsBefore: penaltyPoints(bill(mine) - cap), ...me, why: empty ? null : check({ squad: mine, cap, limit, rules, out: g, inn: t, name: 'You' }) },
+    them: { before: bill(theirs), pointsBefore: penaltyPoints(bill(theirs) - cap), ...other, why: empty ? null : check({ squad: theirs, cap, limit, rules, out: t, inn: g, name: them }) },
   };
 }
 // How even a deal is, for the meter's needle: -1 (you give far more) to 1 (you get far more); 0 is even.

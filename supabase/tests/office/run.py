@@ -1,4 +1,4 @@
-"""Office (S-35) database tests. Each test file runs after migration 0091 and _setup.sql inside one transaction that is rolled back,
+"""Office (S-35) database tests. Each test file runs after migrations 0091 and 0092 and _setup.sql inside one transaction that is rolled back,
 so nothing is left on the live project. Needs the Management API token in ~/.vleague/supabase-token.txt (never commit it).
 
     python supabase/tests/office/run.py              # every test file
@@ -20,7 +20,7 @@ def q(sql):
         return {'error': e.read().decode()[:2000]}
 
 
-mig = (HERE.parents[1] / 'migrations' / '0091_office.sql').read_text(encoding='utf-8')
+mig = '\n'.join((HERE.parents[1] / 'migrations' / m).read_text(encoding='utf-8') for m in ('0091_office.sql', '0092_cap_penalties.sql'))
 setup = (HERE / '_setup.sql').read_text(encoding='utf-8')
 files = [HERE / a for a in sys.argv[1:]] or sorted(p for p in HERE.glob('[0-9]*.sql'))
 passed = failed = 0

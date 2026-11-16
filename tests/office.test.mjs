@@ -1,7 +1,7 @@
 // The Office's sums (S-35, js/office-model.js) and the Editor's settings form (js/editor-office.js).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { money, short, bill, need, NEED, rosterOf, check, after, windowText, windowReason, windowFromSettings, keepPicks, tradeView, fairness, rulesFrom } from '../js/office-model.js';
+import { money, short, bill, need, NEED, rosterOf, check, after, windowText, windowReason, windowFromSettings, keepPicks, tradeView, fairness, rulesFrom, penaltyPoints, penaltyChange, LADDER } from '../js/office-model.js';
 import { readOffice, localInput, fromLocal } from '../js/editor-office.js';
 
 const P = (id, position, value) => ({ id, position, value, name: id });
@@ -43,7 +43,42 @@ test('over the cap: only moves that lower the bill', () => {
   const s = squad();   // 112,000 against a 100,000 cap
   assert.equal(check({ squad: s, cap: 100000, out: [s[2]] }), null);
   assert.match(check({ squad: s, cap: 100000, out: [s[2]], inn: [P('x', 'DEF', 7000)] }), /over the cap/);
-  assert.deepEqual(after({ squad: s, cap: 100000, out: [s[2]] }), { bill: 105000, room: -5000, over: true });
+  assert.deepEqual(after({ squad: s, cap: 100000, out: [s[2]] }), { bill: 105000, room: -5000, over: true, by: 5000, points: 1 });
+});
+
+// Cap penalty points (0092): the ladder, the limit and how a move changes the points.
+test('penalty ladder: every boundary', () => {
+  const cases = [[-500, 0], [0, 0], [1, 1], [5000, 1], [5001, 3], [10000, 3], [10001, 6], [15000, 6], [15001, 10], [20000, 10], [20001, 15], [25000, 15], [25001, 21], [30000, 21], [30001, 21]];
+  for (const [over, p] of cases) assert.equal(penaltyPoints(over), p, `${over} over`);
+  assert.equal(LADDER.at(-1)[0], 30000);
+});
+
+test('over the cap: allowed up to the limit, refused past it, a club past it may still lower its bill', () => {
+  const s = squad().filter(p => p.id !== 'p2'), cap = 108000;   // 105,000 with a defender gone
+  const fa = P('fa', 'DEF', 9000);   // signing him: 114,000, $6,000 over
+  assert.match(check({ squad: s, cap, inn: [fa] }), /over the \$108,000 cap\.$/);   // no limit: the cap is a hard limit (0091)
+  assert.equal(check({ squad: s, cap, limit: 30000, inn: [fa] }), null);
+  assert.equal(check({ squad: s, cap, limit: 6000, inn: [fa] }), null);   // exactly at the limit
+  assert.match(check({ squad: s, cap, limit: 5999, inn: [fa] }), /\$6,000 over the \$108,000 cap \(\$5,999 over at most\)/);
+  const far = squad();   // 112,000 against a cap of 70,000: $42,000 over, past the limit
+  assert.equal(check({ squad: far, cap: 70000, limit: 30000, out: [far[2]] }), null);   // a release lowers the bill
+  assert.match(check({ squad: far.filter(p => p.id !== 'p2'), cap: 70000, limit: 30000, inn: [P('x', 'DEF', 8000)] }), /more than \$30,000 over the cap/);
+  const a = after({ squad: s, cap, inn: [fa] });
+  assert.deepEqual([a.by, a.points], [6000, 3]);
+});
+
+test('penalty change sentence', () => {
+  assert.equal(penaltyChange(90000, 99000, 100000), '');
+  assert.equal(penaltyChange(99000, 106200, 100000), 'Your cap penalty goes from 0 to 3 points.');
+  assert.equal(penaltyChange(106200, 101000, 100000), 'Your cap penalty goes from 3 to 1 point.');
+  assert.equal(penaltyChange(101000, 104000, 100000, 'CCF’s'), 'CCF’s cap penalty stays at 1 point.');
+});
+
+test('trade view: both clubs’ points before and after', () => {
+  const mine = squad(), theirs = squad().map(p => ({ ...p, id: `t${p.id}`, value: p.value + 500 }));   // 112,000 and 120,000
+  const tv = tradeView({ mine, theirs, give: ['p2'], get: ['tp2'], cap: 115000, limit: 30000, them: 'CCF' });
+  assert.deepEqual([tv.me.pointsBefore, tv.me.points, tv.them.pointsBefore, tv.them.points], [0, 0, 1, 1]);
+  assert.equal(tv.me.why, null);
 });
 
 test('trade view: totals, difference and both checks', () => {
@@ -74,9 +109,9 @@ test('window text', () => {
 });
 
 test('editor settings form', () => {
-  const f = new Map([['cap', '130000'], ['releases_per_window', ''], ['opens_at', ''], ['closes_at', '2026-11-20T17:30']]);
+  const f = new Map([['cap', '130000'], ['over_limit', '25000'], ['releases_per_window', ''], ['opens_at', ''], ['closes_at', '2026-11-20T17:30']]);
   const out = readOffice({ get: k => (f.has(k) ? f.get(k) : null) });
-  assert.equal(out.cap, 130000); assert.ok(!('releases_per_window' in out)); assert.equal(out.opens_at, '');
+  assert.equal(out.cap, 130000); assert.equal(out.over_limit, 25000); assert.ok(!('releases_per_window' in out)); assert.equal(out.opens_at, '');
   assert.equal(localInput(out.closes_at), '2026-11-20T17:30');
   assert.equal(fromLocal(''), '');
 });

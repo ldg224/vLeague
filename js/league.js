@@ -82,6 +82,13 @@ if (ctx) {
     const active = rows.filter(r => r.status === 'active' && r.colour);
     season = demoSeason({ rounds: demo, clubs: active.length >= 4 ? active : undefined });
     // &pre=N makes the first N demo rounds preseason rounds, to look at the purple preseason table and stats
+    // A made-up wage cap and bills, so the table shows pending cap penalties beside PTS (0092): the second club $6,200 over (3), the fifth $1,800 over (1).
+    // &cap=0 for none, &cap=applied to see them counted in PTS instead.
+    if (params.get('cap') !== '0') {
+      season.cap = { cap: 125000, over_limit: 30000 };
+      season.wage_bills = Object.fromEntries(season.teams.map((t, i) => [t.code, i === 1 ? 131200 : i === 4 ? 126800 : 112000 + i * 1300]));
+      if (params.get('cap') === 'applied') season.adjustments = [{ team: season.teams[1].code, points: -3, reason: 'Cap penalty' }, { team: season.teams[4].code, points: -1, reason: 'Cap penalty' }];
+    }
     const preN = Number(params.get('pre') || 0);
     if (preN) season.fixtures.forEach(f => { if (f.week <= preN) { f.preseason = true; f.exhibition = true; } });
     if (active.length >= 4) {

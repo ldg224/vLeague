@@ -1,7 +1,7 @@
 // The Office's localhost preview (office.html?preview): made-up clubs, players, offers and moves, and an api that makes the moves in memory with the
 // same checks as the database, so the page can be looked at and screenshotted without signing in. Nothing here touches the database.
-//   previewOffice({ mine, office, window: 'open' | 'closed' | 'round', short: 'DEF' | 'none' ... }) -> { clubs, api }
-import { check, bill, POSITIONS, rosterOf } from './office-model.js';
+//   previewOffice({ mine, office, window: 'open' | 'closed' | 'round', short: 'DEF' | 'none', over: 6200 (your bill that far over the cap), applied }) -> { clubs, api }
+import { check, bill, POSITIONS, rosterOf, penaltyPoints, DEFAULT_LIMIT } from './office-model.js';
 
 const CLUBS = [
   ['TUR', 'Turin United', '#1d3f8a', '#ffffff'], ['SKS', 'Skyline SC', '#c62828', '#ffffff'], ['CCF', 'Coast City FC', '#0f7b6c', '#f2f2f2'],
@@ -17,7 +17,7 @@ const FREE = { GK: 3, DEF: 8, MID: 7, FWD: 6 };
 
 function rng(seed) { let s = seed >>> 0; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 2 ** 32; }; }
 
-export function previewOffice({ mine = 'TUR', office = false, window = 'open', short = 'DEF' } = {}) {
+export function previewOffice({ mine = 'TUR', office = false, window = 'open', short = 'DEF', over = null, applied = false } = {}) {
   const r = rng(35), players = [];
   let n = 0;
   const make = (team, position, lean = 0) => {
@@ -35,9 +35,15 @@ export function previewOffice({ mine = 'TUR', office = false, window = 'open', s
   nudge(mine, 121400); nudge(mine === 'SKS' ? 'TUR' : 'SKS', 129700);
   // "you" one player short (a defender by default, &short=none for a full squad), so the Market's need order and the checks have something to show
   if (POSITIONS.includes(short)) { const gone = players.filter(p => p.team === mine && p.position === short).sort((a, b) => a.value - b.value)[0]; if (gone) gone.team = ''; }
+  // &over=6200: "you" that far over the cap (to look at the penalty points); the squad's wages are scaled, then the last player takes the rounding
+  if (over != null && Number.isFinite(Number(over))) {
+    nudge(mine, 125000 + Number(over));
+    const sq0 = players.filter(p => p.team === mine), d = 125000 + Number(over) - bill(sq0);
+    if (sq0.length) sq0[sq0.length - 1].value += d;
+  }
 
   const clubs = CLUBS.map(([code, name, colour, colour2]) => ({ code, name, short_name: code, colour, colour2, crest_path: null }));
-  const cfg = { cap: 125000, releases_per_window: 2, window_open: window !== 'closed', closes_at: new Date(Date.now() + 3 * 86400000 + 5 * 3600000).toISOString(), opens_at: null };
+  const cfg = { cap: 125000, over_limit: DEFAULT_LIMIT, releases_per_window: 2, window_open: window !== 'closed', closes_at: new Date(Date.now() + 3 * 86400000 + 5 * 3600000).toISOString(), opens_at: null };
   const ago = h => new Date(Date.now() - h * 3600000).toISOString();
   const sq = code => players.filter(p => p.team === code);
   const pick = (code, pos, i = 0) => sq(code).filter(p => p.position === pos).sort((a, b) => b.value - a.value)[i];
@@ -61,7 +67,7 @@ export function previewOffice({ mine = 'TUR', office = false, window = 'open', s
   const status = () => (window === 'round' ? 'round' : cfg.window_open ? 'open' : 'closed');
   const need = () => { const st = status(); if (st === 'closed') throw new Error('The transfer window is closed.'); if (st === 'round') throw new Error('No moves while a round is being played (from the line-up lock to the last game).'); };
   const rules = { GK: { min: 2, max: 2 }, DEF: { min: 5, max: 5 }, MID: { min: 5, max: 5 }, FWD: { min: 4, max: 4 } };
-  const ok = (code, out, inn) => { const why = check({ squad: sq(code), cap: cfg.cap, rules, out, inn, name: code }); if (why) throw new Error(why); };
+  const ok = (code, out, inn) => { const why = check({ squad: sq(code), cap: cfg.cap, limit: cfg.over_limit, rules, out, inn, name: code }); if (why) throw new Error(why); };
   const byId = id => players.find(p => p.id === id);
   const later = v => new Promise(res => setTimeout(() => res(v), 150));
   const roster = code => { const ro = rosterOf(sq(code), rules); return { positions: ro.positions, short: ro.short }; };
@@ -72,6 +78,7 @@ export function previewOffice({ mine = 'TUR', office = false, window = 'open', s
       if (!myCode) throw new Error('Only a club manager can make moves.');
       const b = bill(sq(myCode));
       return later({ club: myCode, cap: cfg.cap, wage_bill: b, room: cfg.cap - b, over_cap: b > cfg.cap,
+        over_limit: cfg.over_limit, limit: cfg.cap + cfg.over_limit, over: Math.max(0, b - cfg.cap), penalty_points: penaltyPoints(b - cfg.cap), penalties_applied: Boolean(applied),
         window: { status: status(), open: status() === 'open', window_open: cfg.window_open, opens_at: cfg.opens_at, closes_at: cfg.closes_at, round_week: window === 'round' ? 6 : null },
         releases: { limit: cfg.releases_per_window, used, left: Math.max(0, cfg.releases_per_window - used) }, roster: roster(myCode), squad: sq(myCode).map(json),
         offers_in: offers.filter(o => o.status === 'pending' && o.to_club === myCode).map(offerJson),
