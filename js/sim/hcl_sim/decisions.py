@@ -169,8 +169,10 @@ def _pass_option(c, r, loft_angle=0.0, subtype=None, z0=0.0, max_speed=None):
                 px, py = pts[i]
                 reach = 0.9 if not o.is_gk else 1.4
                 to = _reach_time(ox, oy, ovmax, px, py, vx=ovx, vy=ovy) - reach / ovmax
-                # Beat both the ball's arrival and the receiver to this point.
-                best_margin = min(best_margin, to - max(times[i], min(t_recv[i], times[i] + 0.4)))
+                # Along the way he has to be there before the ball: once it has rolled past a point, getting there later cuts
+                # nothing out. Where the receiver meets it he has to beat the receiver as well (it was 0.4 s after the ball at
+                # every point, which made most passes look hopeless to the passer, 0.4.0).
+                best_margin = min(best_margin, to - (max(times[i], t_recv[i]) if i == meet else times[i]))
             pi = sigmoid((-best_margin - 0.05) / 0.15)
             if pi > 0.01:
                 p_clear *= (1.0 - pi)

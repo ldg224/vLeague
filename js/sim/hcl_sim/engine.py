@@ -749,6 +749,10 @@ class Match:
             dh, tp = seg_point_dist(px, py, b.x, b.y, q.x, q.y)
             if dh > 2.0:
                 continue
+            if tp <= 0.0 and (b.vx - q.vx) * (q.x - px) + (b.vy - q.vy) * (q.y - py) <= 0.0:
+                # The ball is already past him (or beside him) and moving away faster than he is: he can't get a foot to it. Without
+                # this a presser standing next to the passer touched almost every pass struck away from him (0.4.0).
+                continue
             z = pz + (b.z - pz) * tp
             hands = self._gk_hands_allowed(q)
             r = self._reach(q, z, hands)
@@ -855,16 +859,20 @@ class Match:
         if hands:
             logit = 3.4 + 2.2 * (q.a('handling') - 0.5) - 0.12 * max(0.0, v_rel - 12)
         else:
+            # 0.4.0: a professional kills a soft ball at thigh or chest height, or a dropping ball, most of the time. The penalties
+            # here (with the challenger counted twice, through pressure and again as a contest) made about one reception in seven
+            # of a lofted pass a miscontrol, mostly of slow balls (2-7 m/s relative) and fed the loose-ball ping-pong.
             logit = (TUNING['first_touch_base'] + 2.6 * (q.a('first_touch') - 0.5) - 0.2 * max(0.0, v_rel - 7)
-                     - 0.8 * min(pressure, 1.5) - (1.2 if z > 0.6 else 0.0))
+                     - 0.6 * min(pressure, 1.5) - (0.6 if z > 0.6 else 0.0))
             if f.get('kind') in ('long', 'gk_kick', 'clearance', 'cross', 'corner', 'free_kick', 'goal_kick'):
                 # Dropping balls are harder to kill, especially with an opponent challenging.
                 contest = any(dist(o.x, o.y, q.x, q.y) < 1.8 for o in self.other(T).active())
-                logit -= 0.5 + (0.9 if contest else 0.0)
+                logit -= 0.2 + (0.5 if contest else 0.0)
             if not teammate and f.get('receiver') is not None and v_rel > 9:
                 logit -= 0.7     # reading and cutting out a pass is harder than receiving it
         if rng.random() < sigmoid(logit):
-            live_pass = f.get('kind') not in ('deflection', 'loose') and speed > 9.0
+            # Picking up the other side's clearance is a recovery, not an interception (nobody was meant to receive it).
+            live_pass = f.get('kind') not in ('deflection', 'loose', 'clearance') and speed > 9.0
             how = 'catch' if hands else ('reception' if teammate and f.get('kind') not in ('deflection', 'loose') else
                                          'interception' if kicker is not None and not teammate and live_pass else 'recovery')
             self._gain(q, how, hands=hands)
