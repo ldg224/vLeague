@@ -1,6 +1,7 @@
 // The match page's Lineup tab for a played or live match (WR-39): the Predicted Lineup's pitch (js/match-lineup.js) with what happened. Each player wears
 // this match's rating (red under 5.0, orange under 7.0, green from 7.0, blue with a star for the best on the pitch), small marks for goals, assists and cards, the minute a
-// red card sent them off, and the captain's "C". Pills switch between Average rating (this match), Contributions (goals and assists only) and Value.
+// red card sent them off, and the captain's "C". Pills switch between Average rating (this match, with its goals, assists and cards), Season stats (apps, goals, assists),
+// Ratings (attack and defence) and Value (S-36: Contributions removed).
 // Numbers come from the saved result (`fx.result.players`, js/simulate.js summariseMatch); while a match is live they are worked out from the match file up to
 // the minute reached (js/live-rating.js), so nothing from later shows. Nobody is substituted in this league, so the bench is simply the squad that was not picked,
 // and a red card is the only way off the pitch.
@@ -13,7 +14,7 @@ import { goalMark, redBallMark, assistMark, cardMark, captainMark } from './matc
 import { ratingsAt } from './live-rating.js';
 import { plink } from './player-link.js';
 import { suspensions } from './simulate.js';
-import { VIEWS, money, surname, initials, STAR, PITCH_H, PITCH_V, coach, faceOf, nameTag } from './match-lineup.js';
+import { VIEWS, money, surname, initials, STAR, PITCH_H, PITCH_V, coach, faceOf, nameTag, seasonLine, ratingBadges } from './match-lineup.js';
 
 const POS = { GK: 0, DEF: 1, MID: 2, FWD: 3 };
 
@@ -65,14 +66,15 @@ function side(fx, L, ctx, F, star, which) {
       const top = String(id) === star;
       marks += `<b class="ml-r is-${top ? 'star' : tone(f.r)}" aria-label="Rating ${f.r.toFixed(1)}${top ? ', the best on the pitch' : ''}">${f.r.toFixed(1)}${top ? STAR : ''}</b>`;
     }
-    if (ctx.view !== 'value') {
+    if (ctx.view === 'rating') {   // this match: its goals, assists, missed penalties and cards go with its ratings
       if (f.a) marks += `<span class="ml-m is-a">${assistMark(f.a)}</span>`;
       if (f.g) marks += `<span class="ml-m is-g">${goalMark(f.g)}</span>`;
       if (f.pm) marks += `<span class="ml-m is-g${f.g ? ' is-up' : ''}">${redBallMark('Penalty not scored', f.pm)}</span>`;
-      if (ctx.view === 'rating' && (f.rc || f.yc)) marks += `<span class="ml-off">${f.rc && f.off ? `<em>${esc(f.off)}′</em>` : ''}${cardMark(f.rc ? 'red' : 'yellow')}</span>`;
-    } else if (p) marks += `<b class="ml-v" aria-label="Value ${esc(money(p.value))}">${esc(money(p.value))}</b>`;
+      if (f.rc || f.yc) marks += `<span class="ml-off">${f.rc && f.off ? `<em>${esc(f.off)}′</em>` : ''}${cardMark(f.rc ? 'red' : 'yellow')}</span>`;
+    } else if (ctx.view === 'ratings' && p?.offense != null) marks += ratingBadges(p);   // S-36
+    else if (ctx.view === 'value' && p) marks += `<b class="ml-v" aria-label="Value ${esc(money(p.value))}">${esc(money(p.value))}</b>`;
     return `<li class="ml-p is-${which}${boosted ? ' is-boosted' : ''}" style="--x:${slots[slot].x.toFixed(1)};--y:${slots[slot].y.toFixed(1)}"><span class="ml-av">${face}${marks}</span>`
-      + `<span class="ml-n">${nameTag(cap, p ? num : '', name)}</span></li>`;
+      + `<span class="ml-n">${nameTag(cap, p ? num : '', name)}</span>${ctx.view === 'season' ? seasonLine(ctx.stats?.get(String(id))) : ''}</li>`;
   }).join('');
   const rated = xi.list.map(p => F[p.id]?.r).filter(r => r != null);
   return { html, formation: xi.formation, avg: rated.length ? rated.reduce((a, b) => a + b, 0) / rated.length : null, ids: new Set(xi.list.map(p => String(p.id))) };

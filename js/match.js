@@ -191,7 +191,7 @@ function start() {
   let staleBusy = false;   // the "Load the new match" button is reading the new version (B-42)
   let h2hFilter = null;   // the Head-to-Head filter pills (Home or This season, one at a time, kept while the page is open)
   // Season numbers for the lineup pills (WR-33), from the results this account may see (spoiler-free keeps hidden ones out). The choice lasts while the page is open.
-  let view = preview && ['contrib', 'value'].includes(q.get('view')) ? q.get('view') : 'rating';   // ?view= : localhost preview only
+  let view = preview && ['season', 'ratings', 'value'].includes(q.get('view')) ? q.get('view') : 'rating';   // ?view= : localhost preview only
   const seasonStats = () => {
     if (demo != null) return new Map(totals(countedFixtures(season.fixtures)).players.map(p => [String(p.id), p]));
     if (preview && q.has('fake')) {   // localhost preview only: made-up numbers, to look at the pills while no real season is played

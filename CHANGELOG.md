@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.38.0 (2026-11-16)
+
+Headlines: Season stats and Ratings on the line-ups
+
+**Changed (S-36):** the match page's line-ups (the Predicted lineup and the Lineup tab) drop Contributions. There are two new views instead. **Season stats** shows each player's games this season, with goals and assists under the name ("6 apps", "2G 1A"). **Ratings** shows each player's attack and defence ratings above the head (ATT 8, DEF 4), green from 7, orange from 5, red below. Average rating and Value stay. On a played match, its goals, assists and cards now show with Average rating.
+Database change: none.
+
 ## 1.37.4 (2026-11-16)
 
 Headlines: Stakes chances match the fixtures, every missed shot shows on the shot map, and a warning when you're watching an old version of a match

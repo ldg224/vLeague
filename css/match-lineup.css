@@ -95,6 +95,12 @@
   background: var(--surface); box-shadow: 0 0 0 1px var(--line); color: var(--text-strong); font: 700 var(--fs-xs)/1.2 var(--font); font-variant-numeric: tabular-nums;
 }
 .ml-p:has(.ml-v) .ml-n { margin-top: 10px; }
+/* S-36: Ratings, attack over defence at the top right; Season stats, a line under the name */
+.ml-ad { position: absolute; bottom: calc(100% - 4px); left: 50%; translate: -50% 0; display: flex; gap: 3px; white-space: nowrap; }
+.ml-ad .ml-r { position: static; min-width: 0; height: 18px; padding: 0 5px; }
+.ml-p:has(.ml-ad) { padding-top: 14px; }
+.ml-s { display: grid; justify-items: center; margin-top: -2px; color: var(--muted); font: 400 var(--fs-xs)/1.25 var(--font); font-variant-numeric: tabular-nums; }
+.ml-s-ga { color: var(--text-strong); font-weight: 700; }
 @media (max-width: 767px) { .ml-r { right: -12px; } .ml-m.is-a { left: -10px; } .ml-m.is-g { right: -10px; } }
 
 /* the shirt number, big on the shirt itself (white with a dark edge, so it reads on any kit) */
