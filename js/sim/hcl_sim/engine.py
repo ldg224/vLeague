@@ -12,7 +12,7 @@ import random
 
 from . import physics, tactics, decisions
 from .config import (PITCH_LENGTH, PITCH_WIDTH, GOAL_Y1, GOAL_Y2, GOAL_HEIGHT, BOX_DEPTH, BOX_Y1, BOX_Y2,
-                     TICK, HALF_SECONDS, DEFAULT_FPS, MAX_PLAYER_SPEED, TUNING, PENALTY_SPOT, SIX_DEPTH)
+                     TICK, HALF_SECONDS, DEFAULT_FPS, MAX_PLAYER_SPEED, TUNING, PENALTY_SPOT, SIX_DEPTH, SIX_Y1, SIX_Y2)
 from .geometry import clamp, dist, unit, seg_point_dist, sigmoid, rotate
 from .models import Ball
 from .output import RATING_BASE, VOLUME_NORM
@@ -325,6 +325,8 @@ class Match:
         if self.script:
             self._script_tick()
         if self.phase == 'dead':
+            if self.restart.get('offside'):
+                self._offside_ball()
             self._dead_update()
         else:
             if b.holder is not None:
@@ -808,7 +810,13 @@ class Match:
             self.ev('offside', q)
             self._resolve_pass('offside')
             other = self.other(self.team_of(q))
-            self._start_restart('free_kick', other, (clamp(q.x, 1, PITCH_LENGTH - 1), clamp(q.y, 1, PITCH_WIDTH - 1)), (8, 15), offside=True)
+            b = self.ball
+            z, vx, vy, vz = b.z, b.vx, b.vy, b.vz
+            spot, taker = self._offside_spot(other, q)
+            self._start_restart('free_kick', other, spot, (8, 15), taker=taker, offside=True)
+            # B-43: the flag doesn't freeze the ball in mid-air. The attacker's touch takes the pace off it and it drops and rolls
+            # to a stop (stepped in _tick while the ball is dead) before the taker places it.
+            b.z, b.vx, b.vy, b.vz = z, vx * 0.1, vy * 0.1, min(vz, 0.0)
             return
 
         # Shots
@@ -1249,6 +1257,34 @@ class Match:
             return max(near[:4], key=lambda p: p.attrs['passing'] + p.attrs['long_shots'])
         return near[0]
 
+    def _offside_spot(self, team, q):
+        """Where `team`'s free kick for an offside by q is taken, and who takes it (None: the usual choice).
+
+        It is taken where q became involved, except in `team`'s own penalty area, where Law 13 lets the defending team take it from
+        anywhere in the area: the keeper takes it, from the six-yard line rather than off his goal line (B-43)."""
+        ax, ay = team.to_att(q.x, q.y)
+        if ax < BOX_DEPTH and BOX_Y1 < ay < BOX_Y2:
+            gk = next((p for p in team.active() if p.is_gk), None)
+            if gk is not None:
+                if ax < SIX_DEPTH:
+                    ax, ay = SIX_DEPTH, clamp(ay, SIX_Y1, SIX_Y2)
+                return team.from_att(ax, ay), gk
+        return (clamp(q.x, 1, PITCH_LENGTH - 1), clamp(q.y, 1, PITCH_WIDTH - 1)), None
+
+    def _offside_ball(self):
+        """The dead ball after an offside: it drops and rolls to a stop, and once the taker reaches it he takes it with him to the
+        spot, so it is placed there rather than jumping to it when the kick is taken (B-43)."""
+        b, r = self.ball, self.restart
+        tk = r['taker']
+        if not r.get('gathered') and b.z < 0.05 and not tk.sent_off and dist(tk.x, tk.y, b.x, b.y) < 1.0:
+            r['gathered'] = True
+        if r.get('gathered'):
+            b.stop()
+            b.x, b.y, b.z = tk.x + tk.fx * 0.45, tk.y + tk.fy * 0.45, 0.0
+        elif b.z > 0 or b.vx or b.vy or b.vz:
+            physics.step(b)
+            b.x, b.y = clamp(b.x, -3.0, PITCH_LENGTH + 3.0), clamp(b.y, -3.0, PITCH_WIDTH + 3.0)
+
     def _start_restart(self, kind, team, spot, delay, taker=None, **extra):
         b = self.ball
         self._resolve_pass('out')
@@ -1271,7 +1307,7 @@ class Match:
         taker = taker or self._choose_taker(kind, team, spot)
         ready = self.t + self.rng.uniform(delay[0], delay[1])
         self.restart = {'kind': kind, 'team': team, 'spot': spot, 'taker': taker,
-                        'ready_at': ready, 'max_at': ready + 8}
+                        'ready_at': ready, 'max_at': ready + 8, **extra}
         self.restart_targets = tactics.setpiece_targets(kind, team, self.other(team), spot, taker, self.offside_x(team))
         for p in self.players:
             p.action = None
@@ -1328,6 +1364,8 @@ class Match:
                     p.tx, p.ty = self.restart['spot']
                     p.tx -= 0.3 * (1 if self.team_of(p).direction == 1 else -1)
                     p.urgency = 2
+                    if self.restart.get('offside') and not self.restart.get('gathered') and dist(b.x, b.y, *self.restart['spot']) > 1.5:
+                        p.tx, p.ty = b.x, b.y   # fetch the ball first, then carry it to the spot (B-43)
                 else:
                     p.tx, p.ty = self.restart_targets.get(p, (p.x, p.y))
                     p.urgency = 2 if dist(p.x, p.y, p.tx, p.ty) > 20 or (p.is_gk and self.restart['kind'] == 'penalty') else 1   # a keeper walks right onto his line for a penalty (B-34)
