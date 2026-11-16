@@ -5,7 +5,9 @@ Every published version of the vLeague app. Newest first. How versions work and 
 
 ## 1.37.4 (2026-11-16)
 
-Headlines: Stakes chances match the fixtures, and every missed shot shows on the shot map
+Headlines: Stakes chances match the fixtures, every missed shot shows on the shot map, and a warning when you're watching an old version of a match
+
+**Added (B-42):** when a match is played again after a problem, its file is replaced, but a page opened before that (or a copy the browser kept) could go on showing the old one without saying so. The match page and the Game centre now check the file against the newest result. An old version gets a warning-tape banner, "You're watching an old version of this match", with a "Load the new match" button that reads the new one in place. A browser's old copy is skipped automatically, and a page left open checks every couple of minutes.
 
 **Fixed (B-44, B-40):** on the shot map, the little goal beside a picked shot only reached 0.8 m past each post, and most misses go wider than that (some 20 m or more), so they didn't show at all; the ones that did were a thin ring that was hard to see. The goal now has more room around it, a shot beyond that is pinned to the edge with a dashed ring, misses are a bold ring, and the Result line says how far wide it went ("Off target, 3 m wide") or "over the bar". The player page's Shots map also widens to show a shot from far out instead of cutting it off.
 
