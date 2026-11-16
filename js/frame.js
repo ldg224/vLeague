@@ -9,7 +9,7 @@
 //   vote / voteDue: the Vote tab shows only while voting is open (vote), its dot flashing while this manager has not voted (voteDue);
 //   mountFrame returns { setDraft({ visible, live }), setVote({ visible, due }), setStakes(visible), setBadge(tabId, n) }: a small count on a tab (the News tab's unread posts); 0 or less removes it
 //   mountSubFrame(el, { office, crest, here, title }) -> the same header card for the pages behind the header buttons (My club, Settings, Kits):
-//                                                 the Club or Settings button is the current one (here: 'club' | 'settings'), and a row with a way back to
+//                                                 the Club, Office or Settings button is the current one (here: 'club' | 'office' | 'settings'; the Office, S-35, is office.html), and a row with a way back to
 //                                                 the league replaces the tabs
 //   SEASONS                                    -> the seasons the toggle offers, newest first; the first is the current one
 //   TABS                                       -> the tabs in order. Wide screens show them in a row under the header; on a phone
@@ -58,6 +58,7 @@ export function mountFrame(el, { office = false, draft = false, draftLive = fals
       </div>
       <nav class="lg-tools" aria-label="Your club and account">
         <a class="lg-tool is-club" href="club.html">${crest ? `<img class="lg-tool-crest" src="${esc(crest)}" alt="" onerror="this.replaceWith(document.createRange().createContextualFragment(this.dataset.alt))" data-alt="${esc(icon('shield'))}">` : icon('shield')}<span>Club</span></a>
+        <a class="lg-tool" href="office.html">${icon('briefcase')}<span>Office</span></a>
         <a class="lg-tool" href="settings.html">${icon('settings-2')}<span>Settings</span></a>
         ${office ? `<a class="lg-tool" href="editor.html">${icon('pencil')}<span>Editor</span></a>` : ''}
       </nav>
@@ -238,6 +239,7 @@ export function mountSubFrame(el, { office = false, crest = '', here = 'club', t
       </div>
       <nav class="lg-tools" aria-label="Your club and account">
         ${tool('club', 'club.html', `${crest ? `<img class="lg-tool-crest" src="${esc(crest)}" alt="" onerror="this.replaceWith(document.createRange().createContextualFragment(this.dataset.alt))" data-alt="${esc(icon('shield'))}">` : icon('shield')}<span>Club</span>`, ' is-club')}
+        ${tool('office', 'office.html', `${icon('briefcase')}<span>Office</span>`)}
         ${tool('settings', 'settings.html', `${icon('settings-2')}<span>Settings</span>`)}
         ${office ? tool('editor', 'editor.html', `${icon('pencil')}<span>Editor</span>`) : ''}
       </nav>
