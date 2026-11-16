@@ -1,4 +1,4 @@
-"""Pitch geometry, engine constants and tuning knobs.
+﻿"""Pitch geometry, engine constants and tuning knobs.
 
 Coordinates are metres. Origin is the top-left corner of the pitch as drawn on a screen:
 x runs 0 -> 105 left to right, y runs 0 -> 68 top to bottom, z is height above the grass.
@@ -101,12 +101,12 @@ TUNING = {
     # Goalkeeping
     'gk_reaction': 0.30,          # seconds for a 100-rated keeper; up to +0.15 for poor ones
     'gk_save_base': 3.7,
-    'gk_dive_speed': 4.2,         # m/s along the line once he has left his feet
+    'gk_dive_speed': 4.8,         # m/s along the line once he has left his feet
     'gk_high_delay': 0.12,        # extra seconds before he moves for a ball going into the top corner (it takes a keeper about a second to get there)
-    'gk_read_error': 0.35,        # metres, 1 sd, in where he reads a shot will cross the line (more for a poorer positioner and a harder-hit shot)
+    'gk_read_error': 0.30,        # metres, 1 sd, in where he reads a shot will cross the line (more for a poorer positioner and a harder-hit shot)
     'gk_reach_stand': 1.0,        # metres from his body he can get a hand to without moving: about half an arm span
-    'gk_reach_dive': 1.7,         # and at full stretch
+    'gk_reach_dive': 1.9,         # and at full stretch
 
     # Control
-    'first_touch_base': 3.0,
+    'first_touch_base': 3.8,
 }
