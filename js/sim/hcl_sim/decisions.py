@@ -328,7 +328,9 @@ def _cross_options(c):
         danger = threat(PITCH_LENGTH - zx, PITCH_WIDTH - zy)
         utility = value - (1 - p_exec * p_win) * danger * 0.35
         angle = 22 if d < 28 else 26
-        speed = physics.loft_speed_for(d, angle)
+        # 0.4.0: struck to come down a few metres past the zone, so it reaches the runner there at head height (aimed at the spot itself,
+        # it landed at his feet: headed shots were 2-4% of shots against a real 12-18%).
+        speed = physics.loft_speed_for(d + TUNING['cross_overshoot'], angle)
         if speed is None:
             continue
         out.append({'kind': 'cross', 'subtype': 'cross', 'target': c.to_pitch(zx, zy), 'speed': speed, 'loft': angle,
@@ -339,6 +341,8 @@ def _cross_options(c):
 def _clear_option(c):
     if c.ax > 35:
         return None
+    if c.pressure < TUNING['clear_min_pressure']:
+        return None   # 0.4.0: a defender with time on the ball plays it out; clearing is for when he is pressed (clearances were about twice real)
     tx = clamp(c.ax + 45, 40, 80)
     ty = 6.0 if c.ay < 34 else PITCH_WIDTH - 6.0
     r = c.m.rng.random()
@@ -346,7 +350,7 @@ def _clear_option(c):
         # Under real pressure: just put it out of play.
         tx = clamp(c.ax + 25, 20, 60)
         ty = -4.0 if c.ay < 34 else PITCH_WIDTH + 4.0
-    elif c.pressure > 0.8 and c.ax < 12 and r < 0.6:
+    elif c.pressure > 0.7 and c.ax < 18 and r < 0.75:
         # Pinned near his own goal line: shin it behind for a corner.
         tx, ty = -4.0, c.ay + (-8 if c.ay < 34 else 8)
     d = math.hypot(tx - c.ax, ty - c.ay)

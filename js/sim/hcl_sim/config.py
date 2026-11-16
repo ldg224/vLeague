@@ -112,6 +112,8 @@ TUNING = {
     'mood_from_min': 50,         # 0.4.0: from this minute the score starts to lean on a team's settings (Match._update_mood), fully by 90
     'mood_protect': 0.6,         # a team ahead leans this much (as a fraction of a full -1) toward protecting the lead
     'chase_shot': 1.0,
+    'cross_overshoot': 4.5,      # 0.4.0: metres past the target zone a cross comes down, so it is at head height there
+    'clear_min_pressure': 0.35,  # 0.4.0: below this pressure a defender does not choose to clear
     'behind_block': 0.7,        # 0.4.0: chance a blocked cross or shot near the defender's own goal goes behind (Match._maybe_behind)
     'behind_miscue': 0.55,       # and a defender's mis-hit of a cross, corner or shot there           # shot appetite added at full chasing mood (x1.5)
 }
