@@ -7,8 +7,8 @@
 //   History  every move in the league, newest first
 // The database (supabase/migrations/0091_office.sql) checks every move; js/office-model.js does the same sums first so a button can say why it is off.
 // Localhost only, to look at it without signing in: office.html?preview&mine=TUR&theme=light#trade (made-up players, no database; moves work in memory).
-import { chrome, esc, clubs as loadClubs, crestUrl } from './member.js';
-import { currentUser, myProfile, db } from './auth.js';
+import { chrome, enter, esc, clubs as loadClubs, crestUrl } from './member.js';
+import { db } from './auth.js';
 import { paintClub, startSilk } from './shell.js';
 import { mountSubFrame } from './frame.js';
 import { crest, useClubs } from './places.js';
@@ -17,7 +17,7 @@ import { icon } from './icons.js';
 import { portrait } from './portrait.js';
 import { plink } from './player-link.js';
 import { loadPlayers, forgetPlayers } from './players-data.js';
-import { POSITIONS, POS_NAME, money, bill, rulesFrom, rosterOf, check, after, windowText, windowReason, tradeView, balance, fairness, when } from './office-model.js';
+import { POSITIONS, POS_NAME, money, bill, rulesFrom, rosterOf, check, after, windowText, windowReason, windowFromSettings, keepPicks, tradeView, balance, fairness, when } from './office-model.js';
 import { previewOffice } from './office-preview.js';
 
 chrome();
@@ -30,7 +30,7 @@ const POS_SHORT = { GK: 'GK', DEF: 'DEF', MID: 'MID', FWD: 'FWD' };
 // ---------------------------------------------------------------- data
 let api = null;          // { state(), players(), moves(), release(id), sign(id), offer(to, give, get), respond(id, yes), counter(id, give, get), withdraw(id) }
 let S = { st: null, players: [], clubs: [], moves: [], my: null, readOnly: '' };
-const ui = { confirm: null, err: null, note: null, busy: false, mkt: { pos: 'ALL', sort: 'wage' }, trade: { other: null, give: [], get: [], counter: null } };
+const ui = { confirm: null, err: null, note: null, busy: false, focus: null, mkt: { pos: 'ALL', sort: 'wage' }, trade: { other: null, give: [], get: [], counter: null } };
 
 const clubRow = code => S.clubs.find(c => c.code === code);
 const team = code => { const r = clubRow(code); return { code, name: r?.name || code, colour: r?.colour }; };
@@ -74,8 +74,19 @@ async function load() {
   if (st?.error) {
     S.readOnly = st.error;
     const set = await api.settings?.().catch(() => null);
-    S.st = { cap: set?.cap ?? 125000, window: { status: set?.window_open ? 'open' : 'closed', closes_at: set?.closes_at, opens_at: set?.opens_at }, roster: null, offers_in: [], offers_out: [] };
+    S.st = { cap: set?.cap ?? 125000, window: windowFromSettings(set), roster: null, offers_in: [], offers_out: [] };
   } else { S.st = st; S.my = st.club; S.readOnly = ''; }
+  tidyTrade();
+}
+
+// After the squads change (a move here or by another club), the trade builder keeps only picks still at those clubs, and drops a counter
+// whose original offer has closed.
+function tidyTrade() {
+  const t = ui.trade;
+  if (!t.other) return;
+  t.give = keepPicks(t.give, squadOf(S.my));
+  t.get = keepPicks(t.get, squadOf(t.other));
+  if (t.counter && !(S.st?.offers_in || []).some(o => o.id === t.counter)) t.counter = null;
 }
 
 // ---------------------------------------------------------------- pieces
@@ -122,12 +133,12 @@ function headCard() {
   return `<section class="lg-card of-head">
     <div class="of-id">${crestOf(S.my, 44)}<div><h1>${esc(clubName(S.my))} Office</h1><p class="of-sub">Wages, signings and trades</p></div>${winPill}</div>
     <div class="of-budget">
-      <div class="of-figs">
-        <p><span>Wage bill</span><b>${money(b)}</b>${nb != null && nb !== b ? `<em class="${nb > b ? 'up' : 'down'}">${icon('arrow-right')}${money(nb)}</em>` : ''}</p>
-        <p class="of-room${b > c ? ' over' : ''}"><span>${b > c ? 'Over the cap by' : 'Room left'}</span><b>${money(Math.abs(c - b))}</b>${nb != null && nb !== b ? `<em class="${nb > c ? 'up' : 'down'}">${icon('arrow-right')}${nb > c ? `${money(nb - c)} over` : money(c - nb)}</em>` : ''}</p>
-        <p><span>Releases left</span><b>${r.left} of ${r.limit}</b></p>
-        <p><span>Squad</span><b>${mine.length}</b>${shortAt.length ? `<em class="up">${shortAt.join(', ')} short</em>` : ''}</p>
-      </div>
+      <p class="of-figs">
+        <span><i>Wage bill</i> <b>${money(b)}</b>${nb != null && nb !== b ? `<em class="${nb > b ? 'up' : 'down'}">${icon('arrow-right')}${money(nb)}</em>` : ''}</span>
+        <span class="of-room${b > c ? ' over' : ''}"><i>${b > c ? 'Over the cap by' : 'Room left'}</i> <b>${money(Math.abs(c - b))}</b>${nb != null && nb !== b ? `<em class="${nb > c ? 'up' : 'down'}">${icon('arrow-right')}${nb > c ? `${money(nb - c)} over` : money(c - nb)}</em>` : ''}</span>
+        <span><i>Releases left</i> <b>${r.left} of ${r.limit}</b></span>
+        <span><i>Squad</i> <b>${mine.length}</b>${shortAt.length ? `<em class="up">${shortAt.join(', ')} short</em>` : ''}</span>
+      </p>
       ${budgetBar(b, nb)}
       ${b > c && nb == null ? `<p class="of-hint">${icon('triangle-alert')}You are over the cap: until you are under it, you can only make moves that lower your wage bill.</p>` : ''}
     </div>
@@ -144,10 +155,10 @@ const playerRow = (p, act = '', o = {}) => `<li class="of-row${o.on ? ' on' : ''
     ${act}
   </li>`;
 
-const confirmBox = (key, title, lines, yes, data) => `<li class="of-confirm" data-key="${key}">
-    <div><p><b>${title}</b></p><p>${lines}</p>${errAt(key)}</div>
-    <div class="of-acts">${btn('Cancel', 'data-of="cancel"', { quiet: true })}${btn(yes, data, { primary: true })}</div>
-  </li>`;
+const confirmInner = (key, title, lines, yes, data) => `<div><p><b>${title}</b></p><p>${lines}</p>${errAt(key)}</div>
+    <div class="of-acts">${btn('Cancel', 'data-of="cancel"', { quiet: true })}${btn(yes, `${data} data-confirm`, { primary: true })}</div>`;
+const confirmBox = (key, title, lines, yes, data) => `<li class="of-confirm" data-key="${key}">${confirmInner(key, title, lines, yes, data)}</li>`;
+const confirmBody = (key, title, lines, yes, data) => `<div class="of-confirm in-offer" data-key="${key}">${confirmInner(key, title, lines, yes, data)}</div>`;
 
 // ---------------------------------------------------------------- Squad
 function squadTab() {
@@ -267,14 +278,25 @@ function offerRow(o, dir) {
   const sum = list => list.reduce((t, p) => t + Number(p.wage || 0), 0);
   const youGet = dir === 'in' ? o.give : o.get, youGive = dir === 'in' ? o.get : o.give;
   const w = windowReason(win()), key = `offer-${o.id}`;
+  const asked = dir === 'in' && ui.confirm && ['accept', 'reject'].includes(ui.confirm.kind) && ui.confirm.id === String(o.id) ? ui.confirm.kind : null;
   const acts = dir === 'in'
-    ? `${btn('Reject', `data-of="reject" data-id="${o.id}"`, { quiet: true })}${btn('Counter', `data-of="counter" data-id="${o.id}"`, { off: w })}${btn('Accept', `data-of="accept" data-id="${o.id}"`, { primary: !w, off: w })}`
+    ? `${btn('Reject', `data-of="ask-reject" data-id="${o.id}"`, { quiet: true })}${btn('Counter', `data-of="counter" data-id="${o.id}"`, { off: w })}${btn('Accept', `data-of="ask-accept" data-id="${o.id}"`, { primary: !w, off: w })}`
     : btn('Withdraw', `data-of="withdraw" data-id="${o.id}"`, { quiet: true });
-  return `<li class="of-offer">
+  let confirm = '';
+  if (asked === 'accept') {
+    const mine = squadOf(S.my), a = after({ squad: mine, cap: cap(), out: youGive, inn: youGet });
+    confirm = confirmBody(key, `Accept ${esc(clubName(other))}’s offer?`,
+      `The players move now. Your wage bill goes from ${money(bill(mine))} to <b>${money(a.bill)}</b>, ${a.over ? `<b class="of-over">${money(a.bill - cap())} over the cap</b>` : `<b>${money(a.room)}</b> room`}.`,
+      'Accept trade', `data-of="accept" data-id="${o.id}"`);
+  } else if (asked === 'reject') {
+    confirm = confirmBody(key, `Reject ${esc(clubName(other))}’s offer?`, 'The offer closes and nobody moves. Your wage bill stays the same. To change the deal instead, use Counter.',
+      'Reject offer', `data-of="reject" data-id="${o.id}"`);
+  }
+  return `<li class="of-offer${asked ? ' asking' : ''}">
     <div class="of-offer-h">${crestOf(other, 24)}<b>${esc(clubName(other))}</b><small>${o.reply_to ? 'Counter-offer · ' : ''}${esc(when(o.created_at))}</small></div>
-    <p><span>You get</span>${names(youGet)}<em>${money(sum(youGet))}</em></p>
-    <p><span>You give</span>${names(youGive)}<em>${money(sum(youGive))}</em></p>
-    ${errAt(key)}<div class="of-acts">${acts}</div></li>`;
+    <p><span>You get</span><span class="of-names">${names(youGet)}</span><em>${money(sum(youGet))}</em></p>
+    <p><span>You give</span><span class="of-names">${names(youGive)}</span><em>${money(sum(youGive))}</em></p>
+    ${confirm || `${errAt(key)}<div class="of-acts">${acts}</div>`}</li>`;
 }
 
 function tradeTab() {
@@ -291,6 +313,7 @@ function tradeTab() {
   const tv = tradeView({ mine, theirs, give: t.give, get: t.get, cap: cap(), rules: rules(), them: clubName(t.other) });
   const w = windowReason(win()), plain = w || (tv.empty ? 'Put at least one player in the deal.' : ''), off = plain || tv.me.why || tv.them.why;
   const counterOf = t.counter ? (S.st.offers_in || []).find(o => o.id === t.counter) : null;
+  if (t.counter && !counterOf) t.counter = null;   // the offer it answered has closed: this is a new trade now
   return `<section class="lg-card of-trade">
       <div class="lg-card-head"><h2>${counterOf ? 'Counter-offer' : 'New trade'}</h2>${counterOf ? `<button type="button" class="of-link" data-of="trade-reset">Cancel counter</button>` : `<span class="of-meta">Players only, no cash</span>`}</div>
       ${counterOf ? `<p class="of-lead">Change the deal ${esc(clubName(t.other))} sent you, then send it back. Their offer closes when you do.</p>` : picker}
@@ -308,7 +331,7 @@ function tradeTab() {
 
 // ---------------------------------------------------------------- Clubs
 function clubsTab() {
-  const sel = here().sub || S.my || S.clubs[0]?.code;
+  const sub = here().sub, sel = (clubRow(sub) ? sub : null) || S.my || S.clubs[0]?.code;
   const c = cap();
   const list = S.clubs.map(r => { const sq = squadOf(r.code); return { r, b: bill(sq), n: sq.length }; }).sort((a, b) => a.b - b.b);
   const rows = list.map(({ r, b, n }) => `<li><a class="of-clubrow${r.code === sel ? ' on' : ''}${r.code === S.my ? ' mine' : ''}" href="#clubs/${esc(r.code)}">
@@ -345,27 +368,47 @@ function here() {
   const [tab, ...rest] = location.hash.slice(1).split('/');
   return { tab: TABS.some(t => t[0] === tab) ? tab : 'squad', sub: rest.join('/') };
 }
+// Every redraw keeps keyboard focus: the focused control is found again by what it is (its data-of, data-id, data-v, data-side, tab or link).
+// A confirm step that has just opened takes focus on its main button; one that closes gives it back to the button that opened it.
+const FOCUS_KEYS = ['of', 'id', 'v', 'side', 'tab'];
+function focusKey() {
+  const a = document.activeElement;
+  if (!a || !main.contains(a) || a === main) return null;
+  const parts = FOCUS_KEYS.filter(k => a.dataset[k] != null).map(k => `[data-${k}="${CSS.escape(a.dataset[k])}"]`);
+  if (a.matches('a[href]') && !a.dataset.tab) parts.push(`[href="${CSS.escape(a.getAttribute('href'))}"]`);
+  return parts.length ? `${a.tagName.toLowerCase()}${parts.join('')}` : null;
+}
 function render() {
   const { tab } = here();
   const body = { squad: squadTab, market: marketTab, trade: tradeTab, clubs: clubsTab, history: historyTab }[tab]();
+  const f = focusKey();
   paint(main, `<div class="of">${headCard()}${body}</div>`);
+  const want = ui.focus || f;
+  ui.focus = null;
+  const el = want && (want === 'confirm' ? main.querySelector('[data-confirm]') : main.querySelector(want));
+  if (el && document.activeElement !== el) el.focus({ preventScroll: want !== 'confirm' });
 }
 
 async function act(key, fn, okText, noteKey) {
   if (ui.busy) return;
   ui.busy = true; ui.err = null; main.classList.add('of-busy');
-  try {
-    await fn();
-    ui.confirm = null; ui.note = { key: noteKey, text: okText() };
-    await load();
-  } catch (e) { ui.err = { key, text: explain(e) }; }
+  let done = false;
+  try { await fn(); done = true; } catch (e) { ui.err = { key, text: explain(e) }; }
+  if (done) {
+    ui.confirm = null;
+    let fresh = true;
+    try { await load(); } catch { fresh = false; }   // the move went through either way: a failed reload is not an error with the move
+    ui.note = { key: noteKey, text: okText() + (fresh ? '' : ' The page didn’t refresh: reload it to see the change.') };   // built after the reload, so it reads the new numbers
+  }
   ui.busy = false; main.classList.remove('of-busy');
   render();
 }
 
 function onHash() {
   const { tab, sub } = here();
-  if (tab === 'trade' && sub && sub !== ui.trade.other && clubRow(sub) && sub !== S.my) ui.trade = { other: sub, give: [], get: [], counter: null };
+  // An address with a club that isn't one (#clubs/XYZ, #trade/XYZ, or your own club to trade with) falls back to the list.
+  if (sub && (tab === 'clubs' || tab === 'trade') && (!clubRow(sub) || (tab === 'trade' && sub === S.my))) history.replaceState(null, '', `#${tab}`);
+  else if (tab === 'trade' && sub && sub !== ui.trade.other) ui.trade = { other: sub, give: [], get: [], counter: null };
   ui.confirm = null; ui.err = null; ui.note = null;
   render();
 }
@@ -375,8 +418,8 @@ main.addEventListener('click', e => {
   if (!b || b.disabled) return;
   const k = b.dataset.of, id = b.dataset.id, v = b.dataset.v;
   const nameOf = pid => playerById(pid)?.name || 'The player';
-  if (k === 'ask-release' || k === 'ask-sign') { ui.confirm = { kind: k.slice(4), id }; ui.err = null; ui.note = null; return render(); }
-  if (k === 'cancel') { ui.confirm = null; ui.err = null; return render(); }
+  if (['ask-release', 'ask-sign', 'ask-accept', 'ask-reject'].includes(k)) { ui.confirm = { kind: k.slice(4), id }; ui.err = null; ui.note = null; ui.focus = 'confirm'; return render(); }
+  if (k === 'cancel') { closeConfirm(); return render(); }
   if (k === 'release') return act(`rel-${id}`, () => api.release(id), () => `${nameOf(id)} released. He is a free agent now.`, 'squad');
   if (k === 'sign') return act(`sign-${id}`, () => api.sign(id), () => `${nameOf(id)} signed. Your wage bill is ${money(bill(squadOf(S.my)))}.`, 'market');
   if (k === 'mpos') { ui.mkt.pos = v; return render(); }
@@ -408,18 +451,25 @@ main.addEventListener('click', e => {
   }
 });
 addEventListener('hashchange', onHash);
-addEventListener('keydown', e => { if (e.key === 'Escape' && ui.confirm) { ui.confirm = null; render(); } });
+// Closing a confirm puts focus back on the button that opened it.
+function closeConfirm() {
+  const c = ui.confirm;
+  if (c) ui.focus = `button[data-of="ask-${c.kind}"][data-id="${CSS.escape(c.id)}"]`;
+  ui.confirm = null; ui.err = null;
+}
+addEventListener('keydown', e => { if (e.key === 'Escape' && ui.confirm) { closeConfirm(); render(); } });
 
 try {
-  const user = preview ? { id: 'preview' } : await currentUser().catch(() => null);
-  if (!user) { location.replace('index.html?signin'); await new Promise(() => {}); }   // signed-out visitors only see sign-in (WR-02)
+  // The same entry check as the other signed-in pages: no session -> sign in (WR-02); an account still in set-up -> set-up.
+  const me = preview ? { user: { id: 'preview' } } : await enter('office.html');
+  if (!me) await new Promise(() => {});   // on its way to another page
   if (preview && q.get('theme')) document.documentElement.dataset.theme = q.get('theme');
-  let prof;
+  let prof = me.profile;
   if (preview) {
     const demo = previewOffice({ mine: q.get('mine') || 'TUR', office: q.has('office'), window: q.get('window') });
     S.clubs = demo.clubs; api = demo.api; prof = { role: q.has('office') ? 'office' : 'manager', club: q.has('office') ? null : (q.get('mine') || 'TUR') };
   } else {
-    [S.clubs, prof] = await Promise.all([loadClubs().catch(() => []), myProfile().catch(() => null)]);
+    S.clubs = await loadClubs().catch(() => []);
     api = liveApi();
   }
   useClubs(S.clubs);

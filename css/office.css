@@ -23,11 +23,12 @@
 .of-win.open i { background: var(--res-w); box-shadow: 0 0 0 3px color-mix(in oklab, var(--res-w) 25%, transparent); }
 
 .of-budget { display: grid; gap: 12px; margin-top: 16px; }
-.of-figs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.of-figs p { display: grid; gap: 2px; min-width: 0; }
-.of-figs span { color: var(--muted); font: 400 var(--fs-s) var(--font); }
-.of-figs b { font: 900 var(--fs-xl)/1.15 var(--font-display); font-stretch: 125%; color: var(--text-strong); font-variant-numeric: tabular-nums; }
-.of-figs em { display: inline-flex; align-items: center; gap: 4px; font: 600 var(--fs-s) var(--font); font-style: normal; color: var(--brand); font-variant-numeric: tabular-nums; }
+/* The four figures are one quiet line above the bar (the bar is the focus): labels in grey, values in weight. */
+.of-figs { display: flex; flex-wrap: wrap; gap: 4px 20px; color: var(--muted); font: 400 var(--fs-s)/1.5 var(--font); }
+.of-figs > span { display: inline-flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+.of-figs i { font-style: normal; }
+.of-figs b { font: 700 var(--fs-m) var(--font); color: var(--text-strong); font-variant-numeric: tabular-nums; }
+.of-figs em { display: inline-flex; align-items: center; gap: 4px; font: 600 var(--fs-s) var(--font); font-style: normal; color: var(--brand); font-variant-numeric: tabular-nums; align-self: center; }
 .of-figs em .ic { width: 14px; height: 14px; }
 .of-figs em.up { color: var(--amber-text); }
 .of-room.over b, .of-over { color: var(--amber-text); }
@@ -76,7 +77,10 @@
 .of-face svg { width: 100%; height: 100%; }
 .of-who { display: grid; gap: 2px; min-width: 0; }
 .of-who b { font: 600 var(--fs-m) var(--font); color: var(--text-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.of-who small { display: flex; align-items: center; gap: 8px; color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.of-who .plk { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }   /* the player link wraps the name: the ellipsis has to be on it */
+.of-who small { display: flex; align-items: center; gap: 8px; color: var(--muted); font: 400 var(--fs-s) var(--font); min-width: 0; overflow: hidden; }
+.of-who small > .of-pos { flex: none; }
+.of-who small > span:not(.of-pos) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .of-pos { display: inline-grid; place-items: center; min-width: 34px; height: 18px; padding: 0 5px; border-radius: 4px; background: color-mix(in oklab, var(--pc, var(--faint)) 16%, transparent); color: var(--pc, var(--muted)); font: 700 var(--fs-xs) var(--font); }
 .of-rts { display: flex; gap: 12px; }
 .of-rt { display: grid; justify-items: center; min-width: 30px; font: 700 var(--fs-m) var(--font); color: var(--text); font-variant-numeric: tabular-nums; }
@@ -94,6 +98,7 @@
 .of-confirm p { color: var(--text-soft); font: 400 var(--fs-s)/1.45 var(--font); }
 .of-confirm p b { color: var(--text-strong); font-weight: 700; }
 .of-acts { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.of-confirm.in-offer { margin-top: 6px; padding: 12px; border: 0; border-radius: var(--r-sm); }
 
 /* buttons, pills */
 .of-btn {
@@ -186,6 +191,8 @@
 .of-offer-h small { margin-left: auto; color: var(--muted); font: 400 var(--fs-xs) var(--font); }
 .of-offer p { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 8px; font: 400 var(--fs-s)/1.45 var(--font); color: var(--text); }
 .of-offer p span { color: var(--muted); }
+.of-offer p .of-names { color: var(--text); min-width: 0; }
+.of-offer .of-confirm p { display: block; }
 .of-offer p small { color: var(--muted); font-size: var(--fs-xs); }
 .of-offer p em { font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; }
 .of-offer .of-acts { margin-top: 4px; }
@@ -228,12 +235,18 @@
   .of-id { flex-wrap: wrap; }
   .of-win { order: 3; }
   .of-tabs, .of-rows, .of-clubs, .of-hist { margin-left: -16px; margin-right: -16px; }
-  .of-tabs { padding: 0 4px; }
-  .of-row { grid-template-columns: 36px minmax(0, 1fr) auto auto; padding: 6px 16px; gap: 10px; }
+  /* five tabs in one row on a phone, nothing cut off: sentence case, the small size, sharing the width */
+  .of-tabs { padding: 0 4px; gap: 0; }
+  .of-tabs a { flex: 1 1 auto; justify-content: center; padding: 0 6px; font-size: var(--fs-s); text-transform: none; letter-spacing: 0; }
+  .of-tabs a[aria-current="page"]::after { left: 6px; right: 6px; }
+  .of-row { grid-template-columns: 32px minmax(0, 1fr) auto auto; padding: 6px 16px; gap: 8px; }
+  .of-row .of-face { width: 32px; height: 32px; }
+  .of-row .of-who small > span:not(.of-pos) { display: none; }   /* the shirt number: the name needs the room */
   .of-row .of-rts { display: none; }
   .of-strip, .of-clubrow, .of-move, .of-none { padding-left: 16px; padding-right: 16px; }
   .of-confirm { padding: 12px 16px; }
   .of-act { min-width: 0; }
+  .of-act .of-btn { padding: 0 12px; }
   .of-fx { display: none; }
   .of-move { grid-template-columns: 28px minmax(0, 1fr) auto; }
   .of-move > .crest { display: none; }

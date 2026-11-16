@@ -278,10 +278,13 @@
   .lg-tabs a { height: 48px; padding: 0 12px; }
   .lg-card { padding: 14px 16px 16px; }
 }
-/* Narrow phones: the buttons share one full-width row under the name, equal widths (two for managers, three for the office). */
+/* Narrow phones: the buttons share one full-width row under the name, equal widths (Club, Office and Settings for managers, plus Editor for the
+   office). Four labels don't fit at 360 px, so they show their icons only here; each link keeps its name as its aria-label (js/frame.js). */
 @media (max-width: 479px) {
   .lg-tools { width: 100%; flex-wrap: nowrap; }
   .lg-tool { flex: 1 1 0; justify-content: center; min-width: 0; padding: 0 8px; }
+  .lg-tool > span { display: none; }
+  .lg-tool .ic { width: 20px; height: 20px; }
   .lg.has-club .lg-head .lg-tool.is-club { padding: 0 12px 0 6px; justify-content: flex-start; }
   .lg.has-club .lg-head .lg-tool.is-club .lg-tool-crest { width: 22px; height: 22px; }
 }

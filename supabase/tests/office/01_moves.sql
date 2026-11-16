@@ -27,7 +27,8 @@ begin
   perform pg_temp.ok('release: logged with the wage effect', exists (select 1 from public.office_moves where id = mid and kind = 'release' and club = 'TUR' and players_out = array[d1] and bill_before = b and bill_after = b - pg_temp.wage(d1)));
   st := public.office_state();
   perform pg_temp.ok('state: one release used, one left, one short', (st #>> '{releases,used}')::int = 1 and (st #>> '{releases,left}')::int = 1 and (st #>> '{roster,short}')::int = 1, st::text);
-  perform pg_temp.ok('state: bill, room and squad of 15', (st ->> 'wage_bill')::int = b - pg_temp.wage(d1) and (st ->> 'room')::int = 125000 - (st ->> 'wage_bill')::int and jsonb_array_length(st -> 'squad') = 15);
+  perform pg_temp.ok('state: bill, room and squad one smaller', (st ->> 'wage_bill')::int = b - pg_temp.wage(d1) and (st ->> 'room')::int = 125000 - (st ->> 'wage_bill')::int
+    and jsonb_array_length(st -> 'squad') = (select count(*) from public.players where club = 'TUR'), st::text);
 
   -- ---- sheets cleaned
   perform pg_temp.act('su');
@@ -111,7 +112,33 @@ begin
   update public.fixtures set postponed = true where id = 'zz-office-97';
   perform pg_temp.ok('round: a postponed game does not hold the window', public.office_window_status() = 'open', public.office_window_status());
   update public.fixtures set postponed = false, starts_at = now() - interval '61 minutes' where id = 'zz-office-97';
-  perform pg_temp.ok('round: open again once the last game is over', public.office_window_status() = 'open', public.office_window_status());
+  perform pg_temp.ok('round: past the clock but not simulated still holds the window', public.office_window_status() = 'round', public.office_window_status());
+  insert into public.results (fixture, summary) values ('zz-office-97', '{}'::jsonb);
+  perform pg_temp.ok('round: open again once the last game is over and has its result', public.office_window_status() = 'open', public.office_window_status());
+
+  -- ---- a draft running (live or paused) stops moves
+  if not exists (select 1 from public.drafts) then insert into public.drafts (name) values ('Office test draft'); end if;
+  update public.drafts set status = 'paused' where id = (select max(id) from public.drafts);
+  perform pg_temp.act('lau');
+  perform pg_temp.err('draft: a paused draft refuses a release', format('select public.office_release(%L)', pg_temp.pl('LAU', 'DEF', 1)), 'draft is running');
+  perform pg_temp.act('su');
+  update public.drafts set status = 'live' where id = (select max(id) from public.drafts);
+  perform pg_temp.act('lau');
+  perform pg_temp.err('draft: a live draft refuses a signing', format('select public.office_sign(%L)', pg_temp.pl(null, 'DEF', 1)), 'draft is running');
+  perform pg_temp.act('su');
+  update public.drafts set status = 'done' where status in ('live', 'paused');
+
+  -- ---- over a maximum at one position: a move may not push another position over its maximum (even if the total over stays the same)
+  declare mx int; k int; outs text[]; ins text[];
+  begin
+    select r.mx - (select count(*) from public.players where club = 'TUR' and position = 'MID') into mx from public.office_roster() r where r.pos = 'MID';
+    k := greatest(mx, 0) + 1;
+    -- TUR made k over at DEF by the office (free-agent defenders added), then swaps k defenders for k free midfielders
+    update public.players set club = 'TUR' where id in (select id from public.players where club is null and position = 'DEF' order by id limit k);
+    select array_agg(id) into outs from (select id from public.players where club = 'TUR' and position = 'DEF' order by id limit k) x;
+    select array_agg(id) into ins from (select id from public.players where club is null and position = 'MID' order by id limit k) x;
+    perform pg_temp.err('squad: a move that takes another position over its maximum is refused', format('select public.office_check(''TUR'', %L, %L)', outs, ins), 'too many players at MID');
+  end;
 
   -- ---- who may call
   perform pg_temp.act('noclub');

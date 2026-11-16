@@ -57,10 +57,10 @@ export function mountFrame(el, { office = false, draft = false, draftLive = fals
         </div>
       </div>
       <nav class="lg-tools" aria-label="Your club and account">
-        <a class="lg-tool is-club" href="club.html">${crest ? `<img class="lg-tool-crest" src="${esc(crest)}" alt="" onerror="this.replaceWith(document.createRange().createContextualFragment(this.dataset.alt))" data-alt="${esc(icon('shield'))}">` : icon('shield')}<span>Club</span></a>
-        <a class="lg-tool" href="office.html">${icon('briefcase')}<span>Office</span></a>
-        <a class="lg-tool" href="settings.html">${icon('settings-2')}<span>Settings</span></a>
-        ${office ? `<a class="lg-tool" href="editor.html">${icon('pencil')}<span>Editor</span></a>` : ''}
+        <a class="lg-tool is-club" href="club.html" aria-label="Club">${crest ? `<img class="lg-tool-crest" src="${esc(crest)}" alt="" onerror="this.replaceWith(document.createRange().createContextualFragment(this.dataset.alt))" data-alt="${esc(icon('shield'))}">` : icon('shield')}<span>Club</span></a>
+        <a class="lg-tool" href="office.html" aria-label="Office">${icon('briefcase')}<span>Office</span></a>
+        <a class="lg-tool" href="settings.html" aria-label="Settings">${icon('settings-2')}<span>Settings</span></a>
+        ${office ? `<a class="lg-tool" href="editor.html" aria-label="Editor">${icon('pencil')}<span>Editor</span></a>` : ''}
       </nav>
     </div>
     <nav class="lg-tabs" aria-label="League">
@@ -228,7 +228,7 @@ export function mountSubFrame(el, { office = false, crest = '', here = 'club', t
     </div>`;
     return;
   }
-  const tool = (id, href, inner, extra = '') => `<a class="lg-tool${extra}" href="${href}"${here === id ? ' aria-current="page"' : ''}>${inner}</a>`;
+  const tool = (id, href, inner, extra = '') => `<a class="lg-tool${extra}" href="${href}" aria-label="${id[0].toUpperCase()}${id.slice(1)}"${here === id ? ' aria-current="page"' : ''}>${inner}</a>`;
   el.innerHTML = `<div class="lg-head">
       <div class="lg-id">
         <img class="lg-crest" src="assets/brand/crest.svg" alt="">

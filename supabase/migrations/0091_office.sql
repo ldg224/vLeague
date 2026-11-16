@@ -15,16 +15,17 @@
 --   Trade   players only. Club A offers {give: A's players, get: B's players} to B (at least one player in the deal); B accepts or rejects, or counters (a new offer the
 --           other way that closes the old one); A can withdraw. On accept everything is checked again (each player still where he was, cap, squads, window)
 --           and the players swap in one go. Pending offers expire when the window closes (or a new one opens), and are voided when one of their players moves.
---   Window  moves (and offers) only while the office has a window open (window_open, inside opens_at / closes_at when set) AND no round is being played:
---           from a round's line-up lock (deadlines.locked_at, or locks_at once passed) until its last game is over (stakes_match_over, 60 minutes after kick-off;
---           postponed games do not count).
+--   Window  moves (and offers) only while the office has a window open (window_open, inside opens_at / closes_at when set), no draft is running
+--           (live or paused) AND no round is being played: from a round's line-up lock (deadlines.locked_at, or locks_at once passed) until its last game
+--           is over (stakes_match_over, 60 minutes after kick-off, and its result is in; postponed games do not count).
 --   Sheets  a player who leaves a club is taken out of that club's working team sheet and its unlocked submitted sheets (line-up, bench, captain, set-piece
 --           takers; a boost goes with its captain). Locked week_sheets are never touched.
 --   Log     every completed move is in office_moves (kind, clubs, players, wage bills before and after, who, when, undone_at). Everyone signed in reads it.
 --           Offers are read only by the two clubs involved and the office.
---   Undo    the office can undo any completed move if its players are still where the move put them (no window, cap or squad check: the office's call).
+--   Undo    the office can undo any completed move if its players are still where the move put them and no later move (not undone) involves
+--           any of them (no window, cap or squad check: the office's call).
 --
---   office_settings        one row: cap, releases_per_window, window_open, opens_at, closes_at (window_started_at is set when window_open is switched on)
+--   office_settings        one row: cap, releases_per_window, window_open, opens_at, closes_at (window_started_at is set whenever the window goes from shut to open)
 --   office_offers          trade offers
 --   office_moves           the log of completed moves
 --   office_state()         the signed-in manager's Office: cap, bill, room, window, releases, squad with wages, roster counts, offers in and out
@@ -33,6 +34,7 @@
 --   office_offer(to, give, get) / office_counter(offer, give, get) / office_respond(offer, accept) / office_withdraw(offer)
 --   office_undo(move)      office only
 --   office_save_settings(jsonb)  office only
+--   office_squad_report()  office only: the clubs short of the squad rules or over a position's maximum
 
 -- ---------------------------------------------------------------- tables
 
@@ -113,13 +115,15 @@ language sql stable security definer set search_path = public as $$
 $$;
 revoke all on function public.office_window_start() from public, anon, authenticated;
 
--- The round being played now (locked and a game not over yet), or null.
+-- The round being played now, or null: locked, and a game not over yet by the clock, or a game that has kicked off but has no result yet
+-- (not simulated), so a late simulation never finds its squads changed.
 create or replace function public.office_round_live() returns int
 language sql stable security definer set search_path = public as $$
   select min(d.week) from public.deadlines d
   where coalesce(d.locked_at, d.locks_at) <= now()
     and exists (select 1 from public.fixtures f where f.week = d.week and f.starts_at is not null and not f.postponed
-                and not public.stakes_match_over(f.starts_at, f.postponed))
+                and (not public.stakes_match_over(f.starts_at, f.postponed)
+                     or (f.starts_at <= now() and not exists (select 1 from public.results r where r.fixture = f.id))))
 $$;
 revoke all on function public.office_round_live() from public, anon, authenticated;
 
@@ -142,6 +146,7 @@ begin
   if st = 'closed' then raise exception 'The transfer window is closed.'; end if;
   if st = 'not_yet' then raise exception 'The transfer window is not open yet.'; end if;
   if st = 'round' then raise exception 'No moves while a round is being played (from the line-up lock to the last game).'; end if;
+  if exists (select 1 from public.drafts where status in ('live', 'paused')) then raise exception 'No moves while a draft is running.'; end if;
 end $$;
 revoke all on function public.office_need_window() from public, anon, authenticated;
 
@@ -191,7 +196,7 @@ begin
          string_agg(case when n1 > mx and n1 > n0 then pos || ' (most ' || mx || ')' end, ', ')
     into short0, short1, over0, over1, bad
   from t;
-  if over1 > over0 then raise exception '% would have too many players at %.', p_club, bad; end if;
+  if bad is not null then raise exception '% would have too many players at %.', p_club, bad; end if;
   if short1 > greatest(1, short0) then
     raise exception '% would be % players short of the squad rules (a club may be at most one short: sign or trade for one first).', p_club, short1;
   end if;
@@ -264,6 +269,22 @@ language sql security definer set search_path = public as $$
   select 1 from public.clubs where code = any (p_clubs) order by code for update
 $$;
 revoke all on function public.office_lock_clubs(text[]) from public, anon, authenticated;
+
+-- Lock an offer the way every move locks (its clubs first, then the offer row), so a reply and a release or signing on the same clubs
+-- wait for each other instead of deadlocking. Returns the offer as it is once locked (all nulls if there is no such offer).
+create or replace function public.office_lock_offer(p_offer bigint) returns public.office_offers
+language plpgsql security definer set search_path = public as $$
+declare o public.office_offers; f text; t text;
+begin
+  loop
+    select from_club, to_club into f, t from public.office_offers where id = p_offer;
+    if not found then return o; end if;
+    perform public.office_lock_clubs(array[f, t]);
+    select * into o from public.office_offers where id = p_offer for update;
+    if o.from_club = f and o.to_club = t then return o; end if;   -- a club code changed meanwhile: lock the new ones
+  end loop;
+end $$;
+revoke all on function public.office_lock_offer(bigint) from public, anon, authenticated;
 
 -- A player list as jsonb for the pages.
 create or replace function public.office_players_json(p_ids text[]) returns jsonb
@@ -362,15 +383,14 @@ language plpgsql security definer set search_path = public as $$
 declare me uuid := auth.uid(); my text := public.office_my_club(); o public.office_offers; a0 int; b0 int; mid bigint;
 begin
   perform public.office_tidy();
-  select * into o from public.office_offers where id = p_offer for update;
-  if not found or o.to_club <> my then raise exception 'No such offer to your club.'; end if;
+  o := public.office_lock_offer(p_offer);
+  if o.id is null or o.to_club <> my then raise exception 'No such offer to your club.'; end if;
   if o.status <> 'pending' then raise exception 'That offer is no longer open (%).', o.status; end if;
   if not coalesce(p_accept, false) then
     update public.office_offers set status = 'rejected', decided_by = me, decided_at = now() where id = o.id;
     return null;
   end if;
   perform public.office_need_window();
-  perform public.office_lock_clubs(array[o.from_club, o.to_club]);
   perform 1 from public.players where id = any (o.give || o.get) order by id for update;
   perform public.office_check_offer(o.from_club, o.to_club, o.give, o.get);
   a0 := public.office_bill(o.from_club); b0 := public.office_bill(o.to_club);
@@ -393,8 +413,8 @@ language plpgsql security definer set search_path = public as $$
 declare me uuid := auth.uid(); my text := public.office_my_club(); o public.office_offers; oid bigint;
 begin
   perform public.office_tidy();
-  select * into o from public.office_offers where id = p_offer for update;
-  if not found or o.to_club <> my then raise exception 'No such offer to your club.'; end if;
+  o := public.office_lock_offer(p_offer);
+  if o.id is null or o.to_club <> my then raise exception 'No such offer to your club.'; end if;
   if o.status <> 'pending' then raise exception 'That offer is no longer open (%).', o.status; end if;
   perform public.office_need_window();
   perform public.office_check_offer(my, o.from_club, coalesce(p_give, '{}'), coalesce(p_get, '{}'));
@@ -411,8 +431,8 @@ language plpgsql security definer set search_path = public as $$
 declare me uuid := auth.uid(); my text := public.office_my_club(); o public.office_offers;
 begin
   perform public.office_tidy();
-  select * into o from public.office_offers where id = p_offer for update;
-  if not found or o.from_club <> my then raise exception 'No such offer from your club.'; end if;
+  o := public.office_lock_offer(p_offer);
+  if o.id is null or o.from_club <> my then raise exception 'No such offer from your club.'; end if;
   if o.status <> 'pending' then raise exception 'That offer is no longer open (%).', o.status; end if;
   update public.office_offers set status = 'withdrawn', decided_by = me, decided_at = now() where id = o.id;
 end $$;
@@ -430,6 +450,10 @@ begin
   if m.undone_at is not null then raise exception 'That move has already been undone.'; end if;
   perform public.office_lock_clubs(array[m.club, m.other_club]);
   perform 1 from public.players where id = any (m.players_out || m.players_in) order by id for update;
+  if exists (select 1 from public.office_moves x where x.id > m.id and x.undone_at is null
+             and (x.players_out || x.players_in) && (m.players_out || m.players_in)) then
+    raise exception 'A later move involves the same players: undo that first.';
+  end if;
   if m.kind = 'release' then
     if exists (select 1 from public.players where id = any (m.players_out) and club is not null) then raise exception 'The released player has been signed since: undo that first.'; end if;
     update public.players set club = m.club where id = any (m.players_out);
@@ -457,13 +481,15 @@ grant execute on function public.office_undo(bigint) to authenticated;
 
 create or replace function public.office_save_settings(p jsonb) returns public.office_settings
 language plpgsql security definer set search_path = public as $$
-declare c public.office_settings; k text; keys text[] := array['cap', 'releases_per_window', 'window_open', 'opens_at', 'closes_at'];
+declare c public.office_settings; k text; keys text[] := array['cap', 'releases_per_window', 'window_open', 'opens_at', 'closes_at']; st0 text; st1 text;
 begin
   if not public.is_office() then raise exception 'Only the league office can change Office settings.'; end if;
   for k in select jsonb_object_keys(p) loop
     if not (k = any (keys)) then raise exception 'unknown setting %', k; end if;
   end loop;
   select * into c from public.office_settings where id = 1 for update;
+  st0 := public.office_window_status();
+  perform public.office_tidy();
   update public.office_settings set
     cap                 = coalesce((p ->> 'cap')::int, cap),
     releases_per_window = coalesce((p ->> 'releases_per_window')::int, releases_per_window),
@@ -473,6 +499,12 @@ begin
     window_started_at   = case when coalesce((p ->> 'window_open')::boolean, window_open) and not window_open then now() else window_started_at end,
     updated_at          = now()
   where id = 1 returning * into c;
+  -- A window that was shut (switched off, closed by its dates, or not open yet) and is open now is a new window, however it was opened
+  -- (the switch or only new dates): releases and offers count from now.
+  st1 := public.office_window_status();
+  if st0 in ('closed', 'not_yet') and st1 in ('open', 'round') then
+    update public.office_settings set window_started_at = now() where id = 1 returning * into c;
+  end if;
   perform public.office_tidy();
   return c;
 exception when check_violation then
@@ -515,6 +547,21 @@ begin
 end $$;
 revoke all on function public.office_club(text) from public, anon;
 grant execute on function public.office_club(text) to authenticated;
+
+-- The office's squad check (Editor > Office): every club that is short of the squad rules or over a position's maximum, with its counts.
+create or replace function public.office_squad_report() returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare res jsonb;
+begin
+  if not public.is_office() then raise exception 'Only the league office can see the squad check.'; end if;
+  select coalesce(jsonb_agg(x.j order by x.code), '[]'::jsonb) into res
+  from (select c.code, jsonb_build_object('club', c.code, 'name', c.name, 'roster', public.office_roster_json(c.code)) j from public.clubs c) x
+  where (x.j #>> '{roster,short}')::int > 0
+     or exists (select 1 from jsonb_each(x.j #> '{roster,positions}') e where (e.value ->> 'count')::int > (e.value ->> 'max')::int);
+  return res;
+end $$;
+revoke all on function public.office_squad_report() from public, anon;
+grant execute on function public.office_squad_report() to authenticated;
 
 create or replace function public.office_offers_json(p_where text, p_club text) returns jsonb
 language sql stable security definer set search_path = public as $$

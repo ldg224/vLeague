@@ -1,7 +1,7 @@
 // The Office's sums (S-35, js/office-model.js) and the Editor's settings form (js/editor-office.js).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { money, short, bill, rosterOf, check, after, windowText, windowReason, tradeView, fairness, rulesFrom } from '../js/office-model.js';
+import { money, short, bill, rosterOf, check, after, windowText, windowReason, windowFromSettings, keepPicks, tradeView, fairness, rulesFrom } from '../js/office-model.js';
 import { readOffice, localInput, fromLocal } from '../js/editor-office.js';
 
 const P = (id, position, value) => ({ id, position, value, name: id });
@@ -79,4 +79,28 @@ test('editor settings form', () => {
   assert.equal(out.cap, 130000); assert.ok(!('releases_per_window' in out)); assert.equal(out.opens_at, '');
   assert.equal(localInput(out.closes_at), '2026-11-20T17:30');
   assert.equal(fromLocal(''), '');
+});
+
+test('a position over its maximum may not grow, even when the total over stays the same', () => {
+  // two defenders over (office edits), midfield full: swapping two defenders for two midfielders keeps "two over" but takes midfield over
+  const s = [...squad(), P('xd1', 'DEF', 7000), P('xd2', 'DEF', 7000)];
+  assert.match(check({ squad: s, cap: 1e6, out: [s[2], s[3]], inn: [P('m1', 'MID', 7000), P('m2', 'MID', 7000)] }), /too many midfielders/);
+  assert.equal(check({ squad: s, cap: 1e6, out: [s[2]] }), null);   // bringing defence down is fine
+});
+
+test('window from the settings row (no office_state)', () => {
+  const now = new Date('2026-11-16T12:00:00Z');
+  assert.equal(windowFromSettings(null, now).status, 'closed');
+  assert.equal(windowFromSettings({ window_open: false }, now).status, 'closed');
+  assert.equal(windowFromSettings({ window_open: true }, now).status, 'open');
+  assert.equal(windowFromSettings({ window_open: true, closes_at: '2026-11-16T11:00:00Z' }, now).status, 'closed');
+  assert.equal(windowFromSettings({ window_open: true, opens_at: '2026-11-17T00:00:00Z' }, now).status, 'not_yet');
+  assert.equal(windowFromSettings({ window_open: true, opens_at: '2026-11-15T00:00:00Z', closes_at: '2026-11-18T00:00:00Z' }, now).status, 'open');
+});
+
+test('trade picks keep only players still at the club', () => {
+  const s = squad();
+  assert.deepEqual(keepPicks(['p3', 'gone', 'p1'], s), ['p3', 'p1']);
+  assert.deepEqual(keepPicks(['p3'], []), []);
+  assert.deepEqual(keepPicks(null, s), []);
 });

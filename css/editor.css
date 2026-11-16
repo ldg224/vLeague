@@ -597,3 +597,4 @@
 .ed-ofask button.danger { border-color: transparent; background: var(--res-l); color: #fff; }
 .of-ed-form { display: grid; gap: 16px; margin-bottom: 16px; }
 .of-ed-form > button[type="submit"] { justify-self: start; }
+#of-ed.ed-busy :is(button, input) { opacity: .6; pointer-events: none; }   /* Editor > Office: an action is on its way */

@@ -5,6 +5,8 @@
 //   check({ squad, cap, rules, out, in, code }) -> null when the move is allowed, else a plain sentence why not
 //   after({ squad, cap, out, in }) -> { bill, room, over }
 //   windowText(window, now) -> "Window open, closes Fri 5:30 pm" / "Window closed" ...
+//   windowFromSettings(settings row, now) -> { status, ... } for pages with no office_state()
+//   keepPicks(ids, squad) -> the trade builder's picks still at that club
 //   tradeView({ mine, theirs, give, get, cap, rules, me, them }) -> the value meter's numbers and both clubs' checks
 
 export const POSITIONS = ['GK', 'DEF', 'MID', 'FWD'];
@@ -55,8 +57,9 @@ export function check({ squad, cap, rules = DEFAULT_RULES, out = [], inn = [], n
       : `${you ? 'Your' : `${name}’s`} wage bill would be ${money(b1)}, ${money(b1 - cap)} over the ${money(cap)} cap.`;
   }
   const r0 = rosterOf(squad, rules), r1 = rosterOf(next, rules);
-  if (r1.over > r0.over) {
-    const pos = POSITIONS.find(p => r1.positions[p].count > r1.positions[p].max && r1.positions[p].count > r0.positions[p].count);
+  // Any position over its maximum that the move makes bigger (as the database: not the total over, which a swap could leave the same).
+  const pos = POSITIONS.find(p => r1.positions[p].count > r1.positions[p].max && r1.positions[p].count > r0.positions[p].count);
+  if (pos) {
     return `${you ? 'You' : name} would have too many ${POS_NAME[pos].toLowerCase()} (${r1.positions[pos].max} at most).`;
   }
   if (r1.short > Math.max(1, r0.short)) {
@@ -79,6 +82,16 @@ export function windowText(w, now = new Date()) {
   if (st === 'not_yet') return w.opens_at ? `Window opens ${when(w.opens_at, now)}` : 'Window opens soon';
   return 'Window closed';
 }
+// The window from the office_settings row, for a page that has no office_state() (the office, an account with no club): the switch and the dates,
+// as office_window_status() reads them (it cannot know about a round being played or a draft).
+export function windowFromSettings(set, now = new Date()) {
+  if (!set) return { status: 'closed' };
+  const t = iso => (iso ? new Date(iso).getTime() : null), o = t(set.opens_at), c = t(set.closes_at), n = now.getTime();
+  const status = !set.window_open || (c != null && c <= n) ? 'closed' : o != null && o > n ? 'not_yet' : 'open';
+  return { status, open: status === 'open', window_open: Boolean(set.window_open), opens_at: set.opens_at || null, closes_at: set.closes_at || null };
+}
+// Picks in the trade builder that still stand after the squads changed: only ids of players still at that club, in the order picked.
+export const keepPicks = (ids, squad) => { const at = new Set((squad || []).map(p => p.id)); return (ids || []).filter(id => at.has(id)); };
 // Why nothing can be done now, or null when the window is open.
 export function windowReason(w) {
   const st = w?.status || 'closed';

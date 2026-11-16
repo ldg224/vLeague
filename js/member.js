@@ -23,6 +23,7 @@ export async function enter(page) {
     : page === 'setup.html' ? Boolean(profile?.club)
     : page === 'settings.html' ? Boolean(profile?.club) && !profile.needs_setup
     : page === 'league.html' ? !profile?.needs_setup   // the league page (the whole site) is for every set-up account, office included
+    : page === 'office.html' ? !profile?.needs_setup   // the Office (S-35): every set-up account; the office and accounts with no club look without moving anyone
     : !profile?.needs_setup && !(office && !profile?.club);   // club pages: a set-up account with a club
   if (!allowed) { location.replace(landingPage(profile)); return null; }
   document.body.classList.toggle('is-office', office);

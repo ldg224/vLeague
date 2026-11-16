@@ -29,7 +29,7 @@ begin
   insert into public.team_sheets (club, formation) values ('LAU', '4-4-2') on conflict (club) do nothing;
   update public.team_sheets set captain = t1 where club = 'LAU';
   perform pg_temp.act('office');
-  perform pg_temp.err('undo release: refused once the player has been signed', format('select public.office_undo(%s)', r1), 'signed since');
+  perform pg_temp.err('undo release: refused once the player has been signed', format('select public.office_undo(%s)', r1), 'undo that first');
   perform public.office_undo(s1);
   perform pg_temp.act('su');
   perform pg_temp.ok('undo signing: the player is a free agent again and out of the sheet', pg_temp.club_of(t1) is null and (select captain is null from public.team_sheets where club = 'LAU'));
@@ -54,7 +54,24 @@ begin
   tr2 := public.office_respond(o, true);
   perform public.office_release(t3);
   perform pg_temp.act('office');
-  perform pg_temp.err('undo trade: refused when a player has moved since', format('select public.office_undo(%s)', tr2), 'moved since');
+  perform pg_temp.err('undo trade: refused when a player has moved since', format('select public.office_undo(%s)', tr2), 'undo that first');
+
+  -- ---- undo refused when a later move involved the same player, even if he is back where the move put him
+  -- (TUR releases t1, LAU signs and then releases him: t1 is a free agent again, but TUR's release cannot be undone until LAU's moves are)
+  perform pg_temp.act('su');
+  update public.office_settings set releases_per_window = 10;
+  perform pg_temp.act('tur');
+  r1 := public.office_release(t1);
+  perform pg_temp.act('lau');
+  s1 := public.office_sign(t1);
+  r2 := public.office_release(t1);
+  perform pg_temp.act('office');
+  perform pg_temp.err('undo: refused while a later move involves the same player', format('select public.office_undo(%s)', r1), 'later move');
+  perform public.office_undo(r2);
+  perform public.office_undo(s1);
+  perform public.office_undo(r1);
+  perform pg_temp.act('su');
+  perform pg_temp.ok('undo: in reverse order the player is home', pg_temp.club_of(t1) = 'TUR');
 
   -- ---- settings
   perform pg_temp.act('tur');
@@ -69,10 +86,29 @@ begin
   st := public.office_save_settings('{"window_open": true, "opens_at": "", "closes_at": null}');
   perform pg_temp.ok('settings: switching the window on starts a new one and dates clear', st.window_open and st.window_started_at = now() and st.window_started_at is distinct from ws and st.opens_at is null and st.closes_at is null);
 
+  -- re-opening a window only by new dates (the switch stays on) is a new window too, and offers left from the shut one expire
+  perform pg_temp.act('su');
+  update public.office_settings set window_started_at = now() - interval '2 days', closes_at = now() - interval '1 hour';
+  insert into public.office_offers (from_club, to_club, give, created_at) values ('TUR', 'LAU', array[t1], now() - interval '3 hours') returning id into o;
+  perform pg_temp.act('office');
+  st := public.office_save_settings(jsonb_build_object('closes_at', now() + interval '3 days'));
+  perform pg_temp.act('su');
+  perform pg_temp.ok('settings: new dates on a closed window start a new window', st.window_started_at = now() and public.office_window_status() = 'open', st::text);
+  perform pg_temp.ok('settings: offers from the closed window expire', (select status from public.office_offers where id = o) = 'expired');
+
+  -- ---- the squad check for the office: a club made short shows, with its counts; managers cannot call it
+  perform pg_temp.act('su');
+  update public.players set club = null where id = pg_temp.pl('SKS', 'FWD', 1);
+  perform pg_temp.act('office');
+  perform pg_temp.ok('squad report: a club short of the rules is listed', exists (select 1 from jsonb_array_elements(public.office_squad_report()) e
+    where e ->> 'club' = 'SKS' and (e #>> '{roster,short}')::int >= 1), left(public.office_squad_report()::text, 300));
+  perform pg_temp.act('tur');
+  perform pg_temp.err('squad report: managers cannot read it', 'select public.office_squad_report()', 'Only the league office');
+
   -- ---- reading any club
   perform pg_temp.act('tur');
   cl := public.office_club('SKS');
-  perform pg_temp.ok('club: any club''s squad, bill and room', (cl ->> 'wage_bill')::int = (select sum(value) from public.players where club = 'SKS') and jsonb_array_length(cl -> 'squad') = 16
+  perform pg_temp.ok('club: any club''s squad, bill and room', (cl ->> 'wage_bill')::int = (select sum(value) from public.players where club = 'SKS') and jsonb_array_length(cl -> 'squad') = (select count(*) from public.players where club = 'SKS')
     and (cl ->> 'room')::int = 130000 - (cl ->> 'wage_bill')::int and (cl #>> '{squad,0,wage}') is not null and (cl #>> '{roster,positions,GK,max}')::int = 2, left(cl::text, 300));
   perform pg_temp.err('club: no such club', 'select public.office_club(''ZZZ'')', 'No such club');
 
