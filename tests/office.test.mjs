@@ -1,7 +1,7 @@
 // The Office's sums (S-35, js/office-model.js) and the Editor's settings form (js/editor-office.js).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { money, short, bill, rosterOf, check, after, windowText, windowReason, windowFromSettings, keepPicks, tradeView, fairness, rulesFrom } from '../js/office-model.js';
+import { money, short, bill, need, NEED, rosterOf, check, after, windowText, windowReason, windowFromSettings, keepPicks, tradeView, fairness, rulesFrom } from '../js/office-model.js';
 import { readOffice, localInput, fromLocal } from '../js/editor-office.js';
 
 const P = (id, position, value) => ({ id, position, value, name: id });
@@ -103,4 +103,12 @@ test('trade picks keep only players still at the club', () => {
   assert.deepEqual(keepPicks(['p3', 'gone', 'p1'], s), ['p3', 'p1']);
   assert.deepEqual(keepPicks(['p3'], []), []);
   assert.deepEqual(keepPicks(null, s), []);
+});
+
+test('need: short of a position first, then room, then full (the Market order)', () => {
+  const s = squad().filter(p => p.id !== 'p2');   // a defender gone: DEF 4 of 5
+  const r = rosterOf(s, { GK: { min: 2, max: 2 }, DEF: { min: 5, max: 5 }, MID: { min: 4, max: 6 }, FWD: { min: 4, max: 4 } });
+  assert.equal(need('DEF', r), 2); assert.equal(NEED[need('DEF', r)], 'Need');
+  assert.equal(need('MID', r), 1);   // 5 of 4 to 6: room for one more
+  assert.equal(need('GK', r), 0); assert.equal(need('XX', r), 0);
 });

@@ -1,6 +1,6 @@
 // The Office's localhost preview (office.html?preview): made-up clubs, players, offers and moves, and an api that makes the moves in memory with the
 // same checks as the database, so the page can be looked at and screenshotted without signing in. Nothing here touches the database.
-//   previewOffice({ mine, office, window: 'open' | 'closed' | 'round' }) -> { clubs, api }
+//   previewOffice({ mine, office, window: 'open' | 'closed' | 'round', short: 'DEF' | 'none' ... }) -> { clubs, api }
 import { check, bill, POSITIONS, rosterOf } from './office-model.js';
 
 const CLUBS = [
@@ -17,14 +17,15 @@ const FREE = { GK: 3, DEF: 8, MID: 7, FWD: 6 };
 
 function rng(seed) { let s = seed >>> 0; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 2 ** 32; }; }
 
-export function previewOffice({ mine = 'TUR', office = false, window = 'open' } = {}) {
+export function previewOffice({ mine = 'TUR', office = false, window = 'open', short = 'DEF' } = {}) {
   const r = rng(35), players = [];
   let n = 0;
   const make = (team, position, lean = 0) => {
-    const value = Math.round((2400 + r() * 11000 + lean) / 100) * 100, att = Math.round(40 + r() * 50), def = Math.round(40 + r() * 50);
+    const value = Math.round((2400 + r() * 11000 + lean) / 100) * 100, att = 3 + r() * 6.5, def = 3 + r() * 6.5, d1 = v => Math.round(v * 10) / 10;
     n++;
+    // ratings on the players table's 1 to 10 scale, one decimal, as the real ones
     players.push({ id: `p${n}`, name: `${FIRST[n % FIRST.length]} ${LAST[(n * 7) % LAST.length]}`, team, position, number: (n % 30) + 1,
-      offense: position === 'FWD' ? Math.max(att, 70) : position === 'GK' ? Math.min(att, 30) : att, defense: position === 'GK' || position === 'DEF' ? Math.max(def, 65) : def,
+      offense: d1(position === 'FWD' ? Math.max(att, 6.5 + r() * 2) : position === 'GK' ? Math.min(att, 2 + r()) : att), defense: d1(position === 'GK' || position === 'DEF' ? Math.max(def, 6 + r() * 2.5) : def),
       value: Math.max(2400, Math.min(13400, value)), look: LOOKS[n % LOOKS.length], face: n % 5 });
   };
   CLUBS.forEach(([code], i) => { for (const pos of POSITIONS) for (let k = 0; k < SHAPE[pos]; k++) make(code, pos, (i % 4) * 250 - 300); });
@@ -32,6 +33,8 @@ export function previewOffice({ mine = 'TUR', office = false, window = 'open' } 
   // TUR (the default "you") just under the cap, so the bar and the checks have something to say; SKS over it.
   const nudge = (code, target) => { const sq = players.filter(p => p.team === code); const f = target / bill(sq); sq.forEach(p => { p.value = Math.round(p.value * f / 100) * 100; }); };
   nudge(mine, 121400); nudge(mine === 'SKS' ? 'TUR' : 'SKS', 129700);
+  // "you" one player short (a defender by default, &short=none for a full squad), so the Market's need order and the checks have something to show
+  if (POSITIONS.includes(short)) { const gone = players.filter(p => p.team === mine && p.position === short).sort((a, b) => a.value - b.value)[0]; if (gone) gone.team = ''; }
 
   const clubs = CLUBS.map(([code, name, colour, colour2]) => ({ code, name, short_name: code, colour, colour2, crest_path: null }));
   const cfg = { cap: 125000, releases_per_window: 2, window_open: window !== 'closed', closes_at: new Date(Date.now() + 3 * 86400000 + 5 * 3600000).toISOString(), opens_at: null };

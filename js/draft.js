@@ -12,6 +12,7 @@ import { ago } from './places.js';
 import { overall } from './names.js';
 import { portrait } from './portrait.js';
 import { gridOf, renderGrid } from './draft-grid.js';
+import { sortRows, clickSort as clickSortLevels, sortHead, sortBar } from './sort-table.js';
 import { startTour, tourSeen } from './tour.js';
 import { db } from './auth.js';
 
@@ -158,35 +159,23 @@ export async function mountDraft(main, { club, season, sub: sub0 = 'board', onGo
     const SORTS = { avail: DEFAULT.avail.map(s => ({ ...s })) };
     const colsOf = () => COLS;
     const col = (t, k) => colsOf(t).find(c => c.key === k);
-    const arrow = d => (d > 0 ? icon('chevron-up') : icon('chevron-down'));
-    const sorted = (t, list) => [...list].sort((a, b) => {
-      for (const { key, dir } of SORTS[t]) { const x = col(t, key).val(a), y = col(t, key).val(b); if (x !== y) return (x < y ? -1 : 1) * dir; }
-      return a.name < b.name ? -1 : 1;
-    });
-    function clickSort(t, key, add) {
-      const s = SORTS[t], i = s.findIndex(x => x.key === key);
-      if (add) { if (i >= 0) s[i].dir *= -1; else s.push({ key, dir: col(t, key).first }); }
-      else if (i === 0 && s.length === 1) s[0].dir *= -1;
-      else SORTS[t] = [{ key, dir: i === 0 ? s[0].dir * -1 : col(t, key).first }];
-    }
+    const sorted = (t, list) => sortRows(list, SORTS[t], colsOf(t));
+    function clickSort(t, key, add) { SORTS[t] = clickSortLevels(SORTS[t], key, add, colsOf(t)); }
     const passes = (t, r) => { const f = F[t]; return (!f.pos || r.position === f.pos) && (!f.q || r.name.toLowerCase().includes(f.q.toLowerCase()))
       && (!+f.max || r.value <= +f.max) && (!f.fit || !blocked(r)); };
 
     function toolbar(t) {
-      const f = F[t], s = SORTS[t], unused = colsOf(t).filter(c => !s.some(x => x.key === c.key));
+      const f = F[t];
       const pos = [['', 'All'], ['GK', 'GK'], ['DEF', 'DEF'], ['MID', 'MID'], ['FWD', 'FWD']];
       return `<div class="dr-filter"><label class="dr-search">${icon('search')}<input type="search" data-f="q" data-t="${t}" placeholder="Search players" aria-label="Search players" value="${esc(f.q)}"></label>
         <div class="dr-pos sc-toggle" role="group" aria-label="Position">${pos.map(([v, l]) => `<button type="button" data-fpos="${v}" aria-pressed="${f.pos === v}">${l}</button>`).join('')}</div>
         <label class="dr-max"><span>Max $</span><input type="number" inputmode="numeric" min="0" step="1000" data-f="max" data-t="avail" placeholder="Any" aria-label="Maximum value" value="${esc(f.max)}"></label>
         ${code ? `<label class="dr-fit"><input type="checkbox" data-f="fit" data-t="avail"${f.fit ? ' checked' : ''}><span>Fits my squad</span></label>` : ''}</div>
-        <div class="dr-sortbar"><span class="dr-sortl">Sorted by</span>${s.map((x, i) => `<span class="dr-chip"><button data-t="${t}" data-sflip="${i}" title="Flip direction">${esc(col(t, x.key).long)} ${arrow(x.dir)}</button>${s.length > 1 ? `<button data-t="${t}" data-sdel="${i}" aria-label="Stop sorting by ${esc(col(t, x.key).long)}">${icon('x')}</button>` : ''}</span>`).join('')}
-          ${unused.length ? `<label class="dr-then"><select data-sadd="${t}" aria-label="Then sort by"><option value="">Then by…</option>${unused.map(c => `<option value="${c.key}">${esc(c.long)}</option>`).join('')}</select>${icon('chevron-down')}</label>` : ''}
-          ${s.length > 1 || s[0].key !== DEFAULT[t][0].key || s[0].dir !== DEFAULT[t][0].dir ? `<button class="dr-link" data-t="${t}" data-sreset>Reset</button>` : ''}</div>`;
+        ${sortBar({ t, levels: SORTS[t], cols: colsOf(t), defaults: DEFAULT[t] })}`;
     }
     function table(t, rows, rowHtml, empty) {
       const cols = colsOf(t), s = SORTS[t];
-      return `<div class="dr-tablewrap"><table class="dr-table dt-${t}"><thead><tr>${cols.map(c => { const i = s.findIndex(x => x.key === c.key);
-        return `<th class="c-${c.key}" aria-sort="${i < 0 ? 'none' : s[i].dir > 0 ? 'ascending' : 'descending'}"><button data-t="${t}" data-sort="${c.key}" title="${esc(c.long)}">${esc(c.label)}${i < 0 ? '' : ` <span class="dr-ar">${arrow(s[i].dir)}${s.length > 1 ? `<sup>${i + 1}</sup>` : ''}</span>`}</button></th>`; }).join('')}${t === 'avail' ? '<th></th>' : ''}</tr></thead>
+      return `<div class="dr-tablewrap"><table class="dr-table dt-${t}">${sortHead({ t, levels: s, cols, extra: t === 'avail' ? '<th></th>' : '' })}
         <tbody>${rows.map(rowHtml).join('') || `<tr><td colspan="${cols.length + 1}" class="empty">${empty}</td></tr>`}</tbody></table></div>`;
     }
     // Ratings use the app's red-to-green chips (css/site.css .rt) so strong and weak players stand out at a glance.
