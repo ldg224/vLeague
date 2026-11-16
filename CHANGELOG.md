@@ -3,6 +3,34 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.41.0 (2026-11-16)
+
+Headlines: Cap penalty points
+
+**Added:** clubs can now go over the $125,000 wage cap, up to $30,000 over (a $155,000 bill), at a cost in penalty points:
+| Over the cap | Points |
+|---|---|
+| $1 to $5,000 | 1 |
+| $5,001 to $10,000 | 3 |
+| $10,001 to $15,000 | 6 |
+| $15,001 to $20,000 | 10 |
+| $20,001 to $25,000 | 15 |
+| $25,001 to $30,000 | 21 |
+
+The league table shows each club's pending penalty in grey next to its points. The points are only taken off at the end of the regular season, when the office applies them.
+
+In the Office:
+- **Budget bar:** shows the over-cap zone up to the limit.
+- **Every move:** before you confirm, it shows what it does to your penalty points.
+- **Market:** "Room after" shows the points each signing would cost.
+- **Trade meter:** shows the points change for both clubs.
+- **How it works:** lists the ladder.
+
+Editor > Office has the limit setting, a list of clubs over the cap, and Apply / Undo cap penalties.
+
+**Fixed:** a test match being played would have kept the transfer window shut.
+Database change: yes, 0092_cap_penalties.sql (applied).
+
 ## 1.40.0 (2026-11-16)
 
 Headlines: The Office in your club's colours, with a draft-style Market
