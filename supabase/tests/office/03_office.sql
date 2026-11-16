@@ -94,14 +94,14 @@ begin
   st := public.office_save_settings(jsonb_build_object('closes_at', now() + interval '3 days'));
   perform pg_temp.act('su');
   perform pg_temp.ok('settings: new dates on a closed window start a new window', st.window_started_at = now() and public.office_window_status() = 'open', st::text);
-  perform pg_temp.ok('settings: offers from the closed window expire', (select status from public.office_offers where id = o) = 'expired');
+  perform pg_temp.ok('settings: offers made before stay open (0093: they only expire unanswered after 21 days)', (select status from public.office_offers where id = o) = 'pending');
 
   -- ---- the squad check for the office: a club made short shows, with its counts; managers cannot call it
   perform pg_temp.act('su');
   update public.players set club = null where id = pg_temp.pl('SKS', 'FWD', 1);
   perform pg_temp.act('office');
   perform pg_temp.ok('squad report: a club short of the rules is listed', exists (select 1 from jsonb_array_elements(public.office_squad_report()) e
-    where e ->> 'club' = 'SKS' and (e #>> '{roster,short}')::int >= 1), left(public.office_squad_report()::text, 300));
+    where e ->> 'club' = 'SKS' and ((e #>> '{roster,short}')::int >= 1 or (e #>> '{roster,total}')::int < 15)), left(public.office_squad_report()::text, 300));
   perform pg_temp.act('tur');
   perform pg_temp.err('squad report: managers cannot read it', 'select public.office_squad_report()', 'Only the league office');
 
@@ -109,7 +109,7 @@ begin
   perform pg_temp.act('tur');
   cl := public.office_club('SKS');
   perform pg_temp.ok('club: any club''s squad, bill and room', (cl ->> 'wage_bill')::int = (select sum(value) from public.players where club = 'SKS') and jsonb_array_length(cl -> 'squad') = (select count(*) from public.players where club = 'SKS')
-    and (cl ->> 'room')::int = 130000 - (cl ->> 'wage_bill')::int and (cl #>> '{squad,0,wage}') is not null and (cl #>> '{roster,positions,GK,max}')::int = 2, left(cl::text, 300));
+    and (cl ->> 'room')::int = 130000 - (cl ->> 'wage_bill')::int and (cl #>> '{squad,0,wage}') is not null and (cl #>> '{roster,positions,GK,min}')::int = 1 and (cl #>> '{roster,squad_max}')::int = 16, left(cl::text, 300));
   perform pg_temp.err('club: no such club', 'select public.office_club(''ZZZ'')', 'No such club');
 
   -- ---- row-level security and grants

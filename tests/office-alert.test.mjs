@@ -25,6 +25,12 @@ test('nothing to say, nothing listed; withdrawn or expired answers are left out'
   assert.equal(alertItems({}).length, 0);
   assert.equal(alertItems({ answered: [{ id: 1, to_club: 'SKS', status: 'expired' }] }).length, 0);
 });
+test('0093: what happened to moves that waited for the window', () => {
+  const items = alertItems({ queue: [{ id: 5, kind: 'sign', status: 'done' }, { id: 6, kind: 'trade', status: 'failed', note: 'TUR would have 17 players (16 at most).' }] });
+  assert.deepEqual(items.map(i => i.key), ['q:5:done', 'q:6:failed']);
+  assert.match(items[0].text, /waiting signing <b>went through<\/b>/);
+  assert.match(items[1].text, /waiting trade <b>didn’t go through<\/b>: TUR would have 17 players/);
+});
 test('club names are escaped', () => {
   assert.match(alertItems({ incoming: [{ id: 1, from_club: '<x>' }] }).at(0).text, /&lt;x&gt;/);
 });

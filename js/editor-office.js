@@ -20,7 +20,11 @@ export const fromLocal = v => (v ? new Date(v).toISOString() : '');
 // What the form says, as the object office_save_settings takes. Blank numbers are left out (the database keeps its value); blank dates clear them.
 export function readOffice(f) {
   const out = {}, n = k => { const v = f.get(k); return v === null || v === '' ? undefined : Number(v); };
-  for (const k of ['cap', 'over_limit', 'releases_per_window']) { const v = n(k); if (Number.isFinite(v)) out[k] = Math.round(v); }
+  for (const k of ['cap', 'over_limit', 'releases_per_window', 'squad_min', 'squad_max']) { const v = n(k); if (Number.isFinite(v)) out[k] = Math.round(v); }
+  // 0093: the least of each position (no most)
+  const mins = {};
+  for (const p of ['GK', 'DEF', 'MID', 'FWD']) { const v = n(`min_${p}`); if (Number.isFinite(v)) mins[p] = Math.round(v); }
+  if (Object.keys(mins).length) out.pos_min = mins;
   for (const k of ['opens_at', 'closes_at']) if (f.get(k) !== null) out[k] = fromLocal(f.get(k));
   return out;
 }
@@ -104,7 +108,10 @@ export async function mountOffice({ db, esc, explain }) {
         <section class="ed-invite"><h2>Wages</h2>
           <div class="ed-fields"><label>Wage cap <i>a club’s squad values added up, in $</i><input name="cap" type="number" min="0" max="10000000" step="500" value="${esc(S.cap)}"></label>
           <label>Over-cap limit <i>the most a club may go over the cap, in $ (penalty points up to it)</i><input name="over_limit" type="number" min="0" max="1000000" step="500" value="${esc(S.over_limit ?? 30000)}"></label>
-          <label>Releases per window <i>per club</i><input name="releases_per_window" type="number" min="0" max="50" value="${esc(S.releases_per_window)}"></label></div></section>
+          <label>Releases per window <i>per club</i><input name="releases_per_window" type="number" min="0" max="50" value="${esc(S.releases_per_window)}"></label>
+      <label>Fewest players <i>a squad may have (after a release)</i><input name="squad_min" type="number" min="11" max="40" value="${esc(S.squad_min ?? 15)}"></label>
+      <label>Most players <i>a squad may have</i><input name="squad_max" type="number" min="11" max="40" value="${esc(S.squad_max ?? 16)}"></label>
+      ${['GK', 'DEF', 'MID', 'FWD'].map(p => `<label>At least ${p} <i>no most</i><input name="min_${p}" type="number" min="0" max="11" value="${esc(S.pos_min?.[p] ?? { GK: 1, DEF: 4, MID: 3, FWD: 3 }[p])}"></label>`).join('')}</div></section>
         <section class="ed-invite"><h2>Window dates</h2><p class="ed-hint">Optional. With the switch on, moves are allowed only between these times. Leave both empty to keep the window open until you switch it off.</p>
           <div class="ed-fields"><label>Opens <input name="opens_at" type="datetime-local" value="${localInput(S.opens_at)}"></label>
           <label>Closes <input name="closes_at" type="datetime-local" value="${localInput(S.closes_at)}"></label></div></section>

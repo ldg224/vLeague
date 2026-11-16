@@ -21,19 +21,21 @@ test('bill and roster', () => {
   const r = rosterOf(s);
   assert.equal(r.short, 0); assert.equal(r.over, 0); assert.equal(r.positions.DEF.count, 5);
   assert.deepEqual(rulesFrom({ positions: { GK: { min: 1, max: 3, count: 2 } } }).GK, { min: 1, max: 3 });
-  assert.deepEqual(rulesFrom(null).FWD, { min: 4, max: 4 });
+  assert.deepEqual(rulesFrom(null).FWD, { min: 3, max: Infinity });   // 0093: a minimum, no maximum
+  assert.deepEqual(rulesFrom(null).squad, { min: 15, max: 16 });
+  assert.equal(rulesFrom({ positions: { GK: { min: 1, max: null } } }).GK.max, Infinity);
 });
 
 test('release: one short is fine, two short is not', () => {
   const s = squad();
   assert.equal(check({ squad: s, cap: 125000, out: [s[2]] }), null);
   const one = s.filter(p => p.id !== 'p2');
-  assert.match(check({ squad: one, cap: 125000, out: [one[3]] }), /2 players short/);
+  assert.match(check({ squad: one, cap: 125000, out: [one[3]] }), /too few defenders \(4 at least\)|at least/);   // 0093
 });
 
 test('signing: a full position is refused, the cap is enforced', () => {
   const s = squad(), fa = P('fa', 'DEF', 9000);
-  assert.match(check({ squad: s, cap: 125000, inn: [fa] }), /too many defenders/);
+  assert.match(check({ squad: s, cap: 125000, inn: [fa] }), /17 players \(16 at most\)/);   // 0093: the squad's size, not the position
   const shortSquad = s.filter(p => p.id !== 'p2');   // a defender gone
   assert.equal(check({ squad: shortSquad, cap: 125000, inn: [fa] }), null);
   assert.match(check({ squad: shortSquad, cap: 110000, inn: [fa] }), /over the \$110,000 cap/);
@@ -114,12 +116,17 @@ test('editor settings form', () => {
   assert.equal(out.cap, 130000); assert.equal(out.over_limit, 25000); assert.ok(!('releases_per_window' in out)); assert.equal(out.opens_at, '');
   assert.equal(localInput(out.closes_at), '2026-11-20T17:30');
   assert.equal(fromLocal(''), '');
+  // 0093: the squad's size and each position's least
+  const g = new Map([['squad_min', '15'], ['squad_max', '16'], ['min_GK', '1'], ['min_DEF', '4'], ['min_MID', ''], ['min_FWD', '3']]);
+  const o2 = readOffice({ get: k => (g.has(k) ? g.get(k) : null) });
+  assert.equal(o2.squad_min, 15); assert.equal(o2.squad_max, 16);
+  assert.deepEqual(o2.pos_min, { GK: 1, DEF: 4, FWD: 3 });   // a blank one is left as it is
 });
 
-test('a position over its maximum may not grow, even when the total over stays the same', () => {
-  // two defenders over (office edits), midfield full: swapping two defenders for two midfielders keeps "two over" but takes midfield over
-  const s = [...squad(), P('xd1', 'DEF', 7000), P('xd2', 'DEF', 7000)];
-  assert.match(check({ squad: s, cap: 1e6, out: [s[2], s[3]], inn: [P('m1', 'MID', 7000), P('m2', 'MID', 7000)] }), /too many midfielders/);
+test('0093: no maximum per position; a squad already over 16 may swap but not grow', () => {
+  const s = [...squad(), P('xd1', 'DEF', 7000), P('xd2', 'DEF', 7000)];   // 18 players (office edits)
+  assert.equal(check({ squad: s, cap: 1e6, out: [s[2], s[3]], inn: [P('m1', 'MID', 7000), P('m2', 'MID', 7000)] }), null);   // any position mix
+  assert.match(check({ squad: s, cap: 1e6, inn: [P('m3', 'MID', 7000)] }), /19 players \(16 at most\)/);
   assert.equal(check({ squad: s, cap: 1e6, out: [s[2]] }), null);   // bringing defence down is fine
 });
 

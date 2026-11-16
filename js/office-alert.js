@@ -13,8 +13,14 @@ import { windowFromSettings, windowText } from './office-model.js';
 const KEY = 'vl-office-seen';
 const ANSWER = { accepted: 'accepted your trade offer', rejected: 'turned down your trade offer', countered: 'answered your offer with a counter-offer' };
 
-export function alertItems({ incoming = [], answered = [], window = null } = {}, nameOf = c => c) {
+const KIND = { release: 'release', sign: 'signing', trade: 'trade' };
+export function alertItems({ incoming = [], answered = [], window = null, queue = [] } = {}, nameOf = c => c) {
   const items = [];
+  // 0093: moves that waited for the window: what happened to them when it opened
+  for (const q of queue) {
+    if (q.status === 'done') items.push({ key: `q:${q.id}:done`, kind: 'accepted', text: `Your waiting ${KIND[q.kind] || 'move'} <b>went through</b> when the window opened` });
+    else if (q.status === 'failed') items.push({ key: `q:${q.id}:failed`, kind: 'rejected', text: `Your waiting ${KIND[q.kind] || 'move'} <b>didn’t go through</b>: ${esc(q.note || 'it no longer fitted the rules')}` });
+  }
   for (const o of incoming) items.push({ key: `in:${o.id}`, kind: 'in', text: `<b>${esc(nameOf(o.from_club))}</b> sent you a trade offer` });
   for (const o of answered) if (ANSWER[o.status]) items.push({ key: `ans:${o.id}:${o.status}`, kind: o.status, text: `<b>${esc(nameOf(o.to_club))}</b> ${ANSWER[o.status]}` });
   if (window?.status === 'open') items.push({ key: `win:${window.closes_at || 'open'}`, kind: 'window', text: `<b>Transfer window open.</b> ${esc(windowText(window).replace(/^Window open,?\s*/, '').replace(/^closes/, 'Closes'))}`.trim() });
@@ -27,13 +33,14 @@ const remember = keys => { try { localStorage.setItem(KEY, JSON.stringify([...ne
 async function load(club) {
   const c = await db();
   const since = new Date(Date.now() - 14 * 86400000).toISOString();   // answers from the last fortnight
-  const [inc, ans, set] = await Promise.all([
+  const [inc, ans, set, que] = await Promise.all([
     c.from('office_offers').select('id, from_club, created_at').eq('to_club', club).eq('status', 'pending').order('created_at'),
     c.from('office_offers').select('id, to_club, status, decided_at').eq('from_club', club).in('status', ['accepted', 'rejected', 'countered']).gte('decided_at', since).order('decided_at'),
     c.from('office_settings').select('window_open, opens_at, closes_at').eq('id', 1).maybeSingle(),
+    c.from('office_queue').select('id, kind, status, note, processed_at').or(`club.eq.${club},other_club.eq.${club}`).in('status', ['done', 'failed']).gte('processed_at', since).order('processed_at'),
   ]);
   if (inc.error && ans.error) return null;   // the Office isn't there (or can't be read): no notice
-  return { incoming: inc.data || [], answered: ans.data || [], window: set.data ? windowFromSettings(set.data) : null };
+  return { incoming: inc.data || [], answered: ans.data || [], window: set.data ? windowFromSettings(set.data) : null, queue: que.data || [] };
 }
 
 export async function mountOfficeAlert({ club, nameOf = c => c, data = null } = {}) {

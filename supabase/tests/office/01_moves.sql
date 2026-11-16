@@ -1,7 +1,7 @@
 -- Releases, signings, the cap, squad rules, the release limit, sheets cleaned, the window and a round being played.
 do $$
 declare d1 text; d2 text; d3 text; m1 text; fa_mid text; fa_cheap text; fa_dear text; fa2 text; b int; mid bigint; st jsonb;
-  w_open int; w_locked int; s jsonb; sd1 text; sd2 text; fa_s text;
+  w_open int; w_locked int; qrel text; qsign text; qf text; qc bigint; qr bigint; s jsonb; sd1 text; sd2 text; fa_s text;
 begin
   d1 := pg_temp.pl('TUR', 'DEF', 1); d2 := pg_temp.pl('TUR', 'DEF', 2); d3 := pg_temp.pl('TUR', 'DEF', 3); m1 := pg_temp.pl('TUR', 'MID', 1);
   fa_mid := pg_temp.pl(null, 'MID', 1); fa_cheap := pg_temp.pl(null, 'DEF', 1); fa2 := pg_temp.pl(null, 'DEF', 2); fa_dear := pg_temp.pl(null, 'DEF', 1, true);
@@ -26,7 +26,7 @@ begin
   perform pg_temp.ok('release: player becomes a free agent', pg_temp.club_of(d1) is null);
   perform pg_temp.ok('release: logged with the wage effect', exists (select 1 from public.office_moves where id = mid and kind = 'release' and club = 'TUR' and players_out = array[d1] and bill_before = b and bill_after = b - pg_temp.wage(d1)));
   st := public.office_state();
-  perform pg_temp.ok('state: one release used, one left, one short', (st #>> '{releases,used}')::int = 1 and (st #>> '{releases,left}')::int = 1 and (st #>> '{roster,short}')::int = 1, st::text);
+  perform pg_temp.ok('state: one release used, one left, one short', (st #>> '{releases,used}')::int = 1 and (st #>> '{releases,left}')::int = 1 and (st #>> '{roster,total}')::int = (select count(*) from public.players where club = 'TUR'), st::text);
   perform pg_temp.ok('state: bill, room and squad one smaller', (st ->> 'wage_bill')::int = b - pg_temp.wage(d1) and (st ->> 'room')::int = 125000 - (st ->> 'wage_bill')::int
     and jsonb_array_length(st -> 'squad') = (select count(*) from public.players where club = 'TUR'), st::text);
 
@@ -41,9 +41,9 @@ begin
 
   -- ---- squad rules
   perform pg_temp.act('tur');
-  perform pg_temp.err('squad: a second release while one short is refused', format('select public.office_release(%L)', d2), 'at most one short');
-  perform pg_temp.err('squad: releasing another position while short is refused', format('select public.office_release(%L)', m1), 'at most one short');
-  perform pg_temp.err('squad: signing past a position''s maximum is refused', format('select public.office_sign(%L)', fa_mid), 'too many players at MID');
+  perform pg_temp.err('squad: a second release while at 15 is refused (15 players at least, 4 defenders at least)', format('select public.office_release(%L)', d2), 'at least');
+  perform pg_temp.err('squad: releasing another position while at 15 is refused', format('select public.office_release(%L)', m1), 'at least 15');
+  perform pg_temp.ok('squad: no maximum for any position (0093)', (public.office_state() #> '{roster,positions,MID,max}') = 'null'::jsonb and (public.office_state() #>> '{roster,squad_max}')::int = 16);
 
   -- ---- cap
   perform pg_temp.act('su');
@@ -55,8 +55,8 @@ begin
   perform pg_temp.act('tur');
   mid := public.office_sign(fa_cheap);
   perform pg_temp.ok('sign: a signing that lands exactly on the cap goes through', pg_temp.club_of(fa_cheap) = 'TUR' and exists (select 1 from public.office_moves where id = mid and kind = 'sign' and players_in = array[fa_cheap]));
-  perform pg_temp.err('sign: a player who is not a free agent is refused', format('select public.office_sign(%L)', d2), 'not a free agent');
-  perform pg_temp.err('release: another club''s player is refused', format('select public.office_release(%L)', pg_temp.pl('LAU', 'DEF', 1)), 'not in your squad');
+  perform pg_temp.err('sign: a player who is not a free agent is refused', format('select public.office_sign(%L)', d2), 'free agent');
+  perform pg_temp.err('release: another club''s player is refused', format('select public.office_release(%L)', pg_temp.pl('LAU', 'DEF', 1)), 'squad');
 
   -- ---- release limit (2 per window; an undone release would not count)
   perform pg_temp.act('su');
@@ -72,6 +72,8 @@ begin
   perform pg_temp.act('su');
   update public.office_settings set window_started_at = now() - interval '1 minute';
 
+  perform pg_temp.act('su');
+  update public.office_settings set squad_min = 11;   -- 0093: live SKS may already be at 15; this part is about the cap
   -- ---- over the cap: SKS (over 125,000 today, made sure of here) may release, but not sign while still over
   update public.office_settings set cap = public.office_bill('SKS') - 1000;
   sd1 := pg_temp.pl('SKS', 'DEF', 1, true); fa_s := pg_temp.pl(null, 'DEF', 1);
@@ -85,28 +87,51 @@ begin
   perform pg_temp.act('su');
   update public.office_settings set cap = 125000;
 
-  -- ---- the window
+  -- ---- the window not open: moves wait in the queue and go through when it opens (0093)
   update public.office_settings set window_open = false;
   perform pg_temp.act('lau');
-  perform pg_temp.err('window: closed refuses a release', format('select public.office_release(%L)', pg_temp.pl('LAU', 'DEF', 1)), 'window is closed');
+  qrel := pg_temp.pl('LAU', 'MID', 1);
+  perform pg_temp.ok('queue: a release while the window is closed waits', public.office_release(qrel) is null);
+  perform pg_temp.ok('queue: nothing moves yet, the release is queued', pg_temp.club_of(qrel) = 'LAU' and exists (select 1 from public.office_queue where player = qrel and kind = 'release' and status = 'queued'));
+  perform pg_temp.err('queue: the same release twice is refused', format('select public.office_release(%L)', qrel), 'already waiting');
   perform pg_temp.act('su');
   update public.office_settings set window_open = true, opens_at = now() + interval '1 day';
   perform pg_temp.act('lau');
-  perform pg_temp.err('window: one that opens later refuses a signing', format('select public.office_sign(%L)', pg_temp.pl(null, 'DEF', 1)), 'not open yet');
+  qsign := pg_temp.pl(null, 'DEF', 1);
+  perform pg_temp.ok('queue: a signing before the window opens waits', public.office_sign(qsign) is null and pg_temp.club_of(qsign) is null);
   perform pg_temp.act('su');
-  update public.office_settings set opens_at = now() - interval '2 days', closes_at = now() - interval '1 day';
+  update public.office_settings set opens_at = null;
+  perform public.office_process_queue();
+  perform pg_temp.ok('queue: when the window opens they go through, in order', pg_temp.club_of(qrel) is null and pg_temp.club_of(qsign) = 'LAU'
+    and (select bool_and(status = 'done' and move_id is not null) from public.office_queue where player in (qrel, qsign)));
+  update public.office_settings set window_open = false;
   perform pg_temp.act('lau');
-  perform pg_temp.err('window: one past its closing time refuses a release', format('select public.office_release(%L)', pg_temp.pl('LAU', 'DEF', 1)), 'window is closed');
+  qf := pg_temp.pl(null, 'DEF', 1);
+  perform public.office_sign(qf);
   perform pg_temp.act('su');
-  update public.office_settings set opens_at = null, closes_at = now() + interval '1 day';
-
+  update public.players set club = 'SKS' where id = qf;   -- another club got him first
+  update public.office_settings set window_open = true;
+  perform public.office_process_queue();
+  perform pg_temp.ok('queue: a queued move that no longer works fails with the reason', (select status = 'failed' and note like '%free agent%' from public.office_queue where player = qf and kind = 'sign' order by id desc limit 1));
+  update public.office_settings set window_open = false;
+  perform pg_temp.act('lau');
+  perform public.office_release(pg_temp.pl('LAU', 'FWD', 1));
+  select id into qc from public.office_queue where club = 'LAU' and status = 'queued' order by id desc limit 1;
+  perform public.office_queue_cancel(qc);
+  perform pg_temp.ok('queue: a waiting move can be taken back', (select status from public.office_queue where id = qc) = 'cancelled');
+  perform pg_temp.act('tur');
+  perform pg_temp.err('queue: another club cannot take it back', format('select public.office_queue_cancel(%s)', qc), 'No such move');
+  perform pg_temp.act('su');
+  update public.office_settings set window_open = true, opens_at = null, closes_at = now() + interval '1 day';
   -- ---- a round being played: from the line-up lock to 60 minutes after its last kick-off
   insert into public.rounds (week) values (97) on conflict (week) do nothing;
   insert into public.fixtures (id, week, home, away, starts_at) values ('zz-office-97', 97, 'TUR', 'LAU', now() - interval '10 minutes');
   insert into public.deadlines (week, locks_at) values (97, now() - interval '1 hour') on conflict (week) do update set locks_at = excluded.locks_at;
   perform pg_temp.ok('round: status says a round is being played', public.office_window_status() = 'round', public.office_window_status());
   perform pg_temp.act('lau');
-  perform pg_temp.err('round: a release is refused mid-round', format('select public.office_release(%L)', pg_temp.pl('LAU', 'DEF', 1)), 'round is being played');
+  perform pg_temp.ok('round: a release mid-round waits for the round to end', public.office_release(pg_temp.pl('LAU', 'DEF', 1)) is null);
+  select id into qr from public.office_queue where club = 'LAU' and status = 'queued' order by id desc limit 1;
+  perform public.office_queue_cancel(qr);
   perform pg_temp.ok('round: state shows the round', (public.office_state() #>> '{window,round_week}')::int = 97);
   perform pg_temp.act('su');
   update public.fixtures set postponed = true where id = 'zz-office-97';
@@ -128,17 +153,9 @@ begin
   perform pg_temp.act('su');
   update public.drafts set status = 'done' where status in ('live', 'paused');
 
-  -- ---- over a maximum at one position: a move may not push another position over its maximum (even if the total over stays the same)
-  declare mx int; k int; outs text[]; ins text[];
-  begin
-    select r.mx - (select count(*) from public.players where club = 'TUR' and position = 'MID') into mx from public.office_roster() r where r.pos = 'MID';
-    k := greatest(mx, 0) + 1;
-    -- TUR made k over at DEF by the office (free-agent defenders added), then swaps k defenders for k free midfielders
-    update public.players set club = 'TUR' where id in (select id from public.players where club is null and position = 'DEF' order by id limit k);
-    select array_agg(id) into outs from (select id from public.players where club = 'TUR' and position = 'DEF' order by id limit k) x;
-    select array_agg(id) into ins from (select id from public.players where club is null and position = 'MID' order by id limit k) x;
-    perform pg_temp.err('squad: a move that takes another position over its maximum is refused', format('select public.office_check(''TUR'', %L, %L)', outs, ins), 'too many players at MID');
-  end;
+  -- ---- 16 at most, and no maximum for any position (0093)
+  update public.players set club = 'TUR' where id in (select id from public.players where club is null and position = 'FWD' order by id limit greatest(0, 16 - (select count(*) from public.players where club = 'TUR')));
+  perform pg_temp.err('squad: a 17th player is refused', format('select public.office_check(''TUR'', %L, %L)', array[]::text[], array[pg_temp.pl(null, 'MID', 1)]), '16 at most');
 
   -- ---- who may call
   perform pg_temp.act('noclub');

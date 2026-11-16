@@ -17,7 +17,7 @@ import { icon } from './icons.js';
 import { portrait } from './portrait.js';
 import { plink } from './player-link.js';
 import { loadPlayers, forgetPlayers } from './players-data.js';
-import { POSITIONS, POS_NAME, NEED, money, bill, rulesFrom, rosterOf, check, after, need, windowText, windowReason, windowFromSettings, keepPicks, tradeView, fairness, when, penaltyPoints, penaltyChange, LADDER, pts, DEFAULT_LIMIT } from './office-model.js';
+import { POSITIONS, POS_NAME, NEED, money, bill, rulesFrom, rosterOf, check, after, need, windowText, windowReason, windowFromSettings, keepPicks, tradeView, fairness, when, penaltyPoints, penaltyChange, LADDER, pts, DEFAULT_LIMIT, squadAfter } from './office-model.js';
 import { sortRows, clickSort, sortHead, sortBar } from './sort-table.js';
 import { overall } from './names.js';
 import { accentFor, onColour, isHex } from './club-colour.js';
@@ -46,6 +46,8 @@ const cap = () => Number(S.st?.cap ?? 125000);
 const limit = () => Number(S.st?.over_limit ?? DEFAULT_LIMIT);   // how far over the cap a club may go (0092)
 const rules = () => rulesFrom(S.st?.roster);
 const win = () => S.st?.window || { status: 'closed' };
+const waiting = () => win().status !== 'open';   // 0093: moves made now wait in the queue for the window
+const queued = () => (S.st?.queue || []).filter(x => x.status === 'queued');
 
 // Database messages in plain words. The Office's own are already sentences; anything else gets a general line.
 function explain(e) {
@@ -69,6 +71,7 @@ function liveApi() {
     respond: (id, yes) => rpc('office_respond', { p_offer: id, p_accept: yes }),
     counter: (id, give, get) => rpc('office_counter', { p_offer: id, p_give: give, p_get: get }),
     withdraw: id => rpc('office_withdraw', { p_offer: id }),
+  queueCancel: id => rpc('office_queue_cancel', { p_id: id }),
   };
 }
 
@@ -149,9 +152,9 @@ function pendingBill() {
 // The squad's shape as four chips: how many of each position against the rule, short ones marked.
 function rosterChips(ro) {
   return `<span class="of-roster">${POSITIONS.map(ps => {
-    const g = ro.positions[ps], short = g.count < g.min, top = g.max;
-    return `<span class="of-rchip pos-${ps}${short ? ' short' : g.count >= top ? ' full' : ''}" title="${esc(`${POS_NAME[ps]}: ${g.count} of ${g.min === g.max ? g.min : `${g.min} to ${g.max}`}${short ? `, ${g.min - g.count} short` : ''}`)}"><b>${ps}</b>${g.count}/${top}</span>`;
-  }).join('')}</span>`;
+    const g = ro.positions[ps], short = g.count < g.min;   // 0093: a minimum per position, no maximum
+    return `<span class="of-rchip pos-${ps}${short ? ' short' : ''}" title="${esc(`${POS_NAME[ps]}: ${g.count}, at least ${g.min}${short ? `, ${g.min - g.count} short` : ''}`)}"><b>${ps}</b>${g.count}</span>`;
+  }).join('')}<span class="of-rchip${ro.total >= ro.squadMax ? ' full' : ro.total < ro.squadMin ? ' short' : ''}" title="${esc(`Squad: ${ro.total} of ${ro.squadMin} to ${ro.squadMax}`)}"><b>Squad</b>${ro.total}/${ro.squadMax}</span></span>`;
 }
 
 function headCard() {
@@ -233,22 +236,27 @@ const sortChips = t => sortBar({ t, levels: levelsFor(t), cols: colsFor(t), defa
 // ---------------------------------------------------------------- Squad
 function squadTab() {
   if (!S.my) return `<section class="lg-card"><p class="of-empty">${esc(S.readOnly || 'Only a club manager has a squad here.')} Look at any club in <a href="#clubs">Clubs</a>.</p></section>`;
-  const mine = squadOf(S.my), ro = rosterOf(mine, rules()), w = windowReason(win()), r = S.st.releases || { left: 0 };
-  const why = p => w || (r.left <= 0 ? `You have used all ${r.limit} releases for this window.` : check({ squad: mine, cap: cap(), limit: limit(), rules: rules(), out: [p] }));
-  const general = w || (r.left <= 0 ? 'x' : ro.short ? 'short' : '');
+  // 0093: while the window is not open, a release waits in the queue (and its count is the releases waiting, not the ones used).
+  const mine = squadOf(S.my), ro = rosterOf(mine, rules()), w = null, q = waiting(), r0 = S.st.releases || { left: 0 };
+  const r = q ? { ...r0, left: Math.max(0, r0.limit - (r0.queued || 0)) } : r0;
+  const queuedOut = new Set(queued().filter(x => x.kind === 'release').map(x => x.player?.id));
+  const why = p => (queuedOut.has(p.id) ? 'His release is already waiting for the window.'
+    : r.left <= 0 ? `You have ${q ? 'all' : 'used all'} ${r.limit} releases ${q ? 'waiting for' : 'for'} this window.` : check({ squad: mine, cap: cap(), limit: limit(), rules: rules(), out: [p] }));
+  const general = r.left <= 0 ? 'x' : '';
   const rows = sortRows(mine, levelsFor('squad'), colsFor('squad')).map(p => {
     if (ui.confirm?.kind === 'release' && ui.confirm.id === p.id) {
       const a = after({ squad: mine, cap: cap(), out: [p] });
       return { p, on: true, below: confirmBody(`rel-${p.id}`, `Release ${esc(p.name)}?`,
-        `He becomes a free agent. Your wage bill goes to <b>${money(a.bill)}</b>, ${a.over ? `<b class="of-over">${money(a.bill - cap())} over the cap</b>` : `<b>${money(a.room)}</b> room`}. ${penaltyLine(bill(mine), a.bill)}${r.left - 1} release${r.left - 1 === 1 ? '' : 's'} left after this.`,
-        'Release player', `data-of="release" data-id="${esc(p.id)}"`) };
+        `${q ? 'The window isn’t open, so this waits and goes through when it opens (checked again then). After that he' : 'He'} becomes a free agent. Your wage bill goes to <b>${money(a.bill)}</b>, ${a.over ? `<b class="of-over">${money(a.bill - cap())} over the cap</b>` : `<b>${money(a.room)}</b> room`}. ${penaltyLine(bill(mine), a.bill)}${r.left - 1} release${r.left - 1 === 1 ? '' : 's'} left after this.`,
+        q ? 'Queue the release' : 'Release player', `data-of="release" data-id="${esc(p.id)}"`) };
     }
     const off = why(p);
-    return { p, why: off && !general ? off : '', act: btn('Release', `data-of="ask-release" data-id="${esc(p.id)}"`, { off, label: `Release ${p.name}`, icon: 'user-minus' }),
+    return { p, why: off && !general ? off : '', act: btn(q ? 'Queue release' : 'Release', `data-of="ask-release" data-id="${esc(p.id)}"`, { off, label: `Release ${p.name}`, icon: 'user-minus' }),
       below: ui.err?.key === `rel-${p.id}` ? errAt(`rel-${p.id}`) : '' };
   });
-  const top = w ? hint('lock', `${esc(w)} You can look, but not release.`) : r.left <= 0 ? hint('triangle-alert', 'You have used all your releases for this window. You can still sign and trade.')
-    : ro.short ? hint('triangle-alert', `You are ${ro.short === 1 ? 'a player' : `${ro.short} players`} short. Sign or trade for one before you release another.`) : '';
+  const top = q ? hint('clock', `${esc(windowText(win()))}. Moves you make now wait and go through when it opens, each checked again then.`)
+    : r.left <= 0 ? hint('triangle-alert', 'You have used all your releases for this window. You can still sign and trade.')
+    : ro.total < ro.squadMin ? hint('triangle-alert', `You have ${ro.total} players (${ro.squadMin} at least). Sign or trade for one before you release another.`) : '';
   return `<div class="of-cols"><section class="lg-card of-list-card">
       <div class="lg-card-head"><h2>Squad</h2><span class="of-meta">${mine.length} players · ${money(bill(mine))}</span></div>
       ${noteAt('squad')}${top}${sortChips('squad')}
@@ -256,10 +264,29 @@ function squadTab() {
     </section>${sideCard()}</div>`;
 }
 
+// 0093: moves waiting for the window (with Take back) and how recent ones went (done, or failed with the reason).
+function queueCard() {
+  const all = S.st?.queue || [];
+  if (!all.length) return '';
+  const what = x => {
+    if (x.kind === 'release') return `Release ${esc(x.player?.name || 'a player')}`;
+    if (x.kind === 'sign') return `Sign ${esc(x.player?.name || 'a player')}`;
+    const mine = x.from_club === S.my, give = mine ? x.give : x.get, get = mine ? x.get : x.give;
+    return `Trade with ${esc(clubName(mine ? x.to_club : x.from_club))}: ${esc((give || []).map(p => p.name).join(', ') || 'nobody')} for ${esc((get || []).map(p => p.name).join(', ') || 'nobody')}`;
+  };
+  const row = x => `<li class="of-q is-${esc(x.status)}"><span>${what(x)}<small>${x.status === 'queued' ? 'Waiting for the window' : x.status === 'done' ? 'Went through' : x.status === 'failed' ? `Didn’t go through: ${esc(x.note || '')}` : 'Taken back'}</small></span>
+      ${x.status === 'queued' ? btn('Take back', `data-of="qcancel" data-id="${x.id}"`, { quiet: true, label: `Take back: ${what(x)}` }) : ''}${errAt(`q-${x.id}`)}</li>`;
+  const waitingNow = all.filter(x => x.status === 'queued'), recent = all.filter(x => x.status !== 'queued').slice(0, 4);
+  return `<section class="lg-card of-queue-card"><div class="lg-card-head"><h2>Waiting for the window</h2><span class="of-meta">${waitingNow.length}</span></div>
+      <ul class="of-qlist">${waitingNow.map(row).join('') || '<li class="of-none">Nothing waiting.</li>'}</ul>
+      ${recent.length ? `<h3 class="of-sh">Recently</h3><ul class="of-qlist">${recent.map(row).join('')}</ul>` : ''}</section>`;
+}
+
 function sideCard() {
   const ins = S.st?.offers_in || [], outs = S.st?.offers_out || [];
   const recent = S.moves.filter(m => m.club === S.my || m.other_club === S.my).slice(0, 4);
   return `<aside class="of-side">
+    ${queueCard()}
     <section class="lg-card"><div class="lg-card-head"><h2>Offers</h2><a href="#trade">Trade</a></div>
       <ul class="of-mini">
         <li><a href="#trade"><span>${icon('inbox')}Offers to you</span><b class="${ins.length ? 'hot' : ''}">${ins.length}</b></a></li>
@@ -270,8 +297,8 @@ function sideCard() {
       <ul class="of-how">
         <li>A player’s wage is his value. Your wage bill is your squad’s wages, against the ${money(cap())} cap.</li>
         <li>You may go up to ${money(limit())} over the cap, for penalty points taken off at the end of the regular season. Past that, you can only make moves that bring your bill down.</li>
-        <li>Moves happen while the office has the transfer window open, never during a round.</li>
-        <li>You may be one player short at most: release one, then sign or trade for one before the next.</li>
+        <li>Moves happen while the transfer window is open, never during a round. Moves you make while it isn’t open wait, and go through when it opens, each checked again then.</li>
+        <li>A squad has ${rules().squad.min} to ${rules().squad.max} players, with at least ${POSITIONS.map(p => `${rules()[p].min} ${p}`).join(', ')}. There is no most for any position.</li>
       </ul>
       <table class="of-ladder"><caption>Penalty points</caption><thead><tr><th scope="col">Over the cap by</th><th scope="col">Points</th></tr></thead><tbody>${LADDER.slice(1).map(([top, p], i) => `<tr${S.my && penaltyPoints(bill(squadOf(S.my)) - cap()) === p ? ' class="on"' : ''}><td>${money(LADDER[i][0] + 1)} to ${money(top)}</td><td>${p}</td></tr>`).join('')}<tr><td>More than ${money(limit())}</td><td>Not allowed</td></tr></tbody></table></section>
   </aside>`;
@@ -279,24 +306,29 @@ function sideCard() {
 
 // ---------------------------------------------------------------- Market
 function marketTab() {
-  const f = ui.mkt, mine = S.my ? squadOf(S.my) : null, w = windowReason(win());
+  // 0093: while the window is not open a signing waits in the queue, and is checked against the squad as it will be after the moves already waiting
+  // (so a queued release makes room for a queued signing).
+  const f = ui.mkt, q = waiting(), w = null;
+  const qd = queued(), outs = qd.filter(x => x.kind === 'release' && x.player).map(x => x.player), ins = qd.filter(x => x.kind === 'sign' && x.player).map(x => x.player);
+  const mine = S.my ? (q ? squadAfter(squadOf(S.my), outs, ins) : squadOf(S.my)) : null;
+  const signing = new Set(ins.map(p => p.id));
   const rule = p => (S.my ? check({ squad: mine, cap: cap(), limit: limit(), rules: rules(), inn: [p] }) : null);
-  const why = p => (!S.my ? 'Only a club manager can sign players.' : w || rule(p));
+  const why = p => (!S.my ? 'Only a club manager can sign players.' : signing.has(p.id) ? 'His signing is already waiting for the window.' : w || rule(p));
   const all = S.players.filter(p => !p.team);
   const list = all.filter(p => (f.pos === 'ALL' || p.position === f.pos) && (!f.q || p.name.toLowerCase().includes(f.q.toLowerCase()))
     && (!+f.max || p.value <= +f.max) && (!f.fit || !rule(p)));
-  const blanket = !S.my || w || bill(mine) > cap() + limit();   // one reason for every row: said once above the table, not on each row
+  const blanket = !S.my || w || bill(mine) > cap() + limit() || rosterOf(mine, rules()).total >= rules().squad.max;   // one reason for every row: said once above the table
   const rows = sortRows(list, levelsFor('market'), colsFor('market')).map(p => {
     if (ui.confirm?.kind === 'sign' && ui.confirm.id === p.id) {
       const a = after({ squad: mine, cap: cap(), inn: [p] });
       return { p, on: true, below: confirmBody(`sign-${p.id}`, `Sign ${esc(p.name)}?`,
-        `His wage is ${money(p.value)}. Your wage bill goes to <b>${money(a.bill)}</b>, ${a.over ? `<b class="of-over">${money(a.bill - cap())} over the cap</b>` : `<b>${money(a.room)}</b> room left`}. ${penaltyLine(bill(mine), a.bill)}`,
-        'Sign player', `data-of="sign" data-id="${esc(p.id)}"`) };
+        `${q ? 'The window isn’t open, so this waits and goes through when it opens, if he is still a free agent then (first come, first served). ' : ''}His wage is ${money(p.value)}. Your wage bill goes to <b>${money(a.bill)}</b>, ${a.over ? `<b class="of-over">${money(a.bill - cap())} over the cap</b>` : `<b>${money(a.room)}</b> room left`}. ${penaltyLine(bill(mine), a.bill)}`,
+        q ? 'Queue the signing' : 'Sign player', `data-of="sign" data-id="${esc(p.id)}"`) };
     }
     const off = why(p);
     // the row's own reason, short: the Room after column already shows the money, so a cap reason says just that
     const fx = S.my && after({ squad: mine, cap: cap(), inn: [p] }), rowWhy = off && !blanket ? (fx?.over && /cap/.test(off) ? `Takes you ${money(fx.bill - cap())} over the cap, past the ${money(limit())} limit` : off) : '';
-    return { p, why: rowWhy, need: S.my ? needOf(p) : 0, act: S.my ? btn('Sign', `data-of="ask-sign" data-id="${esc(p.id)}"`, { off, primary: !off, label: `Sign ${p.name}` }) : '',
+    return { p, why: rowWhy, need: S.my ? needOf(p) : 0, act: S.my ? btn(q ? 'Queue' : 'Sign', `data-of="ask-sign" data-id="${esc(p.id)}"`, { off, primary: !off, label: `Sign ${p.name}` }) : '',
       below: ui.err?.key === `sign-${p.id}` ? errAt(`sign-${p.id}`) : '' };
   });
   const count = ps => all.filter(p => ps === 'ALL' || p.position === ps).length;
@@ -309,7 +341,7 @@ function marketTab() {
       <label class="dr-max"><span>Max $</span><input type="number" inputmode="numeric" min="0" step="500" data-f="max" placeholder="Any" aria-label="Maximum wage" value="${esc(f.max)}"></label>
       ${S.my ? `<label class="dr-fit"><input type="checkbox" data-f="fit"${f.fit ? ' checked' : ''}><span>Fits my squad</span></label>` : ''}</div>
     ${sortChips('market')}
-    ${w && S.my ? hint('lock', `${esc(w)} You can look, but not sign.`) : S.my ? marketHint(mine) : ''}
+    ${q && S.my ? hint('clock', `${esc(windowText(win()))}. Signings you make now wait and go through when it opens, first come, first served.`) : ''}${S.my ? marketHint(mine) : ''}
     ${playerTable('market', rows, f.fit ? 'Nobody here fits your squad right now. Turn off Fits my squad to see everyone.' : 'No free agents match.', Boolean(S.my))}
   </section>`;
 }
@@ -319,7 +351,7 @@ function marketHint(mine) {
   const ro = rosterOf(mine, rules()), full = POSITIONS.filter(p => ro.positions[p].count >= ro.positions[p].max), shortAt = POSITIONS.filter(p => ro.positions[p].count < ro.positions[p].min);
   if (bill(mine) > cap() + limit()) return hint('triangle-alert', `You are more than ${money(limit())} over the cap, so you can’t sign anyone until your wage bill is under ${money(cap() + limit())}.`);
   if (bill(mine) > cap()) return hint('triangle-alert', `${penaltyNote(bill(mine))}. A signing adds to it: Room after shows how far over it takes you.`);
-  if (full.length === POSITIONS.length) return hint('triangle-alert', 'Your squad is full. Release a player in the Squad tab first, then sign one in his position.');
+  if (full.length === POSITIONS.length || ro.total >= ro.squadMax) return hint('triangle-alert', `Your squad is full (${ro.squadMax} players). Release a player in the Squad tab first.`);
   if (shortAt.length) return hint('list-ordered', `You are short of ${shortAt.map(p => POS_NAME[p].toLowerCase()).join(' and ')}, so they are listed first.`);
   return '';
 }
@@ -354,7 +386,7 @@ function offerRow(o, dir) {
   const names = list => list.length ? list.map(p => `<span>${esc(p.name)} <small>${money(p.wage)}</small></span>`).join('') : '<small>nobody</small>';
   const sum = list => list.reduce((t, p) => t + Number(p.wage || 0), 0);
   const youGet = dir === 'in' ? o.give : o.get, youGive = dir === 'in' ? o.get : o.give;
-  const w = windowReason(win()), key = `offer-${o.id}`;
+  const w = null, q = waiting(), key = `offer-${o.id}`;   // 0093: offers work any time; an accepted trade waits for the window when it isn't open
   const asked = dir === 'in' && ui.confirm && ['accept', 'reject'].includes(ui.confirm.kind) && ui.confirm.id === String(o.id) ? ui.confirm.kind : null;
   const acts = dir === 'in'
     ? `${btn('Reject', `data-of="ask-reject" data-id="${o.id}"`, { quiet: true })}${btn('Counter', `data-of="counter" data-id="${o.id}"`, { off: w })}${btn('Accept', `data-of="ask-accept" data-id="${o.id}"`, { primary: !w, off: w })}`
@@ -363,8 +395,8 @@ function offerRow(o, dir) {
   if (asked === 'accept') {
     const mine = squadOf(S.my), a = after({ squad: mine, cap: cap(), out: youGive, inn: youGet });
     confirm = confirmBody(key, `Accept ${esc(clubName(other))}’s offer?`,
-      `The players move now. Your wage bill goes from ${money(bill(mine))} to <b>${money(a.bill)}</b>, ${a.over ? `<b class="of-over">${money(a.bill - cap())} over the cap</b>` : `<b>${money(a.room)}</b> room`}. ${penaltyLine(bill(mine), a.bill)}`,
-      'Accept trade', `data-of="accept" data-id="${o.id}"`);
+      `${q ? 'The window isn’t open, so the trade waits and goes through when it opens (checked again then). After that your' : 'The players move now. Your'} wage bill goes from ${money(bill(mine))} to <b>${money(a.bill)}</b>, ${a.over ? `<b class="of-over">${money(a.bill - cap())} over the cap</b>` : `<b>${money(a.room)}</b> room`}. ${penaltyLine(bill(mine), a.bill)}`,
+      q ? 'Accept (waits for the window)' : 'Accept trade', `data-of="accept" data-id="${o.id}"`);
   } else if (asked === 'reject') {
     confirm = confirmBody(key, `Reject ${esc(clubName(other))}’s offer?`, 'The offer closes and nobody moves. Your wage bill stays the same. To change the deal instead, use Counter.',
       'Reject offer', `data-of="reject" data-id="${o.id}"`);
@@ -391,7 +423,7 @@ function tradeTab() {
   if (!t.other) return `<section class="lg-card"><div class="lg-card-head"><h2>New trade</h2><span class="of-meta">Players only, no cash</span></div><p class="of-lead">Pick a club to trade with.</p>${picker}</section>${offersCard()}`;
   const mine = squadOf(S.my), theirs = squadOf(t.other);
   const tv = tradeView({ mine, theirs, give: t.give, get: t.get, cap: cap(), limit: limit(), rules: rules(), them: clubName(t.other) });
-  const w = windowReason(win()), plain = w || (tv.empty ? 'Put at least one player in the deal.' : ''), off = plain || tv.me.why || tv.them.why;
+  const w = null, plain = w || (tv.empty ? 'Put at least one player in the deal.' : ''), off = plain || tv.me.why || tv.them.why;
   const counterOf = t.counter ? (S.st.offers_in || []).find(o => o.id === t.counter) : null;
   if (t.counter && !counterOf) t.counter = null;   // the offer it answered has closed: this is a new trade now
   const panel = (code, side, list, chosen, total, label) => `<div class="of-panel of-k"${kStyle(code)}>
@@ -530,8 +562,10 @@ main.addEventListener('click', e => {
   const nameOf = pid => playerById(pid)?.name || 'The player';
   if (['ask-release', 'ask-sign', 'ask-accept', 'ask-reject'].includes(k)) { ui.confirm = { kind: k.slice(4), id }; ui.err = null; ui.note = null; ui.focus = 'confirm'; return render(); }
   if (k === 'cancel') { closeConfirm(); return render(); }
-  if (k === 'release') return act(`rel-${id}`, () => api.release(id), () => `${nameOf(id)} released. He is a free agent now.`, 'squad');
-  if (k === 'sign') return act(`sign-${id}`, () => api.sign(id), () => `${nameOf(id)} signed. Your wage bill is ${money(bill(squadOf(S.my)))}.`, 'market');
+  const q = waiting();   // 0093: decided before the move, since the reload may open the window
+  if (k === 'release') return act(`rel-${id}`, () => api.release(id), () => (q ? `${nameOf(id)}’s release is waiting for the window. It goes through when it opens.` : `${nameOf(id)} released. He is a free agent now.`), 'squad');
+  if (k === 'sign') return act(`sign-${id}`, () => api.sign(id), () => (q ? `Signing ${nameOf(id)} is waiting for the window. It goes through when it opens, if he is still a free agent.` : `${nameOf(id)} signed. Your wage bill is ${money(bill(squadOf(S.my)))}.`), 'market');
+  if (k === 'qcancel') return act(`q-${id}`, () => api.queueCancel(Number(id)), () => 'Taken back. Nothing will happen when the window opens.', 'squad');
   if (k === 'mpos') { ui.mkt.pos = v; return render(); }
   if (k === 'trade-with') { history.replaceState(null, '', `#trade/${v}`); ui.trade = { other: v, give: [], get: [], counter: null }; ui.err = null; return render(); }
   if (k === 'trade-reset') { ui.trade = { other: null, give: [], get: [], counter: null }; history.replaceState(null, '', '#trade'); return render(); }
@@ -546,7 +580,7 @@ main.addEventListener('click', e => {
     return act('trade', () => (t.counter ? api.counter(t.counter, t.give, t.get) : api.offer(t.other, t.give, t.get)),
       () => { ui.trade = { other: t.other, give: [], get: [], counter: null }; return `${t.counter ? 'Counter-offer' : 'Offer'} sent to ${clubName(t.other)}. It shows under Offers until they answer.`; }, 'trade');
   }
-  if (k === 'accept') return act(`offer-${id}`, () => api.respond(Number(id), true), () => 'Trade done. The players have moved.', 'offers');
+  if (k === 'accept') return act(`offer-${id}`, () => api.respond(Number(id), true), () => (q ? 'Trade agreed. It waits for the window and goes through when it opens.' : 'Trade done. The players have moved.'), 'offers');
   if (k === 'reject') return act(`offer-${id}`, () => api.respond(Number(id), false), () => 'Offer rejected.', 'offers');
   if (k === 'withdraw') return act(`offer-${id}`, () => api.withdraw(Number(id)), () => 'Offer withdrawn.', 'offers');
   if (k === 'counter') {

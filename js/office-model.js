@@ -27,7 +27,8 @@ export const pts = n => `${n} point${n === 1 ? '' : 's'}`;
 
 export const POSITIONS = ['GK', 'DEF', 'MID', 'FWD'];
 export const POS_NAME = { GK: 'Goalkeepers', DEF: 'Defenders', MID: 'Midfielders', FWD: 'Forwards' };
-export const DEFAULT_RULES = { GK: { min: 2, max: 2 }, DEF: { min: 5, max: 5 }, MID: { min: 5, max: 5 }, FWD: { min: 4, max: 4 } };
+// 0093: a minimum for each position, no maximum, and 15 to 16 players in all.
+export const DEFAULT_RULES = { GK: { min: 1, max: Infinity }, DEF: { min: 4, max: Infinity }, MID: { min: 3, max: Infinity }, FWD: { min: 3, max: Infinity }, squad: { min: 15, max: 16 } };
 
 export const money = n => `${n < 0 ? '−' : ''}$${Math.abs(Math.round(Number(n) || 0)).toLocaleString('en-AU')}`;
 export const short = n => {
@@ -40,7 +41,8 @@ export const bill = squad => (squad || []).reduce((t, p) => t + wageOf(p), 0);
 // The roster rules from office_state().roster.positions ({ GK: { min, max, count } }) or the draft's defaults.
 export const rulesFrom = roster => {
   const out = {};
-  for (const pos of POSITIONS) { const r = roster?.positions?.[pos]; out[pos] = r ? { min: Number(r.min), max: Number(r.max) } : { ...DEFAULT_RULES[pos] }; }
+  for (const pos of POSITIONS) { const r = roster?.positions?.[pos]; out[pos] = r ? { min: Number(r.min), max: r.max == null ? Infinity : Number(r.max) } : { ...DEFAULT_RULES[pos] }; }
+  out.squad = { min: Number(roster?.squad_min ?? DEFAULT_RULES.squad.min), max: Number(roster?.squad_max ?? DEFAULT_RULES.squad.max) };
   return out;
 };
 export function rosterOf(squad, rules = DEFAULT_RULES) {
@@ -51,7 +53,8 @@ export function rosterOf(squad, rules = DEFAULT_RULES) {
     positions[pos] = { min: r.min, max: r.max, count };
     shortBy += Math.max(0, r.min - count); overBy += Math.max(0, count - r.max);
   }
-  return { positions, short: shortBy, over: overBy };
+  const sq = rules.squad || DEFAULT_RULES.squad;
+  return { positions, short: shortBy, over: overBy, total: (squad || []).length, squadMin: sq.min, squadMax: sq.max };
 }
 
 // How much a club needs a player in this position, for the Market's default order (positions you are short at first, then ones with room).
@@ -59,7 +62,8 @@ export const NEED = ['Full', 'Room', 'Need'];
 export function need(position, roster) {
   const g = roster?.positions?.[position];
   if (!g) return 0;
-  return g.count < g.min ? 2 : g.count < g.max ? 1 : 0;
+  if (g.count < g.min) return 2;
+  return g.count < g.max && !(roster.total >= roster.squadMax) ? 1 : 0;
 }
 
 const ids = list => new Set((list || []).map(p => (typeof p === 'object' ? p.id : p)));
@@ -85,13 +89,12 @@ export function check({ squad, cap, limit = 0, rules = DEFAULT_RULES, out = [], 
     return `${you ? 'Your' : `${name}’s`} wage bill would be ${money(b1)}, ${money(b1 - cap)} over the ${money(cap)} cap${limit ? ` (${money(limit)} over at most)` : ''}.`;
   }
   const r0 = rosterOf(squad, rules), r1 = rosterOf(next, rules);
-  // Any position over its maximum that the move makes bigger (as the database: not the total over, which a swap could leave the same).
-  const pos = POSITIONS.find(p => r1.positions[p].count > r1.positions[p].max && r1.positions[p].count > r0.positions[p].count);
-  if (pos) {
-    return `${you ? 'You' : name} would have too many ${POS_NAME[pos].toLowerCase()} (${r1.positions[pos].max} at most).`;
-  }
-  if (r1.short > Math.max(1, r0.short)) {
-    return `${you ? 'You' : name} would be ${r1.short} players short. A squad can be one short at most: sign or trade for a player first.`;
+  // As the database (0093): a position under its minimum that the move makes smaller; more than the squad's most; fewer than its least.
+  const pos = POSITIONS.find(p => r1.positions[p].count < r1.positions[p].min && r1.positions[p].count < r0.positions[p].count);
+  if (pos) return `${you ? 'You' : name} would have too few ${POS_NAME[pos].toLowerCase()} (${r1.positions[pos].min} at least).`;
+  if (r1.total > r1.squadMax && r1.total > r0.total) return `${you ? 'You' : name} would have ${r1.total} players (${r1.squadMax} at most).`;
+  if (r1.total < r1.squadMin && r1.total < r0.total) {
+    return `${you ? 'You' : name} would have only ${r1.total} players (${r1.squadMin} at least): sign or trade for a player first.`;
   }
   return null;
 }

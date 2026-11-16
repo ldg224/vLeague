@@ -3,6 +3,7 @@
 do $$
 declare t1 text; fa text; fa2 text; s1 text; fa_s text; st jsonb; cl jsonb; rep jsonb; res jsonb; n int; b int; capv int; s public.office_settings;
 begin
+  update public.office_settings set squad_min = 11;   -- 0093: live squads may already be at 15; these tests are about the cap, not squad size
   -- ---- the ladder
   perform pg_temp.ok('ladder: ' || x.o || ' over -> ' || x.p, public.office_penalty_points(x.o) = x.p, coalesce(public.office_penalty_points(x.o)::text, 'null'))
   from (values (-500, 0), (0, 0), (1, 1), (5000, 1), (5001, 3), (10000, 3), (10001, 6), (15000, 6), (15001, 10), (20000, 10), (20001, 15),

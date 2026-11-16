@@ -1,7 +1,7 @@
 // The Office's localhost preview (office.html?preview): made-up clubs, players, offers and moves, and an api that makes the moves in memory with the
 // same checks as the database, so the page can be looked at and screenshotted without signing in. Nothing here touches the database.
 //   previewOffice({ mine, office, window: 'open' | 'closed' | 'round', short: 'DEF' | 'none', over: 6200 (your bill that far over the cap), applied }) -> { clubs, api }
-import { check, bill, POSITIONS, rosterOf, penaltyPoints, DEFAULT_LIMIT } from './office-model.js';
+import { check, bill, POSITIONS, rosterOf, penaltyPoints, DEFAULT_LIMIT, DEFAULT_RULES } from './office-model.js';
 
 const CLUBS = [
   ['TUR', 'Turin United', '#1d3f8a', '#ffffff'], ['SKS', 'Skyline SC', '#c62828', '#ffffff'], ['CCF', 'Coast City FC', '#0f7b6c', '#f2f2f2'],
@@ -66,11 +66,18 @@ export function previewOffice({ mine = 'TUR', office = false, window = 'open', s
   const myCode = office ? null : mine;
   const status = () => (window === 'round' ? 'round' : cfg.window_open ? 'open' : 'closed');
   const need = () => { const st = status(); if (st === 'closed') throw new Error('The transfer window is closed.'); if (st === 'round') throw new Error('No moves while a round is being played (from the line-up lock to the last game).'); };
-  const rules = { GK: { min: 2, max: 2 }, DEF: { min: 5, max: 5 }, MID: { min: 5, max: 5 }, FWD: { min: 4, max: 4 } };
+  const rules = { ...DEFAULT_RULES };   // 0093: minimums per position, no maximum, 15 to 16 players
   const ok = (code, out, inn) => { const why = check({ squad: sq(code), cap: cfg.cap, limit: cfg.over_limit, rules, out, inn, name: code }); if (why) throw new Error(why); };
   const byId = id => players.find(p => p.id === id);
   const later = v => new Promise(res => setTimeout(() => res(v), 150));
-  const roster = code => { const ro = rosterOf(sq(code), rules); return { positions: ro.positions, short: ro.short }; };
+  const roster = code => { const ro = rosterOf(sq(code), rules); return { positions: Object.fromEntries(Object.entries(ro.positions).map(([k, g]) => [k, { ...g, max: null }])), short: ro.short, total: ro.total, squad_min: ro.squadMin, squad_max: ro.squadMax }; };
+  // 0093: while the window is not open, moves wait here (the preview has no clock: they stay waiting until the page is reloaded with the window open).
+  const queue = [];
+  let queueId = 900;
+  const waits = () => status() !== 'open';
+  const queueJson = x => ({ ...x, player: x.player ? json(byId(x.player)) : null,
+    give: x.offer ? x.offer.give.map(byId).filter(Boolean).map(json) : null, get: x.offer ? x.offer.get.map(byId).filter(Boolean).map(json) : null,
+    from_club: x.offer?.from_club, to_club: x.offer?.to_club });
   const offerJson = o => ({ ...o, give: o.give.map(byId).filter(Boolean).map(json), get: o.get.map(byId).filter(Boolean).map(json) });
 
   const api = {
@@ -80,7 +87,8 @@ export function previewOffice({ mine = 'TUR', office = false, window = 'open', s
       return later({ club: myCode, cap: cfg.cap, wage_bill: b, room: cfg.cap - b, over_cap: b > cfg.cap,
         over_limit: cfg.over_limit, limit: cfg.cap + cfg.over_limit, over: Math.max(0, b - cfg.cap), penalty_points: penaltyPoints(b - cfg.cap), penalties_applied: Boolean(applied),
         window: { status: status(), open: status() === 'open', window_open: cfg.window_open, opens_at: cfg.opens_at, closes_at: cfg.closes_at, round_week: window === 'round' ? 6 : null },
-        releases: { limit: cfg.releases_per_window, used, left: Math.max(0, cfg.releases_per_window - used) }, roster: roster(myCode), squad: sq(myCode).map(json),
+        releases: { limit: cfg.releases_per_window, used, left: Math.max(0, cfg.releases_per_window - used), queued: queue.filter(x => x.status === 'queued' && x.kind === 'release').length },
+        roster: roster(myCode), squad: sq(myCode).map(json), queue: queue.map(queueJson).reverse(),
         offers_in: offers.filter(o => o.status === 'pending' && o.to_club === myCode).map(offerJson),
         offers_out: offers.filter(o => o.status === 'pending' && o.from_club === myCode).map(offerJson) });
     },
@@ -88,8 +96,13 @@ export function previewOffice({ mine = 'TUR', office = false, window = 'open', s
     players: async () => players.map(p => ({ ...p })),
     moves: async () => moves.map(m => ({ ...m })),
     async release(id) {
-      need(); const p = byId(id);
+      const p = byId(id);
       if (!p || p.team !== myCode) throw new Error('That player is not in your squad.');
+      if (waits()) {
+        if (queue.some(x => x.status === 'queued' && x.kind === 'release' && x.player === id)) throw new Error('His release is already waiting for the window.');
+        queue.push({ id: ++queueId, kind: 'release', club: myCode, player: id, status: 'queued', created_at: new Date().toISOString() });
+        return later(null);
+      }
       if (used >= cfg.releases_per_window) throw new Error(`You have used all ${cfg.releases_per_window} releases for this window.`);
       ok(myCode, [p], []);
       const b0 = bill(sq(myCode)); p.team = ''; used++;
@@ -97,16 +110,19 @@ export function previewOffice({ mine = 'TUR', office = false, window = 'open', s
       return later(moveId);
     },
     async sign(id) {
-      need(); const p = byId(id);
+      const p = byId(id);
       if (!p) throw new Error('No such player.');
       if (p.team) throw new Error(`That player is not a free agent (he is at ${p.team}).`);
+      if (waits()) {
+        queue.push({ id: ++queueId, kind: 'sign', club: myCode, player: id, status: 'queued', created_at: new Date().toISOString() });
+        return later(null);
+      }
       ok(myCode, [], [p]);
       const b0 = bill(sq(myCode)); p.team = myCode;
       log('sign', myCode, null, [], [id], b0, bill(sq(myCode)));
       return later(moveId);
     },
-    async offer(to, give, get) {
-      need();
+    async offer(to, give, get) {   // 0093: offers any time
       if (!give.length && !get.length) throw new Error('Put at least one player in the deal.');
       ok(myCode, give.map(byId), get.map(byId)); ok(to, get.map(byId), give.map(byId));
       offers.unshift({ id: ++offerId, from_club: myCode, to_club: to, give, get, status: 'pending', reply_to: null, created_at: new Date().toISOString() });
@@ -116,8 +132,12 @@ export function previewOffice({ mine = 'TUR', office = false, window = 'open', s
       const o = offers.find(x => x.id === id);
       if (!o || o.status !== 'pending') throw new Error('That offer is no longer open.');
       if (!yes) { o.status = 'rejected'; return later(null); }
-      need();
       ok(o.from_club, o.give.map(byId), o.get.map(byId)); ok(o.to_club, o.get.map(byId), o.give.map(byId));
+      if (waits()) {
+        o.status = 'queued';
+        queue.push({ id: ++queueId, kind: 'trade', club: o.to_club, other_club: o.from_club, offer: o, status: 'queued', created_at: new Date().toISOString() });
+        return later(null);
+      }
       const b0 = bill(sq(o.from_club)), o0 = bill(sq(o.to_club));
       o.give.forEach(pid => { byId(pid).team = o.to_club; }); o.get.forEach(pid => { byId(pid).team = o.from_club; });
       o.status = 'accepted';
@@ -130,6 +150,13 @@ export function previewOffice({ mine = 'TUR', office = false, window = 'open', s
       const nid = await api.offer(o.from_club, give, get);
       o.status = 'countered'; offers[0].reply_to = id;
       return nid;
+    },
+    async queueCancel(id) {
+      const x = queue.find(q => q.id === id);
+      if (!x || x.status !== 'queued') throw new Error('That move is no longer waiting.');
+      x.status = 'cancelled'; x.note = 'taken back';
+      if (x.offer) x.offer.status = 'withdrawn';
+      return later(null);
     },
     async withdraw(id) { const o = offers.find(x => x.id === id); if (!o || o.status !== 'pending') throw new Error('That offer is no longer open.'); o.status = 'withdrawn'; return later(null); },
   };
