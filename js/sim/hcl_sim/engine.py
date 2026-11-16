@@ -588,7 +588,9 @@ class Match:
         if penalty and rng.random() < 0.12:
             aim_y = 34 + rng.uniform(-0.8, 0.8)
         d_goal = math.hypot(gx - b.x, 34 - b.y)
-        calm = (not header and not penalty and d_goal < 16.0) * (1.0 - clamp(pressure, 0.0, 1.0))   # B-45: time and space close in
+        # Outfield pressure only: the keeper coming out is what a one on one is, not a reason to snatch at it.
+        press_out = decisions.pressure_on(*T.to_att(p.x, p.y), [(*T.to_att(o.x, o.y), 0, o) for o in self.other(T).active() if not o.is_gk])
+        calm = (not header and not penalty and d_goal < 16.0) * (1.0 - clamp(press_out, 0.0, 1.0))   # B-45: time and space close in
         aim_z = self._shot_height(p, header, gk, gx, calm)
         keeper_guess = None
         power = 0.55 + 0.45 * rng.random() * (0.5 + 0.5 * finishing)
@@ -716,12 +718,14 @@ class Match:
             dive = self.gk_dive.get(q.idx)
             ext = TUNING['gk_reach_dive'] if dive and self.t >= dive['at'] else TUNING['gk_reach_stand']
             return ext if z < 2.65 else 0.0
+        # B-45: a defender throws himself in front of a shot (a stretched leg or the body), so he gets to more of them than a pass.
+        extra = TUNING['shot_block_reach'] if (self.ball.flight or {}).get('kind') == 'shot' else 0.0
         if z < 0.6:
             # Harder to get a foot to a fast ball.
             sp = math.hypot(self.ball.vx, self.ball.vy)
-            return 0.95 - clamp((sp - 10) * 0.03, 0.0, 0.35)
+            return 0.95 - clamp((sp - 10) * 0.03, 0.0, 0.35) + extra
         if z < 1.7:
-            return 0.6
+            return 0.6 + extra
         if z < 2.75:
             return 0.5 + 0.1 * q.a('heading')
         return 0.0
@@ -836,8 +840,13 @@ class Match:
                 if rng.random() < p_block:
                     self._resolve_shot('blocked')
                     self.ev('block', q)
-                    # Blocked shots lose most of their pace and scatter off the defender's body.
-                    self._deflect(q, 0.15, 0.45, 60)
+                    # B-45: his keeper was set for the shot; with it blocked he gets up and reads the ball again instead of finishing a dive
+                    # for a shot that never came (blocked shots were trickling in past him as own goals).
+                    for gk in self.team_of(q).active():
+                        if gk.is_gk:
+                            self.gk_dive.pop(gk.idx, None)
+                    # Blocked shots lose most of their pace and glance off the defender's body, off the line of the shot (often behind for a corner).
+                    self._deflect(q, 0.15, 0.45, 50, min_deg=TUNING['shot_block_turn'])
                 else:
                     q.touch_ready_at = self.t + 0.6
             return
@@ -888,11 +897,13 @@ class Match:
                 self._resolve_pass('intercepted', q)
             self._deflect(q, 0.25, 0.55, 55)
 
-    def _deflect(self, q, lo, hi, spread_deg):
+    def _deflect(self, q, lo, hi, spread_deg, min_deg=0.0):
         b = self.ball
         rng = self.rng
         k = rng.uniform(lo, hi)
-        vx, vy = rotate(b.vx * k, b.vy * k, math.radians(rng.gauss(0, spread_deg)))
+        ang = rng.gauss(0, spread_deg)
+        ang += math.copysign(min_deg, ang)
+        vx, vy = rotate(b.vx * k, b.vy * k, math.radians(ang))
         b.vx, b.vy = vx, vy
         b.vz = abs(b.vz) * 0.3 + (rng.uniform(0, 2.5) if b.z > 0.3 else 0.0)
         b.last_touch = q
@@ -1408,11 +1419,15 @@ class Match:
             bx, by = team.to_att(b.x, b.y)
             off_line = self.offside_x(team)
             presser = second = None
+            danger = False
             if holder is not None and not in_poss and not b.in_hands:
                 ranked = sorted((p for p in team.active() if not p.is_gk),
                                 key=lambda p: dist(p.x, p.y, holder.x, holder.y) / p.vmax())
                 presser = ranked[0] if ranked else None
-                hx, _ = team.to_att(holder.x, holder.y)
+                hx, hy = team.to_att(holder.x, holder.y)
+                # B-45: a carrier within shooting range of our goal: the nearest man closes him down from the goal side and the next one
+                # drops into the shooting lane, instead of both chasing the ball from behind or marking the pass.
+                danger = math.hypot(hx, hy - 34) < TUNING['def_danger_range']
                 if len(ranked) > 1 and (hx < 38 or team.tactic('pressing') > 0.65):
                     second = ranked[1]
             for p in team.active():
@@ -1431,6 +1446,16 @@ class Match:
                 if p is presser:
                     lead = 0.25
                     p.tx, p.ty = holder.x + holder.vx * lead, holder.y + holder.vy * lead
+                    if danger:
+                        gx_, gy_ = team.from_att(0.0, 34.0)
+                        ux, uy, _ = unit(gx_ - p.tx, gy_ - p.ty)
+                        p.tx, p.ty = p.tx + ux * TUNING['def_close_goalside'], p.ty + uy * TUNING['def_close_goalside']
+                    p.urgency = 3
+                    continue
+                if p is second and danger:
+                    gx_, gy_ = team.from_att(0.0, 34.0)
+                    ux, uy, _ = unit(gx_ - holder.x, gy_ - holder.y)
+                    p.tx, p.ty = holder.x + ux * TUNING['def_lane_depth'], holder.y + uy * TUNING['def_lane_depth']
                     p.urgency = 3
                     continue
                 if p is second:

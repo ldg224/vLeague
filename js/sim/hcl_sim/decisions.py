@@ -257,7 +257,7 @@ def _shot_option(c, penalty=False, header=False, force=False, free_kick=False):
         return None     # speculative efforts from distance are rare
     # Players with a good long shot back themselves from distance when they have a sight of goal (S-40: less than they did, since too many
     # shots came from outside the box).
-    appetite = TUNING['shot_appetite'] * (TUNING['long_shot_appetite'] + 0.6 * long_shots if d > 18 else 1.0)
+    appetite = TUNING['shot_appetite'] * (TUNING['long_shot_appetite'] + TUNING['long_shot_skill'] * long_shots if d > 18 else 1.0)
     utility = xg * appetite * 1.15 - (1 - xg) * 0.004
     return {'kind': 'shoot', 'xg': xg, 'utility': utility, 'windup': 0.3 if not penalty else 1.0,
             'target': c.to_pitch(PITCH_LENGTH, 34), 'receiver': None, 'p': xg, 'subtype': 'penalty' if penalty else 'open'}

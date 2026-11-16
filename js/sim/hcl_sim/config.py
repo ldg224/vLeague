@@ -65,8 +65,9 @@ TUNING = {
     'decision_temperature_poor': 0.020,
     'risk_aversion': 1.0,
     'shot_appetite': 0.68,
-    'long_shot_min_xg': 0.035,    # S-40: below this xG a shot from beyond 20 m is not considered (it was 0.03)
-    'long_shot_appetite': 0.62,   # appetite multiplier beyond 18 m is this + 0.6 x long shots (it was 0.7 + 0.7 x)
+    'long_shot_min_xg': 0.03,     # S-40: below this xG a shot from beyond 20 m is not considered (it was 0.03)
+    'long_shot_appetite': 0.68,   # appetite multiplier beyond 18 m is this + long_shot_skill x long shots (step 2 had 0.62 + 0.6 x; original 0.7 + 0.7 x)
+    'long_shot_skill': 0.7,       # S-40: and this x long shots on top
     'carry_in_value': 0.6,        # B-45: a drive toward goal with nobody in the way is worth this share of the shot from the end of it
     'xg_clear_bonus': 0.45,       # B-45: xG logit added for a clean sight of goal (no blockers, no pressure), full at 12 m, none from 20 m
     'shot_clear_calm': 0.3,       # B-45: shot error cut for an unhurried shot close in (no pressure, under 16 m)
@@ -79,6 +80,11 @@ TUNING = {
     # Defending runs in behind (B-45)
     'track_run_range': 18.0,      # metres from his own spot within which a defender picks up a runner
     'track_run_weight': 0.8,      # how fully he goes with the runner (scaled by marking, plus positioning)
+    'def_danger_range': 28.0,     # B-45: a carrier this close to our goal is closed down from the goal side, and a second man drops into the shooting lane
+    'def_close_goalside': 1.2,    # metres goal-side of the carrier the presser aims for
+    'def_lane_depth': 3.5,        # metres goal-side of the carrier the second man takes up, in the lane to goal
+    'shot_block_turn': 25.0,      # degrees a blocked shot is at least turned off its line
+    'shot_block_reach': 0.2,      # metres added to an outfield player's reach for a shot (a block is a lunge, not a controlled touch)
 
     # Duels
     'tackle_rate': 0.075,          # tackle attempts per second when in range
