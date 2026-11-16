@@ -85,6 +85,18 @@ class Match:
     def other(self, team):
         return self.away if team is self.home else self.home
 
+    def _update_mood(self):
+        """The score and the clock lean on how a team plays (0.4.0): from minute TUNING['mood_from_min'] a team behind chases the game more and more
+        (quicker, more direct, higher line, more pressing, more shots: Team.tactic and decisions._shot_option), and a team ahead protects its lead
+        a little (the opposite, at TUNING['mood_protect'] of the strength). Level, nothing changes."""
+        if not self.period:
+            return
+        gm = ((0 if self.period == 1 else HALF_SECONDS) + min(max(0.0, self.t - self.period_start), HALF_SECONDS)) / 60
+        late = clamp((gm - TUNING['mood_from_min']) / (90 - TUNING['mood_from_min']), 0.0, 1.0)
+        for team in (self.home, self.away):
+            d = self.score[team.side] - self.score[1 - team.side]
+            team.mood = late * (1.0 if d < 0 else -TUNING['mood_protect'] if d > 0 else 0.0)
+
     def offside_x(self, team):
         return tactics.offside_line(team, self.other(team).players)
 
@@ -321,6 +333,8 @@ class Match:
         for team in (self.home, self.away):
             if team.boost and self.t >= team.boost['next']:
                 self._boost_check(team)
+        if self.tick % 10 == 0:
+            self._update_mood()
         b = self.ball
         if self.script:
             self._script_tick()

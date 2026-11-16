@@ -259,6 +259,9 @@ def _shot_option(c, penalty=False, header=False, force=False, free_kick=False):
     # shots came from outside the box).
     appetite = TUNING['shot_appetite'] * (TUNING['long_shot_appetite'] + TUNING['long_shot_skill'] * long_shots if d > 18 else 1.0)
     utility = xg * appetite * 1.15 - (1 - xg) * 0.004
+    mood = getattr(c.team, 'mood', 0.0)
+    if mood > 0:
+        utility *= 1 + TUNING['chase_shot'] * mood   # chasing the game late on: have a go (0.4.0)
     return {'kind': 'shoot', 'xg': xg, 'utility': utility, 'windup': 0.3 if not penalty else 1.0,
             'target': c.to_pitch(PITCH_LENGTH, 34), 'receiver': None, 'p': xg, 'subtype': 'penalty' if penalty else 'open'}
 

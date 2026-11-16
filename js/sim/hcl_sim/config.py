@@ -109,4 +109,7 @@ TUNING = {
 
     # Control
     'first_touch_base': 3.8,
+    'mood_from_min': 55,         # 0.4.0: from this minute the score starts to lean on a team's settings (Match._update_mood), fully by 90
+    'mood_protect': 0.6,         # a team ahead leans this much (as a fraction of a full -1) toward protecting the lead
+    'chase_shot': 0.5,           # shot appetite added at full chasing mood (x1.5)
 }

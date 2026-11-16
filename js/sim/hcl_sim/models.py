@@ -4,6 +4,10 @@ from dataclasses import dataclass, field
 
 from .config import PITCH_LENGTH, PITCH_WIDTH
 
+# How far the match situation moves a team's settings at full mood (Team.mood +1 = chasing the game late on, -1 = protecting a lead):
+# chasing, a team plays quicker and more direct, pushes up and presses; protecting a lead, it slows down and drops off (0.4.0).
+MOOD_PUSH = {'tempo': 0.35, 'directness': 0.35, 'line_height': 0.3, 'pressing': 0.35, 'width': 0.15}
+
 
 @dataclass(eq=False)
 class Player:
@@ -82,6 +86,7 @@ class Team:
     captain: str = ''
     boost: dict = None       # Boosted captain (S-33): the state teams.apply_boost sets up and Match._boost_check updates; None when not used
     form: float = 0.0       # per-match skill modifier applied in teams.build_team (fraction, +/- 0.05)
+    mood: float = 0.0       # -1 protecting a lead late on .. +1 chasing the game late on (0.4.0, set by Match._update_mood)
     side: int = 0
     direction: int = 1       # +1 attacks toward x = 105, -1 toward x = 0
 
@@ -99,7 +104,10 @@ class Team:
 
     def tactic(self, name, default=0.5):
         v = self.tactics.get(name)
-        return default if v is None else max(0.0, min(1.0, v))
+        v = default if v is None else v
+        if self.mood and name in MOOD_PUSH:
+            v += self.mood * MOOD_PUSH[name]   # the match situation leans on the manager's settings (0.4.0, Match._update_mood)
+        return max(0.0, min(1.0, v))
 
 
 @dataclass
