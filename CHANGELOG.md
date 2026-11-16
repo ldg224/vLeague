@@ -5,7 +5,9 @@ Every published version of the vLeague app. Newest first. How versions work and 
 
 ## 1.37.4 (2026-11-16)
 
-Headlines: Stakes chances match the fixtures
+Headlines: Stakes chances match the fixtures, and every missed shot shows on the shot map
+
+**Fixed (B-44, B-40):** on the shot map, the little goal beside a picked shot only reached 0.8 m past each post, and most misses go wider than that (some 20 m or more), so they didn't show at all; the ones that did were a thin ring that was hard to see. The goal now has more room around it, a shot beyond that is pinned to the edge with a dashed ring, misses are a bold ring, and the Result line says how far wide it went ("Off target, 3 m wide") or "over the bar". The player page's Shots map also widens to show a shot from far out instead of cutting it off.
 
 **Fixed (B-41):** Stakes showed different win chances from the fixtures and match pages (SKS v NGY: 43% home win in Stakes, 62% on the fixtures). Stakes used its own model plus a random error of about 12%. It now uses the site's win chance, worked out the same way (line-ups, results so far, form, home ground, head to head), and shows the same whole percentages. The random error is gone, and so is its setting in the Editor. Prices follow the chance until each match kicks off, so a later game in a round moves with the results before it. A pick already placed keeps the payout it was locked in at.
 Database change: yes, 0090_stakes_site_chance.sql (already applied).

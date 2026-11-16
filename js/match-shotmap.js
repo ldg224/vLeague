@@ -64,10 +64,23 @@ const PITCH = '<g class="sm-lines"><rect x="0" y="0" width="105" height="68" rx=
   + '<circle cx="11" cy="34" r=".5" class="sm-spot"/><circle cx="94" cy="34" r=".5" class="sm-spot"/><path class="sm-goal" d="M0 30.34h-1.6v7.32H0M105 30.34h1.6v7.32H105"/></g>';
 
 // The goal as the shooter sees it, standing on the pitch facing it, with the shot where it crossed the line (the home club shoots at the left goal of the map, the away club at the right).
+// The picture runs 2.6 m past each post and 1.4 m over the bar (in tenths of a metre). Most misses go wider than that, some by 20 m or more, so a shot beyond the picture
+// is pinned to its edge with a dashed ring, and the Result line says how far wide it went (B-44: misses used to fall outside the picture and not show at all).
+const MOUTH = { x0: -26, x1: 99.2, y0: -14, y1: 30 }, MD_R = 4.6;
 function mouth(s) {
-  const e = s.e, has = e.end_y != null, x = (has ? (s.home ? MID + GOAL_W / 2 - s.endY : s.endY - (MID - GOAL_W / 2)) : 0) * 10, y = (GOAL_H - clamp(e.end_z ?? 0, 0, 3)) * 10;
+  const e = s.e, has = e.end_y != null, x = (has ? (s.home ? MID + GOAL_W / 2 - s.endY : s.endY - (MID - GOAL_W / 2)) : 0) * 10, y = (GOAL_H - Math.max(0, e.end_z ?? 0)) * 10;
+  const px = clamp(x, MOUTH.x0 + MD_R, MOUTH.x1 - MD_R), py = clamp(y, MOUTH.y0 + MD_R, MOUTH.y1 - MD_R), out = px !== x || py !== y;
   const net = Array.from({ length: 7 }, (_, i) => `M${(i + 1) * 9.15} 0V24.4`).join('') + Array.from({ length: 3 }, (_, i) => `M0 ${(i + 1) * 6.1}H73.2`).join('');
-  return `<svg class="sm-mouth" viewBox="-8 -6 89.2 36" aria-hidden="true"><path class="sm-net" d="${net}"/><path class="sm-frame" d="M0 24.4V0h73.2v24.4"/>${has ? `<circle class="sm-md ${kind(s)}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.4"/>` : ''}</svg>`;
+  return `<svg class="sm-mouth" viewBox="${MOUTH.x0} ${MOUTH.y0} ${MOUTH.x1 - MOUTH.x0} ${MOUTH.y1 - MOUTH.y0}" aria-hidden="true"><path class="sm-ground" d="M${MOUTH.x0} 24.4H${MOUTH.x1}"/><path class="sm-net" d="${net}"/><path class="sm-frame" d="M0 24.4V0h73.2v24.4"/>${has ? `<circle class="sm-md ${kind(s)}${out ? ' is-out' : ''}" cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${MD_R}"/>` : ''}</svg>`;
+}
+
+// The Result line: an off-target shot also says how far wide it went, or that it went over.
+export function resultText(s) {
+  const e = s.e, base = RESULT[s.result] || s.result;
+  if (s.result !== 'off_target' || e.end_y == null) return base;
+  const wide = Math.abs(e.end_y - MID) - GOAL_W / 2, over = (e.end_z ?? 0) - GOAL_H;
+  if (wide > 0.05) return `${base}, ${wide < 1 ? wide.toFixed(1) : Math.round(wide)} m wide`;
+  return over > 0 ? `${base}, over the bar` : base;
 }
 
 export function shotMapCard(fx, file, ctx, st) {
@@ -88,7 +101,7 @@ export function shotMapCard(fx, file, ctx, st) {
   const ring = sel ? `${sel.endY != null ? `<line class="sm-trail" x1="${sel.X.toFixed(2)}" y1="${sel.Y.toFixed(2)}" x2="${sel.home ? 0 : 105}" y2="${sel.endY.toFixed(2)}"/>` : ''}<circle class="sm-ring${sel.result === 'goal' ? ' is-goal' : ''}" cx="${sel.X.toFixed(2)}" cy="${sel.Y.toFixed(2)}" r="${(radius(sel) + 1.3).toFixed(2)}"/>` : '';
   const who = sel ? `${ctx.crest(ctx.team(sel.team), 28)}<b>${esc(nameOf(sel) || ctx.club(sel.team)?.short_name || ctx.team(sel.team).name)}</b>` : '';
   const head = sel ? `<div class="sm-pick"><span class="sm-who">${who}</span><span class="sm-step"><button type="button" class="sm-arrow" data-sm-step="-1" aria-label="Previous shot"${idx <= 0 ? ' disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button><b>${esc(sel.minute)}′</b><button type="button" class="sm-arrow" data-sm-step="1" aria-label="Next shot"${idx >= list.length - 1 ? ' disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button></span></div>
-      <div class="sm-detail"><dl class="sm-facts"><div><dt>Shot type</dt><dd>${esc(sel.type)}</dd></div><div><dt>Situation</dt><dd>${esc(sel.situation)}</dd></div><div><dt>Result</dt><dd>${esc(RESULT[sel.result] || sel.result)}</dd></div></dl>
+      <div class="sm-detail"><dl class="sm-facts"><div><dt>Shot type</dt><dd>${esc(sel.type)}</dd></div><div><dt>Situation</dt><dd>${esc(sel.situation)}</dd></div><div><dt>Result</dt><dd>${esc(resultText(sel))}</dd></div></dl>
       <div class="sm-xg">${mouth(sel)}<div><b>${f2(sel.xg)}</b><span>xG</span></div><div><b>${f2(sel.xgot)}</b><span>xGOT</span></div></div></div>` : '';
   return `<section class="lg-card st sm" aria-labelledby="sm-h"><div class="sm-per-row">${pills}</div><div class="st-head"><h2 id="sm-h" class="st-title">Shot map</h2></div>
     <div class="sm-body">${all.length ? `${head}<svg class="sm-pitch" viewBox="-3.5 -3 112 74" role="group" aria-label="Shot map">${PITCH}${ring}${dots}</svg>${list.length ? '' : '<p class="empty">No shots in this half.</p>'}` : '<p class="empty">No shots in this match.</p>'}</div></section>`;
@@ -114,6 +127,8 @@ export function playerShotMap(list, st, o) {
   const sel = list.find(s => s.id === st.sel) || [...list].reverse().find(s => s.result === 'goal') || list[list.length - 1];
   st.sel = sel.id;
   const idx = list.indexOf(sel);
+  // Half a pitch from 40 m out, wider when a shot came from further back (B-40: a long-range shot was cut off).
+  const x0 = Math.floor(Math.min(40, ...list.map(s => s.X - radius(s) - 1.5)));
   const dots = list.map(s => {
     const r = radius(s), common = `class="sm-dot ${kind(s)}${s === sel ? ' is-sel' : ''}" style="--k:${esc(o.colour)}" data-sm-shot="${esc(s.id)}" tabindex="0" role="button" aria-label="${esc(`${s.minute}′, ${RESULT[s.result] || s.result}, ${f2(s.xg)} xG`)}"`;
     return s.result === 'goal' ? `<g ${common} transform="translate(${s.X.toFixed(2)} ${s.Y.toFixed(2)}) scale(${r.toFixed(2)})"><circle r="1" class="sm-ball"/>${BALL}</g>`
@@ -125,8 +140,8 @@ export function playerShotMap(list, st, o) {
   const chip = (k, v) => `<span><b>${v}</b>${k}</span>`;
   return `<div class="pm-chips">${chip('Shots', list.length)}${chip('Goals', goals)}${chip('On target', `${Math.round((100 * on) / list.length)}%`)}${chip('xG', xg.toFixed(2))}${chip('xG a shot', (xg / list.length).toFixed(2))}</div>
     <div class="sm-pick"><span class="sm-who">${o.label(sel)}</span><span class="sm-step">${arrowBtn(-1, idx <= 0, 'm15 6-6 6 6 6')}<b>${esc(sel.minute)}′</b>${arrowBtn(1, idx >= list.length - 1, 'm9 6 6 6-6 6')}</span></div>
-    <div class="sm-detail"><dl class="sm-facts"><div><dt>Shot type</dt><dd>${esc(sel.type)}</dd></div><div><dt>Situation</dt><dd>${esc(sel.situation)}</dd></div><div><dt>Result</dt><dd>${esc(RESULT[sel.result] || sel.result)}</dd></div></dl>
+    <div class="sm-detail"><dl class="sm-facts"><div><dt>Shot type</dt><dd>${esc(sel.type)}</dd></div><div><dt>Situation</dt><dd>${esc(sel.situation)}</dd></div><div><dt>Result</dt><dd>${esc(resultText(sel))}</dd></div></dl>
     <div class="sm-xg">${mouth(sel)}<div><b>${f2(sel.xg)}</b><span>xG</span></div><div><b>${f2(sel.xgot)}</b><span>xGOT</span></div></div></div>
-    <svg class="sm-pitch" viewBox="40 -3 68.5 74" role="group" aria-label="Shot map, attacking the right-hand goal">${PITCH}${ring}${dots}</svg>
+    <svg class="sm-pitch" viewBox="${x0} -3 ${108.5 - x0} 74" role="group" aria-label="Shot map, attacking the right-hand goal">${PITCH}${ring}${dots}</svg>
     <p class="pp-note">Click a shot to see where it went. Every shot is shown attacking the same goal, whichever way his team was kicking.</p>`;
 }
