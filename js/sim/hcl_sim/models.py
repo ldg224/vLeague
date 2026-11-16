@@ -1,4 +1,4 @@
-"""Players, teams and the ball: the physical state of a match."""
+﻿"""Players, teams and the ball: the physical state of a match."""
 
 from dataclasses import dataclass, field
 
@@ -6,7 +6,7 @@ from .config import PITCH_LENGTH, PITCH_WIDTH
 
 # How far the match situation moves a team's settings at full mood (Team.mood +1 = chasing the game late on, -1 = protecting a lead):
 # chasing, a team plays quicker and more direct, pushes up and presses; protecting a lead, it slows down and drops off (0.4.0).
-MOOD_PUSH = {'tempo': 0.35, 'directness': 0.35, 'line_height': 0.3, 'pressing': 0.35, 'width': 0.15}
+MOOD_PUSH = {'tempo': 0.5, 'directness': 0.45, 'line_height': 0.4, 'pressing': 0.5, 'width': 0.2}
 
 
 @dataclass(eq=False)
