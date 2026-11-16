@@ -3,6 +3,18 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.42.0 (2026-11-16)
+
+Headlines: Office notices on the Overview
+
+**Added:** a small card on the Overview tells you what's new in the Office:
+- trade offers waiting for you
+- answers to your offers (accepted, turned down or countered)
+- that the transfer window is open, and when it closes
+
+"See the offers" or "Open the Office" takes you straight there. Each notice shows once; close the card and it only comes back when there's something new.
+Database change: none.
+
 ## 1.41.0 (2026-11-16)
 
 Headlines: Cap penalty points
