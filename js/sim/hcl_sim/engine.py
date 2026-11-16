@@ -474,7 +474,7 @@ class Match:
         b.in_hands = False
         b.last_touch = p
         b.flight = {'kind': 'shot' if kind == 'shoot' else subtype, 'kicker': p, 'receiver': opt.get('receiver'),
-                    'event': e, 't': self.t, 'protected': kind == 'shoot' and self.protect_next, 'sure': kind == 'shoot' and self.sure_next}
+                    'event': e, 't': self.t, 'x0': b.x, 'y0': b.y, 'protected': kind == 'shoot' and self.protect_next, 'sure': kind == 'shoot' and self.sure_next}
         self.protect_next = False
         self.sure_next = False
         p.touch_ready_at = self.t + 0.4
@@ -580,17 +580,21 @@ class Match:
 
         # Aim: inside a post, usually away from the keeper; better finishers aim tighter.
         inset = 0.35 + 0.9 * (1 - finishing)
-        if gk and rng.random() < 0.75:
+        d_goal = math.hypot(gx - b.x, 34 - b.y)
+        # Outfield pressure only: the keeper coming out is what a one on one is, not a reason to snatch at it.
+        opps_out = [(*T.to_att(o.x, o.y), 0, o) for o in self.other(T).active() if not o.is_gk]
+        press_out = decisions.pressure_on(*T.to_att(p.x, p.y), opps_out)
+        # B-45: time and space close in, with a clear sight of goal (nobody in the way): a one on one, not a shot through a crowd.
+        clear = not header and not penalty and d_goal < TUNING['shot_calm_range'] and decisions.blockers_in_cone(*T.to_att(b.x, b.y), opps_out) == 0
+        calm = clear * (1.0 - clamp(press_out, 0.0, 1.0))
+        inset += TUNING['shot_calm_inset'] * calm   # B-45: with time he picks a spot inside the post and passes it there, not at the post
+        if gk and rng.random() < 0.75 + 0.2 * calm:
             side = GOAL_Y1 if gk.y > 34 else GOAL_Y2
         else:
             side = rng.choice((GOAL_Y1, GOAL_Y2))
         aim_y = side + inset if side == GOAL_Y1 else side - inset
         if penalty and rng.random() < 0.12:
             aim_y = 34 + rng.uniform(-0.8, 0.8)
-        d_goal = math.hypot(gx - b.x, 34 - b.y)
-        # Outfield pressure only: the keeper coming out is what a one on one is, not a reason to snatch at it.
-        press_out = decisions.pressure_on(*T.to_att(p.x, p.y), [(*T.to_att(o.x, o.y), 0, o) for o in self.other(T).active() if not o.is_gk])
-        calm = (not header and not penalty and d_goal < 16.0) * (1.0 - clamp(press_out, 0.0, 1.0))   # B-45: time and space close in
         aim_z = self._shot_height(p, header, gk, gx, calm)
         keeper_guess = None
         power = 0.55 + 0.45 * rng.random() * (0.5 + 0.5 * finishing)
@@ -719,7 +723,13 @@ class Match:
             ext = TUNING['gk_reach_dive'] if dive and self.t >= dive['at'] else TUNING['gk_reach_stand']
             return ext if z < 2.65 else 0.0
         # B-45: a defender throws himself in front of a shot (a stretched leg or the body), so he gets to more of them than a pass.
-        extra = TUNING['shot_block_reach'] if (self.ball.flight or {}).get('kind') == 'shot' else 0.0
+        # Only for a man already goal-side of the shooter (in the line of it); one coming across from the side cannot throw himself into it.
+        f = self.ball.flight or {}
+        extra = 0.0
+        if f.get('kind') == 'shot' and f.get('kicker') is not None:
+            kt = self.team_of(f['kicker'])
+            if kt.to_att(q.x, q.y)[0] > kt.to_att(f.get('x0', f['kicker'].x), f.get('y0', f['kicker'].y))[0] + 0.5:
+                extra = TUNING['shot_block_reach']
         if z < 0.6:
             # Harder to get a foot to a fast ball.
             sp = math.hypot(self.ball.vx, self.ball.vy)
@@ -1555,6 +1565,12 @@ class Match:
                     w = clamp(TUNING['track_run_weight'] * (0.5 + 0.5 * p.a('marking')) + 0.3 * p.a('positioning'), 0.0, 0.95)
                     tracking = True
                 ax, ay = ax + (mx - ax) * w, ay + (my - ay) * w
+            if not tracking and p.line == 'DEF' and bx < TUNING['def_compact_range']:
+                # B-45: with the ball near our box the back line narrows toward the posts and stays tight, so a pass or carry between
+                # centre-back and full-back does not leave a man clean through.
+                k = TUNING['def_compact'] * clamp((TUNING['def_compact_range'] - bx) / 15.0, 0.0, 1.0)
+                ay += (34 + (by - 34) * 0.35 - ay) * k
+                urgency = max(urgency, 2)
             if tracking:
                 urgency = 3
             elif pax > bx + 4 and p.line != 'FWD':
