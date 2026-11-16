@@ -8,6 +8,7 @@
 //   windowFromSettings(settings row, now) -> { status, ... } for pages with no office_state()
 //   keepPicks(ids, squad) -> the trade builder's picks still at that club
 //   tradeView({ mine, theirs, give, get, cap, rules, me, them }) -> the value meter's numbers and both clubs' checks
+//   need(position, roster) -> 2 the club is short there, 1 it has room, 0 the position is full (the Market's smart order)
 
 export const POSITIONS = ['GK', 'DEF', 'MID', 'FWD'];
 export const POS_NAME = { GK: 'Goalkeepers', DEF: 'Defenders', MID: 'Midfielders', FWD: 'Forwards' };
@@ -36,6 +37,14 @@ export function rosterOf(squad, rules = DEFAULT_RULES) {
     shortBy += Math.max(0, r.min - count); overBy += Math.max(0, count - r.max);
   }
   return { positions, short: shortBy, over: overBy };
+}
+
+// How much a club needs a player in this position, for the Market's default order (positions you are short at first, then ones with room).
+export const NEED = ['Full', 'Room', 'Need'];
+export function need(position, roster) {
+  const g = roster?.positions?.[position];
+  if (!g) return 0;
+  return g.count < g.min ? 2 : g.count < g.max ? 1 : 0;
 }
 
 const ids = list => new Set((list || []).map(p => (typeof p === 'object' ? p.id : p)));
