@@ -3,6 +3,13 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.37.4 (2026-11-16)
+
+Headlines: Stakes chances match the fixtures
+
+**Fixed (B-41):** Stakes showed different win chances from the fixtures and match pages (SKS v NGY: 43% home win in Stakes, 62% on the fixtures). Stakes used its own model plus a random error of about 12%. It now uses the site's win chance, worked out the same way (line-ups, results so far, form, home ground, head to head), and shows the same whole percentages. The random error is gone, and so is its setting in the Editor. Prices follow the chance until each match kicks off, so a later game in a round moves with the results before it. A pick already placed keeps the payout it was locked in at.
+Database change: yes, 0090_stakes_site_chance.sql (already applied).
+
 ## 1.37.3 (2026-11-11)
 
 Headlines: The ball stays in the picture
