@@ -837,6 +837,8 @@ class Match:
                 self._resolve_pass('intercepted', q)
                 # Blocked crosses keep going roughly the same way (often behind for a corner).
                 self._deflect(q, 0.3, 0.6, 30 if f.get('kind') in ('cross', 'corner') else 60)
+                if f.get('kind') in ('cross', 'corner'):
+                    self._maybe_behind(q, TUNING['behind_block'])
             else:
                 q.touch_ready_at = self.t + 0.4
             return
@@ -871,6 +873,7 @@ class Match:
                             self.gk_dive.pop(gk.idx, None)
                     # Blocked shots lose most of their pace and glance off the defender's body, off the line of the shot (often behind for a corner).
                     self._deflect(q, 0.15, 0.45, 50, min_deg=TUNING['shot_block_turn'])
+                    self._maybe_behind(q, TUNING['behind_block'])
                 else:
                     q.touch_ready_at = self.t + 0.6
             return
@@ -920,6 +923,23 @@ class Match:
             else:
                 self._resolve_pass('intercepted', q)
             self._deflect(q, 0.25, 0.55, 55)
+            if not teammate and f.get('kind') in ('cross', 'corner', 'shot'):
+                self._maybe_behind(q, TUNING['behind_miscue'])
+
+    def _maybe_behind(self, q, p):
+        """0.4.0: a defender's touch on a cross, corner or shot near his own goal often goes behind for a corner, as in real matches (where most
+        corners come from blocked crosses and shots). Called after a deflection: with chance p, the ball is sent toward his own goal line, always
+        wide of the posts (never an own goal), at a deadened pace."""
+        T = self.team_of(q)
+        b = self.ball
+        ax, ay = T.to_att(q.x, q.y)
+        if ax > 25 or self.rng.random() >= p:
+            return
+        ty = GOAL_Y2 + self.rng.uniform(2.5, 12) if ay > PITCH_WIDTH / 2 else GOAL_Y1 - self.rng.uniform(2.5, 12)
+        wx, wy = T.from_att(-3.0, ty)
+        ux, uy, _ = unit(wx - b.x, wy - b.y)
+        sp = max(7.0, math.hypot(b.vx, b.vy) * self.rng.uniform(0.45, 0.75))
+        b.vx, b.vy = ux * sp, uy * sp
 
     def _deflect(self, q, lo, hi, spread_deg, min_deg=0.0):
         b = self.ball
