@@ -5,7 +5,7 @@ back, so nothing is left behind: scratch drafts are made and thrown away, and pl
     python supabase/tests/draft/run.py 02 03            # only those batches (by number)
     python supabase/tests/draft/run.py --pre path.sql   # apply a migration inside the test transaction first (try it before applying it for real)
 
-Needs the Management API token in ~/.vleague/supabase-token.txt (see CLAUDE.md in the workspace). Read-only for real data.
+Needs the Management API token in ~/.supabase/token.txt (see CLAUDE.md in the workspace). Read-only for real data.
 Batches: 01 control and picks, 02 the clock, 03 office tools and holes (taking a pick back), 04 queues and permissions,
 05 active times (random property tests, DST), 06 the 0041 hardening. Each prints PASS or FAIL per check.
 """
@@ -13,7 +13,7 @@ import json, os, sys, urllib.error, urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).parent
-TOKEN = (Path.home() / '.vleague' / 'supabase-token.txt').read_text().strip()
+TOKEN = (Path.home() / '.supabase' / 'token.txt').read_text().strip()
 REF = 'ywkhjpfzqtfssbxbvnbl'
 TAIL = 'select name, ok, detail from t_log order by n;\nrollback;\n'
 

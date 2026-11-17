@@ -1,6 +1,6 @@
 import json,sys,urllib.request,urllib.error
 from pathlib import Path
-T=(Path.home()/'.vleague'/'supabase-token.txt').read_text().strip()
+T=(Path.home()/'.supabase'/'token.txt').read_text().strip()
 def q(sql):
     r=urllib.request.Request('https://api.supabase.com/v1/projects/ywkhjpfzqtfssbxbvnbl/database/query',data=json.dumps({'query':sql}).encode(),headers={'Authorization':'Bearer '+T,'Content-Type':'application/json','User-Agent':'vl/1'})
     try: return json.load(urllib.request.urlopen(r,timeout=150))

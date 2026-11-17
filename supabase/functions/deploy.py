@@ -2,7 +2,7 @@
 
     python supabase/functions/deploy.py invite-manager
 
-Needs the Management API token in C:\\Users\\offic\\.vleague\\supabase-token.txt (never commit it). The function gets
+Needs the Management API token in ~/.supabase/token.txt (never commit it). The function gets
 SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY from Supabase itself; no secrets live in this repo.
 """
 import json
@@ -12,7 +12,7 @@ import uuid
 from pathlib import Path
 
 REF = 'ywkhjpfzqtfssbxbvnbl'
-TOKEN = (Path.home() / '.vleague' / 'supabase-token.txt').read_text().strip()
+TOKEN = (Path.home() / '.supabase' / 'token.txt').read_text().strip()
 # These check their own secret or signed link (pg_cron and email links carry no session), so Supabase must not
 # require a signed-in caller. Every other function does.
 OPEN = {'send-reminders', 'email-unsubscribe'}

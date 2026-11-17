@@ -2,7 +2,7 @@
 
 Acts as a guest (anon), a manager of FC Turtle, a manager with no club, and the league office, and checks what
 each can read and change. Every check runs inside a transaction that is rolled back, so nothing is left behind.
-Needs the Management API token in C:\\Users\\offic\\.vleague\\supabase-token.txt (never commit it).
+Needs the Management API token in ~/.supabase/token.txt (never commit it).
 
     python supabase/tests/rls_check.py
 """
@@ -12,7 +12,7 @@ import urllib.request
 from pathlib import Path
 
 REF = 'ywkhjpfzqtfssbxbvnbl'
-TOKEN = (Path.home() / '.vleague' / 'supabase-token.txt').read_text().strip()
+TOKEN = (Path.home() / '.supabase' / 'token.txt').read_text().strip()
 FAKE_MANAGER = '00000000-0000-4000-8000-00000000a001'
 FAKE_NOCLUB = '00000000-0000-4000-8000-00000000a002'
 

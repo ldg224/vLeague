@@ -1,5 +1,5 @@
 """Office (S-35) database tests. Each test file runs after migrations 0091 and 0092 and _setup.sql inside one transaction that is rolled back,
-so nothing is left on the live project. Needs the Management API token in ~/.vleague/supabase-token.txt (never commit it).
+so nothing is left on the live project. Needs the Management API token in ~/.supabase/token.txt (never commit it).
 
     python supabase/tests/office/run.py              # every test file
     python supabase/tests/office/run.py 02_trades.sql
@@ -8,7 +8,7 @@ import json, sys, urllib.request, urllib.error
 from pathlib import Path
 
 HERE = Path(__file__).parent
-T = (Path.home() / '.vleague' / 'supabase-token.txt').read_text().strip()
+T = (Path.home() / '.supabase' / 'token.txt').read_text().strip()
 
 
 def q(sql):
