@@ -3,6 +3,12 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.44.1 (2026-11-22)
+
+**Fixed:** Record payment and the fee's Save button in Editor > Clubs stopped with "Cannot read properties of null (reading 'dataset')". Both work now.
+
+Database change: no.
+
 ## 1.44.0 (2026-11-22)
 
 Headlines: track the money you collect from each club

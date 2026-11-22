@@ -730,10 +730,10 @@ main.addEventListener('click', e => {
 main.addEventListener('submit', e => {
   e.preventDefault();
   if (e.target.classList.contains('ed-invite-club')) return invite(e.target);
-  if (e.target.classList.contains('ed-inline')) return saveInline(e.target, e.submitter);
-  if (e.target.id === 'add-clubs') return addClubs(e.target);
   if (e.target.classList.contains('ed-pay-form')) return addPayment(e.target);
   if (e.target.classList.contains('ed-fee-form')) return saveFee(e.target);
+  if (e.target.classList.contains('ed-inline')) return saveInline(e.target, e.submitter);
+  if (e.target.id === 'add-clubs') return addClubs(e.target);
   if (e.target.classList.contains('ed-return')) review(e.target.closest('.ed-request'), false, e.target.note.value);
 });
 main.addEventListener('change', e => {
