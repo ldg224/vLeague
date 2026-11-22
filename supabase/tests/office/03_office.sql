@@ -96,6 +96,23 @@ begin
   perform pg_temp.ok('settings: new dates on a closed window start a new window', st.window_started_at = now() and public.office_window_status() = 'open', st::text);
   perform pg_temp.ok('settings: offers made before stay open (0093: they only expire unanswered after 21 days)', (select status from public.office_offers where id = o) = 'pending');
 
+  -- 0094: switching the window on while its closing time has passed clears the old dates, so the window really opens
+  perform pg_temp.act('su');
+  update public.office_settings set window_open = false, opens_at = now() - interval '6 days', closes_at = now() - interval '5 days';
+  perform pg_temp.act('office');
+  st := public.office_save_settings('{"window_open": true}');
+  perform pg_temp.act('su');
+  perform pg_temp.ok('settings: YES with a passed closing time clears the dates and opens the window', st.opens_at is null and st.closes_at is null and public.office_window_status() = 'open', st::text);
+  update public.office_settings set window_open = false, opens_at = null, closes_at = now() + interval '2 days';
+  perform pg_temp.act('office');
+  st := public.office_save_settings('{"window_open": true}');
+  perform pg_temp.act('su');
+  perform pg_temp.ok('settings: YES keeps a closing time still to come', st.closes_at > now() and public.office_window_status() = 'open', st::text);
+  update public.office_settings set window_open = false, closes_at = null;
+  perform pg_temp.act('office');
+  st := public.office_save_settings(jsonb_build_object('window_open', true, 'closes_at', now() - interval '1 hour'));
+  perform pg_temp.ok('settings: a passed closing time sent with YES is kept as given', st.closes_at < now(), st::text);
+
   -- ---- the squad check for the office: a club made short shows, with its counts; managers cannot call it
   perform pg_temp.act('su');
   update public.players set club = null where id = pg_temp.pl('SKS', 'FWD', 1);

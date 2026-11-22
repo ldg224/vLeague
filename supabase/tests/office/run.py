@@ -20,7 +20,7 @@ def q(sql):
         return {'error': e.read().decode()[:2000]}
 
 
-mig = '\n'.join((HERE.parents[1] / 'migrations' / m).read_text(encoding='utf-8') for m in ('0091_office.sql', '0092_cap_penalties.sql', '0093_office_squads_queue.sql'))
+mig = '\n'.join((HERE.parents[1] / 'migrations' / m).read_text(encoding='utf-8') for m in ('0091_office.sql', '0092_cap_penalties.sql', '0093_office_squads_queue.sql', '0094_office_window_reopen.sql'))
 setup = (HERE / '_setup.sql').read_text(encoding='utf-8')
 files = [HERE / a for a in sys.argv[1:]] or sorted(p for p in HERE.glob('[0-9]*.sql'))
 passed = failed = 0

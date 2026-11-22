@@ -4,7 +4,7 @@
 // "Apply cap penalties" (office_apply_cap_penalties, a confirm listing each club's points) with Undo (office_undo_cap_penalties).
 //   officeView() -> the tab's shell;  mountOffice({ db, esc, explain }) -> fills it in
 //   localInput(iso) / fromLocal(value) -> a date for <input type="datetime-local"> and back (exported for the tests)
-import { money, POSITIONS, pts } from './office-model.js';
+import { money, POSITIONS, pts, windowFromSettings } from './office-model.js';
 import { snapshotInputs, restoreInputs } from './paint.js';
 
 export const officeView = () => '<h1>Office</h1><div id="of-ed"><p class="quiet">Loading…</p></div>';
@@ -93,7 +93,16 @@ export async function mountOffice({ db, esc, explain }) {
   function draw() {
     if (!S) { root.innerHTML = `<p class="${bad ? 'err' : 'quiet'}">${esc(msg || 'Office settings did not load.')}</p>`; return; }
     const snap = snapshotInputs(root);   // flipping the window or an undo redraws the tab: keep what was typed in the form and not saved
-    const on = S.window_open;
+    // The switch and the dates together (22 Nov 2026: the switch said YES while a passed closing time kept the window shut, and nothing said so).
+    const on = S.window_open, w = windowFromSettings(S), live = w.open;
+    const state = w.status === 'closed' && on ? 'passed' : !on ? 'off' : w.status;
+    const head = live ? 'OPEN' : state === 'not_yet' ? 'OPENS SOON' : 'CLOSED';
+    const said = {
+      open: `Managers can release, sign and trade${w.closes_at ? `, until ${esc(day(w.closes_at))}` : ' until you switch it off'}. Moves made while a round is being played wait until it ends.`,
+      not_yet: `The switch is on, and the window opens ${esc(day(w.opens_at))}. Moves made before then wait in the queue.`,
+      passed: `The switch is on, but the closing time (${esc(day(w.closes_at))}) has passed. Press YES again to reopen it: that clears the old dates.`,
+      off: 'Moves managers make now wait in the queue and go through when the window opens.',
+    }[state];
     const rows = moves.map(m => `<li class="ed-ofmove${m.undone_at ? ' undone' : ''}">
         <span><span class="ed-ofk">${m.kind === 'release' ? 'Release' : m.kind === 'sign' ? 'Signing' : 'Trade'}</span>${moveText(m)}
           <small>${esc(day(m.made_at))} · ${esc(m.club)} bill ${money(m.bill_before)} → ${money(m.bill_after)}${m.other_club ? ` · ${esc(m.other_club)} ${money(m.other_before)} → ${money(m.other_after)}` : ''}${m.undone_at ? ` · undone ${esc(day(m.undone_at))}` : ''}</small></span>
@@ -101,7 +110,7 @@ export async function mountOffice({ db, esc, explain }) {
           ? `<span class="ed-ofask">Put the players back?<button type="button" data-of-undo="${m.id}" class="danger">Undo move</button><button type="button" data-of-cancel>Keep</button></span>`
           : `<button type="button" data-of-ask="${m.id}">Undo</button>`}
       </li>`).join('');
-    root.innerHTML = `<section class="dr-vis ${on ? 'on' : 'off'}"><div><h2>TRANSFER WINDOW OPEN</h2><p>${on ? 'YES: managers can release, sign and trade (inside the dates below, and never while a round is being played).' : 'NO: the Office is look-only. Pending offers expire when the window closes.'}</p></div>
+    root.innerHTML = `<section class="dr-vis ${live ? 'on' : 'off'}"><div><h2>TRANSFER WINDOW ${head}</h2><p>${said}</p></div>
         <div class="dr-switch" role="group" aria-label="Transfer window open"><button type="button" data-of-flip="0" aria-pressed="${!on}">NO</button><button type="button" data-of-flip="1" aria-pressed="${on}">YES</button></div></section>
       ${msg ? `<p class="${bad ? 'err' : 'ed-hint'}" role="status">${esc(msg)}</p>` : ''}
       <form class="of-ed-form" novalidate>
@@ -112,7 +121,7 @@ export async function mountOffice({ db, esc, explain }) {
       <label>Fewest players <i>a squad may have (after a release)</i><input name="squad_min" type="number" min="11" max="40" value="${esc(S.squad_min ?? 15)}"></label>
       <label>Most players <i>a squad may have</i><input name="squad_max" type="number" min="11" max="40" value="${esc(S.squad_max ?? 16)}"></label>
       ${['GK', 'DEF', 'MID', 'FWD'].map(p => `<label>At least ${p} <i>no most</i><input name="min_${p}" type="number" min="0" max="11" value="${esc(S.pos_min?.[p] ?? { GK: 1, DEF: 4, MID: 3, FWD: 3 }[p])}"></label>`).join('')}</div></section>
-        <section class="ed-invite"><h2>Window dates</h2><p class="ed-hint">Optional. With the switch on, moves are allowed only between these times. Leave both empty to keep the window open until you switch it off.</p>
+        <section class="ed-invite"><h2>Window dates</h2><p class="ed-hint">Optional. With the switch on, moves are allowed only between these times. Leave both empty to keep the window open until you switch it off. Switching it on after the closing time has passed clears these dates.</p>
           <div class="ed-fields"><label>Opens <input name="opens_at" type="datetime-local" value="${localInput(S.opens_at)}"></label>
           <label>Closes <input name="closes_at" type="datetime-local" value="${localInput(S.closes_at)}"></label></div></section>
         <button type="submit" class="primary">Save Office settings</button>
@@ -127,7 +136,7 @@ export async function mountOffice({ db, esc, explain }) {
   root.addEventListener('click', e => {
     const b = e.target.closest('button');
     if (!b || busy) return;
-    if (b.dataset.ofFlip != null) return run(() => c.rpc('office_save_settings', { p: { window_open: b.dataset.ofFlip === '1' } }), b.dataset.ofFlip === '1' ? 'Window open. Managers can make moves.' : 'Window closed.');
+    if (b.dataset.ofFlip != null) return run(() => c.rpc('office_save_settings', { p: { window_open: b.dataset.ofFlip === '1' } }), b.dataset.ofFlip === '1' ? 'Saved: the switch is on.' : 'Window closed.');
     if (b.dataset.ofAsk) { ask = Number(b.dataset.ofAsk); return draw(); }
     if (b.dataset.ofCancel != null) { ask = null; return draw(); }
     if (b.dataset.ofAskpen != null) { ask = 'pen'; return draw(); }

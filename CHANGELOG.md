@@ -3,6 +3,18 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.43.0 (2026-11-22)
+
+Headlines: new squad rules, a move queue, and a transfer window switch you can trust
+
+**Added:** moves made while the transfer window is shut (releases, signings, accepted trades) now wait in a queue and go through when it opens, in order, each checked again then. A move that no longer works shows why. "Take back" cancels a waiting move. Offers can be sent any time and only expire after 21 days unanswered.
+
+**Changed:** squad rules from the league's poll: at least 1 GK, 4 DEF, 3 MID and 3 FWD, no most for any position, and 15 to 16 players (set in Editor > Office).
+
+**Fixed:** switching the transfer window to YES while an old closing time had passed left the window shut, with nothing on screen to say so. Switching it on now clears dates that have passed, and the Editor shows whether the window is really open, closed or opening soon, and when it closes.
+
+Database change: yes (0093 squad rules and queue, 0094 the window switch; both applied).
+
 ## 1.42.0 (2026-11-16)
 
 Headlines: Office notices on the Overview
