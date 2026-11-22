@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.44.0 (2026-11-22)
+
+Headlines: track the money you collect from each club
+
+**Added:** Editor > Clubs has a Money section in every club's panel. Record each payment (amount and an optional note), remove one if it was a mistake, and see the club's running total. An optional fee per club (top of Clubs) shows who has paid in full and who still owes, with a Paid or Owes pill on each club's row and a league total in the bar. Only the league office can see or change any of it.
+
+Database change: yes (0095 club money; applied).
+
 ## 1.43.0 (2026-11-22)
 
 Headlines: new squad rules, a move queue, and a transfer window switch you can trust
