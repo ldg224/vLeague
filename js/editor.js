@@ -27,7 +27,7 @@ const me = ctx.me, main = ctx.main;
 enableSelectMenus(main);   // every select in the Editor opens the Seasons-toggle style menu
 const TABS = { clubs: 'Clubs', players: 'Players', fixtures: 'Fixtures', news: 'News', goal: 'Goal of the week', draft: 'Draft', stakes: 'Stakes', office: 'Office', history: 'History', test: 'Test' };
 // `open` is which club panels and submissions are expanded, kept across redraws so nothing snaps shut after an action.
-let state = { clubs: [], requests: [], accounts: [], phones: null, deadlines: null, locked: [], season: null, digest: true, open: new Set() };
+let state = { clubs: [], requests: [], accounts: [], phones: null, payments: null, fee: null, deadlines: null, locked: [], season: null, digest: true, open: new Set() };
 let firstLoad = true;
 
 // The colour a club shows: its primary colour.
@@ -50,7 +50,7 @@ const crest = (path, code, cls = '') => (path
 
 async function load() {
   const c = await db();
-  const [list, req, acc, dl, ws, season, mine, ph] = await Promise.all([
+  const [list, req, acc, dl, ws, season, mine, ph, pay, cash] = await Promise.all([
     clubs(),
     c.from('club_requests').select('*').order('created_at', { ascending: false }).limit(500),
     c.rpc('office_accounts'),
@@ -59,10 +59,13 @@ async function load() {
     loadSeason().catch(() => null),
     prefs(),
     c.from('manager_phones').select('club, phone, updated_at'),
+    c.from('club_payments').select('id, club, amount_cents, paid_on, note').order('paid_on', { ascending: false }).order('id', { ascending: false }),
+    c.from('money_settings').select('fee_cents').maybeSingle(),
   ]);
   if (req.error || acc.error) throw new Error(explain(req.error || acc.error));
   state = {
     clubs: list, requests: req.data || [], accounts: acc.data || [], phones: ph.error ? null : ph.data || [],
+    payments: pay.error ? null : pay.data || [], fee: cash.error ? null : cash.data?.fee_cents ?? null,
     deadlines: dl.error ? null : dl.data || [], locked: ws.data || [], season, digest: mine.email.office_digest, open: state.open,
   };
   if (firstLoad) {   // clubs waiting on the office start open
@@ -161,10 +164,11 @@ function clubsView() {
   const loose = state.accounts.filter(a => !a.club);
   return `<h1>Clubs</h1>
     <div class="ed-bar">
-      <p class="ed-hint"><b>${live.length}</b> club${live.length === 1 ? '' : 's'}${waiting ? ` · <b>${waiting}</b> waiting for you` : ''}</p>
+      <p class="ed-hint"><b>${live.length}</b> club${live.length === 1 ? '' : 's'}${waiting ? ` · <b>${waiting}</b> waiting for you` : ''}${moneyHint(live)}</p>
       <div class="ed-actions"><button class="btn ghost small" type="button" data-act="phones-copy"${phones ? '' : ' disabled'}>Copy phone numbers</button></div>
     </div>
     <p class="ed-msg" id="bar-msg" role="status"></p>
+    ${moneyBar()}
     <label class="ed-digest"><input type="checkbox" data-act="digest"${state.digest ? ' checked' : ''}> Email me about clubs without a team<span class="ed-msg" role="status"></span></label>
     <input class="ed-find" type="search" placeholder="Find a club or manager" aria-label="Find a club or manager" autocomplete="off">
     <ul class="ed-club-list">${list.map(c => clubItem(c, by.get(c.code) || [])).join('')}</ul>
@@ -190,13 +194,14 @@ function clubItem(c, accts) {
     <details${state.open.has(key) ? ' open' : ''} data-key="${esc(key)}">
       <summary>${crest(c.crest_path, c.code)}
         <span class="who"><b>${esc(c.name)}</b><small>${esc(c.code)}${c.manager_name ? ` · ${esc(c.manager_name)}` : ''}${m ? ` · ${esc(m.email)}` : ''}</small></span>
-        <span class="ed-pill ${kind}">${esc(label)}</span></summary>
+        <span class="ed-pills">${moneyPill(c)}<span class="ed-pill ${kind}">${esc(label)}</span></span></summary>
       <div class="ed-panel">
         ${req ? `<section class="ed-sec">${requestCard(req)}</section>` : ''}
         <section class="ed-sec"><h3>Manager</h3>
           ${accts.length ? `<ul class="ed-accts">${accts.map(a => accountRow(a, false)).join('')}</ul>` : inviteForm(c)}
           <div class="ed-line" data-field="phone"><span>Phone</span><span class="ed-val">${phone ? `<a href="tel:${esc(phone.replace(/[^+\d]/g, ''))}">${esc(phone)}</a>` : '<span class="ed-pill warn">Not added yet</span>'}</span>${pen('phone', 'phone number')}<span class="ed-editor" hidden></span></div>
         </section>
+        ${moneySection(c)}
         <section class="ed-sec"><h3>Club details</h3>
           <table class="ed-diff">
             ${FIELDS.map(f => `<tr data-field="${f.key}"><th>${f.label}</th><td><span class="ed-val">${f.show(c)}</span>${pen(f.key, f.label.toLowerCase())}<span class="ed-editor" hidden></span></td></tr>`).join('')}
@@ -212,6 +217,111 @@ function clubItem(c, accts) {
         </section>
       </div>
     </details></li>`;
+}
+
+// ---------------------------------------------------------------- money (22 Nov 2026)
+// What the office has collected from each club: one row per payment, plus an optional fee per club so the Editor can
+// say who has paid in full and who still owes. Office only (supabase/migrations/0095_club_money.sql).
+
+const money = cents => new Intl.NumberFormat('en-AU', {
+  style: 'currency', currency: 'AUD', minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2,
+}).format(cents / 100);
+// "$50", "50", "12.5" or "1,200.00" → cents; null when it isn't an amount.
+function parseMoney(v) {
+  const t = String(v || '').trim().replace(/^\$/, '').replace(/,/g, '');
+  if (!/^\d+(\.\d{1,2})?$/.test(t)) return null;
+  return Math.round(Number(t) * 100);
+}
+const paymentsOf = code => (state.payments || []).filter(p => p.club === code);
+const paidBy = code => paymentsOf(code).reduce((n, p) => n + p.amount_cents, 0);
+const day = d => new Date(`${d}T00:00:00`).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+
+// [label, pill kind] for a club, or null when there's nothing to say.
+function moneyState(code) {
+  const paid = paidBy(code), fee = state.fee;
+  if (fee) {
+    if (paid >= fee) return [paid > fee ? `Paid ${money(paid)}` : 'Paid', 'approved'];
+    return [`Owes ${money(fee - paid)}`, 'warn'];
+  }
+  return paid ? [`Paid ${money(paid)}`, ''] : null;
+}
+
+function moneyHint(live) {
+  if (!state.payments) return '';
+  const total = state.payments.reduce((n, p) => n + p.amount_cents, 0);
+  if (!state.fee) return total ? ` · <b>${money(total)}</b> collected` : '';
+  const done = live.filter(c => paidBy(c.code) >= state.fee).length;
+  return ` · <b>${money(total)}</b> of ${money(state.fee * live.length)} collected · <b>${done}</b> of ${live.length} paid`;
+}
+
+// The fee every club is meant to pay. Optional: without it the Editor just adds up what came in.
+function moneyBar() {
+  if (!state.payments) return '<p class="ed-msg">Club money isn’t set up in the database yet.</p>';
+  return `<div class="ed-line ed-fee"><span>Fee per club</span>
+    <span>${state.fee ? `<b>${money(state.fee)}</b>` : '<span class="quiet">Not set</span>'}</span>
+    <button class="btn ghost small" type="button" data-act="fee-edit">${state.fee ? 'Change' : 'Set fee'}</button>
+    <form class="ed-inline ed-fee-form" hidden>
+      <input name="amount" inputmode="decimal" autocomplete="off" placeholder="Like 50" value="${state.fee ? esc((state.fee / 100).toFixed(state.fee % 100 ? 2 : 0)) : ''}" aria-label="Fee per club">
+      <button class="btn small">Save</button>
+      <button class="btn ghost small" type="button" data-act="fee-cancel">Cancel</button>
+      <small class="ed-hint-inline">Leave it empty to stop tracking a fee.</small><span class="ed-msg" role="status"></span></form></div>`;
+}
+
+function moneyPill(c) {
+  if (c.status === 'withdrawn' && !paidBy(c.code)) return '';
+  const s = moneyState(c.code);
+  return s ? `<span class="ed-pill ed-money-pill ${s[1]}">${esc(s[0])}</span>` : '';
+}
+
+function moneySection(c) {
+  if (!state.payments) return '';
+  const list = paymentsOf(c.code), paid = paidBy(c.code), s = moneyState(c.code);
+  return `<section class="ed-sec ed-money"><h3>Money ${s ? `<span class="ed-pill ${s[1]}">${esc(s[0])}</span>` : ''}</h3>
+    ${list.length ? `<ul class="ed-pays">${list.map(p => `<li class="ed-pay" data-id="${p.id}">
+        <b>${money(p.amount_cents)}</b><span>${esc(day(p.paid_on))}${p.note ? ` · ${esc(p.note)}` : ''}</span>
+        <button class="btn ghost small" type="button" data-act="pay-del">Remove</button>
+        <p class="ed-confirm" hidden>Remove this ${money(p.amount_cents)} payment?
+          <button class="btn small" type="button" data-act="pay-del-yes">Remove</button>
+          <button class="btn ghost small" type="button" data-act="pay-del-no">Cancel</button></p></li>`).join('')}
+      <li class="ed-pay ed-pay-total"><b>${money(paid)}</b><span>Total${state.fee ? ` of ${money(state.fee)}` : ''}</span></li></ul>`
+    : '<p class="quiet">Nothing collected yet.</p>'}
+    <form class="ed-inline ed-pay-form">
+      <input name="amount" inputmode="decimal" autocomplete="off" placeholder="Amount, like 20" aria-label="Amount collected" required>
+      <input name="note" maxlength="80" autocomplete="off" placeholder="Note, like cash (optional)" aria-label="Note">
+      <button class="btn small">Record payment</button><span class="ed-msg" role="status"></span></form>
+  </section>`;
+}
+
+async function addPayment(form) {
+  const msg = form.querySelector('.ed-msg'), btn = form.querySelector('button');
+  const cents = parseMoney(form.elements.amount.value);
+  if (!cents) { msg.textContent = 'Enter an amount, like 20 or 12.50.'; return; }
+  const club = form.closest('.ed-club').dataset.code, note = form.elements.note.value.trim().replace(/\s+/g, ' ') || null;
+  btn.disabled = true; msg.textContent = 'Saving…';
+  const { error } = await (await db()).from('club_payments').insert({ club, amount_cents: cents, note });
+  btn.disabled = false;
+  if (error) { msg.textContent = explain(error); return; }
+  form.reset();
+  await refresh();
+  const again = document.querySelector(`.ed-club[data-code="${CSS.escape(club)}"] .ed-pay-form .ed-msg`);
+  if (again) again.textContent = `Recorded ${money(cents)}.`;
+}
+
+async function deletePayment(row) {
+  row.querySelectorAll('button').forEach(b => { b.disabled = true; });
+  const { error } = await (await db()).from('club_payments').delete().eq('id', Number(row.dataset.id));
+  if (error) { row.querySelector('.ed-confirm').textContent = explain(error); return; }
+  await refresh();
+}
+
+async function saveFee(form) {
+  const msg = form.querySelector('.ed-msg'), raw = form.elements.amount.value.trim();
+  const cents = raw ? parseMoney(raw) : null;
+  if (raw && cents === null) { msg.textContent = 'Enter an amount, like 50.'; return; }
+  form.querySelectorAll('button').forEach(b => { b.disabled = true; }); msg.textContent = 'Saving…';
+  const { error } = await (await db()).from('money_settings').update({ fee_cents: cents || null, updated_at: new Date().toISOString() }).eq('id', 1);
+  if (error) { msg.textContent = explain(error); form.querySelectorAll('button').forEach(b => { b.disabled = false; }); return; }
+  await refresh();
 }
 
 // ---------------------------------------------------------------- editing (0.16)
@@ -600,6 +710,11 @@ main.addEventListener('click', e => {
   if (act === 'reopen-no') b.closest('.ed-confirm').hidden = true;
   if (act === 'reopen-yes') reopen(b.closest('.ed-sec'));
   if (act === 'phones-copy') copyPhones();
+  if (act === 'fee-edit') { const f = main.querySelector('.ed-fee-form'); f.hidden = false; b.hidden = true; f.elements.amount.focus(); }
+  if (act === 'fee-cancel') { b.closest('form').hidden = true; main.querySelector('[data-act="fee-edit"]').hidden = false; }
+  if (act === 'pay-del') { b.closest('.ed-pay').querySelector('.ed-confirm').hidden = false; b.hidden = true; }
+  if (act === 'pay-del-no') { const row = b.closest('.ed-pay'); row.querySelector('.ed-confirm').hidden = true; row.querySelector('[data-act="pay-del"]').hidden = false; }
+  if (act === 'pay-del-yes') deletePayment(b.closest('.ed-pay'));
   if (act === 'edit-cancel') closeEditor(b.closest('[data-field], [data-acct-field]'));
   if (act === 'unlink') askLink(b.closest('.ed-acct'), '');
   if (act === 'link-yes') link(b.closest('.ed-acct'), true);
@@ -617,6 +732,8 @@ main.addEventListener('submit', e => {
   if (e.target.classList.contains('ed-invite-club')) return invite(e.target);
   if (e.target.classList.contains('ed-inline')) return saveInline(e.target, e.submitter);
   if (e.target.id === 'add-clubs') return addClubs(e.target);
+  if (e.target.classList.contains('ed-pay-form')) return addPayment(e.target);
+  if (e.target.classList.contains('ed-fee-form')) return saveFee(e.target);
   if (e.target.classList.contains('ed-return')) review(e.target.closest('.ed-request'), false, e.target.note.value);
 });
 main.addEventListener('change', e => {
