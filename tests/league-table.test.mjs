@@ -149,6 +149,8 @@ test('cap penalties: pending from the players’ wages, not counted in PTS', () 
   assert.equal(a.pts, 4); assert.deepEqual(a.pen, { over: 6200, points: 3 });
   assert.equal(capPenalties(capped({ wage_bills: { DDD: 131000 } })).get('DDD').points, 3);   // given bills win over the players
   assert.equal(capPenalties({ ...games, players: [pl('AAA', 200000)] }).size, 0);   // no cap known: nothing pending
+  // 0096: release fees still standing are on the wage bill: BBB (120,000 of players) plus a 5,500 fee is 500 over
+  assert.deepEqual(capPenalties(capped({ release_fees: { BBB: 5500 } })).get('BBB'), { over: 500, points: 1 });
 });
 
 test('cap penalties: once applied, counted in PTS and not pending', () => {

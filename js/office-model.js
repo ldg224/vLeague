@@ -1,7 +1,9 @@
 // The Office's sums (S-35): plain functions with no page or database, so the tests can run them. They mirror the database's own checks
 // (supabase/migrations/0091_office.sql, office_check) so a button can say why it is off before anyone presses it; the database checks again either way.
 //   money(n) -> "$7,450"                        short(n) -> "$7.5k"
-//   bill(squad) -> the sum of the squad's wages  rosterOf(squad, rules) -> { GK: { min, max, count }, ... } and short
+//   bill(squad) -> the sum of the squad's wages, plus squad.fees (0096: the club's release fees, set by withFees)
+//   withFees(squad, fees) -> the squad array carrying its club's release fees   releaseFee(player) -> 10% of his wage
+//   rosterOf(squad, rules) -> { GK: { min, max, count }, ... } and short
 //   check({ squad, cap, limit, rules, out, in, code }) -> null when the move is allowed, else a plain sentence why not
 //   after({ squad, cap, out, in }) -> { bill, room, over, by, points }
 //   penaltyPoints(over) -> the cap penalty ladder (0092_cap_penalties.sql, office_penalty_points); LADDER its steps
@@ -36,7 +38,12 @@ export const short = n => {
   return v >= 1000 ? `${s}$${(v / 1000).toFixed(v % 1000 ? 1 : 0)}k` : `${s}$${v}`;
 };
 export const wageOf = p => Number(p?.wage ?? p?.value ?? 0) || 0;
-export const bill = squad => (squad || []).reduce((t, p) => t + wageOf(p), 0);
+// Release fees (0096_release_fees.sql): a release past the window's limit costs 10% of the player's wage, on the club's wage bill until the office
+// clears it. A squad array carries its club's fees as .fees, so every bill below (the cap, the penalty, a trade's sums) counts them.
+export const FEE_PCT = 10;
+export const releaseFee = p => Math.round(wageOf(p) / 10);   // as office_release_fee: the wage is whole dollars, so x.5 is exact and rounds up
+export const withFees = (squad, fees) => { const s = [...(squad || [])]; s.fees = Number(fees) || 0; return s; };
+export const bill = squad => (squad || []).reduce((t, p) => t + wageOf(p), 0) + (Number(squad?.fees) || 0);
 
 // The roster rules from office_state().roster.positions ({ GK: { min, max, count } }) or the draft's defaults.
 export const rulesFrom = roster => {
@@ -68,10 +75,11 @@ export function need(position, roster) {
 
 const ids = list => new Set((list || []).map(p => (typeof p === 'object' ? p.id : p)));
 // The squad after `out` leave and `inn` join (players as objects).
-export const squadAfter = (squad, out = [], inn = []) => { const gone = ids(out); return [...(squad || []).filter(p => !gone.has(p.id)), ...inn]; };
+// The fees go with it; `fee` adds one (a release past the limit).
+export const squadAfter = (squad, out = [], inn = [], fee = 0) => { const gone = ids(out); return withFees([...(squad || []).filter(p => !gone.has(p.id)), ...inn], (Number(squad?.fees) || 0) + fee); };
 
-export function after({ squad, cap, out = [], inn = [] }) {
-  const b = bill(squadAfter(squad, out, inn));
+export function after({ squad, cap, out = [], inn = [], fee = 0 }) {
+  const b = bill(squadAfter(squad, out, inn, fee));
   return { bill: b, room: cap - b, over: b > cap, by: Math.max(0, b - cap), points: penaltyPoints(b - cap) };
 }
 

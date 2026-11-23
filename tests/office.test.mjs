@@ -154,3 +154,20 @@ test('need: short of a position first, then room, then full (the Market order)',
   assert.equal(need('MID', r), 1);   // 5 of 4 to 6: room for one more
   assert.equal(need('GK', r), 0); assert.equal(need('XX', r), 0);
 });
+
+// 0096: release fees, 10% of the wage, carried on a squad as .fees, counted by every bill.
+test('release fees: on the bill, kept through moves, counted by the cap and the trade sums', async () => {
+  const { withFees, releaseFee, squadAfter } = await import('../js/office-model.js');
+  assert.equal(releaseFee(P('a', 'MID', 12345)), 1235);   // as office_release_fee: x.5 rounds up
+  assert.equal(releaseFee(P('a', 'MID', 7000)), 700);
+  const s = withFees(squad(), 1400);
+  assert.equal(bill(s), 113400);
+  assert.equal(bill(squadAfter(s, [s[5]])), 113400 - 7000);
+  assert.equal(after({ squad: s, cap: 125000, out: [s[5]], fee: 700 }).bill, 113400 - 7000 + 700);
+  // a signing that fits without the fees is over the cap with them
+  assert.equal(check({ squad: squad(), cap: 119000, inn: [P('x', 'MID', 7000)], rules: { ...rulesFrom(null), squad: { min: 15, max: 17 } } }), null);
+  assert.match(check({ squad: s, cap: 119000, inn: [P('x', 'MID', 7000)], rules: { ...rulesFrom(null), squad: { min: 15, max: 17 } } }), /over the/);
+  const tv = tradeView({ mine: s, theirs: squad(), give: ['p5'], get: [], cap: 125000, rules: { ...rulesFrom(null), squad: { min: 15, max: 17 } } });
+  assert.equal(tv.giveTotal, 7000);   // the players given, never the fees
+  assert.equal(tv.me.before, 113400);
+});

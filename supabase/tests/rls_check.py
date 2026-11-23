@@ -12,7 +12,7 @@ import urllib.request
 from pathlib import Path
 
 REF = 'ywkhjpfzqtfssbxbvnbl'
-TOKEN = (Path.home() / '.supabase' / 'token.txt').read_text().strip()
+TOKEN = next(p for p in (Path.home() / '.supabase' / 'token.txt', Path.home() / '.vleague' / 'supabase-token.txt') if p.exists()).read_text().strip()
 FAKE_MANAGER = '00000000-0000-4000-8000-00000000a001'
 FAKE_NOCLUB = '00000000-0000-4000-8000-00000000a002'
 

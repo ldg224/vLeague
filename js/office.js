@@ -17,7 +17,7 @@ import { icon } from './icons.js';
 import { portrait } from './portrait.js';
 import { plink } from './player-link.js';
 import { loadPlayers, forgetPlayers } from './players-data.js';
-import { POSITIONS, POS_NAME, NEED, money, bill, rulesFrom, rosterOf, check, after, need, windowText, windowReason, windowFromSettings, keepPicks, tradeView, fairness, when, penaltyPoints, penaltyChange, LADDER, pts, DEFAULT_LIMIT, squadAfter } from './office-model.js';
+import { POSITIONS, POS_NAME, NEED, money, bill, rulesFrom, rosterOf, check, after, need, windowText, windowReason, windowFromSettings, keepPicks, tradeView, fairness, when, penaltyPoints, penaltyChange, LADDER, pts, DEFAULT_LIMIT, squadAfter, withFees, releaseFee, FEE_PCT } from './office-model.js';
 import { sortRows, clickSort, sortHead, sortBar } from './sort-table.js';
 import { overall } from './names.js';
 import { accentFor, onColour, isHex } from './club-colour.js';
@@ -32,7 +32,7 @@ const POS_SHORT = { GK: 'GK', DEF: 'DEF', MID: 'MID', FWD: 'FWD' };
 
 // ---------------------------------------------------------------- data
 let api = null;          // { state(), players(), moves(), release(id), sign(id), offer(to, give, get), respond(id, yes), counter(id, give, get), withdraw(id) }
-let S = { st: null, players: [], clubs: [], moves: [], my: null, readOnly: '' };
+let S = { st: null, players: [], clubs: [], moves: [], fees: [], my: null, readOnly: '' };
 const ui = { confirm: null, err: null, note: null, busy: false, focus: null, mkt: { pos: 'ALL', q: '', max: '', fit: false }, sort: {}, trade: { other: null, give: [], get: [], counter: null } };
 
 const clubRow = code => S.clubs.find(c => c.code === code);
@@ -40,7 +40,9 @@ const team = code => { const r = clubRow(code); return { code, name: r?.name || 
 // A club's crest; a club with no crest uploaded shows its coloured initials (places.js would show an empty space).
 const crestOf = (code, px) => { const h = crest(team(code), px); return clubRow(code)?.crest_path ? h : h.replace('class="crest"', 'class="crest none"').replace(/<img[^>]*>/, ''); };
 const clubName = code => clubRow(code)?.short_name || clubRow(code)?.name || code;
-const squadOf = code => S.players.filter(p => p.team === code);
+// A club's squad, carrying its release fees still standing (0096), so bill() of it is the club's real wage bill.
+const feesOf = code => S.fees.filter(f => f.club === code);
+const squadOf = code => withFees(S.players.filter(p => p.team === code), feesOf(code).reduce((t, f) => t + Number(f.fee), 0));
 const playerById = id => S.players.find(p => p.id === id);
 const cap = () => Number(S.st?.cap ?? 125000);
 const limit = () => Number(S.st?.over_limit ?? DEFAULT_LIMIT);   // how far over the cap a club may go (0092)
@@ -65,6 +67,8 @@ function liveApi() {
     settings: async () => { const { data } = await (await db()).from('office_settings').select('*').eq('id', 1).maybeSingle(); return data; },
     players: () => { forgetPlayers(); return loadPlayers({ fresh: true }); },
     moves: async () => { const { data, error } = await (await db()).from('office_moves').select('*').order('made_at', { ascending: false }).limit(200); if (error) throw new Error(explain(error)); return data; },
+    // 0096: release fees still standing, every club's (an error, such as the table missing before the update, reads as none)
+    fees: async () => { const { data, error } = await (await db()).from('office_release_fees').select('id, club, player, wage, fee, created_at').is('cleared_at', null).order('created_at'); return error ? [] : data; },
     release: id => rpc('office_release', { p_player: id }),
     sign: id => rpc('office_sign', { p_player: id }),
     offer: (to, give, get) => rpc('office_offer', { p_to: to, p_give: give, p_get: get }),
@@ -76,8 +80,9 @@ function liveApi() {
 }
 
 async function load() {
-  const [st, players, moves] = await Promise.all([api.state().catch(e => ({ error: explain(e) })), api.players(), api.moves().catch(() => [])]);
-  S.players = players; S.moves = moves || [];
+  const [st, players, moves, fees] = await Promise.all([api.state().catch(e => ({ error: explain(e) })), api.players(), api.moves().catch(() => []),
+    api.fees ? api.fees().catch(() => []) : []]);
+  S.players = players; S.moves = moves || []; S.fees = fees || [];
   if (st?.error) {
     S.readOnly = st.error;
     const set = await api.settings?.().catch(() => null);
@@ -144,7 +149,7 @@ function penaltyNote(b) {
 function pendingBill() {
   const c = ui.confirm, mine = squadOf(S.my);
   if (!c) return null;
-  if (c.kind === 'release') return bill(mine.filter(p => p.id !== c.id));
+  if (c.kind === 'release') { const p = playerById(c.id); return p ? after({ squad: mine, cap: cap(), out: [p], fee: releasesLeft() <= 0 ? releaseFee(p) : 0 }).bill : null; }
   if (c.kind === 'sign') { const p = playerById(c.id); return p ? bill(mine) + p.value : null; }
   return null;
 }
@@ -174,7 +179,8 @@ function headCard() {
         <p><span>Wage bill</span><b>${money(b)}</b>${moved ? `<em class="${nb > b ? 'up' : 'down'}">${icon('arrow-right')}${money(nb)}</em>` : ''}</p>
         <p class="${b > c ? 'over' : ''}"><span>${b > c ? 'Over the cap by' : 'Room left'}</span><b>${money(Math.abs(c - b))}</b>${moved ? `<em class="${nb > c ? 'up' : 'down'}">${icon('arrow-right')}${nb > c ? `${money(nb - c)} over` : money(c - nb)}</em>` : ''}</p>
         ${b > c || (moved && nb > c) ? `<p class="${b > c ? 'over' : ''}"><span>Penalty</span><b>${penaltyPoints(b - c)}<small> ${penaltyPoints(b - c) === 1 ? 'point' : 'points'}</small></b>${moved && penaltyPoints(nb - c) !== penaltyPoints(b - c) ? `<em class="${nb > b ? 'up' : 'down'}">${icon('arrow-right')}${pts(penaltyPoints(nb - c))}</em>` : ''}</p>` : ''}
-        <p><span>Releases left</span><b>${r.left}<small> of ${r.limit}</small></b></p>
+        <p><span>Releases left</span><b>${releasesLeft()}<small> of ${r.limit}</small></b></p>
+        ${mine.fees ? `<p class="over"><span>Release fees</span><b>${money(mine.fees)}</b></p>` : ''}
         <p class="of-figs-sq"><span>Squad · ${mine.length}</span>${rosterChips(rosterOf(mine, rules()))}</p>
       </div>
       ${budgetBar(b, nb)}
@@ -238,24 +244,24 @@ function squadTab() {
   if (!S.my) return `<section class="lg-card"><p class="of-empty">${esc(S.readOnly || 'Only a club manager has a squad here.')} Look at any club in <a href="#clubs">Clubs</a>.</p></section>`;
   // 0093: while the window is not open, a release waits in the queue (and its count is the releases waiting, not the ones used).
   const mine = squadOf(S.my), ro = rosterOf(mine, rules()), w = null, q = waiting(), r0 = S.st.releases || { left: 0 };
-  const r = q ? { ...r0, left: Math.max(0, r0.limit - (r0.queued || 0)) } : r0;
+  // 0096: past the window's limit a release still goes through, with a release fee (10% of his wage) on the bill until the office clears it.
+  const r = { ...r0, left: releasesLeft() }, over = r.left <= 0;
   const queuedOut = new Set(queued().filter(x => x.kind === 'release').map(x => x.player?.id));
-  const why = p => (queuedOut.has(p.id) ? 'His release is already waiting for the window.'
-    : r.left <= 0 ? `You have ${q ? 'all' : 'used all'} ${r.limit} releases ${q ? 'waiting for' : 'for'} this window.` : check({ squad: mine, cap: cap(), limit: limit(), rules: rules(), out: [p] }));
-  const general = r.left <= 0 ? 'x' : '';
+  const why = p => (queuedOut.has(p.id) ? 'His release is already waiting for the window.' : check({ squad: mine, cap: cap(), limit: limit(), rules: rules(), out: [p] }));
   const rows = sortRows(mine, levelsFor('squad'), colsFor('squad')).map(p => {
     if (ui.confirm?.kind === 'release' && ui.confirm.id === p.id) {
-      const a = after({ squad: mine, cap: cap(), out: [p] });
+      const fee = over ? releaseFee(p) : 0, a = after({ squad: mine, cap: cap(), out: [p], fee });
+      const feeLine = over ? `<span class="of-pen">You have ${q ? 'all' : 'used all'} ${r.limit} free releases ${q ? 'waiting for' : 'for'} this window, so this one costs a release fee of ${money(fee)} (${FEE_PCT}% of his ${money(p.value)} wage). It stays on your wage bill for the rest of the season, and only the league office can clear it.</span> ` : '';
       return { p, on: true, below: confirmBody(`rel-${p.id}`, `Release ${esc(p.name)}?`,
-        `${q ? 'The window isn’t open, so this waits and goes through when it opens (checked again then). After that he' : 'He'} becomes a free agent. Your wage bill goes to <b>${money(a.bill)}</b>, ${a.over ? `<b class="of-over">${money(a.bill - cap())} over the cap</b>` : `<b>${money(a.room)}</b> room`}. ${penaltyLine(bill(mine), a.bill)}${r.left - 1} release${r.left - 1 === 1 ? '' : 's'} left after this.`,
-        q ? 'Queue the release' : 'Release player', `data-of="release" data-id="${esc(p.id)}"`) };
+        `${q ? 'The window isn’t open, so this waits and goes through when it opens (checked again then). After that he' : 'He'} becomes a free agent. ${feeLine}Your wage bill goes to <b>${money(a.bill)}</b>, ${a.over ? `<b class="of-over">${money(a.bill - cap())} over the cap</b>` : `<b>${money(a.room)}</b> room`}. ${penaltyLine(bill(mine), a.bill)}${over ? '' : `${r.left - 1} free release${r.left - 1 === 1 ? '' : 's'} left after this.`}`,
+        q ? (over ? 'Queue the release and fee' : 'Queue the release') : (over ? 'Release and pay the fee' : 'Release player'), `data-of="release" data-id="${esc(p.id)}"`) };
     }
     const off = why(p);
-    return { p, why: off && !general ? off : '', act: btn(q ? 'Queue release' : 'Release', `data-of="ask-release" data-id="${esc(p.id)}"`, { off, label: `Release ${p.name}`, icon: 'user-minus' }),
+    return { p, why: off || (over ? `Release fee ${money(releaseFee(p))}` : ''), act: btn(q ? 'Queue release' : 'Release', `data-of="ask-release" data-id="${esc(p.id)}"`, { off, label: `Release ${p.name}`, icon: 'user-minus' }),
       below: ui.err?.key === `rel-${p.id}` ? errAt(`rel-${p.id}`) : '' };
   });
-  const top = q ? hint('clock', `${esc(windowText(win()))}. Moves you make now wait and go through when it opens, each checked again then.`)
-    : r.left <= 0 ? hint('triangle-alert', 'You have used all your releases for this window. You can still sign and trade.')
+  const top = q ? hint('clock', `${esc(windowText(win()))}. Moves you make now wait and go through when it opens, each checked again then.${over ? ` Your ${r.limit} free releases are already waiting, so any more cost a release fee of ${FEE_PCT}% of the player’s wage.` : ''}`)
+    : over ? hint('triangle-alert', `You have used all ${r.limit} free releases for this window. You can still release players, but each one costs a release fee of ${FEE_PCT}% of his wage, on your wage bill for the rest of the season.`)
     : ro.total < ro.squadMin ? hint('triangle-alert', `You have ${ro.total} players (${ro.squadMin} at least). Sign or trade for one before you release another.`) : '';
   return `<div class="of-cols"><section class="lg-card of-list-card">
       <div class="lg-card-head"><h2>Squad</h2><span class="of-meta">${mine.length} players · ${money(bill(mine))}</span></div>
@@ -282,11 +288,27 @@ function queueCard() {
       ${recent.length ? `<h3 class="of-sh">Recently</h3><ul class="of-qlist">${recent.map(row).join('')}</ul>` : ''}</section>`;
 }
 
+// 0096: free releases left (while the window is not open, the limit less the releases already waiting).
+function releasesLeft() {
+  const r = S.st?.releases || { left: 0, limit: 0 };
+  return waiting() ? Math.max(0, r.limit - (r.queued || 0)) : r.left;
+}
+
+// 0096: your release fees still standing, each with the player and when, and the total on your wage bill.
+function feesCard() {
+  const list = feesOf(S.my);
+  if (!list.length) return '';
+  const total = list.reduce((t, f) => t + Number(f.fee), 0);
+  return `<section class="lg-card of-fees-card"><div class="lg-card-head"><h2>Release fees</h2><span class="of-meta">${money(total)} on your bill</span></div>
+      <ul class="of-fees">${list.map(f => `<li><span><b>${esc(playerById(f.player)?.name || f.player)}</b><small>Released ${esc(when(f.created_at))} · ${FEE_PCT}% of ${money(f.wage)}</small></span><b>${money(f.fee)}</b></li>`).join('')}</ul>
+      <p class="of-hint">${icon('lock')}<span>They stay on your wage bill for the rest of the season. Only the league office can clear them.</span></p></section>`;
+}
+
 function sideCard() {
   const ins = S.st?.offers_in || [], outs = S.st?.offers_out || [];
   const recent = S.moves.filter(m => m.club === S.my || m.other_club === S.my).slice(0, 4);
   return `<aside class="of-side">
-    ${queueCard()}
+    ${queueCard()}${feesCard()}
     <section class="lg-card"><div class="lg-card-head"><h2>Offers</h2><a href="#trade">Trade</a></div>
       <ul class="of-mini">
         <li><a href="#trade"><span>${icon('inbox')}Offers to you</span><b class="${ins.length ? 'hot' : ''}">${ins.length}</b></a></li>
@@ -298,6 +320,7 @@ function sideCard() {
         <li>A player’s wage is his value. Your wage bill is your squad’s wages, against the ${money(cap())} cap.</li>
         <li>You may go up to ${money(limit())} over the cap, for penalty points taken off at the end of the regular season. Past that, you can only make moves that bring your bill down.</li>
         <li>Moves happen while the transfer window is open, never during a round. Moves you make while it isn’t open wait, and go through when it opens, each checked again then.</li>
+        <li>You get ${S.st?.releases?.limit ?? 2} free releases each window. Past that, a release costs a fee of ${FEE_PCT}% of the player’s wage, on your wage bill for the rest of the season. Only the league office can clear it.</li>
         <li>A squad has ${rules().squad.min} to ${rules().squad.max} players, with at least ${POSITIONS.map(p => `${rules()[p].min} ${p}`).join(', ')}. There is no most for any position.</li>
       </ul>
       <table class="of-ladder"><caption>Penalty points</caption><thead><tr><th scope="col">Over the cap by</th><th scope="col">Points</th></tr></thead><tbody>${LADDER.slice(1).map(([top, p], i) => `<tr${S.my && penaltyPoints(bill(squadOf(S.my)) - cap()) === p ? ' class="on"' : ''}><td>${money(LADDER[i][0] + 1)} to ${money(top)}</td><td>${p}</td></tr>`).join('')}<tr><td>More than ${money(limit())}</td><td>Not allowed</td></tr></tbody></table></section>
@@ -455,7 +478,7 @@ function clubsTab() {
       <span class="of-cb"><b>${money(b)}</b><small class="${b > c ? 'over' : ''}">${b > c ? `${money(b - c)} over · ${pts(penaltyPoints(b - c))}` : `${money(c - b)} room · ${n}`}</small></span></a></li>`).join('');
   const sq = squadOf(sel), b = bill(sq);
   const detail = sel ? `<section class="lg-card of-list-card of-club of-k"${kStyle(sel)}>
-      <div class="of-clubhead">${crestOf(sel, 44)}<div><h2>${esc(clubRow(sel)?.name || sel)}</h2><p>${b > c ? `<b class="of-over">${money(b - c)} over the cap · ${pts(penaltyPoints(b - c))}</b>` : `<b>${money(c - b)}</b> room`} · wage bill <b>${money(b)}</b> · ${sq.length} players</p></div>
+      <div class="of-clubhead">${crestOf(sel, 44)}<div><h2>${esc(clubRow(sel)?.name || sel)}</h2><p>${b > c ? `<b class="of-over">${money(b - c)} over the cap · ${pts(penaltyPoints(b - c))}</b>` : `<b>${money(c - b)}</b> room`} · wage bill <b>${money(b)}</b>${sq.fees ? ` (${money(sq.fees)} in release fees)` : ''} · ${sq.length} players</p></div>
         ${S.my && sel !== S.my ? `<a class="of-btn primary of-k" href="#trade/${esc(sel)}"${kStyle(S.my)}>${icon('arrow-left-right')}<span>Make an offer</span></a>` : ''}</div>
       ${budgetBar(b)}
       ${rosterChips(rosterOf(sq, rules()))}
@@ -618,7 +641,7 @@ try {
   if (preview && q.get('theme')) document.documentElement.dataset.theme = q.get('theme');
   let prof = me.profile;
   if (preview) {
-    const demo = previewOffice({ mine: q.get('mine') || 'TUR', office: q.has('office'), window: q.get('window') || 'open', short: q.get('short') || 'DEF', over: q.get('over'), applied: q.has('applied') });
+    const demo = previewOffice({ mine: q.get('mine') || 'TUR', office: q.has('office'), window: q.get('window') || 'open', short: q.get('short') || 'DEF', over: q.get('over'), applied: q.has('applied'), spent: q.has('spent') });
     S.clubs = demo.clubs; api = demo.api; prof = { role: q.has('office') ? 'office' : 'manager', club: q.has('office') ? null : (q.get('mine') || 'TUR') };
   } else {
     S.clubs = await loadClubs().catch(() => []);

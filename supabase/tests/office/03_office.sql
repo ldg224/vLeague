@@ -115,7 +115,7 @@ begin
 
   -- ---- the squad check for the office: a club made short shows, with its counts; managers cannot call it
   perform pg_temp.act('su');
-  update public.players set club = null where id = pg_temp.pl('SKS', 'FWD', 1);
+  update public.players set club = null where id in (pg_temp.pl('SKS', 'FWD', 1), pg_temp.pl('SKS', 'FWD', 2));   -- two out: under 15 whatever SKS had
   perform pg_temp.act('office');
   perform pg_temp.ok('squad report: a club short of the rules is listed', exists (select 1 from jsonb_array_elements(public.office_squad_report()) e
     where e ->> 'club' = 'SKS' and ((e #>> '{roster,short}')::int >= 1 or (e #>> '{roster,total}')::int < 15)), left(public.office_squad_report()::text, 300));

@@ -7,7 +7,7 @@
 //                                                  or hidden by the viewer (so the winner is never given away)
 //   FILTERS                                       [['all', 'All'], ['home', 'Home'], ['away', 'Away'], ['last5', 'Last 5']]
 //   capPenalties(season)                          Map code -> { over, points } of the pending cap penalties (0092): from each club's wage bill now
-//                                                  (season.wage_bills, else its players' values) against season.cap; empty once the office has applied them
+//                                                  (season.wage_bills, else its players' values plus season.release_fees, 0096) against season.cap; empty once the office has applied them
 //                                                  (a 'Cap penalty' adjustment stands), as the table then counts them in PTS
 //
 // Points adjustments (season.adjustments, from points_adjustments) count in PTS in the full season table (not the Home / Away / Last 5 views).
@@ -38,7 +38,10 @@ export function capPenalties(season) {
   const out = new Map(), cap = Number(season?.cap?.cap);
   if (!season?.cap || !Number.isFinite(cap) || (season.adjustments || []).some(a => a.reason === 'Cap penalty')) return out;
   const bills = season.wage_bills || {};
-  if (!season.wage_bills) for (const p of season.players || []) if (p.team) bills[p.team] = (bills[p.team] || 0) + (Number(p.value) || 0);
+  if (!season.wage_bills) {
+    for (const p of season.players || []) if (p.team) bills[p.team] = (bills[p.team] || 0) + (Number(p.value) || 0);
+    for (const [code, fee] of Object.entries(season.release_fees || {})) bills[code] = (bills[code] || 0) + (Number(fee) || 0);   // 0096
+  }
   for (const [code, b] of Object.entries(bills)) { const points = penaltyPoints(b - cap); if (points) out.set(code, { over: b - cap, points }); }
   return out;
 }

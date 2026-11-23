@@ -208,6 +208,15 @@
 .of-mini .ic { width: 16px; height: 16px; color: var(--muted); }
 .of-mini b { min-width: 24px; height: 22px; display: inline-grid; place-items: center; padding: 0 7px; border-radius: 999px; background: var(--surface-sunk); font: 700 var(--fs-s) var(--font); font-variant-numeric: tabular-nums; }
 .of-mini b.hot { background: var(--k-acc); color: var(--k-on); }
+/* 0096: release fees, one row each (player and when, the fee right), hairlines as the other side lists */
+.of .of-fees { margin: 0 -20px 12px; }
+.of-fees li { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 52px; padding: 6px 20px; border-top: 1px solid var(--line); }
+.of-fees li:last-child { border-bottom: 1px solid var(--line); }
+.of-fees span { display: grid; gap: 2px; min-width: 0; }
+.of-fees span b { font: 600 var(--fs-m) var(--font); color: var(--text); }
+.of-fees small { font: 400 var(--fs-s) var(--font); color: var(--muted); }
+.of-fees li > b { font: 700 var(--fs-m) var(--font); color: var(--amber-text); font-variant-numeric: tabular-nums; }
+.of-fees-card .of-hint { margin-bottom: 0; }
 .of-how { display: grid; gap: 8px; }
 .of-how li { position: relative; padding-left: 16px; color: var(--text-soft); font: 400 var(--fs-s)/1.5 var(--font); }
 .of-how li::before { content: ""; position: absolute; left: 2px; top: .6em; width: 5px; height: 5px; border-radius: 50%; background: var(--k-acc); }

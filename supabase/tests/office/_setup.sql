@@ -19,6 +19,16 @@ update public.profiles set role = 'office', club = null where id = '00000000-000
 -- over_limit 0: 01 to 03 test the cap as a hard limit (0091's rule); 04 tests the over-cap zone (0092) with its own limit.
 update public.office_settings set cap = 125000, over_limit = 0, releases_per_window = 2, window_open = true, opens_at = null, closes_at = null, window_started_at = now() - interval '1 minute';
 
+-- The tests expect TUR, LAU and SKS at full squads (16): one a manager has run down to 15 on the live project gets its dearest-free-agent
+-- midfielder back here (rolled back), so the squad-rule tests start where they were written.
+do $$ declare k text; begin
+  foreach k in array array['TUR', 'LAU', 'SKS'] loop
+    while (select count(*) from public.players where club = k) < 16 loop
+      update public.players set club = k where id = (select id from public.players where club is null and position = 'MID' order by value desc, id limit 1);
+    end loop;
+  end loop;
+end $$;
+
 -- who: 'tur', 'lau', 'sks', 'office', 'noclub', 'anon', or 'su' (back to full rights)
 create function pg_temp.act(who text) returns void language plpgsql as $$
 declare u text := case who when 'tur' then '00000000-0000-4000-8000-0000000f0001' when 'lau' then '00000000-0000-4000-8000-0000000f0002'

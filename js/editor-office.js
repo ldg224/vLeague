@@ -33,16 +33,18 @@ export async function mountOffice({ db, esc, explain }) {
   const root = document.getElementById('of-ed');
   if (!root) return;
   const c = await db();
-  let S = null, moves = [], players = new Map(), report = null, caps = null, msg = '', bad = false, ask = null, busy = false;
+  let S = null, moves = [], players = new Map(), report = null, caps = null, fees = null, msg = '', bad = false, ask = null, busy = false;
 
   const load = async () => {
-    const [a, b, p, r, k] = await Promise.all([
+    const [a, b, p, r, k, f] = await Promise.all([
       c.from('office_settings').select('*').eq('id', 1).maybeSingle(),
       c.from('office_moves').select('*').order('made_at', { ascending: false }).limit(100),
       c.from('players').select('id, name').range(0, 1999),
       c.rpc('office_squad_report'),
       c.rpc('office_cap_report'),
+      c.from('office_release_fees').select('id, club, player, wage, fee, created_at').is('cleared_at', null).order('club').order('created_at'),
     ]);
+    fees = f.error ? null : f.data || [];   // null until 0096_release_fees.sql is in
     caps = k.error ? null : k.data;   // null until 0092_cap_penalties.sql is in
     report = r.error ? null : r.data || [];
     if (a.error || !a.data) { msg = a.error ? explain(a.error) : 'Office settings are missing. Run the database update 0091_office.sql once.'; bad = true; S = null; } else S = a.data;
@@ -90,6 +92,22 @@ export async function mountOffice({ db, esc, explain }) {
       <ul class="ed-ofmoves">${list || '<li class="quiet">No club is over the cap.</li>'}</ul>${act}</section>`;
   };
 
+  // Release fees (0096): a release past the window's limit costs the club 10% of the player's wage, on its bill until cleared here.
+  // Clear one, or Clear all (the end of the season, with a confirm). Undoing the release itself also clears its fee.
+  const feesHtml = () => {
+    if (fees == null) return '';
+    const total = fees.reduce((t, x) => t + Number(x.fee), 0);
+    const list = fees.map(x => `<li class="ed-ofmove"><span><b>${esc(x.club)}</b> ${names([x.player])} <b>${money(x.fee)}</b>
+        <small>${esc(day(x.created_at))} · 10% of ${money(x.wage)}</small></span>
+        ${ask === `fee-${x.id}` ? `<span class="ed-ofask">Take it off ${esc(x.club)}’s bill?<button type="button" data-of-unfee="${x.id}" class="danger">Clear fee</button><button type="button" data-of-cancel>Keep</button></span>`
+          : `<button type="button" data-of-askfee="${x.id}">Clear</button>`}</li>`).join('');
+    const all = !fees.length ? '' : ask === 'fees'
+      ? `<p class="ed-ofask">Clear every release fee (${money(total)} across ${new Set(fees.map(x => x.club)).size} club${new Set(fees.map(x => x.club)).size === 1 ? '' : 's'})?<button type="button" data-of-unfees class="danger">Clear all fees</button><button type="button" data-of-cancel>Keep</button></p>`
+      : '<button type="button" data-of-askfees>Clear all fees</button>';
+    return `<section class="ed-invite"><h2>Release fees</h2><p class="ed-hint">A club that releases more players than its ${esc(S.releases_per_window)} a window pays 10% of each extra player’s wage, on its wage bill (and so the cap and penalty points) for the rest of the season. Managers can’t remove it: only you can, here. Clear them all at the end of the season.</p>
+      <ul class="ed-ofmoves">${list || '<li class="quiet">No release fees.</li>'}</ul>${all}</section>`;
+  };
+
   function draw() {
     if (!S) { root.innerHTML = `<p class="${bad ? 'err' : 'quiet'}">${esc(msg || 'Office settings did not load.')}</p>`; return; }
     const snap = snapshotInputs(root);   // flipping the window or an undo redraws the tab: keep what was typed in the form and not saved
@@ -117,7 +135,7 @@ export async function mountOffice({ db, esc, explain }) {
         <section class="ed-invite"><h2>Wages</h2>
           <div class="ed-fields"><label>Wage cap <i>a club’s squad values added up, in $</i><input name="cap" type="number" min="0" max="10000000" step="500" value="${esc(S.cap)}"></label>
           <label>Over-cap limit <i>the most a club may go over the cap, in $ (penalty points up to it)</i><input name="over_limit" type="number" min="0" max="1000000" step="500" value="${esc(S.over_limit ?? 30000)}"></label>
-          <label>Releases per window <i>per club</i><input name="releases_per_window" type="number" min="0" max="50" value="${esc(S.releases_per_window)}"></label>
+          <label>Free releases per window <i>per club; each one past it costs 10% of the wage</i><input name="releases_per_window" type="number" min="0" max="50" value="${esc(S.releases_per_window)}"></label>
       <label>Fewest players <i>a squad may have (after a release)</i><input name="squad_min" type="number" min="11" max="40" value="${esc(S.squad_min ?? 15)}"></label>
       <label>Most players <i>a squad may have</i><input name="squad_max" type="number" min="11" max="40" value="${esc(S.squad_max ?? 16)}"></label>
       ${['GK', 'DEF', 'MID', 'FWD'].map(p => `<label>At least ${p} <i>no most</i><input name="min_${p}" type="number" min="0" max="11" value="${esc(S.pos_min?.[p] ?? { GK: 1, DEF: 4, MID: 3, FWD: 3 }[p])}"></label>`).join('')}</div></section>
@@ -129,6 +147,7 @@ export async function mountOffice({ db, esc, explain }) {
       <section class="ed-invite"><h2>Moves</h2><p class="ed-hint">Newest first. Undo puts the players back where they were (no cap or squad check: your call). A move can only be undone while its players are still where it put them.</p>
         <ul class="ed-ofmoves">${rows || '<li class="quiet">No moves yet.</li>'}</ul></section>
       ${capsHtml()}
+      ${feesHtml()}
       ${reportHtml()}`;
     restoreInputs(root, snap);
   }
@@ -140,6 +159,10 @@ export async function mountOffice({ db, esc, explain }) {
     if (b.dataset.ofAsk) { ask = Number(b.dataset.ofAsk); return draw(); }
     if (b.dataset.ofCancel != null) { ask = null; return draw(); }
     if (b.dataset.ofAskpen != null) { ask = 'pen'; return draw(); }
+    if (b.dataset.ofAskfee) { ask = `fee-${b.dataset.ofAskfee}`; return draw(); }
+    if (b.dataset.ofAskfees != null) { ask = 'fees'; return draw(); }
+    if (b.dataset.ofUnfee) return run(() => c.rpc('office_clear_release_fees', { p_ids: [Number(b.dataset.ofUnfee)] }), 'Release fee cleared. It is off the club’s wage bill.');
+    if (b.dataset.ofUnfees != null) return run(() => c.rpc('office_clear_release_fees', { p_ids: null }), 'Every release fee cleared.');
     if (b.dataset.ofAskunpen != null) { ask = 'unpen'; return draw(); }
     if (b.dataset.ofPen != null) return run(() => c.rpc('office_apply_cap_penalties', { p_note: 'End of the regular season' }), 'Cap penalties applied. The table counts them now.');
     if (b.dataset.ofUnpen != null) return run(() => c.rpc('office_undo_cap_penalties'), 'Cap penalties undone. The points are back.');

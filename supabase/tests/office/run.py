@@ -1,4 +1,4 @@
-"""Office (S-35) database tests. Each test file runs after migrations 0091 and 0092 and _setup.sql inside one transaction that is rolled back,
+"""Office (S-35) database tests. Each test file runs after the Office migrations (0091 to 0094, 0096) and _setup.sql inside one transaction that is rolled back,
 so nothing is left on the live project. Needs the Management API token in ~/.supabase/token.txt (never commit it).
 
     python supabase/tests/office/run.py              # every test file
@@ -8,7 +8,8 @@ import json, sys, urllib.request, urllib.error
 from pathlib import Path
 
 HERE = Path(__file__).parent
-T = (Path.home() / '.supabase' / 'token.txt').read_text().strip()
+_tok = [Path.home() / '.supabase' / 'token.txt', Path.home() / '.vleague' / 'supabase-token.txt']
+T = next(p for p in _tok if p.exists()).read_text().strip()
 
 
 def q(sql):
@@ -20,7 +21,7 @@ def q(sql):
         return {'error': e.read().decode()[:2000]}
 
 
-mig = '\n'.join((HERE.parents[1] / 'migrations' / m).read_text(encoding='utf-8') for m in ('0091_office.sql', '0092_cap_penalties.sql', '0093_office_squads_queue.sql', '0094_office_window_reopen.sql'))
+mig = '\n'.join((HERE.parents[1] / 'migrations' / m).read_text(encoding='utf-8') for m in ('0091_office.sql', '0092_cap_penalties.sql', '0093_office_squads_queue.sql', '0094_office_window_reopen.sql', '0096_release_fees.sql'))
 setup = (HERE / '_setup.sql').read_text(encoding='utf-8')
 files = [HERE / a for a in sys.argv[1:]] or sorted(p for p in HERE.glob('[0-9]*.sql'))
 passed = failed = 0

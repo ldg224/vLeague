@@ -64,7 +64,17 @@ begin
   perform pg_temp.act('tur');
   perform public.office_release(d2);
   perform public.office_sign(fa2);
-  perform pg_temp.err('release limit: a third release in the window is refused', format('select public.office_release(%L)', d3), 'all 2 releases');
+  -- 0096: a third release goes through with a release fee (10% of his wage); undone here so the rest of the file starts as before
+  perform pg_temp.act('su');
+  b := public.office_bill('TUR');
+  perform pg_temp.act('tur');
+  mid := public.office_release(d3);
+  perform pg_temp.act('su');
+  perform pg_temp.ok('release limit: a third release goes through, with a fee of 10% of his wage on the bill', pg_temp.club_of(d3) is null
+    and (select bill_after from public.office_moves where id = mid) = b - pg_temp.wage(d3) + round(pg_temp.wage(d3) * 0.1)::int);
+  perform pg_temp.act('office');
+  perform public.office_undo(mid);
+  perform pg_temp.act('tur');
   perform pg_temp.act('su');
   update public.office_settings set window_started_at = now() + interval '1 second';   -- a new window: (made_at is the transaction's start, so this puts the old releases before it)
   perform pg_temp.act('tur');

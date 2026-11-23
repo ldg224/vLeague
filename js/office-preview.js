@@ -1,7 +1,8 @@
 // The Office's localhost preview (office.html?preview): made-up clubs, players, offers and moves, and an api that makes the moves in memory with the
 // same checks as the database, so the page can be looked at and screenshotted without signing in. Nothing here touches the database.
-//   previewOffice({ mine, office, window: 'open' | 'closed' | 'round', short: 'DEF' | 'none', over: 6200 (your bill that far over the cap), applied }) -> { clubs, api }
-import { check, bill, POSITIONS, rosterOf, penaltyPoints, DEFAULT_LIMIT, DEFAULT_RULES } from './office-model.js';
+//   previewOffice({ mine, office, window: 'open' | 'closed' | 'round', short: 'DEF' | 'none', over: 6200 (your bill that far over the cap), applied,
+//                   spent (both free releases used, and one release fee already on your bill: 0096) }) -> { clubs, api }
+import { check, bill, POSITIONS, rosterOf, penaltyPoints, DEFAULT_LIMIT, DEFAULT_RULES, withFees, releaseFee } from './office-model.js';
 
 const CLUBS = [
   ['TUR', 'Turin United', '#1d3f8a', '#ffffff'], ['SKS', 'Skyline SC', '#c62828', '#ffffff'], ['CCF', 'Coast City FC', '#0f7b6c', '#f2f2f2'],
@@ -17,7 +18,7 @@ const FREE = { GK: 3, DEF: 8, MID: 7, FWD: 6 };
 
 function rng(seed) { let s = seed >>> 0; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 2 ** 32; }; }
 
-export function previewOffice({ mine = 'TUR', office = false, window = 'open', short = 'DEF', over = null, applied = false } = {}) {
+export function previewOffice({ mine = 'TUR', office = false, window = 'open', short = 'DEF', over = null, applied = false, spent = false } = {}) {
   const r = rng(35), players = [];
   let n = 0;
   const make = (team, position, lean = 0) => {
@@ -45,7 +46,8 @@ export function previewOffice({ mine = 'TUR', office = false, window = 'open', s
   const clubs = CLUBS.map(([code, name, colour, colour2]) => ({ code, name, short_name: code, colour, colour2, crest_path: null }));
   const cfg = { cap: 125000, over_limit: DEFAULT_LIMIT, releases_per_window: 2, window_open: window !== 'closed', closes_at: new Date(Date.now() + 3 * 86400000 + 5 * 3600000).toISOString(), opens_at: null };
   const ago = h => new Date(Date.now() - h * 3600000).toISOString();
-  const sq = code => players.filter(p => p.team === code);
+  const fees = [];   // 0096: release fees still standing
+  const sq = code => withFees(players.filter(p => p.team === code), fees.filter(f => f.club === code).reduce((t, f) => t + f.fee, 0));
   const pick = (code, pos, i = 0) => sq(code).filter(p => p.position === pos).sort((a, b) => b.value - a.value)[i];
   const json = p => ({ id: p.id, name: p.name, position: p.position, club: p.team, wage: p.value, offense: p.offense, defense: p.defense, number: p.number });
   let offerId = 10, moveId = 100;
@@ -62,7 +64,11 @@ export function previewOffice({ mine = 'TUR', office = false, window = 'open', s
   log('trade', 'DTP', 'BHR', [pick('DTP', 'DEF', 2).id], [pick('BHR', 'DEF', 3).id], 127000, 126100, 118800, 119700, 20);
   moves[0].undone_at = null;
 
-  let used = 0;
+  let used = 0, feeId = 0;
+  if (spent && !office) {   // &spent: both free releases used, one of them past the limit earlier (a made-up free agent), with its fee
+    used = 2; const gone = fa[2];
+    fees.push({ id: ++feeId, club: mine, player: gone.id, wage: gone.value, fee: releaseFee(gone), created_at: ago(28) });
+  }
   const myCode = office ? null : mine;
   const status = () => (window === 'round' ? 'round' : cfg.window_open ? 'open' : 'closed');
   const need = () => { const st = status(); if (st === 'closed') throw new Error('The transfer window is closed.'); if (st === 'round') throw new Error('No moves while a round is being played (from the line-up lock to the last game).'); };
@@ -95,6 +101,7 @@ export function previewOffice({ mine = 'TUR', office = false, window = 'open', s
     settings: async () => ({ ...cfg }),
     players: async () => players.map(p => ({ ...p })),
     moves: async () => moves.map(m => ({ ...m })),
+    fees: async () => fees.map(f => ({ ...f })),
     async release(id) {
       const p = byId(id);
       if (!p || p.team !== myCode) throw new Error('That player is not in your squad.');
@@ -103,9 +110,10 @@ export function previewOffice({ mine = 'TUR', office = false, window = 'open', s
         queue.push({ id: ++queueId, kind: 'release', club: myCode, player: id, status: 'queued', created_at: new Date().toISOString() });
         return later(null);
       }
-      if (used >= cfg.releases_per_window) throw new Error(`You have used all ${cfg.releases_per_window} releases for this window.`);
       ok(myCode, [p], []);
-      const b0 = bill(sq(myCode)); p.team = ''; used++;
+      const b0 = bill(sq(myCode)); p.team = '';
+      if (used >= cfg.releases_per_window) fees.push({ id: ++feeId, club: myCode, player: id, wage: p.value, fee: releaseFee(p), created_at: new Date().toISOString() });
+      used++;
       log('release', myCode, null, [id], [], b0, bill(sq(myCode)));
       return later(moveId);
     },
