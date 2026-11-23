@@ -19,7 +19,8 @@
 .sm-facts dt { color: var(--muted); }
 .sm-facts dd { margin: 0; color: var(--text-strong); font-weight: 600; }
 .sm-xg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; text-align: center; min-width: 150px; }
-.sm-xg .sm-mouth { grid-column: 1 / -1; justify-self: center; width: 110px; height: auto; }
+.sm-xg .sm-mouth { grid-column: 1 / -1; justify-self: center; width: 150px; height: auto; }
+.sm-ground { stroke: var(--line); stroke-width: .8; fill: none; }
 .sm-xg b { display: block; color: var(--text-strong); font: 700 var(--fs-m) var(--font); font-variant-numeric: tabular-nums; }
 .sm-xg span { color: var(--muted); font: 400 var(--fs-s) var(--font); }
 .sm-net { stroke: color-mix(in oklab, var(--text) 12%, transparent); stroke-width: .4; fill: none; }
@@ -27,7 +28,8 @@
 .sm-md { stroke-width: 1; }
 .sm-md.is-goal { fill: var(--text-strong); stroke: var(--surface); }
 .sm-md.is-save { fill: var(--text-soft); stroke: var(--surface); }
-.sm-md.is-miss { fill: transparent; stroke: var(--text-soft); }
+.sm-md.is-miss { fill: var(--surface); stroke: var(--text-strong); stroke-width: 1.8; }
+.sm-md.is-out { stroke-dasharray: 2.6 1.6; }   /* further out than the picture: pinned to its edge (B-44) */
 .sm-pitch { display: block; width: 100%; height: auto; background: var(--surface-sunk); border: 1px solid var(--line); border-radius: var(--r-lg); }
 .sm-lines { fill: none; stroke: color-mix(in oklab, var(--text) 20%, transparent); stroke-width: .35; stroke-linejoin: round; }
 .sm-lines .sm-spot { fill: color-mix(in oklab, var(--text) 20%, transparent); stroke: none; }

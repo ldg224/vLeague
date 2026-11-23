@@ -25,7 +25,7 @@ import { insights, insightsCard } from './match-insights.js';
 import { chanceCard, venueCard } from './match-side.js';
 import { loadChanceSheets } from './win-chance.js';
 import { h2hCard } from './match-h2h.js';
-import { loadMatchFile, prepareMatchFile } from './match-file.js';
+import { loadMatchFile, prepareMatchFile, isStale, staleBanner, latestVersion, forgetMatchFile } from './match-file.js';
 import { factsView } from './match-facts.js';
 import { playedCard } from './match-played.js';
 import { statsView } from './match-stats.js';
@@ -188,9 +188,10 @@ function start() {
   // The Predicted Lineup (WR-32) loads once, then the Preview tab draws it.
   let lineups = null, chanceSheets = [], formHidden = [], history = null, h2hHidden = [];
   let file = null, fileState = 'idle';   // the saved match file (Facts, Lineup, Stats), read once the first time a tab needs it
+  let staleBusy = false;   // the "Load the new match" button is reading the new version (B-42)
   let h2hFilter = null;   // the Head-to-Head filter pills (Home or This season, one at a time, kept while the page is open)
   // Season numbers for the lineup pills (WR-33), from the results this account may see (spoiler-free keeps hidden ones out). The choice lasts while the page is open.
-  let view = preview && ['contrib', 'value'].includes(q.get('view')) ? q.get('view') : 'rating';   // ?view= : localhost preview only
+  let view = preview && ['season', 'ratings', 'value'].includes(q.get('view')) ? q.get('view') : 'rating';   // ?view= : localhost preview only
   const seasonStats = () => {
     if (demo != null) return new Map(totals(countedFixtures(season.fixtures)).players.map(p => [String(p.id), p]));
     if (preview && q.has('fake')) {   // localhost preview only: made-up numbers, to look at the pills while no real season is played
@@ -266,7 +267,7 @@ function start() {
     // Header, content and side column are painted apart, so a pill or a tab only redraws what it changes: the header's colour washes keep drifting and the
     // other cards keep their silk instead of starting their fade again.
     const at = id => document.getElementById(id);
-    const changed = [paint(at('mh-head'), header(s)), paint(at('mh-main'), b.main), paint(at('mh-chance'), b.chance), paint(at('mh-venue'), b.venue), paint(at('mh-extra'), b.extra)];
+    const changed = [paint(at('mh-stale'), file && isStale(fx, file) ? staleBanner({ busy: staleBusy }) : ''), paint(at('mh-head'), header(s)), paint(at('mh-main'), b.main), paint(at('mh-chance'), b.chance), paint(at('mh-venue'), b.venue), paint(at('mh-extra'), b.extra)];
     if (changed.some(Boolean)) {
       // Each card names its own silk key (its title, else its class), so a card that is made again lands on the same splash and silk phase as before, not on a new one.
       page.querySelectorAll('.lg-card:not([data-silk])').forEach(c => { c.dataset.silk = c.querySelector('h2')?.textContent || c.className; });
@@ -300,7 +301,7 @@ function start() {
     const now = Date.now();
     main.querySelectorAll('[data-until]').forEach(el => { if (now < Number(el.dataset.until)) el.textContent = countdown(Number(el.dataset.until) - now); });
   };
-  main.innerHTML = '<div class="mh" id="mh"><div id="mh-head"></div><div id="mh-player"></div><div class="mh-cols"><div class="mh-main" id="mh-main"></div><aside class="mh-side" aria-label="About this match"><div id="mh-chance"></div><div id="mh-venue"></div><div id="mh-extra"></div></aside></div></div>';
+  main.innerHTML = '<div class="mh" id="mh"><div id="mh-stale"></div><div id="mh-head"></div><div id="mh-player"></div><div class="mh-cols"><div class="mh-main" id="mh-main"></div><aside class="mh-side" aria-label="About this match"><div id="mh-chance"></div><div id="mh-venue"></div><div id="mh-extra"></div></aside></div></div>';
   draw();
   if (look) {
     new ResizeObserver(dressHead).observe(document.getElementById('mh-head'));
@@ -314,6 +315,24 @@ function start() {
   addEventListener('hashchange', draw);
   main.addEventListener('click', e => { if (shotMapClick(e.target, shotMap)) draw(); });
   main.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('[data-sm-shot]')) { e.preventDefault(); if (shotMapClick(e.target, shotMap)) draw(); } });
+  // B-42: the match was played again since this file was read. The button reads the season and the file again in place (a person's own click, so it redraws now).
+  main.addEventListener('click', async e => {
+    if (!e.target.closest('[data-stale-reload]') || staleBusy) return;
+    staleBusy = true; draw();
+    try {
+      const fresh = await loadSeason();
+      season = fresh; fx = season.fixtures.find(f => String(f.id) === String(fx.id)) || fx;
+      forgetMatchFile(fx.id); unmountViewer(); file = null; fileState = 'idle'; shotMap.sel = null;
+      needFile();
+    } catch { /* keep what is on screen; the button stays for another try */ }
+    staleBusy = false; draw();
+  });
+  // While the page is open, look every two minutes for the match being played again, so the banner appears without a refresh.
+  setInterval(async () => {
+    if (document.hidden || !file || file.demoFile || fx.demoFile) return;
+    const v = await latestVersion(fx.id);
+    if (v && v !== file.latest) { file.latest = v; quietly(draw); }
+  }, 120000);
   main.addEventListener('click', async e => {
     const fl = e.target.closest('[data-h2h]');
     if (fl) { h2hFilter = h2hFilter === fl.dataset.h2h ? null : fl.dataset.h2h; draw(); return; }

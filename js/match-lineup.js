@@ -3,9 +3,10 @@
 // above, and the coaches below.
 //   loadLineups(fx, season, rows) -> { home, away, kits } once: each side is { sheet, locked }; kits are small shirt pictures (data URLs)
 //   lineupCard(L, ctx)            -> the card's html. ctx = { season, club(code) -> clubs row | undefined, team(code) -> team, crest(team, px) -> html,
-//                                  stats: Map of player id -> season totals (js/season-stats.js), view: 'rating' | 'contrib' | 'value' }
+//                                  stats: Map of player id -> season totals (js/season-stats.js), view: 'rating' | 'season' | 'ratings' | 'value' }
 // Three views of the same pitch (WR-33), picked with the pills: Average rating (season average match rating as a badge, red under 5.0, orange under 7.0, green from 7.0,
-// blue with a star for the standout), Contributions (goals and assists, nothing for zero) and Value (the editor's value under the shirt).
+// blue with a star for the standout), Season stats (apps, goals and assists under the name), Ratings (attack and defence badges) and Value (the editor's
+// value under the shirt). S-36 (16 Nov 2026) replaced Contributions with Season stats and Ratings.
 // LINEUP RULE (changed by the user, 15 Oct 2026): a club's XI appears as soon as it SUBMITS a team sheet (submitted_lineups(), formation, XI,
 // captain and kit only; the portraits wear that kit from then on, user 18 Oct 2026), and from the lock on the locked sheet (week_sheets) is used. A club that has not submitted keeps an empty half-pitch saying so until the
 // lock; then it shows the random XI the lock picked for it (week_sheets.random, 0080: submit or it's random, user 3 Nov 2026). Unsubmitted drafts are never shown.
@@ -17,7 +18,7 @@ import { kitSprite, kitChest, startDesign } from './kit.js';
 import { onColour } from './club-colour.js';
 import { esc } from './member.js';
 import { icon } from './icons.js';
-import { goalMark, assistMark, captainMark } from './match-marks.js';
+import { captainMark } from './match-marks.js';
 import { portrait } from './portrait.js';
 import { plink } from './player-link.js';
 
@@ -87,7 +88,15 @@ export const faceOf = (p, code, ctx, chest) => (p ? `<span class="ml-face">${por
 export const nameTag = (cap, number, name) => `${cap}${number != null && number !== '' ? `<i>${esc(number)}</i> ` : ''}${esc(surname(name))}`;
 export const initials = n => String(n || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
-export const VIEWS = [['rating', 'Average rating'], ['contrib', 'Contributions'], ['value', 'Value']];
+export const VIEWS = [['rating', 'Average rating'], ['season', 'Season stats'], ['ratings', 'Ratings'], ['value', 'Value']];
+// Season stats (S-36): games played, then goals and assists when there are any ("9 apps · 3G 2A").
+export const seasonLine = st => {
+  const apps = st?.apps || 0, ga = [st?.g ? `${st.g}G` : '', st?.a ? `${st.a}A` : ''].filter(Boolean).join(' ');
+  return `<span class="ml-s"><span>${apps} app${apps === 1 ? '' : 's'}</span>${ga ? `<span class="ml-s-ga">${ga}</span>` : ''}</span>`;
+};
+// Ratings (S-36): the player's attack and defence ratings (1 to 10), each coloured as the average rating is: green from 7, orange from 5, red under.
+const tone = v => (v >= 7 ? 'hi' : v >= 5 ? 'lo' : 'bad');
+export const ratingBadges = p => `<span class="ml-ad"><b class="ml-r is-${tone(p.offense)}" aria-label="Attack ${p.offense}">ATT ${p.offense}</b><b class="ml-r is-${tone(p.defense)}" aria-label="Defence ${p.defense}">DEF ${p.defense}</b></span>`;
 export const STAR = '<svg class="ml-star" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m12 2.8 2.7 5.8 6.3.7-4.7 4.3 1.3 6.2L12 16.6l-5.6 3.2 1.3-6.2L3 9.3l6.3-.7z"/></svg>';
 const avgOf = (stats, id) => { const r = stats?.get(String(id)); return r && r.apps ? r.ratingSum / r.apps : null; };
 
@@ -111,12 +120,12 @@ function players(side, L, ctx, cls, star) {
     if (ctx.view === 'rating' && avg != null) {
       const top = String(id) === star;
       mark = `<b class="ml-r is-${top ? 'star' : avg >= 7 ? 'hi' : avg >= 5 ? 'lo' : 'bad'}" aria-label="Average rating ${avg.toFixed(1)}${top ? ', the standout' : ''}">${avg.toFixed(1)}${top ? STAR : ''}</b>`;
-    } else if (ctx.view === 'contrib' && st) {
-      mark = `${st.a ? `<span class="ml-m is-a">${assistMark(st.a)}</span>` : ''}${st.g ? `<span class="ml-m is-g">${goalMark(st.g)}</span>` : ''}`;
+    } else if (ctx.view === 'ratings' && p.offense != null) {
+      mark = ratingBadges(p);
     }
     const worth = ctx.view === 'value' ? `<b class="ml-v" aria-label="Value ${esc(money(p.value))}">${esc(money(p.value))}</b>` : '';
     return `<li class="ml-p ${cls}${boosted ? ' is-boosted' : ''}" style="--x:${slots[slot].x.toFixed(1)};--y:${slots[slot].y.toFixed(1)}" data-id="${esc(id)}"><span class="ml-av">${face}${mark}${worth}</span>`
-      + `<span class="ml-n">${plink(id, nameTag(cap, p.number, p.name))}</span></li>`;
+      + `<span class="ml-n">${plink(id, nameTag(cap, p.number, p.name))}</span>${ctx.view === 'season' ? seasonLine(st) : ''}</li>`;
   }).join('');
 }
 

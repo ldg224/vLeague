@@ -42,12 +42,17 @@ export async function loadSeason() {
     return res.json();
   }
   const c = await db();
-  const [cl, fx, rs, players, rd, lk, wn] = await Promise.all([
+  // Points adjustments (cap penalties once applied) and the wage cap (for the pending penalty beside PTS), 0092: read softly, so the table still
+  // shows before that database update is in (a missing table or column is an error result, not a throw).
+  const soft = q => Promise.resolve(q).then(r => (r?.error ? null : r?.data ?? null), () => null);
+  const [cl, fx, rs, players, rd, lk, wn, adj, capRow] = await Promise.all([
     c.from('clubs').select('code, name, short_name, colour, crest_path, manager_name, status').order('name'),
     c.from('fixtures').select('id, week, home, away, starts_at, stage, postponed, window_id, look').order('week').order('starts_at').range(0, 1999),
     c.from('results').select('fixture, summary, file').range(0, 1999),
     loadPlayers().catch(() => []),
     c.from('rounds').select('*'), c.from('looks').select('key, name, settings'), c.from('match_windows').select('id, look').range(0, 1999),
+    soft(c.from('points_adjustments').select('club, points, reason').is('undone_at', null).range(0, 1999)),
+    soft(c.from('office_settings').select('cap, over_limit').eq('id', 1).maybeSingle()),
   ]);
   if (cl.error || fx.error) throw new Error('The league data didn’t load.');
   crests = Object.fromEntries(cl.data.filter(x => x.crest_path).map(x => [x.code, x.crest_path]));
@@ -60,6 +65,8 @@ export async function loadSeason() {
   return {
     looks, rounds: Object.fromEntries([...labels].map(([w, l]) => [w, { label: l.label, short: l.short, code: l.code, numbered: l.numbered, no: l.no, name: l.name, ...(rounds.get(w)?.kind === 'preseason' ? { preseason: true } : {}) }])),
     season: 1, league: 'vLeague', live_minutes: 60, points: { win: 3, draw: 1, loss: 0 }, news: [], players,
+    adjustments: (adj || []).map(a => ({ team: a.club, points: Number(a.points) || 0, reason: a.reason })),
+    cap: capRow?.cap != null ? { cap: Number(capRow.cap), over_limit: Number(capRow.over_limit ?? 30000) } : null,
     teams: cl.data.map(x => ({ code: x.code, name: x.name, short_name: x.short_name, colour: x.colour || '#475569', manager: x.manager_name || '',
       ...(x.status === 'withdrawn' || x.status === 'pending' ? { withdrawn: true } : {}) })),
     fixtures: fx.data.map(f => ({ id: f.id, week: f.week, ...(f.week === 99 ? { test: true } : {}), look: lookOf(f), round: labels.get(f.week).label, ...(rounds.get(f.week)?.counts_for_ladder === false || rounds.get(f.week)?.kind === 'preseason' ? { exhibition: true } : {}), ...(rounds.get(f.week)?.kind === 'preseason' ? { preseason: true } : {}), ...(labels.get(f.week).name ? { round_name: labels.get(f.week).name } : {}), home: f.home, away: f.away, ...(f.starts_at ? melbParts(f.starts_at) : {}),

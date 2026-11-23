@@ -1,0 +1,29 @@
+/* The Office notice on the Overview (js/office-alert.js): a small card floating in the bottom corner, above the phone tab bar.
+   It floats, so it may carry a shadow (design rules). A strip in the club's colour ties it to the Office. Tokens only. */
+.oa {
+  position: fixed; z-index: 45; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  width: min(360px, calc(100vw - 32px)); padding: 14px 16px 16px; border: 1px solid var(--line); border-left: 4px solid var(--club-accent, var(--brand));
+  border-radius: var(--r-lg); background: var(--surface); color: var(--text); box-shadow: 0 12px 32px rgba(0, 0, 0, .22);
+  font-family: var(--font); animation: oa-in .22s ease-out;
+}
+.oa-head { display: flex; align-items: center; gap: 10px; }
+.oa-ic { display: grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: 50%; background: color-mix(in oklab, var(--club-accent, var(--brand)) 16%, transparent); color: var(--club-accent, var(--brand)); }
+.oa-ic .ic { width: 16px; height: 16px; }
+.oa h2 { flex: 1; margin: 0; color: var(--text-strong); font: 700 var(--fs-m) var(--font); }
+.oa-x { display: grid; place-items: center; width: 36px; height: 36px; margin: -6px -8px -6px 0; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--muted); cursor: pointer; }
+.oa-x .ic { width: 18px; height: 18px; }
+.oa-x:focus-visible, .oa-go:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.oa-list { list-style: none; margin: 10px 0 12px; padding: 0; display: grid; gap: 6px; }
+.oa-list li { position: relative; padding-left: 14px; color: var(--text-soft); font: 400 var(--fs-s)/1.4 var(--font); }
+.oa-list li::before { content: ''; position: absolute; left: 0; top: .5em; width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
+.oa-list li.is-new::before { background: var(--club-accent, var(--brand)); }
+.oa-list li.is-rejected::before { background: var(--res-l); }
+.oa-list b { color: var(--text-strong); font-weight: 600; }
+.oa-go {
+  display: flex; align-items: center; justify-content: center; min-height: 44px; border-radius: 999px; text-decoration: none;
+  background: var(--club, var(--brand)); color: var(--on-club, #fff); font: 700 var(--fs-m) var(--font);
+}
+@media (hover: hover) { .oa-x:hover { background: var(--surface-hover); color: var(--text); } .oa-go:hover { filter: brightness(1.06); } }
+@media (max-width: 767px) { .oa { right: 12px; left: 12px; width: auto; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); } }
+@keyframes oa-in { from { opacity: 0; transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) { .oa { animation: none; } }

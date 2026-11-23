@@ -5,6 +5,7 @@
 //   stakesView(state, o) / helpers below are plain string builders so the tests can run them without a browser.
 // One state object, one click handler on the root (data-st="side|stake|place|cancel|take|help"). The tab draws itself (it is not redrawn by the league page).
 import { icon } from './icons.js';
+import { percents } from './percents.js';
 import { plink } from './player-link.js';
 import { portrait } from './portrait.js';
 import { startTour, tourSeen } from './tour.js';
@@ -123,19 +124,21 @@ function stakePanel(l, st) {
 export const RESULTS = ['home', 'draw', 'away'];
 // What a result pays: the match's own price (from each side's chance of winning, db 0075), else the league's flat fallback.
 const resultMult = (cfg, which, l) => Number(l?.[`mult_${which}`] ?? (which === 'draw' ? cfg.result_draw_mult ?? DEFAULTS.result_draw_mult : cfg.result_win_mult ?? DEFAULTS.result_win_mult));
-export const chanceText = p => (p == null ? '' : `${Math.max(1, Math.round(Number(p) * 100))}% chance`);
+// The chance is the site's win chance (db 0090, B-41), shown as whole percents that add up to 100 the same way the fixtures page does (js/percents.js).
+export const chancePcts = l => (l?.p_home == null ? null : percents({ home: Number(l.p_home), draw: Number(l.p_draw), away: Number(l.p_away) }));
+export const chanceText = pct => (pct == null ? '' : `${pct}% chance`);
 export const multText = m => `${Number(m).toFixed(Number(m) < 10 ? 2 : 1).replace(/\.?0+$/, '')}×`;
 export const resultLabel = (which, home, away) => (which === 'home' ? `${home} win` : which === 'away' ? `${away} win` : 'Draw');
 function predictRow(l, st, o) {
   const cfg = st.cfg || DEFAULTS, bal = st.wallet?.coins ?? 0, mine = l.my_status != null && l.my_result != null;
   const rs = st.rs?.[l.line_id] || { pick: null, stake: defaultStakeFor(cfg, bal) };
   const locked = l.locks_at ? new Date(l.locks_at) <= Date.now() : false, closed = (st.cfg ? !st.cfg.betting_open : false) || locked, chosen = mine ? l.my_result : rs.pick;
-  const hn = o.name(l.home), an = o.name(l.away);
+  const hn = o.name(l.home), an = o.name(l.away), pcts = chancePcts(l);
   const choice = which => {
     const on = chosen === which, mult = mine ? Number(l.my_mult) : resultMult(cfg, which, l);
     const crest = which === 'home' ? o.crest(l.home, 40) : which === 'away' ? o.crest(l.away, 40) : `<span class="st-rr-draw" aria-hidden="true">=</span>`;
     return `<button type="button" class="st-rr is-${which}${on ? ' on' : ''}${chosen && !on ? ' off' : ''}" data-st="rpick" data-line="${l.line_id}" data-which="${which}" aria-pressed="${on}"${mine || closed ? ' disabled' : ''}>
-      ${crest}<b>${esc(resultLabel(which, hn, an))}</b><span>${mine ? (on ? `pays ${multText(mult)}` : '') : `pays ${multText(mult)}`}</span>${!mine && l.p_home != null ? `<em>${chanceText(l[`p_${which}`])}</em>` : ''}</button>`;
+      ${crest}<b>${esc(resultLabel(which, hn, an))}</b><span>${mine ? (on ? `pays ${multText(mult)}` : '') : `pays ${multText(mult)}`}</span>${!mine && pcts ? `<em>${chanceText(pcts[RESULTS.indexOf(which)])}</em>` : ''}</button>`;
   };
   const act = mine
     ? `<div class="st-pr-act is-mine"><p><b>Locked in: ${esc(resultLabel(l.my_result, hn, an))}</b> · ${coins(l.my_stake)} Coins<br>Pays <b>${coins(payout(l.my_stake, l.my_mult))}</b> if you are right</p>${locked ? '' : `<button type="button" class="st-link" data-st="take" data-line="${l.line_id}">Take back</button>`}</div>`

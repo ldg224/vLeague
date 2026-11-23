@@ -150,7 +150,7 @@
 @media (max-width: 640px) {
   .ed-acct { grid-template-columns: minmax(0, 1fr); }
   .ed-club summary { grid-template-columns: 32px minmax(0, 1fr) 14px; }
-  .ed-club summary .ed-pill { grid-column: 2; justify-self: start; }
+  .ed-club summary .ed-pills { grid-column: 2; justify-self: start; }
   .ed-club summary::after { grid-column: 3; grid-row: 1; }
 }
 .ed-sec .ed-actions { margin-top: 10px; }
@@ -584,3 +584,40 @@
 .sk-reset { align-items: end; grid-template-columns: minmax(180px, 1fr) auto; }
 .sk-form .ed-fields { align-items: end; }
 .sk-form + .sk-danger, .dr-vis + .dr-vis { margin-top: 12px; }
+
+/* Editor > Office (S-35, js/editor-office.js): the moves list with Undo. */
+.ed-ofmoves { margin: 0; padding: 0; list-style: none; }
+.ed-ofmove { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 8px 0; border-top: 1px solid var(--line); font-size: var(--fs-m); }
+.ed-ofmove > span:first-child { display: grid; gap: 2px; min-width: 0; }
+.ed-ofmove small { color: var(--muted); font-size: var(--fs-s); font-variant-numeric: tabular-nums; }
+.ed-ofmove.undone > span:first-child { color: var(--muted); text-decoration: line-through; }
+.ed-ofk { display: inline-block; margin-right: 8px; padding: 1px 8px; border-radius: 999px; background: var(--surface-sunk); color: var(--text-soft); font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; }
+.ed-ofmove button, .ed-ofask button { min-height: 36px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); font: 600 var(--fs-s) var(--font); cursor: pointer; flex: none; }
+.ed-ofask { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; color: var(--text-soft); font-size: var(--fs-s); }
+.ed-ofask button.danger { border-color: transparent; background: var(--res-l); color: #fff; }
+/* cap penalties (0092): Apply / Undo sit under the list, left; the confirm lists the points to take off */
+.ed-invite > [data-of-askpen] { justify-self: start; }   /* the shared .primary button */
+.ed-invite > [data-of-askunpen] { justify-self: start; min-height: 40px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); font: 600 var(--fs-s) var(--font); cursor: pointer; }
+.ed-invite > .ed-ofask { justify-content: flex-start; }
+.ed-invite > .ed-ofask p { flex: 1 1 100%; margin: 0; color: var(--text); }
+.ed-ofmove > b { font-variant-numeric: tabular-nums; color: var(--amber-text); }
+.of-ed-form { display: grid; gap: 16px; margin-bottom: 16px; }
+.of-ed-form > button[type="submit"] { justify-self: start; }
+#of-ed.ed-busy :is(button, input) { opacity: .6; pointer-events: none; }   /* Editor > Office: an action is on its way */
+
+/* ---------- money: what each club has paid (22 Nov 2026) ---------- */
+.ed-pills { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.ed-sec h3 .ed-pill { margin-left: 8px; vertical-align: middle; }
+.ed-fee { margin: 0 0 16px; }
+.ed-fee .ed-fee-form { flex-basis: 100%; }
+.ed-fee .ed-fee-form[hidden], .ed-fee .btn[hidden] { display: none; }
+.ed-pays { list-style: none; margin: 0 0 12px; padding: 0; }
+.ed-pay { display: grid; grid-template-columns: 88px minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; min-height: 48px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: var(--fs-m); }
+.ed-pay b { font-weight: 700; font-variant-numeric: tabular-nums; }
+.ed-pay > span { color: var(--muted); min-width: 0; overflow-wrap: anywhere; }
+.ed-pay .btn[hidden] { display: none; }
+.ed-pay .ed-confirm { grid-column: 1 / -1; margin: 0; }
+.ed-pay .ed-confirm[hidden] { display: none; }
+.ed-pay-total { border-bottom: 0; }
+.ed-pay-total > span { color: var(--faint); }
+.ed-pay-form input[name="amount"] { min-width: 8em; flex: 0 1 10em; }

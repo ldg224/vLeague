@@ -3,6 +3,127 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.44.2 (2026-11-23)
+
+**Fixed:** Goal of the week clips now show the kits the teams actually wore. They used the automatic choice, so a club that picked its away or a special kit for the match was shown in the wrong one (in Round 3: Come Come, Neegy and Spider Society).
+
+**Fixed:** A goal scored straight from a cross or a pass (no shot) was left out of the Goal of the week list. It is now scored like a shot from where the ball was played: Stijn Visser's cross from the left touchline for Come Come against Turtle in Round 3 was the missing one, and has been added to that round.
+
+Database change: no (Round 3's Goal of the week list had the goal added).
+
+## 1.44.1 (2026-11-22)
+
+**Fixed:** Record payment and the fee's Save button in Editor > Clubs stopped with "Cannot read properties of null (reading 'dataset')". Both work now.
+
+Database change: no.
+
+## 1.44.0 (2026-11-22)
+
+Headlines: track the money you collect from each club
+
+**Added:** Editor > Clubs has a Money section in every club's panel. Record each payment (amount and an optional note), remove one if it was a mistake, and see the club's running total. An optional fee per club (top of Clubs) shows who has paid in full and who still owes, with a Paid or Owes pill on each club's row and a league total in the bar. Only the league office can see or change any of it.
+
+Database change: yes (0095 club money; applied).
+
+## 1.43.0 (2026-11-22)
+
+Headlines: new squad rules, a move queue, and a transfer window switch you can trust
+
+**Added:** moves made while the transfer window is shut (releases, signings, accepted trades) now wait in a queue and go through when it opens, in order, each checked again then. A move that no longer works shows why. "Take back" cancels a waiting move. Offers can be sent any time and only expire after 21 days unanswered.
+
+**Changed:** squad rules from the league's poll: at least 1 GK, 4 DEF, 3 MID and 3 FWD, no most for any position, and 15 to 16 players (set in Editor > Office).
+
+**Fixed:** switching the transfer window to YES while an old closing time had passed left the window shut, with nothing on screen to say so. Switching it on now clears dates that have passed, and the Editor shows whether the window is really open, closed or opening soon, and when it closes.
+
+Database change: yes (0093 squad rules and queue, 0094 the window switch; both applied).
+
+## 1.42.0 (2026-11-16)
+
+Headlines: Office notices on the Overview
+
+**Added:** a small card on the Overview tells you what's new in the Office:
+- trade offers waiting for you
+- answers to your offers (accepted, turned down or countered)
+- that the transfer window is open, and when it closes
+
+"See the offers" or "Open the Office" takes you straight there. Each notice shows once; close the card and it only comes back when there's something new.
+Database change: none.
+
+## 1.41.0 (2026-11-16)
+
+Headlines: Cap penalty points
+
+**Added:** clubs can now go over the $125,000 wage cap, up to $30,000 over (a $155,000 bill), at a cost in penalty points:
+| Over the cap | Points |
+|---|---|
+| $1 to $5,000 | 1 |
+| $5,001 to $10,000 | 3 |
+| $10,001 to $15,000 | 6 |
+| $15,001 to $20,000 | 10 |
+| $20,001 to $25,000 | 15 |
+| $25,001 to $30,000 | 21 |
+
+The league table shows each club's pending penalty in grey next to its points. The points are only taken off at the end of the regular season, when the office applies them.
+
+In the Office:
+- **Budget bar:** shows the over-cap zone up to the limit.
+- **Every move:** before you confirm, it shows what it does to your penalty points.
+- **Market:** "Room after" shows the points each signing would cost.
+- **Trade meter:** shows the points change for both clubs.
+- **How it works:** lists the ladder.
+
+Editor > Office has the limit setting, a list of clubs over the cap, and Apply / Undo cap penalties.
+
+**Fixed:** a test match being played would have kept the transfer window shut.
+Database change: yes, 0092_cap_penalties.sql (applied).
+
+## 1.40.0 (2026-11-16)
+
+Headlines: The Office in your club's colours, with a draft-style Market
+
+**Changed (S-35):**
+- **Club colour:** the Office is redesigned in your club's colour. The top panel, the budget bar, the main buttons, the active tab and the pills all use it, and each side of a trade shows in its own club's colour.
+- **Market:** now works like the draft board. It's a sortable table (Need, Pos, Player, OFF, DEF, OVR, Wage, Room after) with "Sorted by … Then by" levels, search, position filters, a maximum wage and a "Fits my squad" switch. The positions you're short of are listed first, and a player you can't sign says why on his row.
+- **Squad:** uses the same table, with Release on each row.
+- **Clubs:** shows each club's wage bar.
+- **History:** grouped by day.
+
+The draft board's table now shares the same code. It looks and works as before.
+Database change: none.
+
+## 1.39.0 (2026-11-16)
+
+Headlines: The Office: wages, the cap, signings and trades
+
+**Added (S-35):** the Office, a new button in the header next to Club and Settings. Each club has a wage bill (every player's wage is his value) and a $125,000 cap, shown as a budget bar along the top. Inside are five tabs:
+- **Squad:** release a player (free, 2 per transfer window).
+- **Market:** sign a free agent (first come, first served).
+- **Trade:** build a trade with another club. The value meter shows what each side gives and gets and what it does to both clubs' bills. You can offer, accept, reject, counter or withdraw.
+- **Clubs:** every club's squad and bill.
+- **History:** every move in the league.
+
+A club over the cap can only make moves that bring its bill down. Moves only happen while the office has a transfer window open, never between a round's line-up lock and its last game, and never during a draft. A player who leaves is taken out of his old club's unlocked team sheets. Editor > Office opens and closes the window, sets the cap and the release limit, lists clubs short of the squad rules, and can undo a move.
+The window starts closed, so nothing moves until the office opens one.
+Database change: yes, 0091_office.sql (applied).
+
+## 1.38.0 (2026-11-16)
+
+Headlines: Season stats and Ratings on the line-ups
+
+**Changed (S-36):** the match page's line-ups (the Predicted lineup and the Lineup tab) drop Contributions. There are two new views instead. **Season stats** shows each player's games this season, with goals and assists under the name ("6 apps", "2G 1A"). **Ratings** shows each player's attack and defence ratings above the head (ATT 8, DEF 4), green from 7, orange from 5, red below. Average rating and Value stay. On a played match, its goals, assists and cards now show with Average rating.
+Database change: none.
+
+## 1.37.4 (2026-11-16)
+
+Headlines: Stakes chances match the fixtures, every missed shot shows on the shot map, and a warning when you're watching an old version of a match
+
+**Added (B-42):** when a match is played again after a problem, its file is replaced, but a page opened before that (or a copy the browser kept) could go on showing the old one without saying so. The match page and the Game centre now check the file against the newest result. An old version gets a warning-tape banner, "You're watching an old version of this match", with a "Load the new match" button that reads the new one in place. A browser's old copy is skipped automatically, and a page left open checks every couple of minutes.
+
+**Fixed (B-44, B-40):** on the shot map, the little goal beside a picked shot only reached 0.8 m past each post, and most misses go wider than that (some 20 m or more), so they didn't show at all; the ones that did were a thin ring that was hard to see. The goal now has more room around it, a shot beyond that is pinned to the edge with a dashed ring, misses are a bold ring, and the Result line says how far wide it went ("Off target, 3 m wide") or "over the bar". The player page's Shots map also widens to show a shot from far out instead of cutting it off.
+
+**Fixed (B-41):** Stakes showed different win chances from the fixtures and match pages (SKS v NGY: 43% home win in Stakes, 62% on the fixtures). Stakes used its own model plus a random error of about 12%. It now uses the site's win chance, worked out the same way (line-ups, results so far, form, home ground, head to head), and shows the same whole percentages. The random error is gone, and so is its setting in the Editor. Prices follow the chance until each match kicks off, so a later game in a round moves with the results before it. A pick already placed keeps the payout it was locked in at.
+Database change: yes, 0090_stakes_site_chance.sql (already applied).
+
 ## 1.37.3 (2026-11-11)
 
 Headlines: The ball stays in the picture

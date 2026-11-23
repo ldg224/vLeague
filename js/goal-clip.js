@@ -5,7 +5,8 @@
 //   stage.destroy()
 // One renderer per match is kept (the camera plans take a moment to build), so the five finalists of a round cost at most five builds.
 import { loadMatchFile } from './match-file.js';
-import { loadKits, matchKits } from './kits-data.js';
+import { loadKits, loadFixtureKits, matchKits } from './kits-data.js';
+import { db } from './auth.js';
 import { clipWindow } from './goal-wow.js';
 
 export class ClipStage {
@@ -24,7 +25,7 @@ export class ClipStage {
       if (!file?.frames?.data?.length) throw new Error('This match has no pictures.');
       const { buildKitArt } = await import('./viewer/player.js');
       const colour = code => this.season.teams.find(t => t.code === code)?.colour;
-      const wear = matchKits(kits, fx.home, fx.away, { [fx.home]: colour(fx.home), [fx.away]: colour(fx.away) }, {});
+      const wear = matchKits(kits, fx.home, fx.away, { [fx.home]: colour(fx.home), [fx.away]: colour(fx.away) }, await kitPicks(fx, file));
       const teams = this.season.teams.filter(t => t.code === fx.home || t.code === fx.away);
       const { logoUrl } = await import('./dashboard-data.js');
       const [assets, kitArt] = await Promise.all([hl.loadAssets(teams), buildKitArt(wear, { home: logoUrl(fx.home), away: logoUrl(fx.away) })]);
@@ -247,4 +248,16 @@ export async function recordReel(season, list, { width = 1280, label = '', onPro
     rec.stop(); await done;
     return { blob: new Blob(chunks, { type: type.split(';')[0] }), ext: type.startsWith('video/mp4') ? 'mp4' : 'webm' };
   } finally { stage.destroy(); }
+}
+
+// The kit each side wore in this match, as the match page shows it: the Editor's choice for the match, else the team's locked sheet, else a test match's kit.
+// (The clips used the automatic choice before, so a club that picked its away or a special kit was shown in the wrong one.)
+async function kitPicks(fx, file) {
+  const [editor, sheets] = await Promise.all([
+    loadFixtureKits(fx.id, fx.home, fx.away),
+    fx.week == null ? [] : db().then(c => c.from('week_sheets').select('club, kit, submitted, random').eq('week', fx.week).in('club', [fx.home, fx.away])).then(r => r.data || []).catch(() => []),
+  ]);
+  const sheet = code => sheets.find(x => x.club === code && (x.submitted || x.random))?.kit;
+  const pick = code => editor[code] || sheet(code) || file?.test_kits?.[code];
+  return { [fx.home]: pick(fx.home), [fx.away]: pick(fx.away) };
 }

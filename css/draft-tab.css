@@ -120,62 +120,7 @@
   .lg-draft .dr-avail[data-sub="auto"] .dr-main, .lg-draft .dr-avail[data-sub="auto"] .dr-queue { display: none; }
 }
 
-/* filters */
-.dr-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
-.dr-search { display: flex; align-items: center; gap: 8px; flex: 1 1 220px; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-sunk); color: var(--muted); }
-.dr-search .ic { width: 16px; height: 16px; flex: none; }
-.dr-search input { flex: 1; min-width: 0; border: 0; background: none; color: var(--text); font: 400 var(--fs-m) var(--font); }
-.dr-search input:focus { outline: none; }
-.dr-search:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
-.lg-draft .dr-pos { align-items: center; }
-.dr-max { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 6px 0 14px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); font: 600 var(--fs-s) var(--font); }
-.dr-max input { width: 84px; border: 0; background: none; color: var(--text); font: 400 var(--fs-m) var(--font); font-variant-numeric: tabular-nums; }
-.dr-max input:focus { outline: none; }
-.dr-max:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
-.dr-fit { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px 0 8px; border-radius: 999px; border: 1px solid var(--line); cursor: pointer; color: var(--text); font: 600 var(--fs-s) var(--font); }
-.dr-fit input { appearance: none; width: 32px; height: 18px; margin: 0; border-radius: 999px; background: color-mix(in oklab, var(--text) 18%, transparent); position: relative; cursor: pointer; transition: background .15s; }
-.dr-fit input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform .15s; }
-.dr-fit input:checked { background: var(--brand); }
-.dr-fit input:checked::after { transform: translateX(14px); }
-/* sorting */
-.dr-sortbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 12px; color: var(--muted); font: 400 var(--fs-s) var(--font); }
-.dr-sortl { margin-right: 2px; }
-.lg-draft .dr-chip { display: inline-flex; align-items: center; min-height: 30px; border-radius: 999px; background: color-mix(in oklab, var(--brand) 12%, transparent); overflow: hidden; }
-.lg-draft .dr-chip button { display: inline-flex; align-items: center; gap: 2px; min-height: 30px; padding: 0 10px; border: 0; background: none; color: var(--brand); cursor: pointer; font: 600 var(--fs-s) var(--font); }
-.lg-draft .dr-chip button + button { padding: 0 8px 0 2px; }
-.lg-draft .dr-chip .ic { width: 14px; height: 14px; }
-.dr-then { position: relative; display: inline-flex; align-items: center; }
-.dr-then select { appearance: none; min-height: 30px; padding: 0 28px 0 12px; border-radius: 999px; border: 1px dashed var(--line); background: none; color: var(--text); cursor: pointer; font: 600 var(--fs-s) var(--font); }
-.dr-then .ic { position: absolute; right: 9px; width: 14px; height: 14px; pointer-events: none; color: var(--muted); }
-.dr-then select option { background: var(--surface); color: var(--text); }
-/* the table */
-.lg-draft .dr-tablewrap { width: auto; max-width: none; max-height: 70vh; margin: 0 -16px; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: none; overflow: auto; }
-.lg-draft .dr-table { width: 100%; min-width: 0; border-collapse: collapse; font: 400 var(--fs-m) var(--font); font-variant-numeric: tabular-nums; }
-.lg-draft .dr-table th { position: sticky; top: 0; z-index: 2; padding: 0; background: var(--surface); border-bottom: 1px solid var(--line); box-shadow: none; text-align: left; white-space: nowrap; }
-.lg-draft .dr-table th button { display: flex; align-items: center; gap: 4px; width: 100%; padding: 10px 12px; border: 0; background: none; color: var(--muted); cursor: pointer; font: 600 var(--fs-xs) var(--font); text-transform: none; letter-spacing: 0; }
-.lg-draft .dr-table th[aria-sort="ascending"] button, .lg-draft .dr-table th[aria-sort="descending"] button { color: var(--text-strong); }
-.lg-draft .dr-table th[aria-sort="none"] .dr-ar { display: none; }
-.lg-draft .dr-ar { display: inline-flex; color: var(--brand); }
-.lg-draft .dr-ar .ic { width: 12px; height: 12px; }
-.lg-draft .dr-table td { padding: 8px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-.lg-draft .dr-table tbody tr:last-child td { border-bottom: 0; }
-@media (hover: hover) { .lg-draft .dr-table tbody tr:hover { background: var(--surface-hover); } }
-.lg-draft .dr-table :is(.c-position, .c-number, .c-offense, .c-defense, .c-overall) { text-align: center; }
-.lg-draft .dr-table th:is(.c-position, .c-number, .c-offense, .c-defense, .c-overall) button { justify-content: center; }
-.lg-draft .dr-table :is(.c-value, th.c-value) { text-align: right; }
-.lg-draft .dr-table th.c-value button { justify-content: flex-end; }
-.lg-draft .dr-table .c-position { width: 3.6em; color: var(--muted); font: 600 var(--fs-xs) var(--font); }
-.lg-draft .dr-table .c-number { width: 3em; color: var(--muted); }
-.lg-draft .dr-table :is(.c-offense, .c-defense, .c-overall) { width: 4.2em; }
-.lg-draft .dr-table .c-value { width: 6.5em; color: var(--text); }
-.lg-draft .dr-table .c-name { width: auto; max-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.lg-draft .dr-table .c-act { width: 1%; text-align: right; }
-.lg-draft .dr-table .c-act .dr-b + .dr-b { margin-left: 6px; }
-.lg-draft .dr-table .rt { min-width: 2.2em; padding: 1px 4px; border-radius: 6px; font: 700 var(--fs-s) var(--font); }
-.lg-draft .dr-name, .dr-dialog .dr-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0; border: 0; background: none; color: var(--text-strong); cursor: pointer; font: 600 var(--fs-m) var(--font); text-align: left; }
-@media (hover: hover) { .lg-draft .dr-name:hover { color: var(--brand); } }
-.lg-draft .dr-table .c-name .dr-name { display: block; }
-.lg-draft .dr-table tr.me { background: color-mix(in oklab, var(--club, var(--brand)) 10%, transparent); }
+/* filters, the sort chips and the sortable table: css/sort-table.css (shared with the Office) */
 
 /* rows of players: the queue and the clubs' squads */
 .lg-draft .dr-list { list-style: none; margin: 0; padding: 0; }

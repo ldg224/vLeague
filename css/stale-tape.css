@@ -1,0 +1,20 @@
+/* B-42: the warning over a match whose file is an old version (js/match-file.js staleBanner), on the match page and the Game centre.
+   A card with a strip of warning tape top and bottom (amber and near-black), what happened, and the button to the new version. Tokens only. */
+.stale-tape { --tape: repeating-linear-gradient(-45deg, var(--amber) 0 12px, #141414 12px 24px);
+  margin: 0 0 16px; border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; background: var(--surface); }
+.stale-tape::before, .stale-tape::after { content: ''; display: block; height: 10px; background: var(--tape); }
+.stale-in { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px;
+  background: color-mix(in oklab, var(--amber) 10%, var(--surface)); }
+.stale-in b { display: block; color: var(--text-strong); font: 700 var(--fs-l, 16px) var(--font); }
+.stale-in p { margin: 4px 0 0; color: var(--text-soft); font: 400 var(--fs-m, 14px) var(--font); }
+.stale-go { flex: none; min-height: 44px; padding: 0 20px; border: 0; border-radius: 999px; background: var(--brand); color: #fff;
+  font: 700 var(--fs-m, 14px) var(--font); cursor: pointer; }
+:root:not([data-theme="light"]) .stale-go { color: var(--blue-900, #0d47a1); }   /* dark: --brand is a light blue, so dark text (as the club page's primary button) */
+.stale-go:disabled { opacity: .6; cursor: default; }
+.stale-go:focus-visible { outline: 2px solid var(--focus, var(--brand)); outline-offset: 2px; }
+@media (hover: hover) { .stale-go:not(:disabled):hover { filter: brightness(1.08); } }
+@media (max-width: 767px) {
+  .stale-tape { margin-bottom: 12px; }
+  .stale-in { flex-direction: column; align-items: stretch; padding: 14px 16px; }
+  .stale-go { width: 100%; }
+}

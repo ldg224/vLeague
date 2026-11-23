@@ -5,7 +5,7 @@
 
 Why a fitted model and not the engine for every price: one engine game takes about 23 seconds, so the chances for a whole season cannot be simulated one by one.
 Instead the engine plays a batch once, a goals model is fitted to what it did, and the database turns that model into the chances of a home win, a draw and an away
-win (db 0077). Run it again when squads change (the draft, transfers) or the engine changes. It needs the Supabase token at ~/.vleague/supabase-token.txt (squads are read
+win (db 0077). Run it again when squads change (the draft, transfers) or the engine changes. It needs the Supabase token at ~/.supabase/token.txt (squads are read
 with a select only) and nothing outside the standard library.
 """
 import json, math, sys, time, urllib.request
@@ -18,7 +18,7 @@ PROJECT = 'ywkhjpfzqtfssbxbvnbl'
 
 
 def q(sql):
-    token = (Path.home() / '.vleague' / 'supabase-token.txt').read_text().strip()
+    token = (Path.home() / '.supabase' / 'token.txt').read_text().strip()
     r = urllib.request.Request(f'https://api.supabase.com/v1/projects/{PROJECT}/database/query', data=json.dumps({'query': sql}).encode(),
                                headers={'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'User-Agent': 'vl/1'})
     return json.load(urllib.request.urlopen(r, timeout=150))

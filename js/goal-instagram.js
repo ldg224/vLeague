@@ -77,7 +77,7 @@ export async function buildInstagram(season, m, { label = '', winner = false, ra
 
   // ---- the clip scene: blurred fill, the picture, header, details
   const chips = (winner ? [
-    m.dist != null ? `${m.dist} M OUT` : null, `${m.xg.toFixed(2)} xG`, m.subtype === 'volley' ? 'VOLLEY' : m.body === 'head' ? 'HEADER' : null,
+    m.dist != null ? `${m.dist} M OUT` : null, `${m.xg.toFixed(2)} xG`, m.subtype === 'cross' ? 'STRAIGHT FROM A CROSS' : m.subtype === 'pass' ? 'STRAIGHT FROM A PASS' : m.subtype === 'volley' ? 'VOLLEY' : m.body === 'head' ? 'HEADER' : null,
     m.passes >= 6 ? `${m.passes}-PASS MOVE` : null, assistName ? `ASSIST ${assistName.split(' ').pop().toUpperCase()}` : null,
   ] : []).filter(Boolean);
   const [sh, sa] = m.score || [], mineFirst = m.team === fx.home;

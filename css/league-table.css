@@ -24,6 +24,11 @@
 .tb .tb-club b { font-weight: inherit; overflow: hidden; text-overflow: ellipsis; }
 .tb .tb-short { display: none; }   /* the full name where there is room; the short one on phones */
 .tb .tb-pts { font-weight: 700; color: var(--text-strong); }
+/* a pending cap penalty (0092): grey, after the points, not counted until the end of the regular season */
+.tb-ptsn { display: inline-block; min-width: 2ch; text-align: right; }
+.tb .tb-pen { display: inline-block; min-width: 2.4em; margin-left: 4px; text-align: left; color: var(--muted); font: 600 var(--fs-xs) var(--font); font-stretch: 100%; font-variant-numeric: tabular-nums; cursor: help; }
+.tb-pennote { display: flex; align-items: baseline; gap: 6px; margin: 4px 4px 6px; color: var(--muted); font: 400 var(--fs-xs)/1.4 var(--font); }
+.tb-pennote .tb-pen { margin: 0; color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
 .tb tr.is-mine td, .tb tr.is-mine th { background-color: color-mix(in oklab, var(--club, var(--blue-700)) 14%, transparent); }
 .tb tr.is-mine .tb-club b { color: var(--club-accent, var(--text-strong)); }
 

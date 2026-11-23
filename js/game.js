@@ -10,6 +10,7 @@ import { chrome, esc, clubs } from './member.js';
 import { currentUser, myProfile, db } from './auth.js';
 import { paintClub } from './shell.js';
 import { loadSeason, kickoff, status, shownScore, liveSimTime, liveMinute, liveState } from './dashboard-data.js';
+import { loadMatchFile, forgetMatchFile, isStale, staleBanner } from './match-file.js';
 import { crest, teamOf, nameOf, fullNameOf, useClubs, day } from './places.js';
 import { prefs, fmtTime, spoilerHidden, revealScore } from './prefs.js';
 import { clubSummary, percents } from './match-model.js';
@@ -77,14 +78,8 @@ async function run() {
     if (data || loadingFile || !['live', 'ft'].includes(st()) || !fx.result?.file) return;
     loadingFile = true;
     try {
-      const { data: blob, error } = await (await db()).storage.from('matches').download(fx.result.file);
-      if (error || !blob) throw new Error(error?.message || 'no file');
-      const text = await new Response(blob.stream().pipeThrough(new DecompressionStream('gzip'))).text();
-      data = JSON.parse(text);
-      data.fi = Object.fromEntries(data.frames.fields.map((f, i) => [f, i]));
-      data.byId = Object.fromEntries(data.players.map(p => [p.id, p]));
-      data.byIdx = Object.fromEntries(data.players.map(p => [p.idx, p]));
-      data.goals = data.events.filter(e => e.type === 'goal');
+      data = await loadMatchFile(fx);   // the shared reader: checks it is the newest version of the match (B-42)
+      if (!data) throw new Error('no file');
       fileError = '';
     } catch (e) { fileError = 'The match file isn’t available yet. Try again in a moment.'; }
     loadingFile = false;
@@ -281,19 +276,28 @@ async function run() {
   let lastHead = '', lastBelow = '', lastPage = '';
   function pageHtml() {
     const waiting = !data && ['live', 'ft'].includes(st());
-    return `<div class="gc"${sides()}>${head()}${data ? `${playerCard(st())}<nav class="gc-jump" aria-label="Jump to a section">${live() ? '<a href="#gc-chance">Win chance</a>' : ''}<a href="#gc-stats">Stats</a><a href="#gc-lineups">Line-ups</a><a href="#gc-timeline">Timeline</a></nav><div id="gc-below">${below()}</div>`
+    return `<div class="gc"${sides()}><div id="gc-stale">${staleHtml()}</div>${head()}${data ? `${playerCard(st())}<nav class="gc-jump" aria-label="Jump to a section">${live() ? '<a href="#gc-chance">Win chance</a>' : ''}<a href="#gc-stats">Stats</a><a href="#gc-lineups">Line-ups</a><a href="#gc-timeline">Timeline</a></nav><div id="gc-below">${below()}</div>`
       : `${waiting ? `<p class="quiet">${esc(fileError || 'Loading the match…')}</p>` : ''}${previewSection()}`}</div>`;
   }
+  // B-42: the match was played again since this file was read (the 30-second season check brings the new result).
+  let staleBusy = false, lastStale = '';
+  const staleHtml = () => (data && isStale(fx, data) ? staleBanner({ busy: staleBusy }) : '');
   const pageKey = () => (data ? '' : pageHtml());
   function draw() {
     liveReactions(fx.id, live());
     unmount();
     main.innerHTML = lastPage = pageHtml();
-    lastHead = head(); lastBelow = data && live() ? below() : '';
+    lastStale = staleHtml(); lastHead = head(); lastBelow = data && live() ? below() : '';
     mount();
   }
 
   // ---------------------------------------------------------------- events
+  main.addEventListener('click', async e => {
+    if (!e.target.closest('[data-stale-reload]') || staleBusy) return;   // a person's own click: read the season and the new file, then draw the page again
+    staleBusy = true; document.getElementById('gc-stale').innerHTML = lastStale = staleHtml();
+    try { season = await loadSeason(); fx = fxOf(season) || fx; forgetMatchFile(fx.id); data = null; await loadFile(); } catch { /* keep what is on screen */ }
+    staleBusy = false; draw();
+  });
   main.addEventListener('click', e => {
     const row = e.target.closest('.tl-row');
     if (!row || live() || !data) return;   // a timeline row: watch that moment
@@ -317,6 +321,8 @@ async function run() {
       // Swap a block only when it changed (the score ticking, a new event); an identical one is left alone, so a text selection or
       // your place in the stats is never reset by the 5-second check. And not at all while something in it is selected.
       const selected = window.getSelection?.(); const holding = el => Boolean(selected && !selected.isCollapsed && el?.contains(selected.anchorNode));
+      const sb = document.getElementById('gc-stale'), sh = staleHtml();
+      if (sb && sh !== lastStale && !holding(sb)) { sb.innerHTML = sh; lastStale = sh; }   // only the banner's own slot: the viewer under it keeps playing
       const h = document.querySelector('.gc-head'), hh = head();
       if (h && hh !== lastHead && !holding(h)) { h.outerHTML = hh; lastHead = hh; }
       const b = document.getElementById('gc-below');

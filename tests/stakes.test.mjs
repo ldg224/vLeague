@@ -2,7 +2,8 @@
 // The Stakes tab's pure parts (MU-1): payout, the closing clock and the page's html for a few states.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { payout, closesIn, stakesView, statName, STEPS, stepsFor, stakeChips, DEFAULTS, defaultStakeFor, bestCols, averageText, RESULTS, resultLabel } from '../js/stakes.js';
+import { payout, closesIn, stakesView, statName, STEPS, stepsFor, stakeChips, DEFAULTS, defaultStakeFor, bestCols, averageText, RESULTS, resultLabel, chancePcts } from '../js/stakes.js';
+import { percents } from '../js/percents.js';
 import { readSettings } from '../js/editor-stakes.js';
 
 const o = { crest: () => '<i class="c"></i>', name: c => c };
@@ -196,14 +197,20 @@ test('the tour has a predictor step only when there are predictors', () => {
 });
 test('the Editor form carries the margin, the biggest payout and the switch', () => {
   const f = new FormData();
-  for (const [k, v] of [['result_margin', '8'], ['result_max_mult', '15'], ['result_noise', '12'], ['score_all', 'on']]) f.append(k, v);
+  for (const [k, v] of [['result_margin', '8'], ['result_max_mult', '15'], ['score_all', 'on']]) f.append(k, v);
   const o3 = readSettings(f);
-  assert.equal(o3.result_margin, 8); assert.equal(o3.result_max_mult, 15); assert.equal(o3.result_noise, 12); assert.equal(o3.score_all, true);
-  assert.ok(!('score_exact_mult' in o3) && !('score_per_week' in o3));
+  assert.equal(o3.result_margin, 8); assert.equal(o3.result_max_mult, 15); assert.equal(o3.score_all, true);
+  assert.ok(!('score_exact_mult' in o3) && !('score_per_week' in o3) && !('result_noise' in o3));   // the random error is gone (B-41)
 });
 test('a result button shows the match’s own chance and payout', () => {
   const html = stakesView(state({ slate: [{ ...resultLine(9), mult_home: 6.5, mult_draw: 4, mult_away: 1.25, p_home: 0.14, p_draw: 0.23, p_away: 0.63 }] }), o);
   assert.match(html, /pays 6\.5×/); assert.match(html, /pays 4×/); assert.match(html, /pays 1\.25×/); assert.match(html, /63% chance/); assert.match(html, /14% chance/);
+});
+test('Stakes shows the same whole percents as the fixtures page (B-41)', () => {
+  const l = { p_home: 0.3335, p_draw: 0.3335, p_away: 0.333 };
+  assert.deepEqual(chancePcts(l), percents({ home: 0.3335, draw: 0.3335, away: 0.333 }));
+  assert.equal(chancePcts(l).reduce((a, b) => a + b, 0), 100);   // rounding each on its own would give 33 + 33 + 33
+  assert.equal(chancePcts({ p_home: null }), null);
 });
 test('history names a result pick and the final score', () => {
   const html = stakesView(state({ history: [{ kind: 'result', home: 'AAA', away: 'BBB', result: 'home', stake: 100, status: 'won', payout: 220, act_home: 2, act_away: 1 }], slate: [line(1)] }), o);

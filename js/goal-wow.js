@@ -19,7 +19,10 @@ export function goalMoments(file, fx) {
   const out = [];
   for (const g of ev) {
     if (g.type !== 'goal' || g.own_goal) continue;
-    const shot = shots.get(g.shot);
+    // A goal straight from a cross or a pass (no shot: the ball the scorer played went in) counts too, scored from where he struck it, as a long shot would be.
+    // (Stijn Visser's cross from the left touchline in Round 3, CCF v TUR, was missed from the list because it had no shot.)
+    const struck = !g.shot ? [...ev].reverse().find(e => e.t <= g.t && e.poss === g.poss && e.type === 'pass' && e.player === g.scorer) : null;
+    const shot = shots.get(g.shot) || (struck && { ...struck, subtype: struck.subtype === 'cross' ? 'cross' : 'pass', body: struck.header ? 'head' : 'foot', xg: 0.02 });
     if (!shot || shot.subtype === 'penalty') continue;
     const before = ev.filter(e => e.poss === shot.poss && e.t <= shot.t);
     const passes = before.filter(e => e.type === 'pass' && e.team === g.team).length;
@@ -58,4 +61,4 @@ export function shortlist(moments, n = 15, perMatch = 3) {
 }
 
 // A one-line description for the card and the caption: "31 m, left foot, 0.03 xG".
-export const describe = m => [`${m.dist} m`, m.subtype === 'volley' ? 'volley' : m.body === 'head' ? 'header' : null, m.passes >= 6 ? `${m.passes}-pass move` : null, `${m.xg.toFixed(2)} xG`].filter(Boolean).join(', ');
+export const describe = m => [`${m.dist} m`, m.subtype === 'cross' ? 'straight from a cross' : m.subtype === 'pass' ? 'straight from a pass' : m.subtype === 'volley' ? 'volley' : m.body === 'head' ? 'header' : null, m.passes >= 6 ? `${m.passes}-pass move` : null, `${m.xg.toFixed(2)} xG`].filter(Boolean).join(', ');
