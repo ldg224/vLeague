@@ -14,11 +14,8 @@ import { possPair } from '../possession.js';
 
 export const W = 1920, H = 1080, FPS = 30;
 const MIN_PLAYER = 110;   // px at 1920 x 1080: how tall a player where the camera is looking is drawn on a wide shot (highlights were showing tiny players on high and wide shots)
-const MAX_BOOST = 1.0;    // the most a shot enlarges its figures to get there: 1 = true size everywhere (the user, 11 Nov 2026: was 1.8)
+const MAX_BOOST = 1.8;    // the most a shot enlarges its figures to get there
 const MIN_FIGURE = 40;    // px at 1920 x 1080: the smallest anyone is drawn, however far away
-// How wide a figure is drawn for his height: 0.28, about 0.52 m for 1.85 m (real shoulders are 0.46 to 0.50 m; the pill has no arms, so a touch more).
-// It was 0.42, which drew everyone about 0.87 m wide.
-const BODY_W = 0.28;
 const GOAL_Y1 = 30.34, GOAL_Y2 = 37.66, GOAL_H = 2.44;
 // vLeague brand (docs/BRAND.md): Material Blue ramp, white as the accent, navy background. The old
 // names stay so the graphics code reads the same: LIME = Blue 300 (accent text), YEL -> LIME2 = the
@@ -1009,7 +1006,7 @@ export class HighlightsRenderer {
     const c = this.c, p = cam.p(it.x, it.y); if (!p) return;
     const fg = this.figure(cam, p, it.x, it.y); if (fg.alpha < 0.02) return;
     c.globalAlpha *= fg.alpha;
-    const bh = fg.h, bw = Math.max(8, bh * BODY_W), bx = p[0], top = p[1] - bh;
+    const bh = fg.h, bw = Math.max(12, bh * 0.42), bx = p[0], top = p[1] - bh;
     const r = Math.max(10, p[2] * 0.6) * fg.k;
     c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(bx + r * 0.4, p[1], r * 1.05, r * 0.42, 0, 0, Math.PI * 2); c.fill();
     const K = this.officialsKit();
@@ -1049,7 +1046,7 @@ export class HighlightsRenderer {
     const c = this.c, p = cam.p(it.x, it.y); if (!p) return;
     const fg = this.figure(cam, p, it.x, it.y); if (fg.alpha < 0.02) return;
     c.globalAlpha *= fg.alpha;
-    const bh = fg.h, bw = Math.max(8, bh * BODY_W), bx = p[0], top = p[1] - bh;
+    const bh = fg.h, bw = Math.max(12, bh * 0.42), bx = p[0], top = p[1] - bh;
     const r = Math.max(10, p[2] * 0.6) * fg.k;
     c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.ellipse(bx + r * 0.4, p[1], r * 1.05, r * 0.42, 0, 0, Math.PI * 2); c.fill();
     const K = this.officialsKit();
@@ -1284,14 +1281,14 @@ export class HighlightsRenderer {
     const top = p[1] - fg.h;
     // Shadow, so he stands on the grass rather than touching it at one point: a dark contact shadow right under the feet, as wide as the body and centred
     // on it, with a softer, wider one cast a little to the side. Lite drawing keeps two plain ellipses (gradients cost too much on a slow phone).
-    const sw = Math.max(8, fg.h * BODY_W), sy = p[1] - sw * 0.1;
+    const sw = Math.max(12, fg.h * 0.42), sy = p[1] - sw * 0.1;
     if (this.lite) {
-      c.fillStyle = 'rgba(0,0,0,0.22)'; c.beginPath(); c.ellipse(p[0] + sw * 0.2, sy, sw * 1.0, sw * 0.32, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = 'rgba(0,0,0,0.22)'; c.beginPath(); c.ellipse(p[0] + sw * 0.3, sy, sw * 1.3, sw * 0.4, 0, 0, Math.PI * 2); c.fill();
       c.fillStyle = 'rgba(0,0,0,0.45)'; c.beginPath(); c.ellipse(p[0], sy, sw * 0.7, sw * 0.24, 0, 0, Math.PI * 2); c.fill();
     } else {
       c.save(); c.translate(p[0], sy); c.scale(1, 0.3);
-      const wide = c.createRadialGradient(sw * 0.25, 0, 0, sw * 0.25, 0, sw * 1.15); wide.addColorStop(0, 'rgba(0,0,0,0.30)'); wide.addColorStop(1, 'rgba(0,0,0,0)');
-      c.fillStyle = wide; c.beginPath(); c.arc(sw * 0.25, 0, sw * 1.15, 0, Math.PI * 2); c.fill();
+      const wide = c.createRadialGradient(sw * 0.35, 0, 0, sw * 0.35, 0, sw * 1.7); wide.addColorStop(0, 'rgba(0,0,0,0.30)'); wide.addColorStop(1, 'rgba(0,0,0,0)');
+      c.fillStyle = wide; c.beginPath(); c.arc(sw * 0.35, 0, sw * 1.7, 0, Math.PI * 2); c.fill();
       const core = c.createRadialGradient(0, 0, 0, 0, 0, sw * 0.95); core.addColorStop(0, 'rgba(0,0,0,0.70)'); core.addColorStop(0.65, 'rgba(0,0,0,0.5)'); core.addColorStop(1, 'rgba(0,0,0,0)');
       c.fillStyle = core; c.beginPath(); c.arc(0, 0, sw * 0.95, 0, Math.PI * 2); c.fill(); c.restore();
     }
@@ -1305,7 +1302,7 @@ export class HighlightsRenderer {
       c.save(); c.translate(p[0], lift ? lift[1] : p[1]); c.rotate(tilt); c.translate(-p[0], -p[1]);
     }
     // body: a short upright capsule, like a player figure seen from the stand
-    const bx = p[0], bh = p[1] - top, bw = Math.max(8, bh * BODY_W);
+    const bx = p[0], bh = p[1] - top, bw = Math.max(12, bh * 0.42);
     // Which way he faces (the way he runs, or at the ball when he is standing) as this camera sees it: front, back or side on.
     const spd = Math.hypot(it.vx, it.vy), wv = Math.min(1, spd / 1.5), ball = this.ballAt || [52.5, 34, 0];
     let tx = ball[0] - it.x, ty = ball[1] - it.y; const tl = Math.hypot(tx, ty) || 1; tx /= tl; ty /= tl;
