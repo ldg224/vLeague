@@ -48,3 +48,16 @@ test('shortlist keeps the best first and at most 3 per match', () => {
 test('describe reads as a short line', () => {
   assert.match(describe(goalMoments(file, fx)[0]), /m, 2 passes?|xG/);
 });
+
+// A goal straight from a cross (no shot event: the ball the scorer crossed went in) is on the list, scored from where he crossed it.
+{
+  const { goalMoments, describe } = await import('../js/goal-wow.js');
+  const file = { players: [{ id: 'p9', name: 'Stijn Visser' }], events: [
+    { id: 1, t: 10, type: 'pass', team: 'AAA', player: 'p2', poss: 5, x: 40, y: 30, outcome: 'complete' },
+    { id: 2, t: 12, type: 'pass', team: 'AAA', player: 'p9', poss: 5, x: 38.1, y: 65.2, subtype: 'cross', header: null, outcome: 'out' },
+    { id: 3, t: 14, type: 'goal', team: 'AAA', poss: 5, x: 0, y: 36.9, scorer: 'p9', own_goal: false, score: [1, 1], minute: '49', shot: null },
+  ] };
+  const [m] = goalMoments(file, { id: 'f1', home: 'AAA', away: 'BBB' });
+  if (!m || m.scorerName !== 'Stijn Visser' || m.subtype !== 'cross' || m.dist !== 49 || !describe(m).includes('straight from a cross')) throw new Error('goal straight from a cross not listed: ' + JSON.stringify(m));
+  console.log('ok - a goal straight from a cross is listed');
+}

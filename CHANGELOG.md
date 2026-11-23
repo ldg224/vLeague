@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.44.2 (2026-11-23)
+
+**Fixed:** Goal of the week clips now show the kits the teams actually wore. They used the automatic choice, so a club that picked its away or a special kit for the match was shown in the wrong one (in Round 3: Come Come, Neegy and Spider Society).
+
+**Fixed:** A goal scored straight from a cross or a pass (no shot) was left out of the Goal of the week list. It is now scored like a shot from where the ball was played: Stijn Visser's cross from the left touchline for Come Come against Turtle in Round 3 was the missing one, and has been added to that round.
+
+Database change: no (Round 3's Goal of the week list had the goal added).
+
 ## 1.44.1 (2026-11-22)
 
 **Fixed:** Record payment and the fee's Save button in Editor > Clubs stopped with "Cannot read properties of null (reading 'dataset')". Both work now.
