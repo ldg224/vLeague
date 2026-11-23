@@ -3,6 +3,12 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.45.1 (2026-11-24)
+
+**Changed:** Match video players are back to how they were before 1.45.0. The slimmer, true-size figures read as too tall and thin.
+
+Database change: no.
+
 ## 1.45.0 (2026-11-24)
 
 Headlines: release past the limit, for a release fee
