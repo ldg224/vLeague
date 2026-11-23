@@ -3,6 +3,21 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.45.0 (2026-11-24)
+
+Headlines: release past the limit, for a release fee
+
+**Added:** A club can now release more players than the window's free releases (2 at the moment). Each release past the limit costs a release fee of 10% of that player's wage. The fee stays on the club's wage bill for the rest of the season, so it counts against the cap, the over-cap limit and penalty points like any wage. A manager can't get rid of it: signing the player back or a new window leaves it there.
+In the Office, once your free releases are used, each player shows his fee, the confirm step states it before you release, and a Release fees card lists what is on your bill. Releases queued while the window is shut no longer stop at 2: any past the limit get their fee when the window opens.
+
+**Added:** Editor > Office has a Release fees section: every fee standing, with Clear on each and Clear all fees (for the end of the season). Undoing a release also clears its fee.
+
+**Changed:** The pending cap penalties on the league table count release fees.
+
+**Changed:** Match video: players are drawn at their true size (no more enlarging on wide shots), about 0.52 m wide instead of 0.87 m, with tighter shadows.
+
+Database change: yes, 0096_release_fees.sql (applied): the release fees table, and the wage bill now includes the fees.
+
 ## 1.44.2 (2026-11-23)
 
 **Fixed:** Goal of the week clips now show the kits the teams actually wore. They used the automatic choice, so a club that picked its away or a special kit for the match was shown in the wrong one (in Round 3: Come Come, Neegy and Spider Society).
