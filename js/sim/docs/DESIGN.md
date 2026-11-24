@@ -110,7 +110,10 @@ possession changes):
   restarts take realistic amounts of time. The ball stays where play stopped (in the net
   during a goal celebration) and is placed when the restart is taken.
 * **Offside** is judged when the ball is played, and called when an offside player becomes
-  involved. Throw-ins, goal kicks and corners are exempt.
+  involved. Throw-ins, goal kicks and corners are exempt. The defending team's free kick is taken where
+  he became involved; inside their own penalty area the keeper takes it, from the six-yard line if the
+  offence was nearer the goal line (Law 13). The touched ball drops and rolls to a stop instead of
+  freezing in the air, and the taker fetches it and carries it to the spot (B-43).
 
 ## Ratings
 

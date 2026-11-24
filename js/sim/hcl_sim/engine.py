@@ -12,7 +12,7 @@ import random
 
 from . import physics, tactics, decisions
 from .config import (PITCH_LENGTH, PITCH_WIDTH, GOAL_Y1, GOAL_Y2, GOAL_HEIGHT, BOX_DEPTH, BOX_Y1, BOX_Y2,
-                     TICK, HALF_SECONDS, DEFAULT_FPS, MAX_PLAYER_SPEED, TUNING, PENALTY_SPOT, SIX_DEPTH)
+                     TICK, HALF_SECONDS, DEFAULT_FPS, MAX_PLAYER_SPEED, TUNING, PENALTY_SPOT, SIX_DEPTH, SIX_Y1, SIX_Y2)
 from .geometry import clamp, dist, unit, seg_point_dist, sigmoid, rotate
 from .models import Ball
 from .output import RATING_BASE, VOLUME_NORM
@@ -84,6 +84,18 @@ class Match:
 
     def other(self, team):
         return self.away if team is self.home else self.home
+
+    def _update_mood(self):
+        """The score and the clock lean on how a team plays (0.4.0): from minute TUNING['mood_from_min'] a team behind chases the game more and more
+        (quicker, more direct, higher line, more pressing, more shots: Team.tactic and decisions._shot_option), and a team ahead protects its lead
+        a little (the opposite, at TUNING['mood_protect'] of the strength). Level, nothing changes."""
+        if not self.period:
+            return
+        gm = ((0 if self.period == 1 else HALF_SECONDS) + min(max(0.0, self.t - self.period_start), HALF_SECONDS)) / 60
+        late = clamp((gm - TUNING['mood_from_min']) / (90 - TUNING['mood_from_min']), 0.0, 1.0)
+        for team in (self.home, self.away):
+            d = self.score[team.side] - self.score[1 - team.side]
+            team.mood = late * (1.0 if d < 0 else -TUNING['mood_protect'] if d > 0 else 0.0)
 
     def offside_x(self, team):
         return tactics.offside_line(team, self.other(team).players)
@@ -321,10 +333,14 @@ class Match:
         for team in (self.home, self.away):
             if team.boost and self.t >= team.boost['next']:
                 self._boost_check(team)
+        if self.tick % 10 == 0:
+            self._update_mood()
         b = self.ball
         if self.script:
             self._script_tick()
         if self.phase == 'dead':
+            if self.restart.get('offside'):
+                self._offside_ball()
             self._dead_update()
         else:
             if b.holder is not None:
@@ -472,7 +488,7 @@ class Match:
         b.in_hands = False
         b.last_touch = p
         b.flight = {'kind': 'shot' if kind == 'shoot' else subtype, 'kicker': p, 'receiver': opt.get('receiver'),
-                    'event': e, 't': self.t, 'protected': kind == 'shoot' and self.protect_next, 'sure': kind == 'shoot' and self.sure_next}
+                    'event': e, 't': self.t, 'x0': b.x, 'y0': b.y, 'protected': kind == 'shoot' and self.protect_next, 'sure': kind == 'shoot' and self.sure_next}
         self.protect_next = False
         self.sure_next = False
         p.touch_ready_at = self.t + 0.4
@@ -495,7 +511,7 @@ class Match:
         """Seconds from the strike to the keeper's first move: his reflexes, plus a little longer to read and jump for a ball going high."""
         return TUNING['gk_reaction'] + 0.15 * (1 - gk.a('reflexes')) + (TUNING['gk_high_delay'] if z > 1.5 else 0.0)
 
-    def _shot_height(self, p, header, gk, gx):
+    def _shot_height(self, p, header, gk, gx, calm=0.0):
         """Where up the goal this shot is aimed (metres at the line). Headers keep their old spread. A footed shot is a low drive along the
         ground, a drive at keeper height, or (more often from a good finisher or a good long-range shot) placed high into the top corner.
         Higher shots are harder to keep on target, so they are only taken where the shooter has the quality for them."""
@@ -504,6 +520,7 @@ class Match:
             return rng.choice((rng.uniform(0.15, 0.6), rng.uniform(0.3, 2.1)))
         quality = 0.5 * p.a('finishing') + 0.5 * p.a('long_shots')
         high = TUNING['shot_high_base'] + TUNING['shot_high_skill'] * quality
+        high *= 1.0 - 0.6 * calm   # B-45: one on one, a finisher with time passes it low past the keeper rather than smashing it at the top corner
         mid = TUNING['shot_mid_share']
         r = rng.random()
         if r < high:
@@ -577,14 +594,22 @@ class Match:
 
         # Aim: inside a post, usually away from the keeper; better finishers aim tighter.
         inset = 0.35 + 0.9 * (1 - finishing)
-        if gk and rng.random() < 0.75:
+        d_goal = math.hypot(gx - b.x, 34 - b.y)
+        # Outfield pressure only: the keeper coming out is what a one on one is, not a reason to snatch at it.
+        opps_out = [(*T.to_att(o.x, o.y), 0, o) for o in self.other(T).active() if not o.is_gk]
+        press_out = decisions.pressure_on(*T.to_att(p.x, p.y), opps_out)
+        # B-45: time and space close in, with a clear sight of goal (nobody in the way): a one on one, not a shot through a crowd.
+        clear = not header and not penalty and d_goal < TUNING['shot_calm_range'] and decisions.blockers_in_cone(*T.to_att(b.x, b.y), opps_out) == 0
+        calm = clear * (1.0 - clamp(press_out, 0.0, 1.0))
+        inset += TUNING['shot_calm_inset'] * calm   # B-45: with time he picks a spot inside the post and passes it there, not at the post
+        if gk and rng.random() < 0.75 + 0.2 * calm:
             side = GOAL_Y1 if gk.y > 34 else GOAL_Y2
         else:
             side = rng.choice((GOAL_Y1, GOAL_Y2))
         aim_y = side + inset if side == GOAL_Y1 else side - inset
         if penalty and rng.random() < 0.12:
             aim_y = 34 + rng.uniform(-0.8, 0.8)
-        aim_z = self._shot_height(p, header, gk, gx)
+        aim_z = self._shot_height(p, header, gk, gx, calm)
         keeper_guess = None
         power = 0.55 + 0.45 * rng.random() * (0.5 + 0.5 * finishing)
         speed = (11 + 5 * finishing) if header else (19 + 13 * power * (0.7 + 0.3 * finishing))
@@ -633,6 +658,7 @@ class Match:
             sigma *= 0.55
         elif aim_z > 1.5 and not header:
             sigma *= TUNING['shot_high_error']   # going for the top corner: more shots miss, so it pays off only for the good finisher
+        sigma *= 1.0 - TUNING['shot_clear_calm'] * calm   # B-45: an unhurried finish close in is placed, not snatched
         if forced or (self.only_script_goals and not penalty and not header):
             sigma = 0.0
         sigma *= 1 + max(0.0, d - 18) / 40
@@ -657,7 +683,7 @@ class Match:
         ax, ay = T.to_att(b.x, b.y)
         opps = [(*T.to_att(o.x, o.y), 0, o) for o in self.other(T).active()]
         xg = decisions.expected_goals(ax, ay, header=header, pressure=pressure,
-                                      blockers=decisions.blockers_in_cone(ax, ay, opps), penalty=penalty)
+                                      blockers=decisions.blockers_in_cone(ax, ay, opps), penalty=penalty, rate=True)
         assist = None
         last = self.last_pass_to.get(p.id)
         if last and last[1] == self.poss_id:
@@ -710,12 +736,20 @@ class Match:
             dive = self.gk_dive.get(q.idx)
             ext = TUNING['gk_reach_dive'] if dive and self.t >= dive['at'] else TUNING['gk_reach_stand']
             return ext if z < 2.65 else 0.0
+        # B-45: a defender throws himself in front of a shot (a stretched leg or the body), so he gets to more of them than a pass.
+        # Only for a man already goal-side of the shooter (in the line of it); one coming across from the side cannot throw himself into it.
+        f = self.ball.flight or {}
+        extra = 0.0
+        if f.get('kind') == 'shot' and f.get('kicker') is not None:
+            kt = self.team_of(f['kicker'])
+            if kt.to_att(q.x, q.y)[0] > kt.to_att(f.get('x0', f['kicker'].x), f.get('y0', f['kicker'].y))[0] + 0.5:
+                extra = TUNING['shot_block_reach']
         if z < 0.6:
             # Harder to get a foot to a fast ball.
             sp = math.hypot(self.ball.vx, self.ball.vy)
-            return 0.95 - clamp((sp - 10) * 0.03, 0.0, 0.35)
+            return 0.95 - clamp((sp - 10) * 0.03, 0.0, 0.35) + extra
         if z < 1.7:
-            return 0.6
+            return 0.6 + extra
         if z < 2.75:
             return 0.5 + 0.1 * q.a('heading')
         return 0.0
@@ -746,6 +780,10 @@ class Match:
                 continue   # a scripted goal: no outfield player gets in the way; the keeper is simply beaten
             dh, tp = seg_point_dist(px, py, b.x, b.y, q.x, q.y)
             if dh > 2.0:
+                continue
+            if tp <= 0.0 and (b.vx - q.vx) * (q.x - px) + (b.vy - q.vy) * (q.y - py) <= 0.0:
+                # The ball is already past him (or beside him) and moving away faster than he is: he can't get a foot to it. Without
+                # this a presser standing next to the passer touched almost every pass struck away from him (0.4.0).
                 continue
             z = pz + (b.z - pz) * tp
             hands = self._gk_hands_allowed(q)
@@ -799,6 +837,8 @@ class Match:
                 self._resolve_pass('intercepted', q)
                 # Blocked crosses keep going roughly the same way (often behind for a corner).
                 self._deflect(q, 0.3, 0.6, 30 if f.get('kind') in ('cross', 'corner') else 60)
+                if f.get('kind') in ('cross', 'corner'):
+                    self._maybe_behind(q, TUNING['behind_block'])
             else:
                 q.touch_ready_at = self.t + 0.4
             return
@@ -808,7 +848,13 @@ class Match:
             self.ev('offside', q)
             self._resolve_pass('offside')
             other = self.other(self.team_of(q))
-            self._start_restart('free_kick', other, (clamp(q.x, 1, PITCH_LENGTH - 1), clamp(q.y, 1, PITCH_WIDTH - 1)), (8, 15), offside=True)
+            b = self.ball
+            z, vx, vy, vz = b.z, b.vx, b.vy, b.vz
+            spot, taker = self._offside_spot(other, q)
+            self._start_restart('free_kick', other, spot, (8, 15), taker=taker, offside=True)
+            # B-43: the flag doesn't freeze the ball in mid-air. The attacker's touch takes the pace off it and it drops and rolls
+            # to a stop (stepped in _tick while the ball is dead) before the taker places it.
+            b.z, b.vx, b.vy, b.vz = z, vx * 0.1, vy * 0.1, min(vz, 0.0)
             return
 
         # Shots
@@ -820,8 +866,14 @@ class Match:
                 if rng.random() < p_block:
                     self._resolve_shot('blocked')
                     self.ev('block', q)
-                    # Blocked shots lose most of their pace and scatter off the defender's body.
-                    self._deflect(q, 0.15, 0.45, 60)
+                    # B-45: his keeper was set for the shot; with it blocked he gets up and reads the ball again instead of finishing a dive
+                    # for a shot that never came (blocked shots were trickling in past him as own goals).
+                    for gk in self.team_of(q).active():
+                        if gk.is_gk:
+                            self.gk_dive.pop(gk.idx, None)
+                    # Blocked shots lose most of their pace and glance off the defender's body, off the line of the shot (often behind for a corner).
+                    self._deflect(q, 0.15, 0.45, 50, min_deg=TUNING['shot_block_turn'])
+                    self._maybe_behind(q, TUNING['behind_block'])
                 else:
                     q.touch_ready_at = self.t + 0.6
             return
@@ -847,16 +899,20 @@ class Match:
         if hands:
             logit = 3.4 + 2.2 * (q.a('handling') - 0.5) - 0.12 * max(0.0, v_rel - 12)
         else:
+            # 0.4.0: a professional kills a soft ball at thigh or chest height, or a dropping ball, most of the time. The penalties
+            # here (with the challenger counted twice, through pressure and again as a contest) made about one reception in seven
+            # of a lofted pass a miscontrol, mostly of slow balls (2-7 m/s relative) and fed the loose-ball ping-pong.
             logit = (TUNING['first_touch_base'] + 2.6 * (q.a('first_touch') - 0.5) - 0.2 * max(0.0, v_rel - 7)
-                     - 0.8 * min(pressure, 1.5) - (1.2 if z > 0.6 else 0.0))
+                     - 0.6 * min(pressure, 1.5) - (0.6 if z > 0.6 else 0.0))
             if f.get('kind') in ('long', 'gk_kick', 'clearance', 'cross', 'corner', 'free_kick', 'goal_kick'):
                 # Dropping balls are harder to kill, especially with an opponent challenging.
                 contest = any(dist(o.x, o.y, q.x, q.y) < 1.8 for o in self.other(T).active())
-                logit -= 0.5 + (0.9 if contest else 0.0)
+                logit -= 0.2 + (0.5 if contest else 0.0)
             if not teammate and f.get('receiver') is not None and v_rel > 9:
                 logit -= 0.7     # reading and cutting out a pass is harder than receiving it
         if rng.random() < sigmoid(logit):
-            live_pass = f.get('kind') not in ('deflection', 'loose') and speed > 9.0
+            # Picking up the other side's clearance is a recovery, not an interception (nobody was meant to receive it).
+            live_pass = f.get('kind') not in ('deflection', 'loose', 'clearance') and speed > 9.0
             how = 'catch' if hands else ('reception' if teammate and f.get('kind') not in ('deflection', 'loose') else
                                          'interception' if kicker is not None and not teammate and live_pass else 'recovery')
             self._gain(q, how, hands=hands)
@@ -867,12 +923,31 @@ class Match:
             else:
                 self._resolve_pass('intercepted', q)
             self._deflect(q, 0.25, 0.55, 55)
+            if not teammate and f.get('kind') in ('cross', 'corner', 'shot'):
+                self._maybe_behind(q, TUNING['behind_miscue'])
 
-    def _deflect(self, q, lo, hi, spread_deg):
+    def _maybe_behind(self, q, p):
+        """0.4.0: a defender's touch on a cross, corner or shot near his own goal often goes behind for a corner, as in real matches (where most
+        corners come from blocked crosses and shots). Called after a deflection: with chance p, the ball is sent toward his own goal line, always
+        wide of the posts (never an own goal), at a deadened pace."""
+        T = self.team_of(q)
+        b = self.ball
+        ax, ay = T.to_att(q.x, q.y)
+        if ax > 25 or self.rng.random() >= p:
+            return
+        ty = GOAL_Y2 + self.rng.uniform(2.5, 12) if ay > PITCH_WIDTH / 2 else GOAL_Y1 - self.rng.uniform(2.5, 12)
+        wx, wy = T.from_att(-3.0, ty)
+        ux, uy, _ = unit(wx - b.x, wy - b.y)
+        sp = max(7.0, math.hypot(b.vx, b.vy) * self.rng.uniform(0.45, 0.75))
+        b.vx, b.vy = ux * sp, uy * sp
+
+    def _deflect(self, q, lo, hi, spread_deg, min_deg=0.0):
         b = self.ball
         rng = self.rng
         k = rng.uniform(lo, hi)
-        vx, vy = rotate(b.vx * k, b.vy * k, math.radians(rng.gauss(0, spread_deg)))
+        ang = rng.gauss(0, spread_deg)
+        ang += math.copysign(min_deg, ang)
+        vx, vy = rotate(b.vx * k, b.vy * k, math.radians(ang))
         b.vx, b.vy = vx, vy
         b.vz = abs(b.vz) * 0.3 + (rng.uniform(0, 2.5) if b.z > 0.3 else 0.0)
         b.last_touch = q
@@ -1249,6 +1324,34 @@ class Match:
             return max(near[:4], key=lambda p: p.attrs['passing'] + p.attrs['long_shots'])
         return near[0]
 
+    def _offside_spot(self, team, q):
+        """Where `team`'s free kick for an offside by q is taken, and who takes it (None: the usual choice).
+
+        It is taken where q became involved, except in `team`'s own penalty area, where Law 13 lets the defending team take it from
+        anywhere in the area: the keeper takes it, from the six-yard line rather than off his goal line (B-43)."""
+        ax, ay = team.to_att(q.x, q.y)
+        if ax < BOX_DEPTH and BOX_Y1 < ay < BOX_Y2:
+            gk = next((p for p in team.active() if p.is_gk), None)
+            if gk is not None:
+                if ax < SIX_DEPTH:
+                    ax, ay = SIX_DEPTH, clamp(ay, SIX_Y1, SIX_Y2)
+                return team.from_att(ax, ay), gk
+        return (clamp(q.x, 1, PITCH_LENGTH - 1), clamp(q.y, 1, PITCH_WIDTH - 1)), None
+
+    def _offside_ball(self):
+        """The dead ball after an offside: it drops and rolls to a stop, and once the taker reaches it he takes it with him to the
+        spot, so it is placed there rather than jumping to it when the kick is taken (B-43)."""
+        b, r = self.ball, self.restart
+        tk = r['taker']
+        if not r.get('gathered') and b.z < 0.05 and not tk.sent_off and dist(tk.x, tk.y, b.x, b.y) < 1.0:
+            r['gathered'] = True
+        if r.get('gathered'):
+            b.stop()
+            b.x, b.y, b.z = tk.x + tk.fx * 0.45, tk.y + tk.fy * 0.45, 0.0
+        elif b.z > 0 or b.vx or b.vy or b.vz:
+            physics.step(b)
+            b.x, b.y = clamp(b.x, -3.0, PITCH_LENGTH + 3.0), clamp(b.y, -3.0, PITCH_WIDTH + 3.0)
+
     def _start_restart(self, kind, team, spot, delay, taker=None, **extra):
         b = self.ball
         self._resolve_pass('out')
@@ -1271,7 +1374,7 @@ class Match:
         taker = taker or self._choose_taker(kind, team, spot)
         ready = self.t + self.rng.uniform(delay[0], delay[1])
         self.restart = {'kind': kind, 'team': team, 'spot': spot, 'taker': taker,
-                        'ready_at': ready, 'max_at': ready + 8}
+                        'ready_at': ready, 'max_at': ready + 8, **extra}
         self.restart_targets = tactics.setpiece_targets(kind, team, self.other(team), spot, taker, self.offside_x(team))
         for p in self.players:
             p.action = None
@@ -1328,6 +1431,8 @@ class Match:
                     p.tx, p.ty = self.restart['spot']
                     p.tx -= 0.3 * (1 if self.team_of(p).direction == 1 else -1)
                     p.urgency = 2
+                    if self.restart.get('offside') and not self.restart.get('gathered') and dist(b.x, b.y, *self.restart['spot']) > 1.5:
+                        p.tx, p.ty = b.x, b.y   # fetch the ball first, then carry it to the spot (B-43)
                 else:
                     p.tx, p.ty = self.restart_targets.get(p, (p.x, p.y))
                     p.urgency = 2 if dist(p.x, p.y, p.tx, p.ty) > 20 or (p.is_gk and self.restart['kind'] == 'penalty') else 1   # a keeper walks right onto his line for a penalty (B-34)
@@ -1358,11 +1463,15 @@ class Match:
             bx, by = team.to_att(b.x, b.y)
             off_line = self.offside_x(team)
             presser = second = None
+            danger = False
             if holder is not None and not in_poss and not b.in_hands:
                 ranked = sorted((p for p in team.active() if not p.is_gk),
                                 key=lambda p: dist(p.x, p.y, holder.x, holder.y) / p.vmax())
                 presser = ranked[0] if ranked else None
-                hx, _ = team.to_att(holder.x, holder.y)
+                hx, hy = team.to_att(holder.x, holder.y)
+                # B-45: a carrier within shooting range of our goal: the nearest man closes him down from the goal side and the next one
+                # drops into the shooting lane, instead of both chasing the ball from behind or marking the pass.
+                danger = math.hypot(hx, hy - 34) < TUNING['def_danger_range']
                 if len(ranked) > 1 and (hx < 38 or team.tactic('pressing') > 0.65):
                     second = ranked[1]
             for p in team.active():
@@ -1381,6 +1490,16 @@ class Match:
                 if p is presser:
                     lead = 0.25
                     p.tx, p.ty = holder.x + holder.vx * lead, holder.y + holder.vy * lead
+                    if danger:
+                        gx_, gy_ = team.from_att(0.0, 34.0)
+                        ux, uy, _ = unit(gx_ - p.tx, gy_ - p.ty)
+                        p.tx, p.ty = p.tx + ux * TUNING['def_close_goalside'], p.ty + uy * TUNING['def_close_goalside']
+                    p.urgency = 3
+                    continue
+                if p is second and danger:
+                    gx_, gy_ = team.from_att(0.0, 34.0)
+                    ux, uy, _ = unit(gx_ - holder.x, gy_ - holder.y)
+                    p.tx, p.ty = holder.x + ux * TUNING['def_lane_depth'], holder.y + uy * TUNING['def_lane_depth']
                     p.urgency = 3
                     continue
                 if p is second:
@@ -1456,19 +1575,39 @@ class Match:
             # Mark the nearest dangerous opponent near our zone, staying goal-side.
             opp = self.other(team)
             best = None
+            tracking = False
             for o in opp.active():
                 if o.is_gk:
                     continue
                 oax, oay = team.to_att(o.x, o.y)
                 d = dist(oax, oay, ax, ay)
-                if d < 11 and (best is None or d < best[0]):
-                    best = (d, oax, oay)
+                # B-45: a defender (or holding midfielder) picks up a runner in behind further from his own spot and goes with him, instead of
+                # letting him go once he has run more than a few metres out of the zone; a better reader of the game picks the run up more often.
+                run = o.run_until > t and (p.line == 'DEF' or p.slot in ('CDM', 'LDM', 'RDM')) and oax < pax + 6 and d < TUNING['track_run_range']
+                key = d - (6.0 if run else 0.0)
+                if (d < 11 or run) and (best is None or key < best[0]):
+                    best = (key, oax, oay, run, o)
             if best:
                 w = 0.65 * p.a('marking') + 0.2
                 gx, gy, _ = unit(0 - best[1], 34 - best[2])
                 mx, my = best[1] + gx * 1.6, best[2] + gy * 1.6
+                if best[3]:
+                    o = best[4]
+                    ovx, ovy = (o.vx, o.vy) if team.direction == 1 else (-o.vx, -o.vy)
+                    # Goal-side of where the runner is going, not where he is now.
+                    mx, my = best[1] + ovx * 0.6 + gx * 1.2, best[2] + ovy * 0.6 + gy * 1.2
+                    w = clamp(TUNING['track_run_weight'] * (0.5 + 0.5 * p.a('marking')) + 0.3 * p.a('positioning'), 0.0, 0.95)
+                    tracking = True
                 ax, ay = ax + (mx - ax) * w, ay + (my - ay) * w
-            if pax > bx + 4 and p.line != 'FWD':
+            if not tracking and p.line == 'DEF' and bx < TUNING['def_compact_range']:
+                # B-45: with the ball near our box the back line narrows toward the posts and stays tight, so a pass or carry between
+                # centre-back and full-back does not leave a man clean through.
+                k = TUNING['def_compact'] * clamp((TUNING['def_compact_range'] - bx) / 15.0, 0.0, 1.0)
+                ay += (34 + (by - 34) * 0.35 - ay) * k
+                urgency = max(urgency, 2)
+            if tracking:
+                urgency = 3
+            elif pax > bx + 4 and p.line != 'FWD':
                 urgency = 3          # caught upfield: recover goal-side at full speed
             elif dist(pax, pay, ax, ay) > 6:
                 urgency = 2

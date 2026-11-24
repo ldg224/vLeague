@@ -40,11 +40,16 @@ def goal_angle(ax, ay):
     return abs(a)
 
 
-def expected_goals(ax, ay, header=False, pressure=0.0, blockers=0, penalty=False):
+def expected_goals(ax, ay, header=False, pressure=0.0, blockers=0, penalty=False, rate=False):
+    """Chance a shot from here scores. `rate`: the figure recorded on the shot (with the B-45 clean-chance term); decisions use the plain model."""
     if penalty:
         return 0.76
     d = math.hypot(PITCH_LENGTH - ax, ay - 34)
     logit = -0.35 - 0.11 * d + 1.4 * goal_angle(ax, ay) - 0.55 * pressure - 0.45 * blockers
+    if rate and blockers == 0 and not header:
+        # B-45: clean through on goal (nobody between him and the posts, close in and not crowded) is a big chance in any real model
+        # (0.35-0.5 one on one from 8-14 m), well above a shot from the same spot through a crowd.
+        logit += TUNING['xg_clear_bonus'] * clamp((20.0 - d) / 8.0, 0.0, 1.0) * (1.0 - clamp(pressure, 0.0, 1.0))
     if header:
         logit -= 0.9
     return sigmoid(logit)
@@ -169,8 +174,10 @@ def _pass_option(c, r, loft_angle=0.0, subtype=None, z0=0.0, max_speed=None):
                 px, py = pts[i]
                 reach = 0.9 if not o.is_gk else 1.4
                 to = _reach_time(ox, oy, ovmax, px, py, vx=ovx, vy=ovy) - reach / ovmax
-                # Beat both the ball's arrival and the receiver to this point.
-                best_margin = min(best_margin, to - max(times[i], min(t_recv[i], times[i] + 0.4)))
+                # Along the way he has to be there before the ball: once it has rolled past a point, getting there later cuts
+                # nothing out. Where the receiver meets it he has to beat the receiver as well (it was 0.4 s after the ball at
+                # every point, which made most passes look hopeless to the passer, 0.4.0).
+                best_margin = min(best_margin, to - (max(times[i], t_recv[i]) if i == meet else times[i]))
             pi = sigmoid((-best_margin - 0.05) / 0.15)
             if pi > 0.01:
                 p_clear *= (1.0 - pi)
@@ -253,11 +260,14 @@ def _shot_option(c, penalty=False, header=False, force=False, free_kick=False):
     if not penalty and not force and not header and d > TUNING['shot_tight_free'] and goal_angle(ax, ay) < TUNING['shot_min_angle']:
         return None
     # Players with a good long shot back themselves from distance when they have a sight of goal.
-    appetite = TUNING['shot_appetite'] * (0.7 + 0.7 * long_shots if d > 18 else 1.0)
+    appetite = TUNING['shot_appetite'] * (TUNING['long_shot_appetite'] + TUNING['long_shot_skill'] * long_shots if d > 18 else 1.0)
     # S-40: close in, a player has a go: within the box and with a fair angle the shot beats keeping the ball or another pass far more often.
     if d <= TUNING['shot_close_range'] and not penalty:
         appetite *= TUNING['shot_close_appetite']
     utility = xg * appetite * 1.15 - (1 - xg) * 0.004
+    mood = getattr(c.team, 'mood', 0.0)
+    if mood > 0:
+        utility *= 1 + TUNING['chase_shot'] * mood   # chasing the game late on: have a go (0.4.0)
     return {'kind': 'shoot', 'xg': xg, 'utility': utility, 'windup': 0.3 if not penalty else 1.0,
             'target': c.to_pitch(PITCH_LENGTH, 34), 'receiver': None, 'p': xg, 'subtype': 'penalty' if penalty else 'open'}
 
@@ -272,6 +282,8 @@ def _dribble_options(c):
     gx, gy, _ = unit(PITCH_LENGTH - c.ax, 34 - c.ay)
     dribbling = c.p.a('dribbling')
     step = 5.0
+    d_now = math.hypot(PITCH_LENGTH - c.ax, c.ay - 34)
+    through = not c.restart and 10.0 < d_now < 22.0 and blockers_in_cone(c.ax, c.ay, c.opps) == 0
     for ang in (0, 35, -35, 75, -75):
         ux, uy = rotate(gx, gy, math.radians(ang))
         ex, ey = c.ax + ux * step, c.ay + uy * step
@@ -281,6 +293,16 @@ def _dribble_options(c):
         space = min((math.hypot(ox - ex, oy - ey) - ov * t_drib * 0.7 for ox, oy, ov, _ in c.opps), default=20)
         p_keep = sigmoid((space + 1.2) / 1.1 + (dribbling - 0.5) * 2.2 - c.pressure * 0.7)
         value = threat(ex, ey)
+        if through and ang in (0, 35, -35):
+            # B-45: a player through on goal carries it on into a better shooting spot instead of snatching at it from the edge of the box:
+            # the drive in is worth the shot he would have from there (until the keeper or a defender is on him).
+            d_there = math.hypot(PITCH_LENGTH - ex, ey - 34)
+            if 9.0 < d_there < 20.0:
+                bl = blockers_in_cone(ex, ey, c.opps)
+                if bl == 0:
+                    press_there = pressure_on(ex, ey, c.opps)
+                    xg_there = expected_goals(ex, ey, pressure=min(press_there, 1.5), blockers=0)
+                    value = max(value, TUNING['carry_in_value'] * xg_there * TUNING['shot_appetite'] * 1.15)
         danger = threat(PITCH_LENGTH - c.ax, PITCH_WIDTH - c.ay)
         utility = p_keep * value - (1 - p_keep) * danger * TUNING['risk_aversion']
         utility -= 0.0015 * c.team.tactic('tempo') + _urgency(c) + TUNING['carry_penalty']
@@ -312,7 +334,9 @@ def _cross_options(c):
         danger = threat(PITCH_LENGTH - zx, PITCH_WIDTH - zy)
         utility = value - (1 - p_exec * p_win) * danger * 0.35
         angle = 22 if d < 28 else 26
-        speed = physics.loft_speed_for(d, angle)
+        # 0.4.0: struck to come down a few metres past the zone, so it reaches the runner there at head height (aimed at the spot itself,
+        # it landed at his feet: headed shots were 2-4% of shots against a real 12-18%).
+        speed = physics.loft_speed_for(d + TUNING['cross_overshoot'], angle)
         if speed is None:
             continue
         out.append({'kind': 'cross', 'subtype': 'cross', 'target': c.to_pitch(zx, zy), 'speed': speed, 'loft': angle,
@@ -323,6 +347,8 @@ def _cross_options(c):
 def _clear_option(c):
     if c.ax > 35:
         return None
+    if c.pressure < TUNING['clear_min_pressure']:
+        return None   # 0.4.0: a defender with time on the ball plays it out; clearing is for when he is pressed (clearances were about twice real)
     tx = clamp(c.ax + 45, 40, 80)
     ty = 6.0 if c.ay < 34 else PITCH_WIDTH - 6.0
     r = c.m.rng.random()
@@ -330,7 +356,7 @@ def _clear_option(c):
         # Under real pressure: just put it out of play.
         tx = clamp(c.ax + 25, 20, 60)
         ty = -4.0 if c.ay < 34 else PITCH_WIDTH + 4.0
-    elif c.pressure > 0.8 and c.ax < 12 and r < 0.6:
+    elif c.pressure > 0.7 and c.ax < 18 and r < 0.75:
         # Pinned near his own goal line: shin it behind for a corner.
         tx, ty = -4.0, c.ay + (-8 if c.ay < 34 else 8)
     d = math.hypot(tx - c.ax, ty - c.ay)
