@@ -212,7 +212,8 @@ def _pass_option(c, r, loft_angle=0.0, subtype=None, z0=0.0, max_speed=None):
         # A pass into a shooting position (cut-back, lay-off, square ball) is worth the chance
         # the receiver scores with it, which spreads shots across the team.
         xg_there = expected_goals(tx, ty, pressure=min(press_target, 1.5), blockers=blockers_in_cone(tx, ty, c.opps))
-        value = max(value, 0.8 * xg_there * TUNING['shot_appetite'] * 1.15)
+        close = TUNING['shot_close_appetite'] if math.hypot(PITCH_LENGTH - tx, ty - 34) <= TUNING['shot_close_range'] else 1.0   # S-40
+        value = max(value, 0.8 * xg_there * TUNING['shot_appetite'] * 1.15 * close)
     directness = c.team.tactic('directness')
     if tx > c.ax + 10:
         value *= 1.0 + 0.25 * directness

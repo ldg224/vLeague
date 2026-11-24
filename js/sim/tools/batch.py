@@ -27,7 +27,7 @@ def one(seed):
     for e in d['events']:
         if e['type'] != 'shot' or e.get('subtype') == 'penalty':
             continue
-        far = e['x'] >= 52.5   # the goal being shot at is the nearer one (ends change at half time)
+        far = math.hypot(105 - e['x'], e['y'] - 34) < math.hypot(e['x'], e['y'] - 34)   # shot at the nearer goal (ends change at half time)
         ax, ay = (e['x'], e['y']) if far else (105 - e['x'], 68 - e['y'])
         shots.append({'d': math.hypot(105 - ax, ay - 34), 'box': ax >= 88.5 and 13.84 <= ay <= 54.16, 'wide': abs(ay - 34) > 16,
                       'xg': e.get('xg') or 0, 'on': e.get('on_target'), 'head': e.get('body') == 'head', 'out': e.get('outcome')})
