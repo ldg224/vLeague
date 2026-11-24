@@ -23,7 +23,7 @@ def threat(ax, ay):
     """Rough chance that possession at this spot leads to a goal soon (0.01 .. ~0.3)."""
     d = math.hypot(PITCH_LENGTH - ax, ay - 34)
     progress = clamp(ax / PITCH_LENGTH, 0.0, 1.0)
-    return 0.008 + 0.075 * progress ** 2.6 + 0.28 * math.exp(-d / 8.5) * _angle_factor(ax, ay)
+    return 0.008 + 0.075 * progress ** 2.6 + TUNING['threat_close'] * math.exp(-d / 8.5) * _angle_factor(ax, ay)
 
 
 def _angle_factor(ax, ay):
