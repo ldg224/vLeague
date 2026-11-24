@@ -50,4 +50,5 @@ if __name__ == '__main__':
     print(f'avg distance {avg(lambda s: s["d"]):.1f} m  in box {avg(lambda s: s["box"]):.0%}  inside 12 m {avg(lambda s: s["d"] < 12):.0%}  '
           f'over 25 m {avg(lambda s: s["d"] > 25):.0%}  wide angle {avg(lambda s: s["wide"]):.0%}  xG/shot {avg(lambda s: s["xg"]):.3f}  headers {avg(lambda s: s["head"]):.0%}  blocked {avg(lambda s: s["out"] == "blocked"):.0%}')
     if home_wins is not None:
-        print(f'stronger side (AAA) wins {home_wins}/{k}')
+        draws = sum(1 for r in res if r[2]['home'] == r[2]['away'])
+        print(f'stronger side (AAA) wins {home_wins}/{k}, draws {draws}, loses {k - home_wins - draws}')
