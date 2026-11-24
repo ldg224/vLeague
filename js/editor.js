@@ -80,7 +80,7 @@ function tab() {
 }
 
 // Panels take the league page's card look (sheen and silk). Whatever a tab draws later (lists load after the tab opens) is picked up here.
-const PANELS = '.gw .nw-card, .ed-invite, .nw-card, .fx-card, .fx-round, .hi-season, .dr-team, .dr-vis, .dr-bigbar, .pl-preview, .ed-club-list, .ed-request';
+const PANELS = '.gw .nw-card, .ed-invite, .nw-card, .fx-card, .fx-round, .hi-card, .dr-team, .dr-vis, .dr-bigbar, .pl-preview, .ed-club-list, .ed-request';
 let paintQueued = false;
 new MutationObserver(() => {
   if (paintQueued) return;

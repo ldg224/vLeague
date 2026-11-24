@@ -3,6 +3,12 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.46.0 (2026-11-24)
+
+**Changed:** Editor, History is rebuilt around how you think about a season. The page is now a list of seasons, newest first, each showing the league name it ran under and who won what; tap one to open its form: its name, the league name that season (pick an earlier one or type a different one), one line per trophy (winner and runner-up, or one holder for the Wooden spoon and the Shield), and notes. A team that has left the league is added straight from the club picker ("Add a team that's left…"). The one-off set-up (the name the league uses now, the trophies and their pictures, and teams that have left) sits in its own card below. Saving no longer redraws the whole page, so nothing jumps or folds shut. The separate League names list is gone: a name no season uses any more is tidied away. The History page and the Seasons tab look the same as before.
+
+Database change: no.
+
 ## 1.45.2 (2026-11-24)
 
 **Fixed (B-45):** Attackers no longer play the ball all the way back (a striker 30 m out passing to his own keeper) when a shot, a run or a pass forward was the better choice. Each player first picks what to do (shoot, pass, dribble, hold, cross, clear), then which pass or run, so having many teammates behind him no longer makes a back pass likely. This applies in the attacking half; the rest of the game plays as before. Over 22 test matches: long back passes from the attacking third down by a fifth, goals about the same (3.6 a match). Match engine 0.3.3.
