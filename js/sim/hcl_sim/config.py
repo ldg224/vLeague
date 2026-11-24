@@ -68,6 +68,14 @@ TUNING = {
     'choose_by_kind_from': 60.0,     # only with the ball this far up (metres from his own goal line): the attacking half, where the back passes were
     'carry_penalty': 0.0,            # taken off holding and dribbling (tried in tuning B-45; 0 keeps them as in 0.3.2)
     'shot_appetite': 0.68,
+    # S-40: more shots, from closer. Shots within shot_close_range metres get shot_close_appetite times the appetite; beyond
+    # shot_tight_free metres no shot is taken when the goal mouth looks narrower than shot_min_angle radians (by the corner flag,
+    # along the byline); and from beyond 20 m a shot needs at least shot_min_xg_far.
+    'shot_close_range': 18.0,
+    'shot_close_appetite': 1.0,
+    'shot_tight_free': 6.0,
+    'shot_min_angle': 0.0,
+    'shot_min_xg_far': 0.03,
     # B-21: free kicks. Within the range the taker's shot utility is multiplied and given a bonus, so a free kick in range is usually a shot; below the xG floor it is not offered.
     'free_kick_shoot_range': 30.0,
     'free_kick_appetite': 3.0,

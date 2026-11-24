@@ -18,13 +18,17 @@ sys.path.insert(0, os.path.join(os.path.dirname(HERE), 'tests'))
 def one(seed):
     from test_engine import synthetic_league
     from hcl_sim.run import simulate
+    from hcl_sim.config import TUNING
+    for kv in filter(None, os.environ.get('TUNE', '').split(',')):   # e.g. TUNE=shot_close_appetite=1.4,shot_min_angle=0.2
+        k, v = kv.split('=')
+        TUNING[k] = float(v)
     d = simulate(synthetic_league(), 'AAA', 'BBB', seed=seed, include_frames=False)
     shots = []
     for e in d['events']:
         if e['type'] != 'shot' or e.get('subtype') == 'penalty':
             continue
-        ax = e['x'] if e['team'] == 'AAA' else 105 - e['x']
-        ay = e['y'] if e['team'] == 'AAA' else 68 - e['y']
+        far = e['x'] >= 52.5   # the goal being shot at is the nearer one (ends change at half time)
+        ax, ay = (e['x'], e['y']) if far else (105 - e['x'], 68 - e['y'])
         shots.append({'d': math.hypot(105 - ax, ay - 34), 'box': ax >= 88.5 and 13.84 <= ay <= 54.16, 'wide': abs(ay - 34) > 16,
                       'xg': e.get('xg') or 0, 'on': e.get('on_target'), 'head': e.get('body') == 'head', 'out': e.get('outcome')})
     goals = sum(1 for e in d['events'] if e['type'] == 'goal')

@@ -246,10 +246,16 @@ def _shot_option(c, penalty=False, header=False, force=False, free_kick=False):
     blockers = 0 if free_kick else blockers_in_cone(ax, ay, c.opps)
     xg = expected_goals(ax, ay, header=header, pressure=min(c.pressure, 1.5), blockers=blockers, penalty=penalty)
     long_shots = c.p.a('long_shots')
-    if d > 20 and xg < 0.03 and not penalty and not force and not free_kick:
+    if d > 20 and xg < TUNING['shot_min_xg_far'] and not penalty and not force and not free_kick:
         return None     # speculative efforts from distance are rare
+    # S-40: no shots from out by the corner flag or along the byline: with almost no goal to aim at, a player crosses or cuts it back.
+    if not penalty and not force and not header and d > TUNING['shot_tight_free'] and goal_angle(ax, ay) < TUNING['shot_min_angle']:
+        return None
     # Players with a good long shot back themselves from distance when they have a sight of goal.
     appetite = TUNING['shot_appetite'] * (0.7 + 0.7 * long_shots if d > 18 else 1.0)
+    # S-40: close in, a player has a go: within the box and with a fair angle the shot beats keeping the ball or another pass far more often.
+    if d <= TUNING['shot_close_range'] and not penalty:
+        appetite *= TUNING['shot_close_appetite']
     utility = xg * appetite * 1.15 - (1 - xg) * 0.004
     return {'kind': 'shoot', 'xg': xg, 'utility': utility, 'windup': 0.3 if not penalty else 1.0,
             'target': c.to_pitch(PITCH_LENGTH, 34), 'receiver': None, 'p': xg, 'subtype': 'penalty' if penalty else 'open'}
