@@ -72,11 +72,11 @@ TUNING = {
     # shot_tight_free metres no shot is taken when the goal mouth looks narrower than shot_min_angle radians (by the corner flag,
     # along the byline); and from beyond 20 m a shot needs at least shot_min_xg_far.
     'shot_close_range': 18.0,
-    'shot_close_appetite': 1.0,
+    'shot_close_appetite': 1.8,
     'shot_tight_free': 6.0,
-    'shot_min_angle': 0.0,
+    'shot_min_angle': 0.25,
     'shot_min_xg_far': 0.03,
-    'threat_close': 0.28,         # S-40: how much the spots near goal are worth in the pitch value model (higher: teams work the ball into the box more)
+    'threat_close': 0.40,         # S-40: how much the spots near goal are worth in the pitch value model (higher: teams work the ball into the box more)
     # B-21: free kicks. Within the range the taker's shot utility is multiplied and given a bonus, so a free kick in range is usually a shot; below the xG floor it is not offered.
     'free_kick_shoot_range': 30.0,
     'free_kick_appetite': 3.0,
