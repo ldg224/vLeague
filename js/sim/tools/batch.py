@@ -39,7 +39,8 @@ if __name__ == '__main__':
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 12
     w = int(sys.argv[2]) if len(sys.argv) > 2 else 6
     with Pool(w) as pool:
-        res = pool.map(one, range(1, n + 1))
+        start = int(os.environ.get('START', '1'))
+        res = pool.map(one, range(start, start + n))
     goals = sum(r[0] for r in res)
     shots = [s for r in res for s in r[1]]
     home_wins = sum(1 for r in res if r[2]['home'] > r[2]['away']) if isinstance(res[0][2], dict) and 'home' in res[0][2] else None

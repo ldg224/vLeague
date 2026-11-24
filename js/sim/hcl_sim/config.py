@@ -67,12 +67,12 @@ TUNING = {
     'choose_by_kind': True,          # B-45: pick what to do (best of each kind), then which; False = one softmax over every option (engine 0.3.2)
     'choose_by_kind_from': 60.0,     # only with the ball this far up (metres from his own goal line): the attacking half, where the back passes were
     'carry_penalty': 0.0,            # taken off holding and dribbling (tried in tuning B-45; 0 keeps them as in 0.3.2)
-    'shot_appetite': 0.68,
+    'shot_appetite': 0.60,
     # S-40: more shots, from closer. Shots within shot_close_range metres get shot_close_appetite times the appetite; beyond
     # shot_tight_free metres no shot is taken when the goal mouth looks narrower than shot_min_angle radians (by the corner flag,
     # along the byline); and from beyond 20 m a shot needs at least shot_min_xg_far.
     'shot_close_range': 18.0,
-    'shot_close_appetite': 1.8,
+    'shot_close_appetite': 2.1,
     'shot_tight_free': 6.0,
     'shot_min_angle': 0.25,
     'shot_min_xg_far': 0.03,
@@ -93,7 +93,7 @@ TUNING = {
 
     # Goalkeeping
     'gk_reaction': 0.30,          # seconds for a 100-rated keeper; up to +0.15 for poor ones
-    'gk_save_base': 3.7,
+    'gk_save_base': 4.1,
     'gk_dive_speed': 4.2,         # m/s along the line once he has left his feet
     'gk_high_delay': 0.12,        # extra seconds before he moves for a ball going into the top corner (it takes a keeper about a second to get there)
     'gk_read_error': 0.35,        # metres, 1 sd, in where he reads a shot will cross the line (more for a poorer positioner and a harder-hit shot)
