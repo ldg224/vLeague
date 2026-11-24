@@ -13,6 +13,8 @@ pasted into an Attributes tab and then revised by hand.
 
 import hashlib
 
+from .config import TUNING
+
 OUTFIELD = [
     # name, offense weight, defense weight, bonus by position {pos: +n}
     ('pace', 0.45, 0.25, {'FWD': 6, 'DEF': 0, 'MID': 2}),
@@ -55,11 +57,12 @@ def _variation(player_id, attr, spread):
 
 
 def _scale(rating):
-    """Sheet rating 1-10 -> 1-100 attribute baseline (1 -> 45, 5 -> 65, 10 -> 90).
+    """Sheet rating 1-10 -> 1-100 attribute baseline: rating_centre_value at rating_centre, rating_slope per point.
 
-    Deliberately compressed: small attribute gaps compound over hundreds of actions per
-    match, so a wider scale makes strong teams unrealistically dominant."""
-    return 40 + 5 * (rating if rating is not None else 5)
+    Was 40 + 5 x rating (engine 0.3.x). 0.4.0: the league's XIs only span about 6.3 to 7.2, so a steeper slope around
+    the league average (7) makes a real but small edge in squad strength show in results; players near 7 are unchanged."""
+    r = rating if rating is not None else 5
+    return TUNING['rating_centre_value'] + TUNING['rating_slope'] * (r - TUNING['rating_centre'])
 
 
 def derive(player, overrides=None):

@@ -118,6 +118,11 @@ TUNING = {
     'gk_reach_stand': 1.0,        # metres from his body he can get a hand to without moving: about half an arm span
     'gk_reach_dive': 1.9,         # and at full stretch
 
+    # Ratings (ratings._scale): sheet rating -> attribute baseline
+    'rating_slope': 5.0,          # attribute points per rating point (0.3.x: 5)
+    'rating_centre': 7.0,         # the league's average rating; a player here gets rating_centre_value whatever the slope
+    'rating_centre_value': 75.0,  # = 40 + 5 x 7, as before
+
     # Control
     'first_touch_base': 3.8,
     'mood_from_min': 50,         # 0.4.0: from this minute the score starts to lean on a team's settings (Match._update_mood), fully by 90
