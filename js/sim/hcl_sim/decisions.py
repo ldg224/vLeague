@@ -276,7 +276,7 @@ def _dribble_options(c):
         value = threat(ex, ey)
         danger = threat(PITCH_LENGTH - c.ax, PITCH_WIDTH - c.ay)
         utility = p_keep * value - (1 - p_keep) * danger * TUNING['risk_aversion']
-        utility -= 0.0015 * c.team.tactic('tempo') + _urgency(c)
+        utility -= 0.0015 * c.team.tactic('tempo') + _urgency(c) + TUNING['carry_penalty']
         out.append({'kind': 'dribble', 'target': c.to_pitch(ex, ey), 'utility': utility, 'p': p_keep,
                     'receiver': None, 'windup': 0.0})
     return out
@@ -397,7 +397,7 @@ def options_for(m, p):
         cl = _clear_option(c)
         if cl:
             opts.append(cl)
-        opts.append({'kind': 'hold', 'utility': threat(c.ax, c.ay) * 0.96 - 0.006 * c.pressure - 0.002 * c.team.tactic('tempo') - _urgency(c),
+        opts.append({'kind': 'hold', 'utility': threat(c.ax, c.ay) * 0.96 - 0.006 * c.pressure - 0.002 * c.team.tactic('tempo') - _urgency(c) - TUNING['carry_penalty'],
                      'receiver': None, 'target': (p.x, p.y), 'p': 1.0, 'windup': 0.0})
     return c, [o for o in opts if o]
 
@@ -433,11 +433,26 @@ def choose(m, p, rng):
         shot = next((o for o in opts if o['kind'] == 'shoot'), None) or _shot_option(c, force=True)
         if shot:
             return c, shot
+    if not TUNING['choose_by_kind'] or c.ax < TUNING['choose_by_kind_from']:
+        return c, _pick(opts, tau, rng)
+    # B-45: first what to do (the best shot, pass, dribble, hold, cross or clearance compete), then which one of that kind.
+    # One softmax over every option let the many pass options (one or two per teammate) outweigh a single better shot or carry
+    # by sheer number: a striker 30 m out with a shot and a dribble rated well above any pass still played it back to his keeper.
+    kinds = {}
+    for o in opts:
+        kinds.setdefault(o['kind'], []).append(o)
+    groups = list(kinds.values())
+    pick = _pick([max(g, key=lambda o: o['utility']) for g in groups], tau, rng)
+    return c, _pick(kinds[pick['kind']], tau, rng)
+
+
+def _pick(opts, tau, rng):
+    """A random option, more likely the better it scores (softmax at temperature tau)."""
     best = max(o['utility'] for o in opts)
     weights = [math.exp((o['utility'] - best) / tau) for o in opts]
     r = rng.random() * sum(weights)
     for o, w in zip(opts, weights):
         r -= w
         if r <= 0:
-            return c, o
-    return c, opts[-1]
+            return o
+    return opts[-1]

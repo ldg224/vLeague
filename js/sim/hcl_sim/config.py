@@ -64,6 +64,9 @@ TUNING = {
     'decision_temperature': 0.006,   # softmax temperature for a 100-rated decision maker
     'decision_temperature_poor': 0.020,
     'risk_aversion': 1.0,
+    'choose_by_kind': True,          # B-45: pick what to do (best of each kind), then which; False = one softmax over every option (engine 0.3.2)
+    'choose_by_kind_from': 60.0,     # only with the ball this far up (metres from his own goal line): the attacking half, where the back passes were
+    'carry_penalty': 0.0,            # taken off holding and dribbling (tried in tuning B-45; 0 keeps them as in 0.3.2)
     'shot_appetite': 0.68,
     # B-21: free kicks. Within the range the taker's shot utility is multiplied and given a bonus, so a free kick in range is usually a shot; below the xG floor it is not offered.
     'free_kick_shoot_range': 30.0,
