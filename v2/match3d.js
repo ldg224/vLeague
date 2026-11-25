@@ -1,7 +1,9 @@
 // V2-1 (Realism) test: a real match file drawn in 3D with three.js. Players are built from simple shapes in code (no model files yet)
 // and animated from the match file alone: running from how far and fast they move between frames, kicks, headers, saves and
 // celebrations from the events. Local test only; nothing on the live site uses this yet.
-import * as THREE from './vendor/three.module.min.js';
+import * as THREE from 'three';
+import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
+import * as SkeletonUtils from './vendor/utils/SkeletonUtils.js';
 
 const q = new URLSearchParams(location.search);
 const data = await (await fetch(q.get('file') || 'match.json')).json();
@@ -204,7 +206,40 @@ function figure(p) {
   scene.add(root);
   return L;
 }
-const figs = players.map(figure);
+// V2-2: the footballer model made in Blender (v2/blender/build_player.py): one file, a copy per player, kit colours per region.
+const model = q.has('shapes') ? null : await new GLTFLoader().loadAsync('models/player.glb').catch(e => { console.warn('model', e); return null; });
+const BONES = ['hips', 'spine', 'chest', 'neck', 'head', 'upperarm.L', 'upperarm.R', 'forearm.L', 'forearm.R', 'thigh.L', 'thigh.R', 'shin.L', 'shin.R'];
+const sideMat = new Map();
+function kitMat(side, gk, part) {   // shared by the players of one side (and its keeper), so a squad is a handful of materials
+  const key = `${side}${gk ? 'g' : ''}${part}`;
+  if (!sideMat.has(key)) { const kit = gk ? GK_KITS[side] : kitColours(side); sideMat.set(key, new THREE.MeshStandardMaterial({ color: kit[part], roughness: part === 'shirt' ? 0.65 : 0.8 })); }
+  return sideMat.get(key);
+}
+function modelFigure(p) {
+  const h = hash(p.id), gk = p.slot === 'GK';
+  const root = new THREE.Group(), body = SkeletonUtils.clone(model.scene);
+  root.add(body);
+  const skin = SKINS[h % 5], hair = HAIR[(h >> 3) % 5];
+  body.traverse(o => {
+    if (!o.isMesh) return;
+    o.castShadow = true; o.frustumCulled = false;
+    const n = o.material.name;
+    o.material = n === 'skin' ? skin : n === 'hair' ? hair : n === 'boots' ? BOOT : kitMat(p.side, gk, n);
+  });
+  const B = {}; body.updateMatrixWorld(true);
+  // each joint keeps its rest turn and its rest frame in the body's own axes (X left-right, Y up, Z forward), so a turn can be given in body axes
+  body.traverse(o => { const n = BONES.find(b => b.replace('.', '') === o.name.replace('.', '')); if (o.isBone && n) { const w = o.getWorldQuaternion(new THREE.Quaternion()); B[n] = { b: o, rest: o.quaternion.clone(), w, wi: w.clone().invert() }; } });   // the loader drops the dot from 'thigh.L'
+  root.scale.setScalar(0.94 + ((h >> 6) % 12) / 100);
+  scene.add(root);
+  return { root, B, model: true, phase: (h % 100) / 16, yaw: p.side ? -Math.PI / 2 : Math.PI / 2, last: null };
+}
+const figs = players.map(p => (model ? modelFigure(p) : figure(p)));
+const _q = new THREE.Quaternion(), _e = new THREE.Euler();
+// a turn about the body's axes at that joint: local = rest x (W^-1 x D x W), W the joint's rest frame in body axes
+const _d = new THREE.Quaternion();
+const turn = (L, name, x, y, z) => { const j = L.B[name]; if (!j) return; _e.set(x, y, z, 'XYZ'); _d.setFromEuler(_e); _q.copy(j.wi).multiply(_d).multiply(j.w); j.b.quaternion.copy(j.rest).multiply(_q); };
+// the model's own pose at rest (arms out in an A) is undone here so 0 means arms by the sides; signs found by looking (tune: ?tune=)
+const TUNE = Object.assign({ armIn: 0.32, armX: 1, armZ: 1, legX: 1, kneeX: 1, spineX: 1 }, Object.fromEntries((q.get('tune') || '').split(',').filter(Boolean).map(kv => { const [k, v] = kv.split('='); return [k, Number(v)]; })));
 
 // ball
 const ball = (() => {
@@ -256,10 +291,10 @@ const actAt = (i, t) => acts[i].find(a => t > a.t - 0.45 && t < a.t + (a.kind ==
 const ease = x => x * x * (3 - 2 * x);
 const lerp = (a, b, k) => a + (b - a) * k;
 const angDiff = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
-function pose(L, i, t, dtReal, B) {
-  const [x, y, vx, vy] = sample(t, 6 + i * 2), [X, Z] = W(x, y), sp = Math.hypot(vx, vy);
+function pose(L, i, t, dtReal, B, ov) {
+  const [x, y, vx, vy] = ov ? ov.s : sample(t, 6 + i * 2), [X, Z] = W(x, y), sp = Math.hypot(vx, vy);
   L.root.position.set(X, 0, Z);
-  const act = actAt(i, t);
+  const act = ov ? ov.act : actAt(i, t);
   // facing: the way he runs when he's moving; otherwise the ball; a kick faces where it goes
   let want = sp > 1.2 ? Math.atan2(vx, vy) : Math.atan2(B.x - x, B.y - y);
   if (act?.dir && Math.abs(t - act.t) < 0.4) want = Math.atan2(act.dir[0], act.dir[1]);
@@ -303,6 +338,21 @@ function pose(L, i, t, dtReal, B) {
       shL = shR = -2.9; elL = elR = -0.3 + Math.sin(ck * 9) * 0.25; sideL = 0.35; sideR = -0.35; rootY = Math.abs(Math.sin(ck * 5)) * 0.18 * (ck < 2.5 ? 1 : 0);
     }
   }
+  if (L.model) {
+    const T = TUNE;
+    L.root.position.y = (hipY - 0.98) + rootY;
+    // the same turns as the figures built from shapes; the thighs and spine carry the hips' lean back out so the legs stay under him
+    turn(L, 'hips', lean * 0.5, 0, roll);
+    turn(L, 'spine', lean * 0.35, Math.sin(L.phase) * 0.12 * a, 0);
+    turn(L, 'chest', lean * 0.15, 0, 0);
+    turn(L, 'neck', (-lean * 1.1 + headTilt) * 0.5, 0, 0);
+    turn(L, 'head', (-lean * 1.1 + headTilt) * 0.5, 0, 0);
+    turn(L, 'thigh.L', -thL * T.legX - lean * 0.5, 0, 0.03); turn(L, 'thigh.R', -thR * T.legX - lean * 0.5, 0, -0.03);
+    turn(L, 'shin.L', knL * T.kneeX, 0, 0); turn(L, 'shin.R', knR * T.kneeX, 0, 0);
+    turn(L, 'upperarm.L', shL * T.armX, 0, (sideL - T.armIn) * T.armZ); turn(L, 'upperarm.R', shR * T.armX, 0, (sideR + T.armIn) * T.armZ);
+    turn(L, 'forearm.L', elL * T.armX, 0, 0); turn(L, 'forearm.R', elR * T.armX, 0, 0);
+    return;
+  }
   L.hips.position.y = hipY + rootY;
   L.hips.rotation.set(lean, 0, roll);
   L.chest.rotation.set(lean * 0.4, Math.sin(L.phase) * 0.12 * a, 0);
@@ -311,6 +361,19 @@ function pose(L, i, t, dtReal, B) {
   L.legL.kn.rotation.set(knL, 0, 0); L.legR.kn.rotation.set(knR, 0, 0);
   L.armL.sh.rotation.set(shL, 0, sideL); L.armR.sh.rotation.set(shR, 0, sideR);
   L.armL.el.rotation.set(elL, 0, 0); L.armR.el.rotation.set(elR, 0, 0);
+}
+
+// ---------- ?demo: one player for each movement in a row, looping, to check the animation ----------
+const DEMO = q.has('demo');
+const DEMOS = [['stand', 0], ['jog', 3.5], ['sprint', 8], ['kick', 0, 'kick'], ['header', 0, 'header'], ['throw', 0, 'throw'], ['dive', 0, 'dive'], ['tackle', 0, 'tackle'], ['celebrate', 0, 'celebrate']];
+function demo(now, dtReal) {
+  DEMOS.forEach(([, v, kind], k) => {
+    const side = q.has('side'), L = figs[k], x = side ? 52.5 : 44 + k * 2.2, y = side ? 30 + (k - 4) * 2.6 : 30, loop = 2.2, tt = now % loop;
+    const act = kind ? { kind, t: kind === 'celebrate' ? now - tt + 0.6 : now - tt + 1.0, dir: kind === 'kick' ? [0, 1] : null, power: 1 } : null;
+    L.yaw = 0; pose(L, k, now, dtReal, { x, y: y + 10 }, { s: [x, y, 0, v], act }); L.yaw = 0; L.root.rotation.y = 0;
+    L.root.position.set(x - 52.5, L.root.position.y, y - 34);
+  });
+  for (let k = DEMOS.length; k < NP; k++) figs[k].root.visible = false;
 }
 
 // ---------- broadcast camera ----------
@@ -324,6 +387,8 @@ function camera(B, dtReal) {
   const px = camT.x * (portrait ? 0.92 : 0.78), pz = portrait ? 70 : 92, py = portrait ? 30 : 26;
   camP.x += (px - camP.x) * k; camP.y = py; camP.z = pz;
   cam.position.copy(camP); cam.lookAt(camT);
+  if (DEMO && q.has('side')) { cam.position.set(14, 1.6, -4); cam.lookAt(0.3, 0.9, -4); cam.fov = 55; cam.updateProjectionMatrix(); return; }
+  if (DEMO) { cam.position.set(-8.5 + 8.8, 3.2, -4 + 12); cam.lookAt(-8.5 + 8.8, 0.9, -4); cam.fov = 50; cam.updateProjectionMatrix(); return; }
   if (q.has('close')) {   // a close look at one player (?close=<index>), to judge the figures
     const f = figs[Number(q.get('close')) || 0].root.position;
     cam.position.set(f.x + 4.5, 2.2, f.z + 5.5); cam.lookAt(f.x, 1.0, f.z); cam.fov = 40; cam.updateProjectionMatrix();
@@ -355,7 +420,8 @@ function loop(ms) {
   const B = ballAt(t), [bx, bz] = W(B.x, B.y);
   ball.position.set(bx, 0.11 + Math.max(0, B.z), bz);
   ball.rotation.x += B.vy * dtReal * speed / 0.11 * 0.5; ball.rotation.z -= B.vx * dtReal * speed / 0.11 * 0.5;
-  for (let i = 0; i < NP; i++) pose(figs[i], i, t, dtReal * Math.max(1, speed), B);
+  if (DEMO) demo(ms / 1000, dtReal);
+  else for (let i = 0; i < NP; i++) pose(figs[i], i, t, dtReal * Math.max(1, speed), B);
   camera(B, dtReal);
   const sc = goals.filter(g => g.t <= t).at(-1)?.score || [0, 0];
   document.getElementById('bug-s').textContent = `${sc[0]}–${sc[1]}`;
