@@ -202,9 +202,18 @@ class CustomFormations(unittest.TestCase):
             site = json.load(f)
         mine = {n: {k: [v[0], v[1], v[3]] for k, v in custom_formation(n).items()} for n in site}
         self.assertEqual(mine, site)
-        for bad in ('9-1', '4-4-3', '2-5-3', '6-3-1', '4-0-6', 'abc', '', None, 442):
+        for bad in ('9-1', '4-4-3', '4-3-0-3', '1-1-1-1-6', '11-0-0', 'abc', '', None, 442):
             self.assertNotIn(bad, FORMATIONS)
             self.assertIsNone(FORMATIONS.get(bad))
+
+    def test_any_line_counts_play_a_full_match(self):
+        # S-49: no limits on a line; ten forwards or ten defenders still play a valid match.
+        league = synthetic_league()
+        league['tactics']['AAA'] = {'formation': '0-0-10'}
+        league['tactics']['BBB'] = {'formation': '10-0-0'}
+        data = simulate(league, 'AAA', 'BBB', seed=7)
+        self.assertEqual(data['teams']['home']['formation'], '0-0-10')
+        self.assertEqual(validate(data)['ok'], True)
 
     def test_a_custom_formation_plays_a_full_match(self):
         league = synthetic_league()

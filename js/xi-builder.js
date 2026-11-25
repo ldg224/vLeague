@@ -90,7 +90,7 @@ export function mountXI(dlg, ctx) {
     for (const f of PRESETS_SHOWN) rows.push([f, f, BLURB[f], !s.shape && s.formation === f]);
     m.innerHTML = `<p class="xb-menu-h">Start from a formation</p>${rows.map(([k, name, blurb, on]) =>
       `<button type="button" class="xb-mrow${on ? ' on' : ''}" data-xb-f="${esc(k)}" aria-pressed="${on}"><span class="xb-mini" aria-hidden="true">${mini(k === 'own' ? s.formation : k)}</span><span><b>${esc(name)}</b><small>${esc(blurb)}</small></span>${on ? ICON.tick : ''}</button>`).join('')}
-      <p class="xb-menu-foot">Or drag players anywhere on the pitch. Any shape with 3 to 5 at the back works.</p>`;
+      <p class="xb-menu-foot">Or drag players anywhere on the pitch. Any shape works.</p>`;
   }
 
   function drawTools() {
@@ -203,7 +203,7 @@ export function mountXI(dlg, ctx) {
       if (near) return { error: `Too close to ${near.slot}. Leave a little room between players.` };
     }
     const named = nameShape(pts);
-    if (!named) return { error: 'That doesn’t make a formation. Keep 3 to 5 at the back, 1 to 3 up front and at most 5 in each midfield line.' };
+    if (!named) return { error: 'That doesn’t make a formation.' };   // can't happen now any 10 make one (S-49); kept as a guard
     return { pts, named };
   }
   function movesFor(slot, x, y) {

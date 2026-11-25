@@ -21,14 +21,17 @@ test('a custom formation has eleven distinct slots with one goalkeeper', () => {
     const slots = FORMATIONS[name], wants = Object.values(slots).map(s => s.want);
     assert.equal(Object.keys(slots).length, 11, name);
     assert.equal(wants.filter(w => w === 'GK').length, 1, name);
-    assert.ok(wants.filter(w => w === 'DEF').length >= 3, name);
+    assert.equal(new Set(Object.values(slots).map(s => `${s.line} ${s.across}`)).size, 11, `${name}: two slots on one spot`);
   }
 });
 
 test('names that are not formations are refused; presets stay as they were', () => {
-  for (const bad of ['9-1', '4-4-3', '2-5-3', '6-3-1', '4-0-6', '4-4-2-0', '1-1-1-1-6', 'abc', '', null, undefined, 442]) assert.equal(isFormation(bad), false, String(bad));
+  for (const bad of ['9-1', '4-4-3', '4-3-0-3', '1-1-1-1-6', '11-0-0', '-1-5-6', 'abc', '', null, undefined, 442]) assert.equal(isFormation(bad), false, String(bad));
   assert.deepEqual(Object.keys(FORMATIONS), ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2']);   // the picker lists presets only
   assert.ok(isFormation('4-4-2') && isFormation('4-1-4-1') && '3-4-3' in FORMATIONS);
+  // S-49: no limits on a line, as long as there is one keeper.
+  for (const ok of ['2-5-3', '6-3-1', '4-0-6', '4-4-2-0', '0-0-10', '10-0-0', '0-4-4-2']) assert.ok(isFormation(ok), ok);
+  assert.deepEqual(Object.keys(FORMATIONS['6-3-1']).filter(k => FORMATIONS['6-3-1'][k].line === 'DEF'), ['LCB3', 'LCB2', 'LCB1', 'RCB1', 'RCB2', 'RCB3']);
 });
 
 test('a played match is matched back to its formation from the slots', () => {

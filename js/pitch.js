@@ -39,7 +39,8 @@ const BASE = {
 };
 
 // S-30: custom formations. Any "D-M-F" or "D-M-A-F" that adds up to 10 outfield players is a formation: defenders first, forwards last, one or two
-// midfield rows between (the second is the attacking midfield). Built row by row with the preset slot names, as the engine does
+// midfield rows between (the second is the attacking midfield). S-49 (25 Nov 2026): no limits on a line, 0 to 10 each (one keeper is the only
+// rule); a D-M-A-F name needs at least one in the attacking midfield, else it is the D-M-F one. Built row by row with the preset slot names, as the engine does
 // (hcl-s3/js/sim/hcl_sim/tactics.py, custom_formation); tests/formations.test.mjs checks the two agree.
 const ACROSS = {
   DEF: { 1: [34], 2: [25, 43], 3: [20, 34, 48], 4: [7, 25, 43, 61], 5: [7, 20, 34, 48, 61] },
@@ -55,12 +56,20 @@ const NAMES = {
   AMW: { 3: ['LW', 'CAM', 'RW'] },
   FWD: { 1: ['ST'], 2: ['LST', 'RST'], 3: ['LW', 'ST', 'RW'] },
 };
+// A line the tables don't cover (6 or more, 4 or more forwards, or names an earlier line took): spread evenly across, named from the outside in
+// with a side so mirroring still pairs them (LCB2 LCB1 CB RCB1 RCB2). As tactics.py _side_names.
+const BASE_NAME = { DEF: ['CB', 'CB'], MID: ['CM', 'CM'], MID2: ['CM', 'CM'], AM: ['AM', 'CAM'], AMW: ['AM', 'CAM'], FWD: ['ST', 'ST'] };
+const spread = n => (n === 1 ? [34] : Array.from({ length: n }, (_, i) => Math.floor(7 + 54 * i / (n - 1) + 0.5)));
+function sideNames(names, n) {
+  const [base, mid] = BASE_NAME[names], half = Math.floor(n / 2);
+  return [...Array.from({ length: half }, (_, i) => `L${base}${half - i}`), ...(n % 2 ? [mid] : []), ...Array.from({ length: half }, (_, i) => `R${base}${i + 1}`)];
+}
 const made = new Map();
 export function customFormation(name) {
-  if (typeof name !== 'string' || !/^\d(-\d){2,3}$/.test(name)) return null;
+  if (typeof name !== 'string' || !/^\d{1,2}(-\d{1,2}){2,3}$/.test(name)) return null;
   if (made.has(name)) return made.get(name);
   const rows = name.split('-').map(Number), mids = rows.slice(1, -1);
-  const ok = rows.reduce((a, b) => a + b, 0) === 10 && rows[0] >= 3 && rows[0] <= 5 && rows.at(-1) >= 1 && rows.at(-1) <= 3 && mids.every(n => n >= 1 && n <= 5);
+  const ok = rows.reduce((a, b) => a + b, 0) === 10 && !(rows.length === 4 && rows[2] === 0);
   let out = null;
   if (ok) {
     out = { GK: s('GK', 34, 0, 'GK') };
@@ -68,14 +77,19 @@ export function customFormation(name) {
     if (mids.length === 1) plan.push(['MID', 'MID', 'MID', 'MID']);
     else plan.push(['MID', 'MID2', 'MID', 'MID'], ['AM', rows.at(-1) !== 3 && mids[1] === 3 ? 'AMW' : 'AM', 'AM', 'MID']);   // three forwards take the winger names
     plan.push(['FWD', 'FWD', 'FWD', 'FWD']);
-    plan.forEach(([line, names, across, want], i) => NAMES[names][rows[i]].forEach((slot, j) => {
-      out[slot] = s(line, ACROSS[across][rows[i]][j], 0, (slot === 'LW' || slot === 'RW') && line === 'AM' ? 'FWD' : want);
-    }));
+    plan.forEach(([line, names, across, want], i) => {
+      const n = rows[i];
+      let got = NAMES[names][n];
+      if (!got || got.some(g => g in out)) got = sideNames(names, n);
+      const xs = ACROSS[across][n] || spread(n);
+      got.forEach((slot, j) => { out[slot] = s(line, xs[j], 0, (slot === 'LW' || slot === 'RW') && line === 'AM' ? 'FWD' : want); });
+    });
+    if (Object.keys(out).length !== 11) out = null;
   }
   made.set(name, out);
   return out;
 }
-// Every formation name the site accepts: the presets, then the custom ones (a shape of 3 to 5 defenders, 1 to 3 forwards).
+// Every formation name the site accepts: the presets, then the custom ones (any 10 outfield players across the lines).
 export const FORMATIONS = new Proxy(BASE, {
   get: (t, k) => (typeof k !== 'string' || k in t ? t[k] : customFormation(k) || undefined),
   has: (t, k) => k in t || (typeof k === 'string' && customFormation(k) !== null),
@@ -83,13 +97,9 @@ export const FORMATIONS = new Proxy(BASE, {
 export const isFormation = name => typeof name === 'string' && FORMATIONS[name] != null;
 export function customNames() {
   const out = [];
-  for (let d = 3; d <= 5; d++) for (let f = 1; f <= 3; f++) {
-    const rest = 10 - d - f;
-    for (let m = 1; m <= Math.min(5, rest); m++) {
-      const one = `${d}-${m}-${f}`;
-      if (m === rest) out.push(one);
-      else if (rest - m <= 5) out.push(`${d}-${m}-${rest - m}-${f}`);
-    }
+  for (let d = 0; d <= 10; d++) for (let m = 0; m <= 10 - d; m++) {
+    out.push(`${d}-${m}-${10 - d - m}`);
+    for (let a = 1; a <= 10 - d - m; a++) out.push(`${d}-${m}-${a}-${10 - d - m - a}`);
   }
   return out.filter(n => customFormation(n) && !(n in BASE));
 }
@@ -119,7 +129,7 @@ export function spotsOf(formation, shape) {
   return out;
 }
 // The formation that 10 outfield spots make ([{ key, x, y }]), and which of its slots each spot takes ({ key: slot }); null when the lines don't
-// make a formation (3 to 5 defenders, 1 to 3 forwards, 1 to 5 in each midfield line).
+// make a formation (any 10 outfield players does, S-49).
 export function nameShape(points) {
   const by = { DEF: [], MID: [], AM: [], FWD: [] };
   for (const p of points) by[bandOf(p.y)].push(p);

@@ -24,11 +24,12 @@ test('moving a spot into another line renames the formation and its slots', () =
   assert.deepEqual(new Set(Object.values(named.map)), new Set(Object.keys(FORMATIONS['4-2-1-3']).filter(s => s !== 'GK')));
 });
 
-test('shapes that are not formations are refused', () => {
+test('any ten outfield spots make a formation (S-49: no limits on a line)', () => {
   const two = outfield('4-4-2').map(p => (p.key === 'LCB' || p.key === 'RCB' ? { ...p, y: 48 } : p));   // only 2 defenders
-  assert.equal(nameShape(two), null);
+  assert.equal(nameShape(two).formation, '2-6-2');
   const fourUp = outfield('4-3-3').map(p => (p.key === 'LCM' ? { ...p, y: 80 } : p));   // 4 forwards
-  assert.equal(nameShape(fourUp), null);
+  assert.equal(nameShape(fourUp).formation, '4-2-4');
+  assert.equal(nameShape(outfield('4-3-3').slice(1)), null, 'nine spots are not a formation');
 });
 
 test('a stored shape is kept only when it still makes its own formation', () => {

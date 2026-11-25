@@ -40,7 +40,8 @@ FORMATIONS = {
 }
 
 # S-30: custom formations. Any "D-M-F" or "D-M-A-F" that adds up to 10 outfield players is a formation: defenders first, forwards last, one or two
-# midfield rows between (the second is the attacking midfield). Slots are built row by row, with the names the presets use (LB, LCB, CDM, LM, CAM, LW, ST...)
+# midfield rows between (the second is the attacking midfield). S-49 (25 Nov 2026): no limits on a line, any count from 0 to 10 (one keeper is
+# the only rule); a D-M-A-F name needs at least one in the attacking midfield, else it is the D-M-F one. Slots are built row by row, with the names the presets use (LB, LCB, CDM, LM, CAM, LW, ST...)
 # so the slot scores, wide-slot runs and the site's line-of-slot checks all work. Keep js/pitch.js (customFormation) in step: tests/formations.test.mjs
 # and js/sim/tests/test_engine.py check both against the same list.
 _ACROSS = {
@@ -57,7 +58,25 @@ _NAMES = {
     'AMW': {3: ['LW', 'CAM', 'RW']},
     'FWD': {1: ['ST'], 2: ['LST', 'RST'], 3: ['LW', 'ST', 'RW']},
 }
-_CUSTOM = re.compile(r'^\d(-\d){2,3}$')
+_CUSTOM = re.compile(r'^\d{1,2}(-\d{1,2}){2,3}$')
+# A line the tables above don't cover (6 or more, 4 or more forwards, or names an earlier line took): spread evenly across, named from the
+# outside in with a side, so mirroring still pairs them (LCB2 LCB1 CB RCB1 RCB2).
+_BASE = {'DEF': ('CB', 'CB'), 'MID': ('CM', 'CM'), 'MID2': ('CM', 'CM'), 'AM': ('AM', 'CAM'), 'AMW': ('AM', 'CAM'), 'FWD': ('ST', 'ST')}
+
+
+def _spread(n):
+    return [34] if n == 1 else [int(7 + 54 * i / (n - 1) + 0.5) for i in range(n)]
+
+
+def _side_names(names, n):
+    base, mid = _BASE[names]
+    half = n // 2
+    return [f'L{base}{half - i}' for i in range(half)] + ([mid] if n % 2 else []) + [f'R{base}{i + 1}' for i in range(half)]
+
+
+def base_slot(slot):
+    """A slot's name without the number a big line adds (LCB2 -> LCB), for the checks that go by name."""
+    return slot.rstrip('0123456789')
 
 
 def custom_formation(name):
@@ -65,7 +84,7 @@ def custom_formation(name):
     if not isinstance(name, str) or not _CUSTOM.match(name):
         return None
     rows = [int(x) for x in name.split('-')]
-    if sum(rows) != 10 or not 3 <= rows[0] <= 5 or not 1 <= rows[-1] <= 3 or any(not 1 <= n <= 5 for n in rows[1:-1]):
+    if sum(rows) != 10 or (len(rows) == 4 and rows[2] == 0):
         return None
     mids = rows[1:-1]
     slots = {'GK': ('GK', 34, 0, 'GK')}
@@ -78,9 +97,12 @@ def custom_formation(name):
         plan.append(('AM', 'AMW' if rows[-1] != 3 and mids[1] == 3 else 'AM', 'AM', 'MID'))
     plan.append(('FWD', 'FWD', 'FWD', 'FWD'))
     for (line, names, across, want), n in zip(plan, rows):
-        for slot, y in zip(_NAMES[names][n], _ACROSS[across][n]):
+        got = _NAMES[names].get(n)
+        if not got or any(g in slots for g in got):
+            got = _side_names(names, n)
+        for slot, y in zip(got, _ACROSS[across].get(n) or _spread(n)):
             slots[slot] = (line, y, 0, 'FWD' if slot in ('LW', 'RW') and line == 'AM' else want)
-    return slots
+    return slots if len(slots) == 11 else None
 
 
 class _Formations(dict):
@@ -151,6 +173,7 @@ def slot_want(formation, slot):
 
 def _slot_score(p, slot):
     a = p.attrs
+    slot = base_slot(slot)
     if slot == 'GK':
         return a['reflexes'] + a['handling']
     if slot in WIDE_SLOTS:
@@ -183,8 +206,8 @@ def assign_lineup(players, formation, chosen=None):
             assigned.append((p, slot))
     slots = {s: v for s, v in slots.items() if all(s != a for _, a in assigned)}
     # Fill slots in order of specificity: GK, then centre-backs, full-backs, CDM, strikers, rest.
-    order = sorted(slots, key=lambda s: ('GK', 'CB', 'LCB', 'RCB', 'CDM', 'LDM', 'RDM', 'ST', 'LST', 'RST').index(s)
-                   if s in ('GK', 'CB', 'LCB', 'RCB', 'CDM', 'LDM', 'RDM', 'ST', 'LST', 'RST') else 20)
+    first = ('GK', 'CB', 'LCB', 'RCB', 'CDM', 'LDM', 'RDM', 'ST', 'LST', 'RST')
+    order = sorted(slots, key=lambda s: first.index(base_slot(s)) if base_slot(s) in first else 20)
     for slot in order:
         want = slots[slot][3]
         pool = [p for p in remaining if p.position == want] or [p for p in remaining if p.position != 'GK'] or remaining
