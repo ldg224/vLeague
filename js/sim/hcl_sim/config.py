@@ -40,20 +40,25 @@ TUNING = {
     # (carrier's x in our attacking coords below press_zone_lo + (hi - lo) * pressing; beyond it he holds his place in the shape), and when a
     # second man joins in. Tempo scales how long a player takes on the ball; directness weights forward passes up and square/back ones down;
     # width spreads the shape. A setting of 0.5 plays as before for tempo and width.
-    'press_zone_lo': 45.0,
+    'volley_error_extra': 5.0,    # degrees added to a first-time volley's direction error
+    'volley_xg_mult': 1.5, 'volley_max': 0.5,   # a low cross reaching a teammate in the box: first-time finish chance = xg x mult, 0.15..max
+    'box_run_from': 68.0,         # S-40: a teammate wide (y < 18 or > 50) this far up: forwards attack the near post, far post and spot
+    'cross_zone_near': 5.0,       # a cross counts a teammate as attacking a zone only within this many metres of it, or running to it
+    'press_zone_lo': 60.0,
     'press_zone_hi': 112.0,
     'press_second': 0.6,
     'tempo_time': 0.5,            # time on the ball x (1 + tempo_time * (0.5 - tempo))
     'tempo_hold': 0.012,          # holding the ball, utility per step of tempo above 0.5
+    'direct_util': 0.006,         # plus this much utility (about one softmax temperature) for a 30 m forward pass at directness 1, minus at 0
     'direct_gain': 0.35,          # forward pass value x (1 +- direct_gain) for a 30 m forward / backward pass at directness 1 (and the reverse at 0)
     'width_in_lo': 0.875, 'width_in_span': 0.3,   # in possession: lateral spread 0.875 (narrow) to 1.175 (wide), 1.025 at 0.5 as before
     'width_out_lo': 0.55, 'width_out_span': 0.14, # out of possession: 0.55 to 0.69, 0.62 at 0.5 as before
     # Passing execution error (degrees of direction error, 1 standard deviation)
     'pass_error_base': 1.4,
-    'pass_error_skill': 5.5,      # added for a 0-rated passer, scaled down by skill
-    'pass_error_pressure': 3.5,   # added at full pressure
+    'pass_error_skill': 4.0,      # added for a 0-rated passer, scaled down by skill
+    'pass_error_pressure': 2.5,   # added at full pressure
     'pass_power_error': 0.07,     # fraction of intended speed, 1 sd, for a 50-rated passer
-    'loft_error': 0.11,           # landing error as a fraction of distance, 1 sd
+    'loft_error': 0.09,           # landing error as a fraction of distance, 1 sd
 
     # Shooting execution error (degrees, 1 sd)
     'shot_error_base': 6.0,    # S-40 step 2c: was 5.5
@@ -75,7 +80,7 @@ TUNING = {
     # Decisions
     'decision_temperature': 0.006,   # softmax temperature for a 100-rated decision maker
     'decision_temperature_poor': 0.020,
-    'risk_aversion': 1.0,
+    'risk_aversion': 1.5,
     'choose_by_kind': True,          # B-45: pick what to do (best of each kind), then which; False = one softmax over every option (engine 0.3.2)
     'choose_by_kind_from': 60.0,     # only with the ball this far up (metres from his own goal line): the attacking half, where the back passes were
     'carry_penalty': 0.0,            # taken off holding and dribbling (tried in tuning B-45; 0 keeps them as in 0.3.2)
@@ -103,9 +108,9 @@ TUNING = {
     'free_kick_min_xg': 0.02,
 
     # Defending runs in behind (B-45)
-    'track_run_range': 18.0,      # metres from his own spot within which a defender picks up a runner
-    'track_run_weight': 0.8,      # how fully he goes with the runner (scaled by marking, plus positioning)
-    'def_danger_range': 28.0,     # B-45: a carrier this close to our goal is closed down from the goal side, and a second man drops into the shooting lane
+    'track_run_range': 26.0,      # metres from his own spot within which a defender picks up a runner
+    'track_run_weight': 0.95,      # how fully he goes with the runner (scaled by marking, plus positioning)
+    'def_danger_range': 34.0,     # B-45: a carrier this close to our goal is closed down from the goal side, and a second man drops into the shooting lane
     'def_close_goalside': 1.2,    # metres goal-side of the carrier the presser aims for
     'def_lane_depth': 3.5,        # metres goal-side of the carrier the second man takes up, in the lane to goal
     'def_compact_range': 42.0,    # B-45: ball this close to our goal (metres along the pitch): the back line narrows
@@ -135,7 +140,10 @@ TUNING = {
     # Goalkeeping
     'gk_reaction': 0.30,          # seconds for a 100-rated keeper; up to +0.15 for poor ones
     # S-40 (25 Nov 2026; was save 3.7, dive 4.8, read 0.30): real clubs scored ~4.4 a match, keepers conceded 46% of shots on target.
-    'gk_save_base': 4.3,
+    'gk_save_base': 6.0,
+    'gk_catch_base': 0.95,        # S-40: chance to hold a save at his body (handling 0.5, up to 16 m/s); keepers fumbled about half their saves
+    'gk_catch_stretch': 0.6,      # taken off at full stretch
+    'gk_parry_wide': 0.75,        # a parry pushed wide or over (usually a corner) rather than back into play (was 0.62)
     'gk_dive_speed': 5.25,        # m/s along the line once he has left his feet
     'gk_high_delay': 0.12,        # extra seconds before he moves for a ball going into the top corner (it takes a keeper about a second to get there)
     'gk_read_error': 0.22,        # metres, 1 sd, in where he reads a shot will cross the line (more for a poorer positioner and a harder-hit shot)

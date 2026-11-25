@@ -223,10 +223,11 @@ def _pass_option(c, r, loft_angle=0.0, subtype=None, z0=0.0, max_speed=None):
         value = max(value, 0.8 * xg_there * TUNING['shot_appetite'] * 1.15 * close)
     # S-40: direct sides value balls forward, short sides keep it and play square or back.
     fwd = clamp((tx - c.ax) / 30.0, -1.0, 1.0)
-    value *= 1.0 + TUNING['direct_gain'] * 2 * (c.team.tactic('directness') - 0.5) * fwd
+    lean = 2 * (c.team.tactic('directness') - 0.5) * fwd
+    value *= 1.0 + TUNING['direct_gain'] * lean
     loss_x, loss_y = (worst[1], worst[2]) if worst else (tx, ty)
     danger = threat(PITCH_LENGTH - loss_x, PITCH_WIDTH - loss_y)
-    utility = ps * value - (1 - ps) * danger * TUNING['risk_aversion']
+    utility = ps * value - (1 - ps) * danger * TUNING['risk_aversion'] + TUNING['direct_util'] * lean
     if r.is_gk:
         utility -= 0.004
 
@@ -318,10 +319,12 @@ def _cross_options(c):
     far = PITCH_WIDTH - near
     out = []
     crossing = c.p.a('crossing')
-    for zx, zy in ((98.5, near), (93.0, 34.0), (99.0, far)):
+    for zx, zy in c.m.box_zones(c.ay):
         d = math.hypot(zx - c.ax, zy - c.ay)
         flight = 0.3 + d / 17.0
-        att = sum(1 for q in c.mates if _reach_time(*c.team.to_att(q.x, q.y), q.vmax(), zx, zy, 0.2) < flight + 0.4)
+        # S-40: only teammates actually in the zone or running to it count (box runs, Match._box_role).
+        att = sum(1 for q in c.mates if _reach_time(*c.team.to_att(q.x, q.y), q.vmax(), zx, zy, 0.2) < flight + 0.4
+                  and min(dist(*c.team.to_att(q.x, q.y), zx, zy), dist(*c.team.to_att(q.tx, q.ty), zx, zy)) < TUNING['cross_zone_near'])
         dfn = sum(1 for ox, oy, ov, o in c.opps if _reach_time(ox, oy, ov, zx, zy, 0.2) < flight + 0.2)
         gk_claim = 1.2 if zx > 99 - 1 and abs(zy - 34) < 5 else 0.0
         if att == 0:

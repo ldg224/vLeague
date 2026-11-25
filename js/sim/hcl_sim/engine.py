@@ -59,6 +59,7 @@ class Match:
         self.next_frame = 0.0
         self.pending_pass = None
         self.pending_shot = None
+        self._box_roles = {}
         self.offside_flags = set()
         self._held = {}                 # player id -> [spell start, last seen carrying]
         self.last_pass_to = {}          # player id -> (passer, poss_id) of the last completed pass they received
@@ -450,7 +451,10 @@ class Match:
                 err = TUNING['loft_error'] * (1.4 - skill) * d * (1.6 if header else 1.0) * (1 + 0.5 * min(ctx_pressure, 1))
                 tx2, ty2 = tx + rng.gauss(0, err), ty + rng.gauss(0, err * 0.8)
                 d2 = max(3.0, math.hypot(tx2 - b.x, ty2 - b.y))
-                speed = physics.loft_speed_for(d2, angle, z0=z_start) or opt['speed']
+                # S-40: a cross is struck to come down past its target, so it reaches the runner there at head height (cross_overshoot; the
+                # speed was worked out for that in decisions._cross_options, but recomputing it here for the target alone used to undo it).
+                carry = TUNING['cross_overshoot'] if kind == 'cross' else 0.0
+                speed = physics.loft_speed_for(d2 + carry, angle, z0=z_start) or opt['speed']
                 vx, vy, vz = physics.launch_velocity(tx2 - b.x, ty2 - b.y, speed, angle)
             else:
                 sigma = (TUNING['pass_error_base'] + TUNING['pass_error_skill'] * (1 - skill)
@@ -654,6 +658,8 @@ class Match:
         sigma = TUNING['shot_error_base'] + TUNING['shot_error_skill'] * (1 - finishing) + TUNING['shot_error_pressure'] * pressure
         if header:
             sigma += TUNING['header_error_extra']
+        if opt.get('subtype') == 'volley':
+            sigma += TUNING['volley_error_extra']   # S-40: hitting a cross first time is harder to place (volleys went in 65% of the time)
         if penalty:
             sigma *= 0.55
         elif aim_z > 1.5 and not header:
@@ -889,7 +895,7 @@ class Match:
         if (f.get('kind') in ('cross', 'corner') and teammate and ax > PITCH_LENGTH - BOX_DEPTH
                 and BOX_Y1 < ay < BOX_Y2 and z < 1.7):
             xg = decisions.expected_goals(ax, ay)
-            if rng.random() < clamp(xg * 3.0, 0.15, 0.85):
+            if rng.random() < clamp(xg * TUNING['volley_xg_mult'], 0.15, TUNING['volley_max']):   # S-40: how often he hits it first time
                 self._resolve_pass('complete', q)
                 self._kick(q, {'kind': 'shoot', 'subtype': 'volley'}, header=False, z0=z)
                 return
@@ -1000,7 +1006,9 @@ class Match:
         logit = (TUNING['gk_save_base'] + 2.0 * (gk.a('reflexes') - 0.5) + 1.0 * (gk.a('diving') - 0.5)
                  - 0.07 * max(0.0, speed - 20) - 3.2 * stretch ** 1.5 - (0.9 if z > 1.8 else 0.0))   # a ball going high needs a jump as well as a dive
         if (b.flight or {}).get('sure') or rng.random() < sigmoid(logit):
-            p_catch = clamp(0.25 + 0.6 * gk.a('handling') - 0.025 * max(0.0, speed - 14), 0.05, 0.85)
+            # S-40: a shot near his body is held; the further he has to stretch (and the harder it's hit), the likelier he can only parry it.
+            p_catch = clamp(TUNING['gk_catch_base'] + 0.5 * (gk.a('handling') - 0.5) - 0.02 * max(0.0, speed - 16)
+                            - TUNING['gk_catch_stretch'] * stretch, 0.1, 0.95)
             if z < 2.3 and rng.random() < p_catch:
                 self._resolve_shot('saved')
                 self.ev('save', gk, result='caught')
@@ -1010,7 +1018,7 @@ class Match:
                 self.ev('save', gk, result='parried')
                 T = self.team_of(gk)
                 away = 1 if T.direction == 1 else -1
-                if rng.random() < 0.62:
+                if rng.random() < TUNING['gk_parry_wide']:
                     # Pushed wide / around the post / over the bar: usually ends up a corner.
                     side = 1 if b.y > 34 else -1
                     b.vx = -away * rng.uniform(3, 8)
@@ -1528,6 +1536,32 @@ class Match:
             p.tx, p.ty = p.x + p.vx * 0.3, p.y + p.vy * 0.3
             p.urgency = 1
 
+    def box_zones(self, hay):
+        """S-40: where a cross from this side is attacked (attacking coords): near post, far post, penalty spot."""
+        near = 30.5 if hay < 34 else 37.5
+        return [(98.5, near), (97.5, PITCH_WIDTH - near), (92.5, 34.0)]
+
+    def _box_role(self, p, team, holder, hax, hay):
+        """S-40: the zone this player attacks while a teammate has the ball wide in a crossing position, or None."""
+        if not (hax > TUNING['box_run_from'] and (hay < 18 or hay > 50)) or p is holder:
+            return None
+        key = (team.side, holder.id, round(self.t, 1))
+        roles = self._box_roles.get(team.side)
+        if not roles or roles[0] != key:
+            zones = self.box_zones(hay)
+            fwd = [q for q in team.active() if q is not holder and not q.is_gk and q.line in ('FWD', 'AM')]
+            mids = [q for q in team.active() if q is not holder and not q.is_gk and q.line == 'MID' and q.slot not in tactics.WIDE_SLOTS]
+            take, left = {}, list(zones)
+            for q in sorted(fwd, key=lambda q: min(dist(*team.to_att(q.x, q.y), zx, zy) for zx, zy in left))[:len(zones)]:
+                z = min(left, key=lambda z: dist(*team.to_att(q.x, q.y), *z))
+                take[q.id] = z; left.remove(z)
+            if left and mids:   # the penalty spot (or whatever is left) to the nearest central midfielder, arriving from deep
+                q = min(mids, key=lambda q: dist(*team.to_att(q.x, q.y), *left[-1]))
+                take[q.id] = left[-1]
+            roles = (key, take)
+            self._box_roles[team.side] = roles
+        return roles[1].get(p.id)
+
     def _shape_target(self, p, team, bx, by, in_poss, off_line, holder):
         t = self.t
         rng = self.rng
@@ -1546,7 +1580,14 @@ class Match:
             # Attacking the final third: fill the box instead of leaving the striker alone.
             # Wide forwards cut inside into the channels; the far-side central midfielder arrives
             # late at the edge of the area.
-            if hax > 66 and p.run_until <= t:
+            role = self._box_role(p, team, holder, hax, hay) if p.run_until <= t else None
+            if role is not None:
+                # S-40: a wide man in a crossing position: attack the near post, the far post and the penalty spot, held onside until
+                # the ball is struck (then the cross's flight sends them on), instead of crossing to whoever happens to be near.
+                zx, zy = role
+                ax, ay = min(zx, line - 0.5), zy
+                urgency = 3 if dist(pax, pay, ax, ay) > 3 else 2
+            elif hax > 66 and p.run_until <= t:
                 y_base = tactics.slot_spec(team, p.slot)[1]
                 if p.line in ('FWD', 'AM') and p.slot not in ('ST', 'LST', 'RST', 'CAM'):
                     side = -1 if y_base < 34 else 1
@@ -1557,7 +1598,9 @@ class Match:
                     ax = max(ax, 85.0 if far_side else 79.0)
                     ay = ay + (34 - ay) * (0.55 if far_side else 0.3)
             # Forward runs in behind.
-            if p.run_until > t:
+            if role is not None:
+                pass
+            elif p.run_until > t:
                 ax, ay = p.tx_att_run
                 urgency = 3
             elif (p.line in ('FWD', 'AM') or (p.slot in tactics.WIDE_SLOTS and hax > 55)) and hax > 28 \
