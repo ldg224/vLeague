@@ -103,8 +103,19 @@ TUNING = {
 
     # Duels
     'tackle_rate': 0.075,          # tackle attempts per second when in range
-    'tackle_base_success': 0.42,
-    'foul_base': 0.10,
+    # S-40 tackles/blocks (25 Nov 2026; was success 0.42, foul 0.10, behind 0.18, beaten foul 0.10, all lines 1.0, pass block 0.08):
+    # about 65% of clean challenges now win the ball (real ~60-65%, was ~32%), defenders win the most tackles, fouls ~10 a team.
+    'tackle_base_success': 0.66,
+    'foul_base': 0.22,
+    'tackle_skill_weight': 0.9,    # how much tackling v dribbling moves the win chance
+    'tackle_behind_penalty': 0.12, # win chance lost tackling from behind
+    'beaten_foul_base': 0.08,      # beaten: chance he brings the carrier down instead (plus 0.15 x aggression)
+    'tackle_rate_def': 1.45,       # tackle attempt rate by line (defenders do most of the tackling in real games)
+    'tackle_rate_mid': 0.75,
+    'tackle_rate_fwd': 0.4,
+    'pass_block_base': 0.05,       # a pass struck past a man next to the kicker: chance he blocks it (plus 0.15 x marking)
+    'pass_block_fwd': 0.35,        # that chance for forwards and attacking mids (pressers rarely get a body in the way)
+    'pass_block_mid': 0.5,         # and for midfielders
     'yellow_on_foul': 0.16,
     'second_yellow_factor': 0.35,  # a booked player: a referee thinks twice before a second yellow (B-31)
     'booked_foul_factor': 0.6,     # and he goes in less hard, so he fouls less

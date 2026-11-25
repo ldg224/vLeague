@@ -832,7 +832,7 @@ class Match:
         # A ball just struck past a defender standing next to the kicker: he may get a block
         # in, but mostly the kicker plays it around him. No clean control from point-blank range.
         if kicker is not None and not teammate and self.t - f.get('t', -9) < 0.3 and f.get('kind') != 'shot':
-            if rng.random() < 0.08 + 0.15 * q.a('marking'):
+            if rng.random() < (TUNING['pass_block_base'] + 0.15 * q.a('marking')) * (TUNING['pass_block_fwd'] if q.line in ('FWD', 'AM') else TUNING['pass_block_mid'] if q.line == 'MID' else 1.0):
                 self.ev('block', q)
                 self._resolve_pass('intercepted', q)
                 # Blocked crosses keep going roughly the same way (often behind for a corner).
@@ -1101,6 +1101,7 @@ class Match:
             rate = TUNING['tackle_rate'] * (0.6 + 0.8 * o.a('aggression')) * (1.5 if in_windup else 1.0) * (1.4 if d < 0.9 else 1.0)
             if self.in_own_box(o):
                 rate *= 0.6
+            rate *= TUNING['tackle_rate_def'] if o.line == 'DEF' else TUNING['tackle_rate_fwd'] if o.line in ('FWD', 'AM') else TUNING['tackle_rate_mid']
             ux, uy, _ = unit(o.x - p.x, o.y - p.y)
             if ux * p.fx + uy * p.fy < -0.5:
                 rate *= 0.5   # sensible defenders rarely tackle from behind
@@ -1116,7 +1117,7 @@ class Match:
         ux, uy, _ = unit(o.x - p.x, o.y - p.y)
         behind = (ux * p.fx + uy * p.fy) < -0.5
         skill = o.a('tackling') - (0.6 * p.a('dribbling') + 0.2 * p.a('strength') + 0.2 * p.a('agility'))
-        p_win = clamp(TUNING['tackle_base_success'] + 0.9 * skill - (0.18 if behind else 0.0), 0.08, 0.85)
+        p_win = clamp(TUNING['tackle_base_success'] + TUNING['tackle_skill_weight'] * skill - (TUNING['tackle_behind_penalty'] if behind else 0.0), 0.08, 0.85)
         p_foul = clamp(TUNING['foul_base'] + 0.12 * o.a('aggression') + (0.1 if behind else 0.0) - 0.08 * o.a('tackling'), 0.02, 0.4)
         careful = TUNING['booked_foul_factor'] if o.yellow else 1.0   # a booked player goes in less hard
         p_foul *= careful
@@ -1147,7 +1148,7 @@ class Match:
                 self._set_possession(self.team_of(o))
         else:
             # Beaten. Sometimes the defender brings the attacker down rather than let him go.
-            if rng.random() < (0.10 + 0.15 * o.a('aggression')) * careful:
+            if rng.random() < (TUNING['beaten_foul_base'] + 0.15 * o.a('aggression')) * careful:
                 self._foul(o, p, behind)
                 return
             o.stunned_until = t + rng.uniform(0.7, 1.2)
