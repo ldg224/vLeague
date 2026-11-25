@@ -1,12 +1,15 @@
 # V2: a photoreal still of the Mixamo footballer (Cycles), for showcase and later per-player portraits. Not used in the live 3D match,
 # which keeps the light game model from build_mixamo.py; this only renders images, so it costs nothing in the browser.
-#   blender -b --python v2/blender/render_hero.py -- <character.fbx> <out.png> [samples] [save.blend]
+#   blender -b --python v2/blender/render_hero.py -- <character.fbx> <out.png> [samples] [save.blend] [--head <donor.fbx>]
 # The Mixamo body and kit share one material on one 4K texture sheet, so each part gets its own copy of it (keeping the textures)
 # and its own upgrade: skin with subsurface scattering and pores, polyester weave on the kit, synthetic leather boots with grass dirt.
-import bpy, sys, math
+import bpy, sys, math, os
 from mathutils import Vector
 
 argv = sys.argv[sys.argv.index('--') + 1:]
+# --head <donor.fbx>: another Mixamo character's face, hair and beard on this body and kit (headswap.py)
+HEAD = argv[argv.index('--head') + 1] if '--head' in argv else None
+if HEAD: i = argv.index('--head'); argv = argv[:i] + argv[i + 2:]
 SRC, OUT = argv[0], argv[1]
 SAMPLES = int(argv[2]) if len(argv) > 2 else 256
 SAVE = argv[3] if len(argv) > 3 else None
@@ -25,13 +28,6 @@ for o in M.values():
         if m.type == 'ARMATURE':
             m.use_deform_preserve_volume = True
 
-# ---------- smoothing ----------
-for n, o in M.items():
-    for p in o.data.polygons: p.use_smooth = True
-    if n in ('Ch38_Eyelashes', 'Ch38_Hair'):
-        continue   # alpha cards: subdividing them only blurs the strands
-    s = o.modifiers.new('subd', 'SUBSURF'); s.levels = 1; s.render_levels = 2; s.quality = 3
-    s.uv_smooth = 'PRESERVE_BOUNDARIES'
 
 # ---------- node helpers ----------
 base = bpy.data.materials['Ch38_body']
@@ -43,9 +39,30 @@ def tex_of(mat, socket):
                 if l2.to_node == l.from_node and l2.from_node.type == 'TEX_IMAGE': return l2.from_node.image
 DIFF, NORM, SPEC, GLOSS = tex_of(base, 'Base Color'), tex_of(base, 'Normal'), tex_of(base, 'Specular IOR Level'), tex_of(base, 'Roughness')
 print('TEXTURES', DIFF and DIFF.name, NORM and NORM.name, SPEC and SPEC.name, GLOSS and GLOSS.name)
+OURS = {'diff': DIFF, 'norm': NORM, 'gloss': GLOSS}
+
+# ---------- another face (optional) ----------
+TINT, HEADS = (1.0, 1.0, 1.0), []
+if HEAD:
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import headswap
+    HEADS, TINT = headswap.swap(rig, M, HEAD, lambda m: tex_of(m, 'Base Color'))
+    for o in HEADS:
+        M[o.name] = o
+        for m in o.modifiers:
+            if m.type == 'ARMATURE': m.use_deform_preserve_volume = True
+
+# ---------- smoothing ----------
+for n, o in M.items():
+    for p in o.data.polygons: p.use_smooth = True
+    if n.split('_')[-1] in ('Eyelashes', 'Hair', 'Beard', 'Eyes', 'Brows', 'Eyebrows', 'Moustache', 'Mustache'):
+        continue   # alpha cards: subdividing them only blurs the strands
+    s = o.modifiers.new('subd', 'SUBSURF'); s.levels = 1; s.render_levels = 2; s.quality = 3
+    s.uv_smooth = 'PRESERVE_BOUNDARIES'
 
 class G:   # a small graph builder so each material reads top to bottom
-    def __init__(self, name):
+    def __init__(self, name, T=None):
+        self.T = T or OURS
         self.m = bpy.data.materials.new(name); self.m.use_nodes = True
         self.nt = self.m.node_tree; self.nt.nodes.clear()
         self.out = self.n('ShaderNodeOutputMaterial'); self.b = self.n('ShaderNodeBsdfPrincipled')
@@ -63,14 +80,14 @@ class G:   # a small graph builder so each material reads top to bottom
         if non_color: im.colorspace_settings.name = 'Non-Color'
         return t
     def albedo(self):
-        return self.img(DIFF)
+        return self.img(self.T['diff'])
     def roughness_from_gloss(self, lo, hi):   # Mixamo ships glossiness; roughness is its inverse, squeezed into a believable range
-        g = self.img(GLOSS, True); inv = self.n('ShaderNodeMath', operation='SUBTRACT'); inv.inputs[0].default_value = 1
+        g = self.img(self.T['gloss'], True); inv = self.n('ShaderNodeMath', operation='SUBTRACT'); inv.inputs[0].default_value = 1
         self.l(g, 'Color', inv, 1)
         mr = self.n('ShaderNodeMapRange'); mr.inputs['To Min'].default_value = lo; mr.inputs['To Max'].default_value = hi
         self.l(inv, 0, mr, 'Value'); return mr
     def normal_map(self, strength=1.0):
-        t = self.img(NORM, True); nm = self.n('ShaderNodeNormalMap'); nm.inputs['Strength'].default_value = strength
+        t = self.img(self.T['norm'], True); nm = self.n('ShaderNodeNormalMap'); nm.inputs['Strength'].default_value = strength
         self.l(t, 'Color', nm, 'Color'); return nm
     def bump(self, height_node, out, strength, distance, normal=None):
         b = self.n('ShaderNodeBump'); b.inputs['Strength'].default_value = strength; b.inputs['Distance'].default_value = distance
@@ -79,12 +96,15 @@ class G:   # a small graph builder so each material reads top to bottom
         return b
 
 # ---------- skin ----------
-def skin():
-    g = G('skin'); b = g.b
+def skin(T=None, tint=(1, 1, 1), name='skin'):
+    g = G(name, T); b = g.b
     alb = g.albedo()
     # the texture's own tone, warmed slightly toward living skin
     warm = g.n('ShaderNodeMix', data_type='RGBA', blend_type='MULTIPLY'); warm.inputs['Factor'].default_value = 0.15
     warm.inputs[7].default_value = (1.0, 0.86, 0.80, 1)
+    if tuple(tint) != (1, 1, 1):   # the body's skin matched to the new face's tone
+        tn = g.n('ShaderNodeMix', data_type='RGBA', blend_type='MULTIPLY'); tn.inputs['Factor'].default_value = 1.0
+        tn.inputs[7].default_value = (*tint, 1); g.l(alb, 'Color', tn, 6); g.l(tn, 2, warm, 6)
     g.l(alb, 'Color', warm, 6); g.l(warm, 2, b, 'Base Color')
     b.subsurface_method = 'RANDOM_WALK'
     b.inputs['Subsurface Weight'].default_value = 0.18
@@ -166,11 +186,22 @@ def hair():
     if hasattr(h, 'surface_render_method'): h.surface_render_method = 'DITHERED'
     return h
 
-ASSIGN = {'Ch38_Body': skin(), 'Ch38_Shirt': fabric('jersey', 0.5), 'Ch38_Shorts': fabric('shorts', 0.6, 1600.0),
+ASSIGN = {'Ch38_Body': skin(tint=TINT), 'Ch38_Shirt': fabric('jersey', 0.5), 'Ch38_Shorts': fabric('shorts', 0.6, 1600.0),
           'Ch38_Socks': fabric('socks', 0.7, 1100.0), 'Ch38_Shoes': boots()}
 for n, m in ASSIGN.items():
     M[n].data.materials.clear(); M[n].data.materials.append(m)
 hair()
+for o in HEADS:
+    part = o.name.split('_')[-1]
+    m0 = o.data.materials[0]
+    if part == 'Body':
+        T = {'diff': tex_of(m0, 'Base Color'), 'norm': tex_of(m0, 'Normal'), 'gloss': tex_of(m0, 'Roughness') or GLOSS}
+        print('HEAD TEXTURES', {k: v and v.name for k, v in T.items()})
+        o.data.materials.clear(); o.data.materials.append(skin(T, name='face'))
+    else:
+        bs = m0.node_tree.nodes.get('Principled BSDF')
+        if bs: bs.inputs['Roughness'].default_value = 0.45; bs.inputs['Coat Weight'].default_value = 0.0
+        if hasattr(m0, 'surface_render_method'): m0.surface_render_method = 'DITHERED'
 
 # ---------- where things are: the eyes from the head bone ----------
 bpy.context.view_layer.update()
