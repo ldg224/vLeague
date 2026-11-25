@@ -68,7 +68,9 @@ export async function enterPlace(place, { neutral = false } = {}) {   // neutral
   drawNav();
   // Localhost only, for looking at the header and the page's frame without signing in (screenshots): ?preview&club=%23c8102e&office
   const q = new URLSearchParams(location.search);
-  if (['localhost', '127.0.0.1'].includes(location.hostname) && q.has('preview')) {
+  // Also a computer's address on a home network (192.168.x.x, 10.x.x.x), so a phone on the same WiFi can open a branch served from it (S-49, 25 Nov 2026).
+  const local = ['localhost', '127.0.0.1'].includes(location.hostname) || /^(192\.168|10)\.\d+\.\d+(\.\d+)?$/.test(location.hostname);
+  if (local && q.has('preview')) {
     if (q.get('theme')) document.documentElement.dataset.theme = q.get('theme');
     const [rows, season] = await Promise.all([db().then(c => c.from('clubs').select('*')).then(r => r.data || []).catch(() => []), loadSeason().catch(() => null)]);
     const real = rows.find(c => c.code === q.get('mine'));

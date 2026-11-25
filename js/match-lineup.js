@@ -12,7 +12,7 @@
 // lock; then it shows the random XI the lock picked for it (week_sheets.random, 0080: submit or it's random, user 3 Nov 2026). Unsubmitted drafts are never shown.
 // BOOSTED CAPTAIN (S-33, the user, 4 Nov 2026): a club sees its own boost as soon as it submits, read from its own submitted sheet. Everyone else, the office included, sees it from the lock.
 import { db } from './auth.js';
-import { FORMATIONS, DEFAULT_FORMATION, autoLineup } from './pitch.js';
+import { FORMATIONS, DEFAULT_FORMATION, autoLineup, spotsOf, cleanShape } from './pitch.js';
 import { loadKits, loadFixtureKits, matchKits } from './kits-data.js';
 import { kitSprite, kitChest, startDesign } from './kit.js';
 import { onColour } from './club-colour.js';
@@ -34,7 +34,7 @@ export async function loadLineups(fx, season, rows, { fake = false, mine = null 
   const c = await db(), now = new Date();
   const [dl, ws, sub, kits, own, editorKits] = await Promise.all([
     c.from('deadlines').select('week, locks_at, locked_at').eq('week', fx.week).maybeSingle().then(r => r.data || null).catch(() => null),
-    c.from('week_sheets').select('club, formation, captain, lineup, kit, submitted, random, boost').eq('week', fx.week).in('club', [fx.home, fx.away]).then(r => r.data || []).catch(() => []),
+    c.from('week_sheets').select('club, formation, captain, lineup, kit, submitted, random, boost, shape').eq('week', fx.week).in('club', [fx.home, fx.away]).then(r => r.data || []).catch(() => []),
     c.rpc('submitted_lineups', { p_week: fx.week, p_clubs: [fx.home, fx.away] }).then(r => r.data || []).catch(() => []),   // submitted, not yet locked
     loadKits(),
     mine && [fx.home, fx.away].includes(mine) ? c.from('submitted_sheets').select('club, sheet').eq('week', fx.week).eq('club', mine).maybeSingle().then(r => r.data || null).catch(() => null) : null,
@@ -108,7 +108,8 @@ export const PITCH_V = '<svg class="ml-lines is-v" viewBox="0 0 68 105" preserve
 // One side's players, placed on the whole pitch by --x (across) and --y (up the pitch from the own goal), as the team sheet's slots give them.
 function players(side, L, ctx, cls, star) {
   const sheet = L[side].sheet;
-  const formation = FORMATIONS[sheet.formation] ? sheet.formation : DEFAULT_FORMATION, slots = FORMATIONS[formation];
+  // S-49: a manager's own shape moves the spots (the formation still names the slots).
+  const formation = FORMATIONS[sheet.formation] ? sheet.formation : DEFAULT_FORMATION, slots = spotsOf(formation, cleanShape(formation, sheet.shape));
   const byId = new Map((ctx.season.players || []).map(p => [String(p.id), p]));
   const code = ctx.code[side], team = ctx.team(code), colour = ctx.club(code)?.colour || team.colour;
   return Object.entries(sheet.lineup).filter(([slot]) => slots[slot]).map(([slot, id]) => {
@@ -135,8 +136,10 @@ function bar(side, L, ctx) {
   const name = ctx.club(code)?.short_name || ctx.club(code)?.name || team.name;
   const chip = value != null ? `<span class="ml-chip" title="Team value">${esc(money(value))}</span>` : '';
   const shirt = L.kits[side]?.badge ? `<img class="ml-kit" src="${L.kits[side].badge}" alt="" title="${esc(name)} kit: ${esc({ home: 'home', away: 'away', special: 'special', special2: 'special 2', special3: 'special 3' }[sheet.kit] || 'default')}">` : '';
-  const shape = sheet ? esc(FORMATIONS[sheet.formation] ? sheet.formation : DEFAULT_FORMATION) : '';
-  const form = !sheet ? '' : sheet.random ? `<span class="ml-form" title="No team sheet submitted, so the XI was picked at random">${shape} · Random XI</span>` : `<span class="ml-form">${shape}</span>`;
+  const fm = sheet && FORMATIONS[sheet.formation] ? sheet.formation : DEFAULT_FORMATION;
+  // S-49: the bar has no room for "own shape" beside the club name (it squeezed the name away on desktop); the pitch shows the spots, the title says it.
+  const shape = sheet ? esc(fm) : '', own = sheet && cleanShape(fm, sheet.shape) ? ` title="${esc(fm)}, own shape"` : '';
+  const form = !sheet ? '' : sheet.random ? `<span class="ml-form" title="No team sheet submitted, so the XI was picked at random">${shape} · Random XI</span>` : `<span class="ml-form"${own}>${shape}</span>`;
   return `<div class="ml-side is-${side}">${side === 'home' ? `${chip}${ctx.crest(team, 32)}<b>${esc(name)}</b>${shirt}${form}` : `${form}${shirt}<b>${esc(name)}</b>${ctx.crest(team, 32)}${chip}`}</div>`;
 }
 

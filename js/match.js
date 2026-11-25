@@ -75,6 +75,14 @@ try {
   if (demo != null) season = demoMatchSeason(rows, demo);
   if (demo != null && preview && q.has('pre')) season.fixtures.forEach(f => { f.preseason = true; f.exhibition = true; });   // localhost only: look at a preseason match page
   if (demo != null && q.get('boost')) for (const code of q.get('boost').split(',')) if (season.demoSheets[code]) season.demoSheets[code].boost = true;   // the demo (localhost or the office): ?boost=CCF,SKS to watch the Boosted Captain entrance
+  if (demo != null && q.get('shape')) {   // the demo (localhost or the office): ?shape=CCF gives that club an own shape (S-49): full-backs pushed on, the striker higher
+    const { spotsOf, cleanShape } = await import('./pitch.js');
+    for (const code of q.get('shape').split(',')) {
+      const sh = season.demoSheets[code]; if (!sh) continue;
+      const own = Object.fromEntries(Object.entries(spotsOf(sh.formation, null)).filter(([sl]) => sl !== 'GK').map(([sl, at]) => [sl, [at.x, at.y + ({ LB: 9, RB: 9, ST: 6 }[sl] || 0)]]));
+      sh.shape = cleanShape(sh.formation, own);
+    }
+  }
   fx = season?.fixtures.find(f => String(f.id) === String(id)) || (demo != null ? season.fixtures[0] : null) || null;
   if (fx && preview && q.get('look')) {   // localhost only: ?look=opening_week to see a look on the real viewer and the header (&stage=SF for a semi-final)
     fx.look = q.get('look'); fx.stage = q.get('stage') || fx.stage;
