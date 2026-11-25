@@ -379,6 +379,17 @@ const ballAt = t => { const [x, y, vx, vy] = sample(t, 1), i = rowAt(t), b = ROW
 
 // events that move bodies
 const idx = Object.fromEntries(players.map((p, i) => [p.id, i]));
+// who is on the pitch: a backup keeper (lineup entry with sub: true, engine 0.4.1) sits on the bench until his 'substitution' event;
+// the player he replaces, and anyone sent off, leaves at that moment
+const ON_AT = players.map(p => (p.sub ? Infinity : -Infinity)), OFF_AT = players.map(() => Infinity);
+{
+  const ix = Object.fromEntries(players.map((p, i) => [p.id, i]));
+  for (const e of data.events) {
+    if (e.type === 'substitution') { if (ix[e.player] != null) ON_AT[ix[e.player]] = e.t; if (ix[e.off] != null) OFF_AT[ix[e.off]] = Math.min(OFF_AT[ix[e.off]], e.t); }
+    else if (e.type === 'card' && (e.card === 'red' || e.card === 'second_yellow' || e.colour === 'red') && ix[e.player] != null) OFF_AT[ix[e.player]] = Math.min(OFF_AT[ix[e.player]], e.t + 4);
+  }
+}
+const onPitch = (i, t) => t >= ON_AT[i] && t < OFF_AT[i];
 const KICKS = ['pass', 'shot', 'clearance', 'goal_kick', 'corner', 'free_kick', 'penalty', 'kickoff'];
 const acts = players.map(() => []);
 for (const e of data.events) {
@@ -529,7 +540,7 @@ function loop(ms) {
   ball.position.set(bx, 0.11 + Math.max(0, B.z), bz);
   ball.rotation.x += B.vy * dtReal * speed / 0.11 * 0.5; ball.rotation.z -= B.vx * dtReal * speed / 0.11 * 0.5;
   if (DEMO) demo(ms / 1000, dtReal);
-  else for (let i = 0; i < NP; i++) pose(figs[i], i, t, dtReal * Math.max(1, speed), B);
+  else for (let i = 0; i < NP; i++) { const on = onPitch(i, t); figs[i].root.visible = on; if (on) pose(figs[i], i, t, dtReal * Math.max(1, speed), B); }
   camera(B, dtReal);
   const sc = goals.filter(g => g.t <= t).at(-1)?.score || [0, 0];
   document.getElementById('bug-s').textContent = `${sc[0]}–${sc[1]}`;
