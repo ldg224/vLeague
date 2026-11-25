@@ -233,7 +233,114 @@ function modelFigure(p) {
   scene.add(root);
   return { root, B, model: true, phase: (h % 100) / 16, yaw: p.side ? -Math.PI / 2 : Math.PI / 2, last: null };
 }
-const figs = players.map(p => (model ? modelFigure(p) : figure(p)));
+// V2-2 (Mixamo): the footballer with motion-captured movement (v2/blender/build_mixamo.py). Default; ?v=blender or ?shapes for the earlier ones.
+const mocap = q.get('v') === 'blender' || q.has('shapes') ? null : await new GLTFLoader().loadAsync('models/footballer.glb').catch(e => { console.warn('footballer', e); return null; });
+const CLIP = {};
+if (mocap) {
+  for (const c of mocap.animations) {
+    // the runs are in place already; one-off moves keep their rise and fall but not their travel, since the match file says where he is
+    for (const tr of c.tracks) if (/Hips\.position$/.test(tr.name)) { const v = tr.values; for (let k = 0; k < v.length; k += 3) { v[k] = v[0]; v[k + 2] = v[2]; } }
+    CLIP[c.name] = c;
+  }
+}
+// the speed (m/s) each run is drawn at, so the clip is sped up or slowed to his real pace and his feet don't slide
+const GAIT = { idle: 0, walk: 1.4, jog: 3.4, run: 5.6, sprint: 7.6 };
+const SIDE = { jog_back: 2.6, run_back: 4.2, jog_left: 2.8, jog_right: 2.8 };
+let MOCAP_H = 1.8;
+if (mocap) { const bb = new THREE.Box3().setFromObject(mocap.scene); MOCAP_H = bb.max.y - bb.min.y; }
+// when in each kick, header or dive the touch happens: the moment the foot (or head) moves fastest
+const CONTACT = {};
+if (mocap) {
+  const probe = SkeletonUtils.clone(mocap.scene), mx = new THREE.AnimationMixer(probe), wp = new THREE.Vector3();
+  const bone = n => { let b = null; probe.traverse(o => { if (o.isBone && o.name.endsWith(n)) b = o; }); return b; };
+  const RF = bone('RightFoot'), LF = bone('LeftFoot'), HD = bone('Head');
+  for (const n of ['pass', 'shot', 'shot_run', 'chip', 'header', 'header_jump', 'tackle', 'tackle2', 'gk_dive', 'gk_dive2', 'gk_catch', 'gk_catch2', 'gk_drop_kick', 'gk_throw', 'throw_in', 'bicycle', 'receive']) {
+    const c = CLIP[n]; if (!c) continue;
+    const a = mx.clipAction(c); a.play(); let best = 0, at = c.duration / 2;
+    const parts = /header|gk_|throw/.test(n) ? [HD] : [RF, LF];
+    for (const B of parts) {
+      let prev = null;
+      for (let tt = 0; tt <= c.duration; tt += 1 / 30) {
+        a.time = tt; mx.update(0); probe.updateMatrixWorld(true); B.getWorldPosition(wp);
+        if (prev) { const v = wp.distanceTo(prev) * 30; if (v > best) { best = v; at = tt; } }
+        prev = wp.clone();
+      }
+    }
+    a.stop(); CONTACT[n] = at;
+  }
+  console.log('contact', JSON.stringify(CONTACT));
+}
+const ONE = { header: 'header', throw: 'throw_in', dive: 'gk_dive', tackle: 'tackle', celebrate: 'celebrate' };
+function oneShot(act, sp) {   // which clip plays for an action
+  if (act.kind === 'kick') {
+    if (['shot', 'clearance', 'penalty', 'goal_kick'].includes(act.ev)) return sp > 2.5 && CLIP.shot_run ? 'shot_run' : 'shot';
+    if (act.high && CLIP.chip) return 'chip';
+    return 'pass';
+  }
+  if (act.kind === 'dive') return CLIP.gk_dive ? 'gk_dive' : null;
+  return CLIP[ONE[act.kind]] ? ONE[act.kind] : null;
+}
+function mocapFigure(p) {
+  const h = hash(p.id), gk = p.slot === 'GK';
+  const root = new THREE.Group(), body = SkeletonUtils.clone(mocap.scene);
+  root.add(body);
+  body.scale.multiplyScalar(1.8 / MOCAP_H * (0.95 + ((h >> 6) % 10) / 100));
+  const skinTone = SKINS[h % 5].color, hairTone = HAIR[(h >> 3) % 5].color;
+  const kit = gk ? GK_KITS[p.side] : kitColours(p.side);
+  body.traverse(o => {
+    if (!o.isMesh) return;
+    o.castShadow = true; o.frustumCulled = false;
+    const n = o.material.name, m = o.material.clone();
+    // the textures are grey: the colour here is the kit (or skin, or hair); the lift brings the grey back to full strength
+    const col = n === 'skin' ? skinTone : n === 'hair' ? hairTone : n === 'boots' ? new THREE.Color(0x222222) : kit[n] || new THREE.Color(0xffffff);
+    m.color = col.clone().multiplyScalar(n === 'hair' ? 1.2 : 1.5);
+    if (n === 'hair') { m.alphaTest = 0.4; m.transparent = false; }
+    m.roughness = n === 'shirt' ? 0.7 : 0.85; m.metalness = 0;
+    o.material = m;
+  });
+  const mixer = new THREE.AnimationMixer(body), A = {};
+  for (const n of [...Object.keys(GAIT), ...Object.keys(SIDE), 'gk_idle']) if (CLIP[n]) { const a = mixer.clipAction(CLIP[n]); a.play(); a.setEffectiveWeight(0); A[n] = a; }
+  scene.add(root);
+  return { root, mixer, A, gk, mocap: true, W: {}, one: null, yaw: p.side ? -Math.PI / 2 : Math.PI / 2, phase: 0, last: null };
+}
+function mocapPose(L, t, dt, sp, vx, vy, act) {
+  // the run: blend the two gaits either side of his speed, in the direction he moves relative to where he faces
+  const want = {};
+  const f = vx * Math.sin(L.yaw) + vy * Math.cos(L.yaw), l = vx * Math.cos(L.yaw) - vy * Math.sin(L.yaw);
+  let rate = 1;
+  if (sp < 0.35) want[L.gk && L.A.gk_idle ? 'gk_idle' : 'idle'] = 1;
+  else if (f < -Math.abs(l) * 0.8 && L.A.jog_back) { const n = sp > 3.6 && L.A.run_back ? 'run_back' : 'jog_back'; want[n] = 1; rate = sp / SIDE[n]; }
+  else if (Math.abs(l) > Math.abs(f) * 1.2 && sp < 4.5 && L.A.jog_left) { const n = l > 0 ? 'jog_left' : 'jog_right'; want[n] = 1; rate = sp / SIDE[n]; }
+  else {
+    const g = Object.entries(GAIT);
+    let k = g.findIndex(([, v]) => v >= sp); if (k < 0) k = g.length - 1; if (k === 0) k = 1;
+    const [n0, v0] = g[k - 1], [n1, v1] = g[k], u = Math.min(1, Math.max(0, (sp - v0) / (v1 - v0)));
+    want[n0] = 1 - u; want[n1] = u;
+    rate = sp / ((v0 * (1 - u) + v1 * u) || 1);
+  }
+  // a one-off move (kick, header, dive...) takes over the body around the moment it happens, timed so the touch lands on the event
+  let oneW = 0;
+  const clip = act && oneShot(act, sp);
+  if (clip && CLIP[clip]) {
+    const c = CLIP[clip], local = t - (act.t - (CONTACT[clip] ?? 0.4));
+    if (local >= 0 && local <= c.duration) {
+      if (!L.one || L.one.clip !== clip) { if (L.one) L.one.a.stop(); const a = L.mixer.clipAction(c); a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; a.play(); a.timeScale = 0; L.one = { clip, a }; }
+      L.one.a.time = local;
+      oneW = Math.max(0, Math.min(1, local / 0.15, (c.duration - local) / 0.3));
+      L.one.a.setEffectiveWeight(oneW);
+    }
+  }
+  if (!oneW && L.one) { L.one.a.stop(); L.one = null; }
+  // ease each gait's weight towards what it should be, so changes of pace blend
+  const k = 1 - Math.exp(-dt * 8);
+  for (const [n, a] of Object.entries(L.A)) {
+    L.W[n] = (L.W[n] || 0) + ((want[n] || 0) - (L.W[n] || 0)) * k;
+    a.setEffectiveWeight(L.W[n] * (1 - oneW));
+    a.timeScale = Math.min(1.6, Math.max(0.55, rate));
+  }
+  L.mixer.update(dt);
+}
+const figs = players.map(p => (mocap ? mocapFigure(p) : model ? modelFigure(p) : figure(p)));
 const _q = new THREE.Quaternion(), _e = new THREE.Euler();
 // a turn about the body's axes at that joint: local = rest x (W^-1 x D x W), W the joint's rest frame in body axes
 const _d = new THREE.Quaternion();
@@ -279,13 +386,13 @@ for (const e of data.events) {
   if (KICKS.includes(e.type) && !(e.type === 'pass' && e.subtype === 'throw_in')) {
     const head = e.header || e.body === 'head';
     const dir = e.end_x != null ? [e.end_x - e.x, (e.end_y ?? e.y) - e.y] : null;
-    acts[i].push({ t: e.t, kind: head ? 'header' : 'kick', dir, power: e.type === 'shot' || e.type === 'clearance' || e.height === 'high' ? 1 : 0.6 });
+    acts[i].push({ t: e.t, kind: head ? 'header' : 'kick', ev: e.type, high: e.height === 'high' || e.subtype === 'lob', dir, power: e.type === 'shot' || e.type === 'clearance' || e.height === 'high' ? 1 : 0.6 });
   } else if (e.type === 'throw_in') acts[i].push({ t: e.t, kind: 'throw' });
-  else if (e.type === 'save') acts[i].push({ t: e.t, kind: 'dive' });
+  else if (e.type === 'save') acts[i].push({ t: e.t, kind: 'dive', caught: e.result === 'caught' });
   else if (e.type === 'tackle') acts[i].push({ t: e.t, kind: 'tackle' });
 }
 for (const e of data.events) if (e.type === 'goal' && !e.own_goal && idx[e.scorer] != null) acts[idx[e.scorer]].push({ t: e.t + 0.6, kind: 'celebrate' });
-const actAt = (i, t) => acts[i].find(a => t > a.t - 0.45 && t < a.t + (a.kind === 'celebrate' ? 5 : a.kind === 'dive' ? 1.4 : 0.5));
+const actAt = (i, t) => acts[i].find(a => t > a.t - (mocap ? 1.6 : 0.45) && t < a.t + (a.kind === 'celebrate' ? 5 : a.kind === 'dive' ? 1.6 : mocap ? 1.4 : 0.5));
 
 // ---------- animating a figure ----------
 const ease = x => x * x * (3 - 2 * x);
@@ -300,6 +407,7 @@ function pose(L, i, t, dtReal, B, ov) {
   if (act?.dir && Math.abs(t - act.t) < 0.4) want = Math.atan2(act.dir[0], act.dir[1]);
   L.yaw += angDiff(L.yaw, want) * Math.min(1, dtReal * (sp > 4 ? 6 : 4));
   L.root.rotation.y = L.yaw;
+  if (L.mocap) { mocapPose(L, t, L.last == null ? 0 : Math.min(0.25, Math.abs(t - L.last)), sp, vx, vy, act); L.last = t; return; }
   // running: the stride cycle moves with the ground he covers, so feet don't slide
   const a = Math.min(1, sp / 7.5), stride = 1.5 + 0.18 * sp;
   if (L.last != null) L.phase += Math.min(3, Math.abs(t - L.last) * sp) / stride * Math.PI * 2;
@@ -365,10 +473,10 @@ function pose(L, i, t, dtReal, B, ov) {
 
 // ---------- ?demo: one player for each movement in a row, looping, to check the animation ----------
 const DEMO = q.has('demo');
-const DEMOS = [['stand', 0], ['jog', 3.5], ['sprint', 8], ['kick', 0, 'kick'], ['header', 0, 'header'], ['throw', 0, 'throw'], ['dive', 0, 'dive'], ['tackle', 0, 'tackle'], ['celebrate', 0, 'celebrate']];
+const DEMOS = [['stand', 0], ['jog', 3.4], ['sprint', 7.6], ['kick', 0, 'kick'], ['header', 0, 'header'], ['throw', 0, 'throw'], ['dive', 0, 'dive'], ['tackle', 0, 'tackle'], ['celebrate', 0, 'celebrate']];
 function demo(now, dtReal) {
   DEMOS.forEach(([, v, kind], k) => {
-    const side = q.has('side'), L = figs[k], x = side ? 52.5 : 44 + k * 2.2, y = side ? 30 + (k - 4) * 2.6 : 30, loop = 2.2, tt = now % loop;
+    const side = q.has('side'), L = figs[k], x = side ? 52.5 : 44 + k * 2.2, y = side ? 30 + (k - 4) * 2.6 : 30, loop = 3.2, tt = now % loop;
     const act = kind ? { kind, t: kind === 'celebrate' ? now - tt + 0.6 : now - tt + 1.0, dir: kind === 'kick' ? [0, 1] : null, power: 1 } : null;
     L.yaw = 0; pose(L, k, now, dtReal, { x, y: y + 10 }, { s: [x, y, 0, v], act }); L.yaw = 0; L.root.rotation.y = 0;
     L.root.position.set(x - 52.5, L.root.position.y, y - 34);
