@@ -12,7 +12,7 @@ import { rating } from './places.js';
 import { suspensions } from './simulate.js';
 import { prefsNow, spoilerHidden } from './prefs.js';
 import { kitSprite, kitChest, cleanDesign, kitName, FIELD_SLOTS } from './kit.js';
-import { renderPitch, FORMATIONS, isFormation, positionPenalty, DEFAULT_FORMATION, TACTICS, STEPS, PRESETS, POS_ORDER, normaliseSheet, reshape, benchOf, autoLineup, fillLineup } from './pitch.js';import { portrait } from './portrait.js';
+import { renderPitch, FORMATIONS, spotsOf, nameShape, cleanShape, SHAPE_AREA, positionPenalty, DEFAULT_FORMATION, TACTICS, STEPS, PRESETS, POS_ORDER, normaliseSheet, reshape, benchOf, autoLineup, fillLineup } from './pitch.js';import { portrait } from './portrait.js';
 
 
 const PIECES = [['captain', 'Captain'], ['penalties', 'Penalties'], ['freekicks', 'Free kicks'], ['corners', 'Corners']];
@@ -166,7 +166,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
       <div class="dlg-body dlg-edit">
         <div class="dlg-pitch">
           <div class="formations sc-toggle" role="radiogroup" aria-label="Formation" id="fm-pills"></div>
-          <div class="fb" id="fb" hidden></div>
+          <div class="fs" id="fs"></div>
           <div id="pitch" class="ts-pitch"></div>
           <p class="ts-pick" id="pick" hidden></p>
           <div class="ts-oop" id="oop" hidden></div>
@@ -229,7 +229,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
     const preset = Object.keys(PRESETS).find(k => TACTICS.every(t => PRESETS[k][t.key] === sheet.tactics[t.key])) || 'Custom';
     const kitLabel = sheet.kit && kitsMade[sheet.kit] ? kitName(sheet.kit, kitsMade[sheet.kit]) : 'Automatic';
     const rows = [
-      ['lineup', 'Starting XI', `${n} of ${slots.length} · ${sheet.formation}${oop ? ` · ${oop} out of position` : ''}`, n === slots.length],
+      ['lineup', 'Starting XI', `${n} of ${slots.length} · ${sheet.formation}${sheet.shape ? ', own shape' : ''}${oop ? ` · ${oop} out of position` : ''}`, n === slots.length],
       ...PIECES.map(([k, label]) => [`piece:${k}`, label, nameOf(sheet[k]) || 'Not set', Boolean(sheet[k])]),
       ['tactics', 'Tactics', preset, true],
       ['kit', 'Kit', kitLabel, true],
@@ -258,7 +258,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
       ...xi.map(({ slot, p }) => `<li><button type="button" class="pk-row" data-set="${esc(p.id)}" aria-pressed="${String(sheet[pieceKey]) === String(p.id)}"><span class="pk-pos pos-${esc(p.position)}">${esc(p.position)}</span><span class="pk-name">${esc(p.name)}<small>${esc(slot)}</small></span></button></li>`)].join('');
   }
   for (const d of box.querySelectorAll('dialog')) {
-    d.addEventListener('close', () => { sel = null; redraw(); });
+    d.addEventListener('close', () => { sel = null; shaping = false; shapeMsg = ''; redraw(); });
     d.addEventListener('click', e => { if (e.target === d) d.close(); });   // a tap on the dim area
   }
 
@@ -267,34 +267,43 @@ async function teamSheet(box, { club, squad, userId, season }) {
   const slotOf = id => Object.keys(sheet.lineup).find(s => sheet.lineup[s] === id) || null;
   const wantOf = slot => FORMATIONS[sheet.formation][slot]?.want;
 
-  // Formations (S-30): the four presets, the club's own shape when it isn't one of them, and a Custom button that opens the builder.
-  // The builder sets how many players stand in each line (they must add up to 10 outfield players) and names the shape, e.g. 4-1-4-1.
-  const LINES = [['d', 'Defenders', 3, 5], ['m', 'Midfielders', 1, 5], ['a', 'Attacking midfielders', 0, 5], ['f', 'Forwards', 1, 3]];
-  let fbOpen = false, fb = { d: 4, m: 3, a: 0, f: 3 };
-  const fbName = () => [fb.d, fb.m, fb.a || null, fb.f].filter(n => n != null).join('-');
-  const fbFrom = name => { const n = name.split('-').map(Number); return n.length === 3 ? { d: n[0], m: n[1], a: 0, f: n[2] } : { d: n[0], m: n[1], a: n[2], f: n[3] }; };
+  // Formations: the four presets as starting points, plus the club's own shape when it isn't one of them.
+  // S-49 (replaces the S-30 line-count builder): "Move players" lets the manager drag each outfield spot anywhere on the pitch. How deep a spot
+  // stands puts it in a line (the bands drawn on the pitch); the lines name the formation, and each player keeps his spot as the slots are renamed.
+  let shaping = false, shapeMsg = '';
   function drawFormations() {
     const presets = Object.keys(FORMATIONS), own = presets.includes(sheet.formation) ? [] : [sheet.formation];
-    $('#fm-pills', box).innerHTML = [...presets, ...own].map(f => `<button type="button" role="radio" data-f="${esc(f)}" aria-checked="${f === sheet.formation}">${esc(f)}</button>`).join('')
-      + `<button type="button" role="radio" aria-checked="false" class="fb-open" data-fb-toggle aria-expanded="${fbOpen}" aria-controls="fb">Custom</button>`;
-    const el = $('#fb', box); el.hidden = !fbOpen;
-    if (!fbOpen) return;
-    const total = fb.d + fb.m + fb.a + fb.f, name = fbName(), ok = total === 10 && isFormation(name);
-    const left = 10 - total;
-    el.innerHTML = `<p class="fb-t">Build your own shape</p>
-      <ul class="fb-rows">${LINES.map(([k, label, lo, hi]) => `<li><span>${label}</span><span class="fb-step"><button type="button" data-fb="${k}-" aria-label="Fewer ${label.toLowerCase()}"${fb[k] <= lo ? ' disabled' : ''}>&minus;</button><b aria-live="polite">${fb[k]}</b><button type="button" data-fb="${k}+" aria-label="More ${label.toLowerCase()}"${fb[k] >= hi || left <= 0 ? ' disabled' : ''}>+</button></span></li>`).join('')}</ul>
-      <p class="fb-sum${ok ? '' : ' bad'}">${ok ? `${esc(name)}: 10 outfield players` : left > 0 ? `${left} more outfield player${left === 1 ? '' : 's'} to place` : `Take off ${-left} outfield player${left === -1 ? '' : 's'}`}</p>
-      <div class="fb-go"><button type="button" class="link-btn" data-fb-cancel>Cancel</button><button type="button" class="btn-primary" data-fb-apply${ok && name !== sheet.formation ? '' : ' disabled'}>${ok ? `Use ${esc(name)}` : 'Use this shape'}</button></div>`;
+    $('#fm-pills', box).innerHTML = [...presets, ...own].map(f => `<button type="button" role="radio" data-f="${esc(f)}" aria-checked="${f === sheet.formation && !sheet.shape}">${esc(f)}</button>`).join('')
+      + (sheet.shape ? `<button type="button" role="radio" data-f="${esc(sheet.formation)}" data-own aria-checked="true">Own shape</button>` : '');
+    $('#fs', box).innerHTML = `<div class="fs-bar"><button type="button" class="fs-toggle" data-shape-toggle aria-pressed="${shaping}">${shaping ? 'Done moving' : 'Move players'}</button>
+      ${sheet.shape ? '<button type="button" class="link-btn" data-shape-reset>Reset shape</button>' : ''}</div>
+      <p class="fs-help" aria-live="polite">${shapeMsg ? `<b>${esc(shapeMsg)}</b>` : shaping ? 'Drag a player to a new spot, or use the arrow keys. How deep they stand sets their line.' : ''}</p>`;
   }
   function setFormation(f) {
-    if (f === sheet.formation) return;
-    sheet.lineup = reshape(sheet.lineup, sheet.formation, f, avail);
-    sheet.formation = f; sel = null;
-    changed(); redraw(`[data-f="${f}"]`);
+    if (f === sheet.formation && !sheet.shape) return;
+    if (f !== sheet.formation) sheet.lineup = reshape(sheet.lineup, sheet.formation, f, avail);
+    sheet.formation = f; sheet.shape = null; sel = null; shapeMsg = '';
+    changed(); redraw(`[data-f="${f}"]:not([data-own])`);
+  }
+  // Move one spot to (x, y). Returns false, and says why, when the lines it leaves don't make a formation.
+  const outfieldSpots = () => Object.entries(spotsOf(sheet.formation, sheet.shape)).filter(([sl]) => sl !== 'GK').map(([key, sl]) => ({ key, x: sl.x, y: sl.y }));
+  const clampTo = (v, [lo, hi]) => Math.round(Math.min(hi, Math.max(lo, v)) * 2) / 2;
+  function moveSpot(slot, x, y) {
+    x = clampTo(x, SHAPE_AREA.x); y = clampTo(y, SHAPE_AREA.y);
+    const pts = outfieldSpots().map(p => (p.key === slot ? { ...p, x, y } : p));
+    const near = pts.find(p => p.key !== slot && Math.hypot((p.x - x) * 0.68, (p.y - y) * 1.05) < 4);
+    if (near) { shapeMsg = `Too close to ${near.key}. Leave a little room between players.`; return false; }
+    const named = nameShape(pts);
+    if (!named) { shapeMsg = 'That doesn’t make a formation. Keep 3 to 5 in defence, 1 to 3 in attack and at most 5 in each midfield line.'; return false; }
+    const lineup = {}, shape = {};
+    if (sheet.lineup.GK) lineup.GK = sheet.lineup.GK;
+    for (const p of pts) { const to = named.map[p.key]; if (sheet.lineup[p.key]) lineup[to] = sheet.lineup[p.key]; shape[to] = [p.x, p.y]; }
+    sheet.formation = named.formation; sheet.lineup = lineup; sheet.shape = cleanShape(named.formation, shape);
+    shapeMsg = ''; return named.map[slot];
   }
 
   function drawPitch() {
-    renderPitch($('#pitch', box), { ...sheet, players: squad, editable: true, selected: sel?.slot || null, onSlot, club, kits: pitchKits() });
+    renderPitch($('#pitch', box), { ...sheet, players: squad, editable: true, selected: shaping ? null : sel?.slot || null, onSlot, club, kits: pitchKits(), shaping });
     drawFormations();
     // S-25: a player out of position loses rating in the match, more the further the slot is from his own (positionPenalty).
     const off = Object.keys(FORMATIONS[sheet.formation]).map(sl => ({ sl, p: byId.get(String(sheet.lineup[sl])) })).filter(x => x.p && x.p.position !== wantOf(x.sl))
@@ -469,6 +478,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
     const snap = JSON.stringify(sheet);
     const body = JSON.parse(snap);
     if (body.kit == null && !(rowRes.data && 'kit' in rowRes.data)) delete body.kit;   // until the kit column exists (migration 0044), a sheet without a kit pick saves exactly as before
+    if (!(rowRes.data && 'shape' in rowRes.data)) delete body.shape;   // S-49: until the shape column exists, the formation (from the lines) saves and the spots stay on this page
     const { error } = await ok(c.from('team_sheets').upsert({ club: club.code, ...body, updated_by: userId }, { onConflict: 'club' }));
     saving = false;
     if (error) { state = 'error'; drawSave(); return; }
@@ -493,6 +503,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   }
 
   function onSlot(slot) {
+    if (shaping) return;   // while moving players, a tap doesn't pick (drag or the arrow keys move the spot)
     if (sel?.player) { place(slot, sel.player); sel = null; changed(); }
     else if (sel?.slot === slot) sel = null;
     else if (sel?.slot) {   // two slots: swap them
@@ -510,7 +521,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   let drag = null, dragged = false;
   const dropAt = (x, y) => { const el = document.elementFromPoint(x, y); return el?.closest('.pt-slot[data-slot]') || el?.closest('#players'); };
   box.addEventListener('pointerdown', e => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || shaping) return;
     const from = e.target.closest('.pl, .pt-slot[data-slot]:not(.empty)');
     if (!from || !box.contains(from)) return;
     const slot = from.dataset.slot || null, id = slot ? sheet.lineup[slot] : from.dataset.id;
@@ -572,6 +583,51 @@ async function teamSheet(box, { club, squad, userId, season }) {
   };
   box.addEventListener('pointerup', endDrag);
   box.addEventListener('pointercancel', endDrag);
+  // S-49: moving a spot. The spot follows the pointer (the line it would join shows on the pitch's label), and the shape is checked on release:
+  // a move that doesn't make a formation goes back where it was.
+  let mv = null;
+  const pctAt = (e, pt) => { const r = pt.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * 100, (r.bottom - e.clientY) / r.height * 100]; };
+  box.addEventListener('pointerdown', e => {
+    if (!shaping || e.button !== 0) return;
+    const el = e.target.closest('.pt-shaping .pt-slot[data-slot]');
+    if (!el || el.dataset.slot === 'GK') return;
+    e.preventDefault();
+    mv = { el, slot: el.dataset.slot, pt: el.closest('.pt'), pid: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
+    el.setPointerCapture(e.pointerId);
+  });
+  box.addEventListener('pointermove', e => {
+    if (!mv || e.pointerId !== mv.pid) return;
+    if (!mv.moved && Math.hypot(e.clientX - mv.x, e.clientY - mv.y) < 4) return;
+    mv.moved = true; mv.el.classList.add('moving');
+    const [x, y] = pctAt(e, mv.pt);
+    mv.el.style.left = `${clampTo(x, SHAPE_AREA.x)}%`; mv.el.style.bottom = `${clampTo(y, SHAPE_AREA.y)}%`;
+    const pts = outfieldSpots().map(p => (p.key === mv.slot ? { ...p, x: clampTo(x, SHAPE_AREA.x), y: clampTo(y, SHAPE_AREA.y) } : p)), named = nameShape(pts);
+    mv.pt.querySelector('.pt-form').textContent = named ? named.formation : 'Not a formation';
+    mv.el.classList.toggle('bad', !named);
+  });
+  const endMove = e => {
+    if (!mv || e.pointerId !== mv.pid) return;
+    const m = mv; mv = null;
+    if (!m.moved) return;
+    dragged = true; setTimeout(() => { dragged = false; }, 0);
+    const [x, y] = pctAt(e, m.pt);
+    const to = e.type === 'pointercancel' ? false : moveSpot(m.slot, x, y);
+    if (to) changed();
+    redraw(`.pt-slot[data-slot="${to || m.slot}"]`);
+  };
+  box.addEventListener('pointerup', endMove);
+  box.addEventListener('pointercancel', endMove);
+  // The arrow keys move the focused spot (Shift for a bigger step).
+  box.addEventListener('keydown', e => {
+    if (!shaping) return;
+    const el = e.target.closest?.('.pt-shaping .pt-slot[data-slot]'), d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] }[e.key];
+    if (!el || !d || el.dataset.slot === 'GK') return;
+    e.preventDefault();
+    const step = e.shiftKey ? 6 : 2, at = spotsOf(sheet.formation, sheet.shape)[el.dataset.slot];
+    const to = moveSpot(el.dataset.slot, at.x + d[0] * step, at.y + d[1] * step);
+    if (to) changed();
+    redraw(`.pt-slot[data-slot="${to || el.dataset.slot}"]`);
+  });
   // A drag ends in a click on whatever it started on; that click shouldn't also pick.
   box.addEventListener('click', e => { if (dragged) { e.stopPropagation(); e.preventDefault(); } }, true);
 
@@ -624,18 +680,11 @@ async function teamSheet(box, { club, squad, userId, season }) {
       host?.querySelector('[data-boost]')?.focus();
       return;
     }
-    const f = t.closest('[data-f]'), pl = t.closest('.pl'), pr = t.closest('[data-preset]'), st = t.closest('[data-tac]'), fbs = t.closest('[data-fb]');
-    if (t.closest('[data-fb-toggle]')) {
-      fbOpen = !fbOpen; if (fbOpen) fb = fbFrom(sheet.formation);
-      drawFormations(); box.querySelector(fbOpen ? '[data-fb="d+"]:not([disabled]), [data-fb="d-"]' : '[data-fb-toggle]')?.focus();
-    } else if (t.closest('[data-fb-cancel]')) { fbOpen = false; drawFormations(); box.querySelector('[data-fb-toggle]')?.focus(); }
-    else if (t.closest('[data-fb-apply]')) { const name = fbName(); if (isFormation(name)) { fbOpen = false; setFormation(name); } }
-    else if (fbs) {
-      const [k, dir] = [fbs.dataset.fb[0], fbs.dataset.fb[1] === '+' ? 1 : -1], [, , lo, hi] = LINES.find(l => l[0] === k);
-      fb[k] = Math.min(hi, Math.max(lo, fb[k] + dir)); drawFormations();
-      box.querySelector(`[data-fb="${k}${dir > 0 ? '+' : '-'}"]:not([disabled])`)?.focus();
-    } else if (f) {
-      fbOpen = false; setFormation(f.dataset.f);
+    const f = t.closest('[data-f]'), pl = t.closest('.pl'), pr = t.closest('[data-preset]'), st = t.closest('[data-tac]');
+    if (t.closest('[data-shape-toggle]')) { shaping = !shaping; sel = null; shapeMsg = ''; redraw('[data-shape-toggle]'); }
+    else if (t.closest('[data-shape-reset]')) { setFormation(sheet.formation); box.querySelector('[data-shape-toggle]')?.focus(); }
+    else if (f) {
+      if (!f.hasAttribute('data-own')) setFormation(f.dataset.f);
     } else if (pl) {
       const id = pl.dataset.id, hadSlot = Boolean(sel?.slot);
       if (hadSlot) { place(sel.slot, id); sel = null; changed(); }

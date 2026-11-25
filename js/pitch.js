@@ -7,6 +7,7 @@
 //   reshape(lineup, from, to, squad) -> the XI in a new formation: same-named slots keep their player, the rest refilled
 //   customFormation(name)  -> the slots of a custom formation like '4-1-4-1' (S-30), or null; FORMATIONS[name] gives these too, for any valid name
 //   isFormation(name), customNames(), formationFromSlots(slotNames)
+//   spotsOf(formation, shape), nameShape(points), cleanShape(formation, shape)  -> a manager's own shape (S-49): spots dragged anywhere
 import { esc } from './member.js';
 import { portrait } from './portrait.js';
 
@@ -99,6 +100,55 @@ export function formationFromSlots(slotNames) {
   return Object.keys(BASE).find(same) || customNames().find(same) || null;
 }
 export const DEFAULT_FORMATION = '4-3-3';
+
+// S-49: a free shape. Managers drag each outfield spot anywhere on the pitch; sheet.shape keeps where they stand ({ slot: [x, y] }: % across from
+// the left touchline and % up from the own goal line, as the pitch draws them), or null for the formation's usual spots. How deep a spot stands
+// puts it in a line (BANDS); the count in each line names the formation (e.g. 4-2-3-1) and its slots, left to right, so the lineup, slot names,
+// wanted positions and out-of-position penalties work as before, and a sheet read without its shape still plays that formation.
+export const BANDS = [['DEF', 'Defence', 0, 37], ['MID', 'Midfield', 37, 57.5], ['AM', 'Attacking midfield', 57.5, 71], ['FWD', 'Attack', 71, 100.01]];
+export const SHAPE_AREA = { x: [5, 95], y: [16, 90] };
+const bandOf = y => (BANDS.find(([, , lo, hi]) => y >= lo && y < hi) || BANDS.at(-1))[0];
+const round1 = v => Math.round(v * 2) / 2;
+// Where each slot stands: the shape's spot, else the formation's own.
+export function spotsOf(formation, shape) {
+  const out = {};
+  for (const [slot, sl] of Object.entries(slotsOf(formation))) {
+    const at = shape?.[slot];
+    out[slot] = at ? { ...sl, x: at[0], y: at[1] } : sl;
+  }
+  return out;
+}
+// The formation that 10 outfield spots make ([{ key, x, y }]), and which of its slots each spot takes ({ key: slot }); null when the lines don't
+// make a formation (3 to 5 defenders, 1 to 3 forwards, 1 to 5 in each midfield line).
+export function nameShape(points) {
+  const by = { DEF: [], MID: [], AM: [], FWD: [] };
+  for (const p of points) by[bandOf(p.y)].push(p);
+  const name = [by.DEF.length, by.MID.length, by.AM.length || null, by.FWD.length].filter(n => n != null).join('-');
+  if (points.length !== 10 || !isFormation(name)) return null;
+  const slots = FORMATIONS[name], map = {};
+  for (const line of ['DEF', 'MID', 'AM', 'FWD']) {
+    const names = Object.entries(slots).filter(([, sl]) => sl.line === line).sort((a, b) => a[1].across - b[1].across).map(([n]) => n);
+    [...by[line]].sort((a, b) => a.x - b.x || a.y - b.y).forEach((p, i) => { map[p.key] = names[i]; });
+  }
+  return { formation: name, map };
+}
+// A shape kept only if it is whole and its spots still make its own formation with the same slots; spots back on the formation's usual places
+// are dropped (null = the usual shape).
+export function cleanShape(formation, shape) {
+  if (!shape || typeof shape !== 'object' || !FORMATIONS[formation]) return null;
+  const outfield = Object.keys(slotsOf(formation)).filter(sl => sl !== 'GK');
+  const pts = [], out = {};
+  for (const slot of outfield) {
+    const at = shape[slot];
+    if (!Array.isArray(at) || at.length !== 2 || !at.every(Number.isFinite)) return null;
+    const x = round1(Math.min(SHAPE_AREA.x[1], Math.max(SHAPE_AREA.x[0], at[0]))), y = round1(Math.min(SHAPE_AREA.y[1], Math.max(SHAPE_AREA.y[0], at[1])));
+    pts.push({ key: slot, x, y }); out[slot] = [x, y];
+  }
+  const named = nameShape(pts);
+  if (!named || named.formation !== formation || pts.some(p => named.map[p.key] !== p.key)) return null;
+  const usual = slotsOf(formation);
+  return pts.every(p => Math.abs(usual[p.key].x - p.x) < 0.5 && Math.abs(usual[p.key].y - p.y) < 0.5) ? null : out;
+}
 // S-25: what a player's match rating loses for standing in a slot that wants another position. A step along defence-midfield-attack costs 0.5,
 // a forward in defence (or the other way round) 3, an outfield player in goal 4, a keeper in the outfield 3.5. Keep in step with OUT_OF_POSITION
 // in js/sim/hcl_sim/output.py and with js/live-rating.js.
@@ -171,7 +221,7 @@ export function normaliseSheet(row, squad) {
   const inXI = new Set(Object.values(full));
   const pick = id => (id != null && inXI.has(String(id)) ? String(id) : null);
   return {
-    formation, lineup: full, tactics, bench: benchOf(full, squad),
+    formation, shape: cleanShape(formation, row?.shape), lineup: full, tactics, bench: benchOf(full, squad),
     captain: pick(row?.captain), penalties: pick(row?.penalties), freekicks: pick(row?.freekicks), corners: pick(row?.corners),
     kit: ['home', 'away', 'special', 'special2', 'special3'].includes(row?.kit) ? row.kit : null,   // the kit worn (S-23); null = automatic
   };
@@ -193,10 +243,11 @@ const POS_NAME = { GK: 'goalkeeper', DEF: 'defender', MID: 'midfielder', FWD: 'f
 
 // `club` ({ code, colour, colour2 }) dresses each player's portrait (js/portrait.js) in the club's colours; the slot name moves to a small tag on it.
 // `kits` ({ field, gk }: kitChest() pictures) dresses them in the club's real kit instead.
-export function renderPitch(el, { formation, lineup = {}, captain = null, players = [], editable = false, selected = null, onSlot = null, club = null, kits = null } = {}) {
+// `shape` (S-49) moves the spots; `shaping` shows the lines a spot's depth puts it in, while the manager moves them.
+export function renderPitch(el, { formation, shape = null, lineup = {}, captain = null, players = [], editable = false, selected = null, onSlot = null, club = null, kits = null, shaping = false } = {}) {
   const f = FORMATIONS[formation] ? formation : DEFAULT_FORMATION;
   const byId = new Map(players.map(p => [String(p.id), p]));
-  const tokens = Object.entries(slotsOf(f)).map(([slot, sl]) => {
+  const tokens = Object.entries(spotsOf(f, shape)).map(([slot, sl]) => {
     const id = lineup[slot] != null ? String(lineup[slot]) : null, p = id ? byId.get(id) : null;
     const off = p && p.position !== sl.want, cap = p && String(captain) === id;
     const label = p ? `${slot}: ${p.number != null && p.number !== '' ? `number ${p.number}, ` : ''}${p.name}${cap ? ', captain' : ''}${off ? `, a ${POS_NAME[p.position] || 'player'} out of position` : ''}` : `${slot}: empty`;
@@ -207,7 +258,8 @@ export function renderPitch(el, { formation, lineup = {}, captain = null, player
       ? `<button type="button" class="${cls}" data-slot="${esc(slot)}" style="${pos}" aria-label="${esc(label)}" aria-pressed="${slot === selected}">${inner}</button>`
       : `<div class="${cls}" style="${pos}" role="listitem" aria-label="${esc(label)}">${inner}</div>`;
   }).join('');
-  el.innerHTML = `<div class="pt${editable ? ' pt-edit' : ''}">${LINES}<span class="pt-form">${esc(f)}</span>
+  const bands = shaping ? `<div class="pt-bands" aria-hidden="true">${BANDS.map(([k, label, lo, hi]) => `<span class="pt-band pt-band-${k}" style="bottom:${Math.max(lo, SHAPE_AREA.y[0] - 4)}%;height:${Math.min(hi, 100) - Math.max(lo, SHAPE_AREA.y[0] - 4)}%">${label}</span>`).join('')}</div>` : '';
+  el.innerHTML = `<div class="pt${editable ? ' pt-edit' : ''}${shaping ? ' pt-shaping' : ''}">${LINES}${bands}<span class="pt-form">${esc(f)}</span>
     <div class="pt-xi"${editable ? '' : ' role="list" aria-label="Starting XI"'}>${tokens}</div></div>`;
   if (editable && onSlot) {
     el.querySelector('.pt-xi').onclick = e => { const b = e.target.closest('[data-slot]'); if (b) onSlot(b.dataset.slot); };

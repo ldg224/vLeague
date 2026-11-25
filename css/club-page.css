@@ -229,25 +229,25 @@
 .club-facts dd small { color: var(--muted); font: 400 var(--fs-s) var(--font); }
 .lg-sub .club .dots button:focus-visible { outline: none; }
 
-/* Custom formations (S-30): the builder under the formation pills */
-.fb { max-width: 440px; margin: 0 auto 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
-.fb[hidden] { display: none; }
-.fb-t { margin: 0 0 4px; color: var(--text-strong); font: 700 var(--fs-m) var(--font); }
-.fb-rows { margin: 0; padding: 0; list-style: none; }
-.fb-rows li { display: flex; align-items: center; justify-content: space-between; min-height: 48px; border-top: 1px solid var(--line); color: var(--text); font: 400 var(--fs-m) var(--font); }
-.fb-rows li:first-child { border-top: 0; }
-.fb-step { display: inline-flex; align-items: center; gap: 4px; }
-.fb-step b { min-width: 32px; text-align: center; font: 700 var(--fs-m) var(--font); font-variant-numeric: tabular-nums; }
-.fb-step button { width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--text); font: 600 var(--fs-l) var(--font); cursor: pointer; }
-.fb-step button[disabled] { opacity: .35; cursor: default; }
-.fb-sum { margin: 4px 0 0; color: var(--muted); font: 600 var(--fs-s) var(--font); }
-.fb-sum.bad { color: var(--amber-text, var(--amber)); }
-.fb-go { display: flex; align-items: center; justify-content: flex-end; gap: 16px; margin-top: 12px; }
-.fb-go .btn-primary { min-height: 44px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--brand); color: #fff; font: 600 var(--fs-m) var(--font); cursor: pointer; }
-:root:not([data-theme="light"]) .fb-go .btn-primary { color: var(--blue-900, #0d47a1); }
-.fb-go .btn-primary[disabled] { opacity: .4; cursor: default; }
-@media (hover: hover) { .fb-step button:not([disabled]):hover { background: var(--surface-hover); } }
-.fb-step button:focus-visible, .fb-go button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* Own shape (S-49): "Move players" under the formation pills; while it's on, the pitch shows its lines and the spots drag */
+.fs { max-width: 440px; margin: 0 auto 12px; }
+.fs-bar { display: flex; align-items: center; gap: 16px; }
+.fs-toggle { min-height: 44px; padding: 0 18px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); font: 600 var(--fs-m) var(--font); cursor: pointer; }
+.fs-toggle[aria-pressed="true"] { border-color: var(--brand); background: var(--brand); color: #fff; }
+:root:not([data-theme="light"]) .fs-toggle[aria-pressed="true"] { color: var(--blue-900, #0d47a1); }
+@media (hover: hover) { .fs-toggle[aria-pressed="false"]:hover { background: var(--surface-hover); } }
+.fs-toggle:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.fs-help { margin: 8px 0 0; color: var(--muted); font: 400 var(--fs-s) var(--font); }
+.fs-help:empty { display: none; }
+.fs-help b { color: var(--amber-text, var(--amber)); font-weight: 600; }
+.pt-bands { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.pt-band { position: absolute; left: 0; right: 0; box-sizing: border-box; padding: 3px 8px; border-top: 1px dashed color-mix(in oklab, var(--text) 28%, transparent); text-align: right; color: var(--muted); font: 600 var(--fs-xs) var(--font); }
+.pt-band:nth-child(even) { background: color-mix(in oklab, var(--brand) 7%, transparent); }
+.pt-shaping .pt-slot:not([data-slot="GK"]) { touch-action: none; cursor: grab; }
+.pt-shaping .pt-slot[data-slot="GK"] { opacity: .55; cursor: default; }
+.pt-shaping .pt-slot.moving { z-index: 2; cursor: grabbing; }
+.pt-shaping .pt-slot.moving .pt-disc { transform: scale(1.12); }
+.lg-sub .pt-shaping .pt-slot.bad .pt-disc { box-shadow: 0 0 0 2px var(--surface-sunk), 0 0 0 4px var(--res-l); }
 .ts-oop { max-width: 440px; margin: 8px auto 0; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface-sunk); color: var(--text); font: 400 var(--fs-s) var(--font); }
 .ts-oop > b { color: var(--amber-text, var(--amber)); font-weight: 700; }
 .ts-oop ul { margin: 6px 0 0; padding: 0; list-style: none; }
