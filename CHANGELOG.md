@@ -3,6 +3,22 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.47.0 (2026-11-25)
+
+**Added:** a new Starting XI screen (S-49). The pitch shows each player's face, full surname and form, with the bench underneath and a squad panel showing attack, defence and form, with position filters and "best for this slot". Tap a player to change him, drag him onto the grass to move his spot, or drag him onto a teammate to swap. You can now build your own formation: drag players anywhere, with a snap grid and a mirror switch. Position names follow where a player stands (a full-back pushed high reads LWB). The formation menu shows the presets as mini pitches, and live Attack and Defence meters show how your XI shapes up. Your own shape is saved, locks at the deadline, shows on the match page, and the match engine plays it: in a match the whole shape moves with the ball.
+
+**Changed:** match engine 0.4.0 (S-40, B-45). Matches play much more like real football:
+- Tactics now clearly show on the pitch. Pressing sets how high you close the ball down (Low only presses around your own half), tempo how quickly the ball moves, width how far the team spreads, the defensive line how high it holds, and passing whether you go forward early or keep the ball.
+- Crosses: forwards attack the near post, the far post and the penalty spot, and crosses come down at head height. Headed shots go from about 4% to about 16% of shots, and many more crosses find a teammate.
+- Players shoot from closer in, and fewer shots come from near the corner flag. Attackers no longer play the ball all the way back when they could shoot (B-45).
+- Defenders win more tackles and block more shots. Fouls and cards are close to real levels.
+- Keepers hold shots that come near them, push most parries wide instead of back into danger, and make fewer mistakes.
+- A side that's losing late on pushes for a goal. Stronger sides win more often.
+- Fewer scrappy turnovers: more accurate passing, fewer loose touches and miscontrols.
+- Goals are about 4 a match, a little above real football. Through-balls and offsides get a follow-up fix.
+
+Database change: yes, migration 0097 (a `shape` column on team sheets, week sheets and their saved versions).
+
 ## 1.46.0 (2026-11-24)
 
 **Changed:** Editor, History is rebuilt around how you think about a season. The page is now a list of seasons, newest first, each showing the league name it ran under and who won what; tap one to open its form: its name, the league name that season (pick an earlier one or type a different one), one line per trophy (winner and runner-up, or one holder for the Wooden spoon and the Shield), and notes. A team that has left the league is added straight from the club picker ("Add a team that's left…"). The one-off set-up (the name the league uses now, the trophies and their pictures, and teams that have left) sits in its own card below. Saving no longer redraws the whole page, so nothing jumps or folds shut. The separate League names list is gone: a name no season uses any more is tidied away. The History page and the Seasons tab look the same as before.
