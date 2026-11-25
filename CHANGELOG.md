@@ -3,6 +3,16 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.48.0 (2026-11-25)
+
+**Added:** a backup keeper. When a keeper is sent off and there's a keeper on the bench, he comes on for the lowest-rated outfield player (attack plus defence), so the team plays on with ten and a real keeper. With no keeper on the bench, an outfield player still goes in goal, as before. On the match page the keeper who came on is at the top of Substitutes with a green arrow and the minute, the player taken off wears a red arrow and the minute on the pitch, and the Events list shows the change. The match viewer brings him on at that moment. The Editor's test match has a new event, "Red card for the keeper", to try it.
+
+**Changed:** no limits on how many players stand in each line of your Starting XI (S-49). Any shape works as long as there is one keeper: five at the back, no forwards, ten up front. Big lines are spread evenly and still mirror. Every formation that was allowed before plays exactly as it did.
+
+**Fixed:** goals conceded (and so match ratings) now count only for keepers and defenders who were on the pitch when the goal went in. Before, a player who had been sent off was still charged.
+
+Match engine 0.4.1. Database change: no.
+
 ## 1.47.1 (2026-11-25)
 
 **Fixed:** the Starting XI on phones. The squad now pulls up like a real sheet: drag the bar up to open it halfway (the pitch stays in view), further for the whole screen, or down to close it. A tap still opens and closes it. Scrolling with a finger on the pitch's grass now scrolls the screen (only the players themselves are held for dragging). Each squad row now has room for the player's full name, with attack and defence written under it. When you change a player, the spot you're changing stays in view above the squad.

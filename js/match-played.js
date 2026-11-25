@@ -3,14 +3,15 @@
 // red card sent them off, and the captain's "C". Pills switch between Average rating (this match, with its goals, assists and cards), Season stats (apps, goals, assists),
 // Ratings (attack and defence) and Value (S-36: Contributions removed).
 // Numbers come from the saved result (`fx.result.players`, js/simulate.js summariseMatch); while a match is live they are worked out from the match file up to
-// the minute reached (js/live-rating.js), so nothing from later shows. Nobody is substituted in this league, so the bench is simply the squad that was not picked,
-// and a red card is the only way off the pitch.
+// the minute reached (js/live-rating.js), so nothing from later shows. The only substitution is the backup keeper coming on when the keeper is sent off
+// (for the lowest-rated outfield player): the pitch shows the XI that started, the player taken off wears a red arrow and the minute, and the keeper who came on
+// is at the top of Substitutes with a green arrow. Otherwise the bench is simply the squad that was not picked.
 //   playedCard(fx, L, ctx) -> the card's html. L = loadLineups() result (kits, locked sheets), ctx = match-lineup's ctx plus
 //                             { file?: match file (live only), horizon: match seconds seen so far (Infinity once it is over), live: bool }
 import { FORMATIONS, DEFAULT_FORMATION, formationFromSlots } from './pitch.js';
 import { onColour } from './club-colour.js';
 import { esc } from './member.js';
-import { goalMark, redBallMark, assistMark, cardMark, captainMark } from './match-marks.js';
+import { goalMark, redBallMark, assistMark, cardMark, captainMark, subMark } from './match-marks.js';
 import { ratingsAt } from './live-rating.js';
 import { plink } from './player-link.js';
 import { suspensions } from './simulate.js';
@@ -23,25 +24,26 @@ function facts(fx, ctx) {
   const out = {};
   if (ctx.live && ctx.file) {
     const r = ratingsAt(ctx.file, ctx.horizon);
-    for (const p of ctx.file.players) out[p.id] = { r: r[p.id] ?? null, g: 0, a: 0, yc: 0, rc: 0, pm: 0, off: null };
+    for (const p of ctx.file.players) out[p.id] = { r: r[p.id] ?? null, g: 0, a: 0, yc: 0, rc: 0, pm: 0, off: null, on: null, so: null };
     for (const e of ctx.file.events) {
       if (e.t > ctx.horizon) break;
       if (e.type === 'shot' && e.subtype === 'penalty' && (e.outcome === 'saved' || e.outcome === 'off_target') && out[e.player]) out[e.player].pm++;
       if (e.type === 'goal' && !e.own_goal && out[e.scorer]) { out[e.scorer].g++; if (e.assist && out[e.assist]) out[e.assist].a++; }
       if (e.type === 'card' && out[e.player]) { if (e.card === 'yellow') out[e.player].yc++; else { out[e.player].rc++; out[e.player].off = e.minute; } }
+      if (e.type === 'substitution') { if (out[e.player]) out[e.player].on = e.minute; if (out[e.off]) out[e.off].so = e.minute; }
     }
     return out;
   }
   const off = new Map((fx.result?.cards || []).filter(c => c.card !== 'yellow').map(c => [String(c.player), c.minute]));
-  for (const [id, p] of Object.entries(fx.result?.players || {})) out[id] = { r: p.r ?? null, g: p.g || 0, a: p.a || 0, yc: p.yc || 0, rc: p.rc || 0, pm: p.pm || 0, off: p.rc ? off.get(String(id)) ?? null : null };
+  for (const [id, p] of Object.entries(fx.result?.players || {})) out[id] = { r: p.r ?? null, g: p.g || 0, a: p.a || 0, yc: p.yc || 0, rc: p.rc || 0, pm: p.pm || 0, off: p.rc ? off.get(String(id)) ?? null : null, on: p.on ?? null, so: p.so ?? null };
   return out;
 }
 
 // The XI as played: who stood in which slot, and the formation those slots make.
-function xiOf(fx, ctx, code) {
-  const src = ctx.live && ctx.file
+function xiOf(fx, ctx, code, F = {}) {
+  const src = (ctx.live && ctx.file
     ? ctx.file.players.filter(p => p.team === code).map(p => ({ id: p.id, slot: p.slot, name: p.name }))
-    : Object.entries(fx.result?.players || {}).filter(([, p]) => p.team === code).map(([id, p]) => ({ id, slot: p.slot, name: p.name }));
+    : Object.entries(fx.result?.players || {}).filter(([, p]) => p.team === code).map(([id, p]) => ({ id, slot: p.slot, name: p.name }))).filter(p => F[p.id]?.on == null);   // the XI that started
   const slots = new Set(src.map(p => p.slot));
   const formation = formationFromSlots(slots) || DEFAULT_FORMATION;
   return { formation, list: src.filter(p => FORMATIONS[formation][p.slot]) };
@@ -52,7 +54,7 @@ const numberOf = (p, id) => (p?.number != null && p.number !== '' ? p.number : S
 const tone = r => (r >= 7 ? 'hi' : r >= 5 ? 'lo' : 'bad');   // green from 7.0, orange from 5.0, red below 5.0 (as FotMob)
 
 function side(fx, L, ctx, F, star, which) {
-  const code = fx[which], xi = xiOf(fx, ctx, code), sheet = L?.[which]?.sheet, team = ctx.team(code), colour = ctx.club(code)?.colour || team.colour;
+  const code = fx[which], xi = xiOf(fx, ctx, code, F), sheet = L?.[which]?.sheet, team = ctx.team(code), colour = ctx.club(code)?.colour || team.colour;
   const byId = new Map((ctx.season.players || []).map(p => [String(p.id), p]));
   const slots = FORMATIONS[xi.formation];
   const html = xi.list.map(({ id, slot, name }) => {
@@ -71,6 +73,7 @@ function side(fx, L, ctx, F, star, which) {
       if (f.g) marks += `<span class="ml-m is-g">${goalMark(f.g)}</span>`;
       if (f.pm) marks += `<span class="ml-m is-g${f.g ? ' is-up' : ''}">${redBallMark('Penalty not scored', f.pm)}</span>`;
       if (f.rc || f.yc) marks += `<span class="ml-off">${f.rc && f.off ? `<em>${esc(f.off)}′</em>` : ''}${cardMark(f.rc ? 'red' : 'yellow')}</span>`;
+      else if (f.so != null) marks += `<span class="ml-off"><em>${esc(f.so)}′</em>${subMark(false)}</span>`;
     } else if (ctx.view === 'ratings' && p?.offense != null) marks += ratingBadges(p);   // S-36
     else if (ctx.view === 'value' && p) marks += `<b class="ml-v" aria-label="Value ${esc(money(p.value))}">${esc(money(p.value))}</b>`;
     return `<li class="ml-p is-${which}${boosted ? ' is-boosted' : ''}" style="--x:${slots[slot].x.toFixed(1)};--y:${slots[slot].y.toFixed(1)}"><span class="ml-av">${face}${marks}</span>`
@@ -88,14 +91,16 @@ function bar(which, S, ctx, fx) {
 }
 
 // The squad that was not picked: goalkeepers first, then by line and number.
-function bench(which, S, ctx, fx, out = new Map()) {
+function bench(which, S, ctx, fx, out = new Map(), F = {}) {
   const code = fx[which], colour = ctx.club(code)?.colour || ctx.team(code).colour;
+  const came = p => F[p.id]?.on != null;   // the backup keeper who came on goes first
   const rows = (ctx.season.players || []).filter(p => p.team === code && !S[which].ids.has(String(p.id)))
-    .sort((a, b) => (POS[a.position] ?? 9) - (POS[b.position] ?? 9) || (Number(a.number) || 99) - (Number(b.number) || 99));
+    .sort((a, b) => came(b) - came(a) || (POS[a.position] ?? 9) - (POS[b.position] ?? 9) || (Number(a.number) || 99) - (Number(b.number) || 99));
   if (!rows.length) return `<ul class="pl-bench is-${which}"><li class="pl-none">No one on the bench.</li></ul>`;
   return `<ul class="pl-bench is-${which}">${rows.map(p => { const ban = out.get(String(p.id));
     return `<li${ban ? ' class="is-susp"' : ''}><i class="ml-disc" style="--c:${esc(colour)};--on:${esc(onColour(colour))}">${esc(p.number ?? initials(p.name))}</i>`
-    + `<span class="pl-nm"><b>${plink(p.id, esc(p.name))}</b><small>${esc(ban ? `Suspended · ${ban.reason}` : p.position || '')}</small></span></li>`; }).join('')}</ul>`;
+    + `<span class="pl-nm"><b>${plink(p.id, esc(p.name))}</b><small>${esc(ban ? `Suspended · ${ban.reason}` : came(p) ? `${p.position || 'GK'} · On ${F[p.id].on}′` : p.position || '')}</small></span>`
+    + `${came(p) ? `<span class="pl-in">${F[p.id].r != null && ctx.view === 'rating' ? `<b class="ml-r is-${tone(F[p.id].r)}">${F[p.id].r.toFixed(1)}</b>` : ''}${subMark(true)}</span>` : ''}</li>`; }).join('')}</ul>`;
 }
 
 export function playedCard(fx, L, ctx) {
@@ -111,6 +116,6 @@ export function playedCard(fx, L, ctx) {
     <div class="ml-pitch" role="group" aria-label="Line-ups as played, on a pitch">${PITCH_H}${PITCH_V}<ul class="ml-xi">${S.home.html}${S.away.html}</ul></div>
     <div class="ml-coaches">${coach('home', ctx)}<b>Coach</b>${coach('away', ctx)}</div>
     <div class="pl-subs"><h3>Substitutes</h3>
-      <div class="pl-cols">${bench('home', S, ctx, fx, out)}${bench('away', S, ctx, fx, out)}</div></div>
+      <div class="pl-cols">${bench('home', S, ctx, fx, out, F)}${bench('away', S, ctx, fx, out, F)}</div></div>
   </section>`;
 }

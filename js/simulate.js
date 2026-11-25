@@ -165,7 +165,7 @@ const melb = d => {
 const throwOn = (r, what) => { if (r.error) throw new Error(`${what} (${r.error.message})`); return r; };
 
 // Options from the Editor's Test tab: `homeCode` / `awayCode` pick the clubs (blank = random), `script` is a list of events at set minutes
-// ([{ minute, team: 'home' | 'away', kind: 'penalty_scored' | 'penalty_saved' | 'penalty_missed' | 'yellow' | 'red' | 'second_yellow' }]),
+// ([{ minute, team: 'home' | 'away', kind: 'penalty_scored' | 'penalty_saved' | 'penalty_missed' | 'yellow' | 'red' | 'second_yellow' | 'keeper_red' }]),
 // and `onlyScriptGoals` makes the scripted goals the only ones, so the final score is exactly what was asked for, and `skipToHighlights` makes the match already finished.
 export async function startTestMatch(c, clubs, { look = 'random', looks = [], homeCode = '', awayCode = '', kits = {}, script = [], onlyScriptGoals = false, skipToHighlights = false, onProgress, onStatus = () => {} } = {}) {
   const active = clubs.filter(x => x.status === 'active');
@@ -259,12 +259,15 @@ export function summariseMatch(d) {
     if (players[e.on]) players[e.on].pw++;
     if (players[e.player]) players[e.player].pcn++;
   }
+  // The backup keeper on when the keeper is sent off: the minute he came on (on) and the minute the player he replaced went off (so).
+  const subs = d.events.filter(e => e.type === 'substitution').map(e => ({ t: e.t, minute: e.minute, team: e.team, on: e.player, off: e.off, on_name: names[e.player] ?? null, off_name: names[e.off] ?? null }));
+  for (const s of subs) { if (players[s.on]) players[s.on].on = s.minute; if (players[s.off]) players[s.off].so = s.minute; }
   const motm = Object.keys(players).reduce((best, id) => (!best || players[id].r > players[best].r ? id : best), null);
   const fr = d.frames.data;
   const boosted = [d.teams?.home, d.teams?.away].filter(t => t?.captain_boost).map(t => t.code);   // Boosted captain (S-33): spends a use (0082)
   return {
     home: d.result.home, away: d.result.away, duration_t: fr[fr.length - 1][0] / 10, periods: d.periods,
-    goals, cards, stats: d.stats.teams, players, motm, engine: d.engine.version, seed: d.engine.seed, ...(boosted.length ? { boosted } : {}),
+    goals, cards, ...(subs.length ? { subs } : {}), stats: d.stats.teams, players, motm, engine: d.engine.version, seed: d.engine.seed, ...(boosted.length ? { boosted } : {}),
   };
 }
 

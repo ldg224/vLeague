@@ -11,4 +11,8 @@ export const goalMark = n => chip('mk-goal', BALL, 'Goal', n);
 export const redBallMark = (label, n) => chip('mk-goal is-red', BALL, label, n);
 export const assistMark = n => chip('mk-assist', BOOT, 'Assist', n);
 export const cardMark = which => chip('mk-card', `<i class="mk-c is-${which === 'red' ? 'r' : 'y'}"></i>`, which === 'red' ? 'Red card' : 'Yellow card');
+// A substitution (the backup keeper on when the keeper is sent off): a green arrow up for the player on, a red arrow down for the player off, as FotMob.
+const UP = glyph('M208.49,120.49a12,12,0,0,1-17,0L140,69V216a12,12,0,0,1-24,0V69L64.49,120.49a12,12,0,0,1-17-17l72-72a12,12,0,0,1,17,0l72,72A12,12,0,0,1,208.49,120.49Z');
+const DOWN = glyph('M208.49,152.49l-72,72a12,12,0,0,1-17,0l-72-72a12,12,0,0,1,17-17L116,187V40a12,12,0,0,1,24,0V187l51.51-51.52a12,12,0,0,1,17,17Z');
+export const subMark = on => chip(`mk-sub ${on ? 'is-on' : 'is-off'}`, on ? UP : DOWN, on ? 'Substituted on' : 'Substituted off');
 export const captainMark = (boosted = false) => `<b class="mk mk-cap${boosted ? ' is-boost' : ''}" role="img" aria-label="${boosted ? 'Boosted captain' : 'Captain'}">C</b>`;

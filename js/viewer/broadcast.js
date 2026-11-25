@@ -435,6 +435,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
       if (fall) { const k = seg01(t, fall.until, fall.until + 0.5); x = lerp(fall.x, p[0], k); y = lerp(fall.y, p[1], k); lying = t < fall.until ? fall : false; }
       return { i, x, y, vx: st.vel[i][0], vy: st.vel[i][1], lying, dive: this.efx.diveAt(i, t), d: cam.p(x, y)?.[2] ?? 0 };
     });
+    for (let k = items.length - 1; k >= 0; k--) if (this.benched(items[k].i, t)) items.splice(k, 1);
     const [rx, ry] = this.refPos(t);
     items.push({ ref: true, x: rx, y: ry, card: this.cards.find(k => t >= k.t && t < k.until), d: cam.p(rx, ry)?.[2] ?? 0 });
     for (const a of this.assistants(st, t)) items.push({ ...a, ar: true, d: cam.p(a.x, a.y)?.[2] ?? 0 });

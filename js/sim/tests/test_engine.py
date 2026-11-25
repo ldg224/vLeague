@@ -42,6 +42,46 @@ class Cards(unittest.TestCase):
         self.assertLess(m._booking_chance(o, False, False), first * 0.5)
 
 
+class KeeperSentOff(unittest.TestCase):
+    """When the keeper is sent off, a keeper on the bench comes on for the lowest-rated outfield player (25 Nov 2026)."""
+
+    def league(self, bench_gk):
+        league = synthetic_league()
+        n = 100
+        for pos in (['GK'] if bench_gk else []) + ['DEF', 'MID']:
+            pid = f'{n:04d}'
+            league['players'][pid] = {'id': pid, 'name': f'Bench {pid}', 'team': 'AAA', 'position': pos, 'offense': 5, 'defense': 5}
+            n += 1
+        league['players']['0003']['defense'] = 5   # AAA's lowest-rated starter (12; the others are 13, the bench 10)
+        return league
+
+    def play(self, league):
+        info = {'script': [{'minute': 30, 'team': 'home', 'kind': 'keeper_red'}]}
+        return simulate(league, 'AAA', 'BBB', seed=3, info=info)
+
+    def test_the_backup_keeper_comes_on_for_the_weakest_player(self):
+        data = self.play(self.league(True))
+        self.assertEqual(validate(data)['ok'], True, validate(data))
+        subs = [e for e in data['events'] if e['type'] == 'substitution']
+        self.assertEqual(len(subs), 1)
+        self.assertEqual((subs[0]['player'], subs[0]['off']), ('0100', '0003'))
+        home = data['teams']['home']['lineup']
+        self.assertEqual([p['idx'] for p in home], list(range(12)))   # home players first, the sub with them
+        self.assertEqual(home[-1], {'idx': 11, 'id': '0100', 'name': 'Bench 0100', 'position': 'GK', 'slot': 'GK', 'sub': True})
+        self.assertEqual(len(data['frames']['fields']), 6 + 2 * 23)
+        self.assertTrue(all(len(r) == 6 + 2 * 23 for r in data['frames']['data']))
+        st = data['stats']['players']
+        self.assertLess(st['0003']['minutes'], 40)
+        self.assertGreater(st['0100']['minutes'], 50)
+
+    def test_with_no_keeper_on_the_bench_an_outfield_player_goes_in_goal(self):
+        data = self.play(self.league(False))
+        self.assertEqual(validate(data)['ok'], True)
+        self.assertFalse([e for e in data['events'] if e['type'] == 'substitution'])
+        self.assertTrue([e for e in data['events'] if e['type'] == 'position_change' and e['new_slot'] == 'GK'])
+        self.assertEqual(len(data['players']), 22)
+
+
 class Physics(unittest.TestCase):
     def test_ground_pass_arrives_at_planned_speed(self):
         for d, arrival in ((10, 6), (25, 8), (40, 9)):

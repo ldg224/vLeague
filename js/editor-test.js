@@ -1,12 +1,12 @@
 // Editor → Test (S-21): make a test match with controls. A made-up match for trying the broadcast, Game centre and highlights without
 // touching the season (see startTestMatch in js/simulate.js): pick the two clubs, set the final score, and script events at set minutes
-// (a goal from open play; a penalty scored, saved or missed; a yellow, red or second yellow). It plays out live as soon as it is made.
+// (a goal from open play; a penalty scored, saved or missed; a yellow, red or second yellow; the keeper sent off). It plays out live as soon as it is made.
 
 import { loadKits } from './kits-data.js';
 import { kitSprite, kitName, FIELD_SLOTS } from './kit.js';
 
 const EVENTS = [['goal', 'Goal, from open play'], ['penalty_scored', 'Penalty, scored'], ['penalty_saved', 'Penalty, saved'], ['penalty_missed', 'Penalty, missed'],
-  ['yellow', 'Yellow card'], ['red', 'Red card'], ['second_yellow', 'Second yellow (sent off)']];
+  ['yellow', 'Yellow card'], ['red', 'Red card'], ['second_yellow', 'Second yellow (sent off)'], ['keeper_red', 'Red card for the keeper']];
 
 export function testView() {
   return '<h1>Test</h1><div id="tt-root"><p class="quiet">Loading…</p></div>';

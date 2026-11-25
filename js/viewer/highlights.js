@@ -404,7 +404,11 @@ export class HighlightsRenderer {
     this.camState = new Map();
     this.trail = [];
     this.gkIdx = new Set(data.players.filter(p => p.slot === 'GK').map(p => p.idx));
+    // A substitute (the backup keeper, on when the keeper is sent off) isn't drawn before he comes on.
+    const idxOf = new Map(data.players.map(p => [p.id, p.idx]));
+    this.onAt = new Map((data.events || []).filter(e => e.type === 'substitution').map(e => [idxOf.get(e.player), e.t]));
   }
+  benched(i, t) { const on = this.onAt?.get(i); return on != null && t < on; }
 
   // Change the drawing resolution without rebuilding anything (the camera and director plans don't depend on it).
   // Lite drawing (B-33, for slow phones): the player turns it on for touch devices and for anything struggling to keep up. The stands are plain colour with
@@ -943,6 +947,7 @@ export class HighlightsRenderer {
       }
       return { i, x, y, vx: st.vel[i][0], vy: st.vel[i][1], lying, dive: this.efx.diveAt(i, tSim), d: cam.p(x, y)?.[2] ?? 0 };
     });
+    for (let k = items.length - 1; k >= 0; k--) if (this.benched(items[k].i, tSim)) items.splice(k, 1);
     const [rx, ry] = this.refAt(plan, tSim);
     const card = plan.cards.find(k => tSim >= k.t && tSim < k.until);
     items.push({ ref: true, x: rx, y: ry, card, d: cam.p(rx, ry)?.[2] ?? 0 });

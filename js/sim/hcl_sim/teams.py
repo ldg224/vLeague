@@ -72,7 +72,8 @@ def build_team(league, code):
     players = []
     for sp in squad:
         attrs = ratings.derive(sp, league['attributes'].get(sp['id']))
-        players.append(Player(id=sp['id'], name=sp['name'], team=code, position=sp['position'] or 'MID', attrs=attrs))
+        players.append(Player(id=sp['id'], name=sp['name'], team=code, position=sp['position'] or 'MID', attrs=attrs,
+                              ability=float(sp.get('offense') or 0) + float(sp.get('defense') or 0)))
 
     # Make sure somebody is in goal.
     if not any(p.position == 'GK' for p in players):
@@ -90,9 +91,10 @@ def build_team(league, code):
         p.slot = slot
         p.line = tactics.FORMATIONS[formation][slot][0]
         starters.append(p)
-    apply_form(starters, form)   # after picking the XI, so form never changes who plays
+    bench = [p for p in players if p not in starters]
+    apply_form(starters + bench, form)   # after picking the XI, so form never changes who plays
     tac_clean = {k: v / 100 if v > 1 else v for k, v in tac.items() if isinstance(v, (int, float))}
-    team = Team(code=code, name=info['name'], colour=info['colour'], players=starters, formation=formation, tactics=tac_clean, spots=tactics.shape_slots(formation, shape),
+    team = Team(code=code, name=info['name'], colour=info['colour'], players=starters, bench=bench, formation=formation, tactics=tac_clean, spots=tactics.shape_slots(formation, shape),
                 takers=takers, form=form, captain=captain if any(str(p.id) == captain for p in starters) else '')
     if boosted:
         apply_boost(team, squad, league['attributes'])

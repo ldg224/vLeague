@@ -39,6 +39,11 @@ times a second.
   "lineup": [ { "idx": 0, "id": "0014", "name": "...", "position": "GK", "slot": "GK" }, ... ] }
 ```
 
+`lineup` is the team's players in `idx` order, home team first. A substitute (engine 0.4.1: the backup keeper, on when
+the keeper is sent off) is listed last in his team's lineup with `"sub": true`, so a team can have 12 entries; the XI that
+started is the entries without `sub`. Before he comes on (his `substitution` event) his frame columns hold his seat
+beside the halfway line, just off the pitch; viewers don't draw him until then.
+
 Input: `league.tactics[code]` may hold `formation` (4-3-3, 4-4-2, 4-2-3-1, 3-5-2), the tactic
 values `tempo`, `pressing`, `width`, `line_height`, `directness` (0..1, default 0.5), and the
 manager's picks: `lineup` ({slot: player id}; empty or invalid slots are filled automatically),
@@ -126,6 +131,7 @@ it increases every time possession changes team, so events with the same `poss` 
 | `foul` | `on` (fouled player id), `penalty` (true when the foul was in the box and gave a penalty; absent otherwise) | foul |
 | `card` | `card`: yellow / second_yellow / red | card |
 | `position_change` | `new_slot`, `old_slot` | e.g. an outfield player going in goal |
+| `substitution` | `off` (player id taken off), `reason` (`keeper_sent_off`) | `player` comes on. Only when a keeper is sent off and a keeper is on the bench: he replaces the lowest-rated outfield player (offense + defense). With no keeper on the bench an outfield player goes in goal (`position_change`) |
 | `offside` | | offside called against `player` |
 | `out` | `last_touch` | ball out of play at `x`, `y` |
 | `throw_in`, `corner`, `goal_kick`, `free_kick`, `penalty`, `kickoff` | | restart taken by `player` at `x`, `y` |

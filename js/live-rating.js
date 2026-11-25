@@ -22,6 +22,13 @@ export function ratingsAt(data, t) {
     info[p.id] = { pos: p.position, side: p.team === home.code ? 0 : 1, team: p.team, gk: p.slot === 'GK', def: lineOfSlot(formation, p.slot) === DEF,
       off: positionPenalty(FORMATIONS[formation]?.[p.slot]?.want, p.position) };
   }
+  // On the pitch when: off at a red card or the substitution, on at the substitution (a goal is conceded only by those on the pitch).
+  const left = {}, came = {};
+  for (const e of data.events) {
+    if (e.type === 'card' && e.card !== 'yellow') left[e.player] = e.t;
+    if (e.type === 'substitution') { left[e.off] = e.t; came[e.player] = e.t; }
+  }
+  const onPitch = (id, at) => (came[id] ?? 0) <= at && at <= (left[id] ?? Infinity);
   const score = [0, 0];
   for (const e of data.events) {
     if (e.t > t) continue;
@@ -36,7 +43,7 @@ export function ratingsAt(data, t) {
         if (e.own_goal) { if (S[e.scorer]) S[e.scorer].own++; } else if (S[e.scorer]) S[e.scorer].goals++;
         if (e.assist && S[e.assist]) S[e.assist].assists++;
         score[e.team === home.code ? 0 : 1]++;
-        for (const id in info) if (info[id].team !== e.team && (info[id].gk || info[id].def)) S[id].conceded++;
+        for (const id in info) if (info[id].team !== e.team && (info[id].gk || info[id].def) && onPitch(id, e.t)) S[id].conceded++;
         break;
       case 'control': if (s && e.how === 'interception') s.inter++; break;
       case 'tackle': if (s && e.won) s.tackles++; break;

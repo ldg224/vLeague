@@ -44,7 +44,7 @@ function pitchScene(r, cam, sides, pos, t, { ball = null, faces = [52.5, 34, 0],
   for (const b of ball || []) r.drawBall(cam, { ball: [b[0], b[1], 0], inPlay: false, ballAlpha: 1 });
 }
 
-const sideIdx = r => [r.home.lineup.map(p => p.idx), r.away.lineup.map(p => p.idx)];
+const sideIdx = r => [r.home.lineup.filter(p => !p.sub).map(p => p.idx), r.away.lineup.filter(p => !p.sub).map(p => p.idx)];   // the XI (a substitute comes on later)
 const isKeeper = (r, i) => r.gkIdx.has(i);
 
 // Warm-ups: each club in its own half, a passing circle, the others running shuttles, the keeper moving across his goal.
@@ -78,7 +78,7 @@ function portrait(r, q, colour, cx, cy, R, bottom) {
 
 // Starting line-up and introductions: the club's XI, each player called out in turn.
 function lineupCard(r, team, colour, local, dur) {
-  const c = r.c, L = team.lineup, step = dur / Math.max(1, L.length), now = clamp(Math.floor(local / step), 0, L.length - 1), p = L[now];
+  const c = r.c, L = team.lineup.filter(p => !p.sub), step = dur / Math.max(1, L.length), now = clamp(Math.floor(local / step), 0, L.length - 1), p = L[now];
   r.bg(0.88);
   c.save(); c.globalAlpha = 0.75;
   const g = c.createLinearGradient(0, 0, W * 0.62, 0); g.addColorStop(0, colour); g.addColorStop(1, 'rgba(0,0,0,0)');

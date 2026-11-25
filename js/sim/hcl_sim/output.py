@@ -9,6 +9,14 @@ from .tactics import slot_want
 
 
 def _player_stats(m):
+    # Who was on the pitch when (a goal is conceded only by those on it): off at a red card or a substitution, on at a substitution.
+    left = {e['player']: e['t'] for e in m.events if e['type'] == 'card' and e['card'] in ('red', 'second_yellow')}
+    left.update({e['off']: e['t'] for e in m.events if e['type'] == 'substitution'})
+    came = {e['player']: e['t'] for e in m.events if e['type'] == 'substitution'}
+
+    def on_pitch(pid, t):
+        return came.get(pid, 0.0) <= t <= left.get(pid, float('inf'))
+
     stats = {}
     for p in m.players:
         stats[p.id] = {
@@ -45,7 +53,7 @@ def _player_stats(m):
             if e.get('assist') in stats:
                 stats[e['assist']]['assists'] += 1
             for p in m.players:
-                if p.team != e['team'] and (p.is_gk or p.line == 'DEF'):
+                if p.team != e['team'] and (p.is_gk or p.line == 'DEF') and on_pitch(p.id, e['t']):
                     stats[p.id]['goals_conceded'] += 1
         elif t == 'control' and s:
             s['touches'] += 1
@@ -77,9 +85,13 @@ def _player_stats(m):
 
     total = m.t
     sent_off_at = {e['player']: e['t'] for e in m.events if e['type'] == 'card' and e['card'] in ('red', 'second_yellow')}
+    for e in m.events:
+        if e['type'] == 'substitution':
+            sent_off_at[e['off']] = e['t']
+    on_at = {e['player']: e['t'] for e in m.events if e['type'] == 'substitution'}
     for p in m.players:
         s = stats[p.id]
-        played = sent_off_at.get(p.id, total)
+        played = sent_off_at.get(p.id, total) - on_at.get(p.id, 0.0)
         s['minutes'] = min(90, round(played / total * 90)) if total else 0
         s['xg'] = round(s['xg'], 2)
         s['rating'] = _rating(p, s, m)
@@ -183,11 +195,34 @@ def _team_block(team):
     if team.boost:
         block['captain_boost'] = True
         block['boost_low_minutes'] = team.boost['low_minutes']
-    block['lineup'] = [{'idx': p.idx, 'id': p.id, 'name': p.name, 'position': p.position, 'slot': p.slot} for p in team.players]
+    block['lineup'] = [{'idx': p.idx, 'id': p.id, 'name': p.name, 'position': p.position, 'slot': p.slot, **({'sub': True} if p.seat else {})}
+                       for p in team.players]
     return block
 
 
+def _renumber(m):
+    """A substitute is added at the end of m.players when he comes on. Put him back with his team (home players first, then away, as
+    the viewers expect) and give him a column in every frame: before he comes on he sits at his seat beside the pitch."""
+    order = m.home.players + m.away.players
+    if [p.idx for p in order] == list(range(len(order))):
+        return
+    new = {p.idx: i for i, p in enumerate(order)}
+    rows = []
+    for row in m.frames:
+        out = row[:6]
+        out[4] = new.get(row[4], -1) if row[4] >= 0 else -1
+        for p in order:
+            k = 6 + 2 * p.idx
+            out += row[k:k + 2] if k + 1 < len(row) else [int(round(p.seat[0] * 10)), int(round(p.seat[1] * 10))]
+        rows.append(out)
+    m.frames = rows
+    for p in order:
+        p.idx = new[p.idx]
+    m.players = order
+
+
 def build(m, include_frames=True):
+    _renumber(m)
     pstats = _player_stats(m)
     goals = [e for e in m.events if e['type'] == 'goal']
     out = {

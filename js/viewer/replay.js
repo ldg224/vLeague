@@ -23,6 +23,8 @@ export class Replay {
     this.playing = false;
     this.maxT = null;          // function returning the latest viewable time (live mode)
     this.nHome = data.teams.home.lineup.length;
+    const idxOf = new Map(data.players.map(p => [p.id, p.idx]));
+    this.onAt = new Map((data.events || []).filter(e => e.type === 'substitution').map(e => [idxOf.get(e.player), e.t]));   // a substitute appears when he comes on
     this.cols = [safeColour(data.teams.home.colour), safeColour(data.teams.away.colour)];
     this.half2 = data.periods[1]?.start_t ?? Infinity;
     this._last = 0;
@@ -87,6 +89,7 @@ export class Replay {
     c.save(); c.translate(PAD, PAD);
     const holder = a[4];
     this.d.players.forEach((p, k) => {
+      if (this.t < (this.onAt.get(k) ?? -1)) return;
       const kit = this.kitArt?.[k < this.nHome ? 'home' : 'away']?.[p.slot === 'GK' ? 'gk' : 'field'];
       const x = lerp(6 + 2 * k) * SC, y = lerp(7 + 2 * k) * SC, col = kit?.main || this.cols[k < this.nHome ? 0 : 1];
       c.beginPath(); c.arc(x, y, PLAYER_R, 0, Math.PI * 2);

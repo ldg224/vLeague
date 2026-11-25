@@ -12,7 +12,7 @@
 import { esc } from './member.js';
 import { possPair } from './possession.js';
 import { icon } from './icons.js';
-import { goalMark, cardMark, redBallMark } from './match-marks.js';
+import { subMark, goalMark, cardMark, redBallMark } from './match-marks.js';
 import { onColour } from './club-colour.js';
 import { portrait } from './portrait.js';
 import { plink } from './player-link.js';
@@ -102,6 +102,8 @@ function events(fx, file, ctx) {
     } else if (e.type === 'card') {
       const red = e.card !== 'yellow';
       list.push({ t: e.t, minute: e.minute, side: e.team === fx.home ? 'home' : 'away', icon: red ? 'red' : 'yellow', pid: e.player, who: nameOf(file, e.player), sub: e.card === 'second_yellow' ? 'Second yellow card' : red ? 'Red card' : 'Yellow card' });
+    } else if (e.type === 'substitution') {   // the backup keeper on when the keeper is sent off
+      list.push({ t: e.t, minute: e.minute, side: e.team === fx.home ? 'home' : 'away', icon: 'sub', pid: e.player, who: nameOf(file, e.player), sub: `On for ${surname(nameOf(file, e.off))} (keeper sent off)` });
     } else if (e.type === 'woodwork') {
       list.push({ t: e.t, minute: e.minute, side: e.team === fx.home ? 'home' : 'away', icon: 'wood', pid: e.player, who: nameOf(file, e.player), sub: e.part === 'bar' ? 'Hit the crossbar' : 'Hit the post' });
     } else if (e.type === 'added_time') {
@@ -112,7 +114,7 @@ function events(fx, file, ctx) {
       list.push({ t: e.t + 0.01, divider: `${e.period === 1 ? 'HT' : 'FT'} ${score.home} – ${score.away}`, strong: true });
     }
   }
-  const ic = { ball: goalMark(), own: redBallMark('Own goal'), miss: redBallMark('Penalty not scored'), yellow: cardMark('yellow'), red: cardMark('red'), wood: icon('map-pin') };
+  const ic = { ball: goalMark(), own: redBallMark('Own goal'), miss: redBallMark('Penalty not scored'), yellow: cardMark('yellow'), red: cardMark('red'), wood: icon('map-pin'), sub: subMark(true) };
   const byPlayer = new Map((ctx.players || []).map(p => [String(p.id), p]));
   const face = it => { const p = byPlayer.get(String(it.pid)); return p ? `<span class="ev-face">${portrait(p, ctx.club(p.team), undefined, true)}</span>` : ''; };
   const row = it => it.divider

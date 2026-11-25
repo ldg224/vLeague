@@ -47,8 +47,11 @@ class Player:
     kick_at: float = 0.0
     action: object = None           # pending on-ball action
 
+    ability: float = 0.0     # the player's two ratings added (offense + defense): who comes off for a keeper sub
+    seat: tuple = None       # where a substitute sits (pitch coords) before he comes on
+
     yellow: int = 0
-    sent_off: bool = False
+    sent_off: bool = False   # off the pitch for good: sent off, or taken off for the backup keeper
     chasing: bool = False
 
     oe: float = 0.7                 # current offside-line misjudgement (m)
@@ -81,6 +84,7 @@ class Team:
     colour: str
     players: list
     formation: str = '4-3-3'
+    bench: list = field(default_factory=list)    # the rest of the squad; a keeper here comes on if the starting keeper is sent off
     tactics: dict = field(default_factory=dict)
     takers: dict = field(default_factory=dict)   # kind ('penalty', 'free_kick', 'corner') -> player id
     captain: str = ''

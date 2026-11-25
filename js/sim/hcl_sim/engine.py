@@ -247,8 +247,12 @@ class Match:
         if kind == 'goal':
             self.pending_goals.append({'side': team.side, 'since': self._minute_now()})
             return True
+        if kind == 'keeper_red':   # a test match can send the keeper off (the backup keeper comes on)
+            kind, it = 'red', dict(it, keeper=True)
         if kind in ('yellow', 'red', 'second_yellow'):
             pool = [p for p in team.active() if not p.is_gk]
+            if kind == 'red' and it.get('keeper'):
+                pool = [p for p in team.active() if p.is_gk]
             if kind == 'yellow':
                 pool = [p for p in pool if p.yellow == 0]
             elif kind == 'second_yellow':
@@ -1196,7 +1200,7 @@ class Match:
                 o.sent_off = True
                 o.chasing = False
                 if o.is_gk:
-                    self._emergency_keeper(self.team_of(o))
+                    self._keeper_off(self.team_of(o))
         p.action = None
         in_box = vax > PITCH_LENGTH - BOX_DEPTH and BOX_Y1 < vay < BOX_Y2
         if in_box:
@@ -1205,6 +1209,28 @@ class Match:
             self._start_restart('penalty', victim_team, spot, (30, 50))
         else:
             self._start_restart('free_kick', victim_team, (clamp(p.x, 0.5, PITCH_LENGTH - 0.5), clamp(p.y, 0.5, PITCH_WIDTH - 0.5)), (12, 26))
+
+    def _keeper_off(self, team):
+        """The keeper is sent off (25 Nov 2026). A keeper on the bench comes on for the lowest-rated outfield player, so the team still has a
+        real keeper and plays on with ten. With no keeper on the bench, an outfield player goes in goal (_emergency_keeper)."""
+        sub = max((p for p in team.bench if p.position == 'GK'), key=lambda p: (p.attrs['reflexes'] + p.attrs['handling'], p.id), default=None)
+        out = min((p for p in team.active() if not p.is_gk), key=lambda p: (p.ability, sum(p.attrs.values()), p.id), default=None)
+        if sub is None or out is None:
+            self._emergency_keeper(team)
+            return
+        team.bench.remove(sub)
+        out.sent_off = True
+        out.chasing = False
+        if self.ball.holder is out:
+            self.ball.holder = None
+        sub.slot, sub.line, sub.side = 'GK', 'GK', team.side
+        sub.idx = len(self.players)   # output.build puts him back with his team
+        sub.seat = (52.5 + (-4 if team.side == 0 else 4), -1.5)   # beside the halfway line; he walks on from there
+        sub.x, sub.y = sub.seat
+        sub.setup_physical()
+        team.players.append(sub)
+        self.players.append(sub)
+        self.ev('substitution', sub, off=out.id, reason='keeper_sent_off')
 
     def _emergency_keeper(self, team):
         """No substitutes: when the keeper is sent off, a defender goes in goal."""
