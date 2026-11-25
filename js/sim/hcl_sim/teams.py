@@ -60,6 +60,7 @@ def build_team(league, code):
     tac = dict(league['tactics'].get(code, {}))
     form = _form(tac.pop('form', 0))
     boosted = bool(tac.pop('captain_boost', False))
+    shape = tac.pop('shape', None)   # S-49
     formation = tac.pop('formation', None) or '4-3-3'
     if formation not in tactics.FORMATIONS:
         print(f'warning: unknown formation {formation!r} for {code}, using 4-3-3')
@@ -91,7 +92,7 @@ def build_team(league, code):
         starters.append(p)
     apply_form(starters, form)   # after picking the XI, so form never changes who plays
     tac_clean = {k: v / 100 if v > 1 else v for k, v in tac.items() if isinstance(v, (int, float))}
-    team = Team(code=code, name=info['name'], colour=info['colour'], players=starters, formation=formation, tactics=tac_clean,
+    team = Team(code=code, name=info['name'], colour=info['colour'], players=starters, formation=formation, tactics=tac_clean, spots=tactics.shape_slots(formation, shape),
                 takers=takers, form=form, captain=captain if any(str(p.id) == captain for p in starters) else '')
     if boosted:
         apply_boost(team, squad, league['attributes'])

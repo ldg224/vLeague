@@ -221,9 +221,9 @@ def _pass_option(c, r, loft_angle=0.0, subtype=None, z0=0.0, max_speed=None):
         xg_there = expected_goals(tx, ty, pressure=min(press_target, 1.5), blockers=blockers_in_cone(tx, ty, c.opps))
         close = TUNING['shot_close_appetite'] if math.hypot(PITCH_LENGTH - tx, ty - 34) <= TUNING['shot_close_range'] else 1.0   # S-40
         value = max(value, 0.8 * xg_there * TUNING['shot_appetite'] * 1.15 * close)
-    directness = c.team.tactic('directness')
-    if tx > c.ax + 10:
-        value *= 1.0 + 0.25 * directness
+    # S-40: direct sides value balls forward, short sides keep it and play square or back.
+    fwd = clamp((tx - c.ax) / 30.0, -1.0, 1.0)
+    value *= 1.0 + TUNING['direct_gain'] * 2 * (c.team.tactic('directness') - 0.5) * fwd
     loss_x, loss_y = (worst[1], worst[2]) if worst else (tx, ty)
     danger = threat(PITCH_LENGTH - loss_x, PITCH_WIDTH - loss_y)
     utility = ps * value - (1 - ps) * danger * TUNING['risk_aversion']
@@ -430,7 +430,7 @@ def options_for(m, p):
         cl = _clear_option(c)
         if cl:
             opts.append(cl)
-        opts.append({'kind': 'hold', 'utility': threat(c.ax, c.ay) * 0.96 - 0.006 * c.pressure - 0.002 * c.team.tactic('tempo') - _urgency(c) - TUNING['carry_penalty'],
+        opts.append({'kind': 'hold', 'utility': threat(c.ax, c.ay) * 0.96 - 0.006 * c.pressure - 0.002 * c.team.tactic('tempo') - TUNING['tempo_hold'] * (c.team.tactic('tempo') - 0.5) - _urgency(c) - TUNING['carry_penalty'],
                      'receiver': None, 'target': (p.x, p.y), 'p': 1.0, 'windup': 0.0})
     return c, [o for o in opts if o]
 

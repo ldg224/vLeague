@@ -216,6 +216,45 @@ class CustomFormations(unittest.TestCase):
         self.assertEqual(sum(1 for p in data['players'] if p['team'] == 'AAA' and p['slot']), 11)
 
 
+class OwnShape(unittest.TestCase):
+    """S-49: a manager's own shape (spots dragged on the site's pitch) moves where each player stands."""
+
+    def usual(self, formation):
+        from hcl_sim.tactics import FORMATIONS, _ROW
+        return {k: [v[1] / 0.68, _ROW[v[0]] + v[2] * 1.4] for k, v in FORMATIONS[formation].items() if k != 'GK'}
+
+    def test_the_usual_spots_give_the_formation_back(self):
+        from hcl_sim.tactics import FORMATIONS, shape_slots
+        for f in ('4-3-3', '3-5-2', '4-2-3-1', '4-1-4-1'):
+            got = shape_slots(f, self.usual(f))
+            for k, v in FORMATIONS[f].items():
+                self.assertEqual(got[k][0], v[0]); self.assertAlmostEqual(got[k][1], v[1], places=1); self.assertAlmostEqual(got[k][2], v[2], places=1)
+
+    def test_a_partial_or_bad_shape_is_ignored(self):
+        from hcl_sim.tactics import shape_slots
+        self.assertIsNone(shape_slots('4-3-3', {'LB': [10, 30]}))
+        self.assertIsNone(shape_slots('4-3-3', {**self.usual('4-3-3'), 'LB': ['a', 3]}))
+        self.assertIsNone(shape_slots('4-3-3', None))
+
+    def test_moved_spots_move_the_players_and_a_match_plays(self):
+        from hcl_sim.tactics import shape_target
+        shape = {**self.usual('4-3-3'), 'LB': [14, 35], 'ST': [30, 86]}
+        league = synthetic_league()
+        league['tactics']['AAA'] = {'formation': '4-3-3', 'shape': shape}
+        plain = teams.build_team(synthetic_league(), 'AAA')
+        own = teams.build_team(league, 'AAA')
+        lb = lambda t: next(p for p in t.players if p.slot == 'LB')
+        st = lambda t: next(p for p in t.players if p.slot == 'ST')
+        for poss in (True, False):
+            a, b = shape_target(lb(plain), plain, 50, 34, poss, 80), shape_target(lb(own), own, 50, 34, poss, 80)
+            self.assertGreater(b[0], a[0] + 3)   # the left-back stands higher
+            self.assertGreater(b[1], a[1])       # and less wide (further from the left touchline)
+        a, b = shape_target(st(plain), plain, 50, 34, False, 105), shape_target(st(own), own, 50, 34, False, 105)
+        self.assertLess(b[1], a[1] - 4)          # the striker drifts left
+        data = simulate(league, 'AAA', 'BBB', seed=5, include_frames=False)
+        self.assertEqual(data['teams']['home']['formation'], '4-3-3')
+
+
 class OutOfPosition(unittest.TestCase):
     """S-25: a player picked in a slot that wants another position loses rating, more the further apart the two are."""
 

@@ -105,6 +105,7 @@ function sheetTactics(sheet, available) {
   if (t.formation && sheet.lineup && typeof sheet.lineup === 'object') {
     t.lineup = Object.fromEntries(Object.entries(sheet.lineup).filter(([, id]) => ok(id)).map(([slot, id]) => [slot, String(id)]));
   }
+  if (t.formation && sheet.shape && typeof sheet.shape === 'object') t.shape = sheet.shape;   // S-49: the manager's own shape (the engine checks it, tactics.shape_slots)
   for (const k of ['captain', 'penalties', 'freekicks', 'corners']) if (ok(sheet[k])) t[k] = String(sheet[k]);
   if (sheet.boost && t.captain) t.captain_boost = true;   // Boosted captain (S-33): a suspended captain drops out above, so there's no boost
   return t;

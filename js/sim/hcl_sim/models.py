@@ -85,6 +85,7 @@ class Team:
     takers: dict = field(default_factory=dict)   # kind ('penalty', 'free_kick', 'corner') -> player id
     captain: str = ''
     boost: dict = None       # Boosted captain (S-33): the state teams.apply_boost sets up and Match._boost_check updates; None when not used
+    spots: dict = None      # S-49: the manager's own shape, {slot: (line, across, x_adjust, want)} (tactics.shape_slots); None = the formation's
     form: float = 0.0       # per-match skill modifier applied in teams.build_team (fraction, +/- 0.05)
     mood: float = 0.0       # -1 protecting a lead late on .. +1 chasing the game late on (0.4.0, set by Match._update_mood)
     side: int = 0

@@ -405,7 +405,7 @@ class Match:
             p.decide_at = t + self.rng.uniform(0.6, 1.1)
         elif opt['kind'] == 'hold':
             p.action = None
-            p.decide_at = t + self.rng.uniform(0.3, 0.6)
+            p.decide_at = t + self.rng.uniform(0.3, 0.6) * (1 + TUNING['tempo_time'] * (0.5 - self.team_of(p).tactic('tempo')))
         else:
             p.action = opt
             p.kick_at = t + opt['windup']
@@ -1054,7 +1054,7 @@ class Match:
         q.action = None
         pressure = decisions.pressure_on(*self.team_of(q).to_att(q.x, q.y),
                                          [(*self.team_of(q).to_att(o.x, o.y), 0, o) for o in self.other(self.team_of(q)).active()])
-        q.decide_at = self.t + (0.2 + 0.45 * (1 - q.a('first_touch')) + 0.15 * min(pressure, 1.5))
+        q.decide_at = self.t + (0.2 + 0.45 * (1 - q.a('first_touch')) + 0.15 * min(pressure, 1.5)) * (1 + TUNING['tempo_time'] * (0.5 - self.team_of(q).tactic('tempo')))
         if hands and how == 'catch':
             q.decide_at = self.t + self.rng.uniform(2.0, 5.0)
         self.offside_flags = set()
@@ -1470,10 +1470,14 @@ class Match:
                                 key=lambda p: dist(p.x, p.y, holder.x, holder.y) / p.vmax())
                 presser = ranked[0] if ranked else None
                 hx, hy = team.to_att(holder.x, holder.y)
+                pressing = team.tactic('pressing')
+                # S-40: a low block lets the carrier come; a high press goes after him anywhere.
+                if hx > TUNING['press_zone_lo'] + (TUNING['press_zone_hi'] - TUNING['press_zone_lo']) * pressing:
+                    presser = None
                 # B-45: a carrier within shooting range of our goal: the nearest man closes him down from the goal side and the next one
                 # drops into the shooting lane, instead of both chasing the ball from behind or marking the pass.
                 danger = math.hypot(hx, hy - 34) < TUNING['def_danger_range']
-                if len(ranked) > 1 and (hx < 38 or team.tactic('pressing') > 0.65):
+                if presser is not None and len(ranked) > 1 and (hx < 38 or pressing > TUNING['press_second']):
                     second = ranked[1]
             for p in team.active():
                 if p is holder:
@@ -1543,7 +1547,7 @@ class Match:
             # Wide forwards cut inside into the channels; the far-side central midfielder arrives
             # late at the edge of the area.
             if hax > 66 and p.run_until <= t:
-                y_base = tactics.FORMATIONS.get(team.formation, tactics.FORMATIONS['4-3-3'])[p.slot][1]
+                y_base = tactics.slot_spec(team, p.slot)[1]
                 if p.line in ('FWD', 'AM') and p.slot not in ('ST', 'LST', 'RST', 'CAM'):
                     side = -1 if y_base < 34 else 1
                     ax = max(ax, min(line - 0.5, 97.0))

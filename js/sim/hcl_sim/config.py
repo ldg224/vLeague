@@ -36,6 +36,18 @@ CONTROL_DISTANCE = 1.5     # a held ball is never further than this from its hol
 # Tuning knobs. Each is a real-world quantity or a weight; `calibrate` reports how the
 # resulting match statistics compare with real football so these can be adjusted.
 TUNING = {
+    # S-40 round 2: tactics that reach the pitch (25 Nov 2026). Pressing sets how far up the pitch the nearest man closes the carrier down
+    # (carrier's x in our attacking coords below press_zone_lo + (hi - lo) * pressing; beyond it he holds his place in the shape), and when a
+    # second man joins in. Tempo scales how long a player takes on the ball; directness weights forward passes up and square/back ones down;
+    # width spreads the shape. A setting of 0.5 plays as before for tempo and width.
+    'press_zone_lo': 45.0,
+    'press_zone_hi': 112.0,
+    'press_second': 0.6,
+    'tempo_time': 0.5,            # time on the ball x (1 + tempo_time * (0.5 - tempo))
+    'tempo_hold': 0.012,          # holding the ball, utility per step of tempo above 0.5
+    'direct_gain': 0.35,          # forward pass value x (1 +- direct_gain) for a 30 m forward / backward pass at directness 1 (and the reverse at 0)
+    'width_in_lo': 0.875, 'width_in_span': 0.3,   # in possession: lateral spread 0.875 (narrow) to 1.175 (wide), 1.025 at 0.5 as before
+    'width_out_lo': 0.55, 'width_out_span': 0.14, # out of possession: 0.55 to 0.69, 0.62 at 0.5 as before
     # Passing execution error (degrees of direction error, 1 standard deviation)
     'pass_error_base': 1.4,
     'pass_error_skill': 5.5,      # added for a 0-rated passer, scaled down by skill

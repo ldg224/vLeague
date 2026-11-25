@@ -7,7 +7,7 @@ toward x=105, y=0 is the team's left touchline. The engine converts to pitch coo
 import math
 import re
 
-from .config import PITCH_LENGTH, PITCH_WIDTH, BOX_DEPTH, CENTRE_CIRCLE
+from .config import PITCH_LENGTH, PITCH_WIDTH, BOX_DEPTH, CENTRE_CIRCLE, TUNING
 from .geometry import clamp, dist, unit
 
 # slot: (line, y_base, x_adjust, wanted player position)
@@ -107,6 +107,42 @@ FORMATIONS = _Formations(FORMATIONS)
 WIDE_SLOTS = {'LB', 'RB', 'LWB', 'RWB'}
 
 
+# S-49: a manager's own shape. The site stores where each outfield slot stands ({slot: [x, y]}: % across from the left touchline and % up from the
+# own goal line, as js/pitch.js draws the formations). On the site's pitch a slot of line L stands at ROW[L] + 1.4 * x_adjust (%) and
+# across / 68 * 100 (%), so a spot turns back into (line, across, x_adjust) the same way. The line stays the formation's own (the site keeps a shape
+# only while its depths still make that formation). A shape that doesn't cover every outfield slot is ignored.
+_ROW = {'DEF': 26.0, 'MID': 48.0, 'AM': 65.0, 'FWD': 80.0}
+
+
+def shape_slots(formation, shape):
+    """{slot: (line, across, x_adjust, want)} for the formation with the manager's spots, or None to use the formation's own."""
+    slots = FORMATIONS.get(formation)
+    if not slots or not isinstance(shape, dict):
+        return None
+    out = dict(slots)
+    for slot, (line, _, _, want) in slots.items():
+        if line == 'GK':
+            continue
+        at = shape.get(slot)
+        try:
+            x, y = float(at[0]), float(at[1])
+        except (TypeError, ValueError, IndexError, KeyError):
+            return None
+        if not (math.isfinite(x) and math.isfinite(y)):
+            return None
+        x, y = clamp(x, 5.0, 95.0), clamp(y, 16.0, 90.0)
+        out[slot] = (line, round(x * 0.68, 2), round((y - _ROW[line]) / 1.4, 2), want)
+    return out
+
+
+def slot_spec(team, slot):
+    """(line, across, x_adjust, want) for a player's slot: the team's own shape if it has one, else its formation's."""
+    own = getattr(team, 'spots', None)
+    if own and slot in own:
+        return own[slot]
+    return FORMATIONS.get(team.formation, FORMATIONS['4-3-3'])[slot]
+
+
 def slot_want(formation, slot):
     """The position a formation slot wants ('GK', 'DEF', 'MID' or 'FWD'), or None for an unknown slot."""
     s = FORMATIONS.get(formation, {}).get(slot)
@@ -169,7 +205,7 @@ def offside_line(team, opponents):
 
 def shape_target(p, team, bx, by, in_possession, off_line):
     """Where this player wants to be in open play, given the ball at (bx, by) in attacking coords."""
-    line, y_base, x_adj, _ = FORMATIONS.get(team.formation, FORMATIONS['4-3-3'])[p.slot]
+    line, y_base, x_adj, _ = slot_spec(team, p.slot)
     lh = team.tactic('line_height')
     width = team.tactic('width')
 
@@ -179,13 +215,13 @@ def shape_target(p, team, bx, by, in_possession, off_line):
     if in_possession:
         d = clamp(bx - 31 + 10 * lh, 12, 58)
         lines = {'DEF': d, 'MID': d + 17, 'AM': d + 26, 'FWD': d + 33}
-        wf, shift = 0.95 + 0.15 * width, 0.22
+        wf, shift = TUNING['width_in_lo'] + TUNING['width_in_span'] * width, 0.22
     else:
         # Defensive line: ~13 m from goal with the ball 25 m out, ~40 m with it at halfway.
         d = clamp(bx - 16 + 8 * lh, 9, 48)
         d = min(d, max(bx - 5, 6))
         lines = {'DEF': d, 'MID': d + 11, 'AM': d + 18, 'FWD': d + 24}
-        wf, shift = 0.62, 0.42
+        wf, shift = TUNING['width_out_lo'] + TUNING['width_out_span'] * width, 0.42
 
     x = lines[line] + x_adj
     y = 34 + (y_base - 34) * wf + (by - 34) * shift
