@@ -478,7 +478,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
     const snap = JSON.stringify(sheet);
     const body = JSON.parse(snap);
     if (body.kit == null && !(rowRes.data && 'kit' in rowRes.data)) delete body.kit;   // until the kit column exists (migration 0044), a sheet without a kit pick saves exactly as before
-    if (!(rowRes.data && 'shape' in rowRes.data)) delete body.shape;   // S-49: until the shape column exists, the formation (from the lines) saves and the spots stay on this page
+    if (body.shape == null && !(rowRes.data && 'shape' in rowRes.data)) delete body.shape;   // S-49 (0097): a sheet without an own shape saves exactly as before, as the kit does
     const { error } = await ok(c.from('team_sheets').upsert({ club: club.code, ...body, updated_by: userId }, { onConflict: 'club' }));
     saving = false;
     if (error) { state = 'error'; drawSave(); return; }

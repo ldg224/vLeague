@@ -4,7 +4,7 @@
 // League data comes from Supabase (dashboard-data.js loadSeason, since 0.12); only a local ?src= test copy reads a season.json file.
 import { enterPlace, badge } from './shell.js';
 import { paint, quietly } from './paint.js';
-import { renderPitch } from './pitch.js';
+import { renderPitch, cleanShape } from './pitch.js';
 import { spoilerHidden, revealScore, fmtTime, fmtDay } from './prefs.js';
 import { clubs, esc, crestUrl } from './member.js';
 import { db } from './auth.js';
@@ -115,7 +115,7 @@ function drawPitches(s) {
     const row = sheetOf(fig.dataset.club), el = fig.querySelector('.hm-pitch');
     if (!row || !el) return;
     // Exactly as locked: an empty slot stays empty (the engine fills it on the day).
-    try { renderPitch(el, { formation: row.formation, lineup: row.lineup || {}, captain: row.captain, players: s.players, club: (s.teams || []).find(t => t.code === fig.dataset.club) }); } catch { el.remove(); }
+    try { renderPitch(el, { formation: row.formation, shape: cleanShape(row.formation, row.shape), lineup: row.lineup || {}, captain: row.captain, players: s.players, club: (s.teams || []).find(t => t.code === fig.dataset.club) }); } catch { el.remove(); }
   });
 }
 
