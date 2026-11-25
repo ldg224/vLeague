@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>vLeague V2-4: director test</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b1220; color: #fff; font: 600 14px/1.3 system-ui, sans-serif; overflow: hidden; }
+  canvas { display: block; width: 100%; height: 100%; }
+  .hud { position: fixed; top: 12px; left: 12px; background: rgba(10, 20, 45, .85); padding: 6px 10px; border-radius: 6px; font-variant-numeric: tabular-nums; }
+  .tag { position: fixed; top: 12px; right: 12px; background: #e53935; padding: 5px 10px; border-radius: 4px; font-weight: 800; letter-spacing: .06em; display: none; }
+  .ctl { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; gap: 6px; align-items: center; background: rgba(10, 20, 45, .85); padding: 6px; border-radius: 999px; }
+  .ctl button { height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: #fff; color: #0b1a3a; font: inherit; cursor: pointer; }
+  .ctl input { width: 220px; }
+</style>
+</head>
+<body>
+<div class="hud" id="hud"></div>
+<div class="tag" id="tag"></div>
+<div class="ctl"><button id="play">Pause</button><button id="goal">Next goal</button><input id="seek" type="range" min="0" max="1" step="0.0001" aria-label="Match time"></div>
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
+<script type="module">
+// A bare scene (pitch, goals, ball, players as capsules) driven only by director.js, to judge the camera on its own. ?t=117 starts there; ?still
+// holds that moment (for screenshots); window.__shot(t) returns the director's shot at t.
+import * as THREE from 'three';
+import { makeDirector } from './director.js';
+
+const q = new URLSearchParams(location.search);
+const data = await (await fetch(q.get('match') || 'match.json')).json();
+const F = data.frames.data, SC = data.frames.scale || 10, NP = data.players.length;
+const idx = t => { let lo = 0, hi = F.length - 1; const ds = t * SC; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (F[m][0] <= ds) lo = m; else hi = m - 1; } return lo; };
+const at = (t, c) => { const i = idx(t), a = F[i], b = F[Math.min(F.length - 1, i + 1)], k = b[0] > a[0] ? Math.min(1, Math.max(0, (t * SC - a[0]) / (b[0] - a[0]))) : 0; return (a[c] + ((b[c] ?? a[c]) - a[c]) * k) / SC; };
+const ballAt = t => { const x = at(t, 1), y = at(t, 2), z = at(t, 3), x2 = at(t + 0.1, 1), y2 = at(t + 0.1, 2), x0 = at(t - 0.1, 1), y0 = at(t - 0.1, 2); return { x, y, z, vx: (x - x0) / 0.1, vy: (y - y0) / 0.1 }; };
+// (the velocity above uses only the last 0.1 s: no looking ahead; x2/y2 are unused on purpose)
+const dir = makeDirector(data, { ballAt });
+window.__shot = (t, aspect) => dir.shot(t, 0, aspect ?? innerWidth / innerHeight);
+window.__shots = dir.shots.map(s => ({ kind: s.kind, from: +s.from.toFixed(1), to: +s.to.toFixed(1) }));
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+document.body.prepend(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color('#0b1220');
+const cam = new THREE.PerspectiveCamera(30, 16 / 9, 0.5, 800);
+scene.add(new THREE.HemisphereLight('#ffffff', '#335533', 1.4));
+// pitch with stripes and lines
+const cv = document.createElement('canvas'); cv.width = 1050; cv.height = 680; const g = cv.getContext('2d');
+for (let i = 0; i < 14; i++) { g.fillStyle = i % 2 ? '#2f7d32' : '#358a38'; g.fillRect(i * 75, 0, 75, 680); }
+g.strokeStyle = '#e8f5e9'; g.lineWidth = 3; g.strokeRect(10, 10, 1030, 660); g.beginPath(); g.moveTo(525, 10); g.lineTo(525, 670); g.stroke();
+g.beginPath(); g.arc(525, 340, 91.5, 0, 7); g.stroke(); g.strokeRect(10, 138, 165, 404); g.strokeRect(875, 138, 165, 404); g.strokeRect(10, 248, 55, 184); g.strokeRect(985, 248, 55, 184);
+const tex = new THREE.CanvasTexture(cv); tex.anisotropy = 8;
+const pitch = new THREE.Mesh(new THREE.PlaneGeometry(105, 68), new THREE.MeshLambertMaterial({ map: tex })); pitch.rotation.x = -Math.PI / 2; scene.add(pitch);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 160), new THREE.MeshLambertMaterial({ color: '#1f5e22' })); ground.rotation.x = -Math.PI / 2; ground.position.y = -0.02; scene.add(ground);
+for (const s of [-1, 1]) { const goal = new THREE.Mesh(new THREE.BoxGeometry(0.15, 2.44, 7.32), new THREE.MeshLambertMaterial({ color: '#ffffff', wireframe: true })); goal.position.set(s * 52.6, 1.22, 0); scene.add(goal); }
+const ball = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 12), new THREE.MeshLambertMaterial({ color: '#ffffff' })); scene.add(ball);
+const col = side => new THREE.MeshLambertMaterial({ color: (side === data.teams.home.code ? data.teams.home.colour : data.teams.away.colour) || '#888' });
+const figs = data.players.map(p => { const m = new THREE.Mesh(new THREE.CapsuleGeometry(0.32, 1.2, 4, 8), col(p.team)); scene.add(m); return m; });
+function resize() { renderer.setSize(innerWidth, innerHeight, false); cam.aspect = innerWidth / innerHeight; }
+addEventListener('resize', resize); resize();
+
+const goals = data.events.filter(e => e.type === 'goal');
+let t = Number(q.get('t') || dir.t0), playing = !q.has('still'), last = performance.now();
+const seek = document.getElementById('seek'), hud = document.getElementById('hud'), tag = document.getElementById('tag');
+seek.oninput = () => { t = dir.t0 + (dir.t1 - dir.t0) * seek.value; };
+document.getElementById('play').onclick = e => { playing = !playing; e.target.textContent = playing ? 'Pause' : 'Play'; };
+document.getElementById('goal').onclick = () => { const gl = goals.find(e => e.t > t + 2) || goals[0]; if (gl) t = gl.t - 8; };
+function draw() {
+  const s = dir.shot(t, 0, innerWidth / innerHeight), st = s.sceneT;
+  const b = ballAt(st); ball.position.set(b.x - 52.5, 0.22 + Math.max(0, b.z || 0), b.y - 34);
+  for (let i = 0; i < NP; i++) { const x = at(st, 6 + 2 * i), y = at(st, 7 + 2 * i); figs[i].visible = Number.isFinite(x); if (figs[i].visible) figs[i].position.set(x - 52.5, 0.92, y - 34); }
+  cam.position.set(...s.pos); cam.fov = s.fov; cam.updateProjectionMatrix(); cam.lookAt(...s.look);
+  renderer.render(scene, cam);
+  hud.textContent = `t ${t.toFixed(1)} s · ${s.kind}${st !== t ? ` · showing ${st.toFixed(1)} s` : ''} · fov ${s.fov.toFixed(1)}°`;
+  tag.style.display = s.label ? 'block' : 'none'; tag.textContent = s.label;
+  seek.value = (t - dir.t0) / (dir.t1 - dir.t0);
+}
+function loop(ms) { const dt = Math.min(0.1, (ms - last) / 1000); last = ms; if (playing) t = Math.min(dir.t1, t + dt); draw(); requestAnimationFrame(loop); }
+window.__draw = tt => { t = tt; draw(); };
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
