@@ -3,6 +3,12 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.47.1 (2026-11-25)
+
+**Fixed:** the Starting XI on phones. The squad now pulls up like a real sheet: drag the bar up to open it halfway (the pitch stays in view), further for the whole screen, or down to close it. A tap still opens and closes it. Scrolling with a finger on the pitch's grass now scrolls the screen (only the players themselves are held for dragging). Each squad row now has room for the player's full name, with attack and defence written under it. When you change a player, the spot you're changing stays in view above the squad.
+
+Database change: no.
+
 ## 1.47.0 (2026-11-25)
 
 **Added:** a new Starting XI screen (S-49). The pitch shows each player's face, full surname and form, with the bench underneath and a squad panel showing attack, defence and form, with position filters and "best for this slot". Tap a player to change him, drag him onto the grass to move his spot, or drag him onto a teammate to swap. You can now build your own formation: drag players anywhere, with a snap grid and a mirror switch. Position names follow where a player stands (a full-back pushed high reads LWB). The formation menu shows the presets as mini pitches, and live Attack and Defence meters show how your XI shapes up. Your own shape is saved, locks at the deadline, shows on the match page, and the match engine plays it: in a match the whole shape moves with the ball.

@@ -61,7 +61,7 @@
 .xb-link { border: 0; background: none; color: var(--brand) !important; font-weight: 600; font-size: var(--fs-s); cursor: pointer; padding: 4px; }
 
 /* ---------- pitch ---------- */
-.xb-pitch { position: relative; aspect-ratio: 68 / 88; width: min(100%, calc((100dvh - 340px) * 68 / 88)); min-width: min(100%, 300px); align-self: center; border-radius: 12px; border: 1px solid var(--line); overflow: hidden; touch-action: none;
+.xb-pitch { position: relative; aspect-ratio: 68 / 88; width: min(100%, calc((100dvh - 340px) * 68 / 88)); min-width: min(100%, 300px); align-self: center; border-radius: 12px; border: 1px solid var(--line); overflow: hidden; touch-action: pan-y;
   background: repeating-linear-gradient(0deg, color-mix(in oklab, var(--club, var(--brand)) 5%, var(--surface-sunk)) 0 12.5%, var(--surface-sunk) 12.5% 25%); }
 .xb-lines { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; stroke: color-mix(in oklab, var(--text) 18%, transparent); stroke-width: 1; pointer-events: none; }
 .xb-lines * { vector-effect: non-scaling-stroke; }
@@ -143,6 +143,7 @@
 .xb-who .xb-face { width: 38px; height: 38px; flex: 0 0 auto; border-width: 1px; }
 .xb-who b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .xb-who > span:last-child { min-width: 0; }
+.xb-ad { display: none; }
 .xb-who small { font-size: var(--fs-xs); color: var(--muted); }
 .xb-num { text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
 .xb-num.hi { color: var(--res-w); } .xb-num.lo { color: var(--amber-text); }
@@ -178,13 +179,25 @@
   .xb-fpill i { font-size: 0; gap: 0; }   /* just the dot on a phone: "Own shape" is in the menu */
   .xb-top h2 { flex: 1; }
   /* the squad: a bar at the bottom, opening into a sheet when a player is picked or the bar is tapped */
-  .xb-squad { flex: 0 0 auto; max-height: 62dvh; background: var(--surface); border-top: 1px solid var(--line); border-radius: 16px 16px 0 0; box-shadow: 0 -12px 30px rgba(0, 0, 0, .3); padding-bottom: env(safe-area-inset-bottom); }
+  .xb-squad { flex: 0 0 auto; background: var(--surface); border-top: 1px solid var(--line); border-radius: 16px 16px 0 0; box-shadow: 0 -12px 30px rgba(0, 0, 0, .3); padding-bottom: env(safe-area-inset-bottom); }
   .xb:not(.sheet-open) .xb-squad > :not(.xb-grab) { display: none; }
+  .xb.sheet-open .xb-squad { height: 58dvh; }
+  .xb.sheet-full .xb-squad { height: calc(100dvh - 64px - env(safe-area-inset-top)); }
+  .xb.sheet-full .xb-left { display: none; }
+  .xb-squad { transition: height .22s cubic-bezier(.2, .8, .2, 1); }
+  .xb.sheet-moving .xb-squad { transition: none; }
+  .xb-grab, .xb-sq-head { touch-action: none; }   /* a pull on the bar moves the sheet instead of the page */
+  /* the grass scrolls the page (touch-action: pan-y on .xb-pitch); only the players themselves are held for dragging */
+  .xb.sheet-open .xb-bench { display: none; }     /* the bench is in the squad list while it's open */
+  .xb-cols { display: none; }
+  .xb-row { grid-template-columns: minmax(0, 1fr) 44px 64px; }
+  .xb-row > .xb-num { display: none; }
+  .xb-ad { display: inline; }
   .xb-grab { display: grid; justify-items: center; gap: 6px; width: 100%; min-height: 48px; padding: 8px 16px; border: 0; background: none; font-size: var(--fs-s); font-weight: 600; color: var(--muted); cursor: pointer; }
   .xb-grab i { width: 40px; height: 4px; border-radius: 4px; background: var(--line); }
   .xb-sq-head { padding: 8px 16px; }
-  .xb-cols, .xb-row { grid-template-columns: minmax(0, 1fr) 32px 32px 44px 62px; gap: 6px; padding-left: 16px; padding-right: 16px; }
+  .xb-row { gap: 8px; padding-left: 16px; padding-right: 16px; }
   .xb-grp { padding-left: 16px; }
 }
 @media (max-width: 420px) { .xb-face { width: 38px; height: 38px; } .xb-seg-k { display: none; } }
-@media (prefers-reduced-motion: reduce) { .xb-tok, .xb-fpill svg, .xb-switch i, .xb-switch i::after, .xb-meter u::after { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .xb-squad, .xb-tok, .xb-fpill svg, .xb-switch i, .xb-switch i::after, .xb-meter u::after { transition: none; } }

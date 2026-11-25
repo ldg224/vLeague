@@ -33,7 +33,7 @@ const LINES = '<svg class="xb-lines" viewBox="0 0 68 88" aria-hidden="true"><rec
 export function mountXI(dlg, ctx) {
   const { squad, avail, bans, byId, club } = ctx;
   let sel = null;            // { slot } or { player }: the first tap of a change
-  let filter = 'ALL', menu = false, msg = '', sheetOpen = false;
+  let filter = 'ALL', menu = false, msg = '', sheetOpen = false, sheetFull = false;
   let grid = store.get('vleague-xi-grid', 'medium'), mirror = store.get('vleague-xi-mirror', 'off') === 'on';
   const S = () => ctx.sheet();
   const slotsNow = () => FORMATIONS[S().formation];
@@ -147,7 +147,7 @@ export function mountXI(dlg, ctx) {
       const pill = ban ? `<span class="xb-pill ban" title="${esc(ban.reason)}">Banned</span>` : slot ? `<span class="xb-pill on${p.position !== wantOf(slot) ? ' oop' : ''}">${esc(slot)}</span>` : '<span class="xb-pill">Bench</span>';
       const n = v => `<span class="xb-num ${v >= 7 ? 'hi' : v < 5 ? 'lo' : ''}">${esc(v)}</span>`;
       return `<li><button type="button" class="xb-row${fits ? ' fit' : ''}${ban ? ' out' : ''}${sel?.player === id ? ' sel' : ''}" data-pl="${esc(id)}"${ban ? ' aria-disabled="true"' : ''}>
-        <span class="xb-who"><span class="xb-face">${face(p, p.position === 'GK')}</span><span><b>${esc(p.name)}</b><small>${p.number != null && p.number !== '' ? `#${esc(p.number)} · ` : ''}${esc(p.position)}${ban ? ` · ${esc(ban.reason)}` : fits ? ' · Fits' : ''}</small></span></span>
+        <span class="xb-who"><span class="xb-face">${face(p, p.position === 'GK')}</span><span><b>${esc(p.name)}</b><small>${p.number != null && p.number !== '' ? `#${esc(p.number)} · ` : ''}${esc(p.position)}<span class="xb-ad"> · ATT ${esc(p.offense)} · DEF ${esc(p.defense)}</span>${ban ? ` · ${esc(ban.reason)}` : fits ? ' · Fits' : ''}</small></span></span>
         ${n(p.offense)}${n(p.defense)}<span class="xb-form">${formBadge(id, 'xb-fb') || '<span class="xb-none">–</span>'}</span>${pill}</button></li>`;
     };
     let html;
@@ -162,8 +162,13 @@ export function mountXI(dlg, ctx) {
     // On a phone the squad is a sheet at the bottom: a bar until a player is picked (or the bar is tapped), then it opens over the pitch.
     const open = Boolean(sel) || sheetOpen;
     dlg.querySelector('.xb').classList.toggle('picking', Boolean(sel));
+    if (!open) sheetFull = false;
     dlg.querySelector('.xb').classList.toggle('sheet-open', open);
+    dlg.querySelector('.xb').classList.toggle('sheet-full', open && sheetFull);
+    $('.xb-squad').style.height = '';
     const g = $('[data-xb-sheet]'); g.setAttribute('aria-expanded', open); g.querySelector('span').textContent = open ? 'Hide squad' : `Squad · ${squad.length} players`;
+    // On a phone the open sheet covers the bottom of the pitch: keep the spot being changed in sight above it.
+    if (sel?.slot && open && !sheetFull) requestAnimationFrame(() => dlg.querySelector(`[data-tok="${sel.slot}"]`)?.scrollIntoView({ block: 'nearest' }));
   }
 
   function draw(focus) {
@@ -254,7 +259,7 @@ export function mountXI(dlg, ctx) {
     const fl = t.closest('[data-xb-filter]');
     if (fl) { filter = fl.dataset.xbFilter; drawSquad(); dlg.querySelector(`[data-xb-filter="${filter}"]`)?.focus(); return; }
     if (t.closest('[data-xb-cancel]')) { sel = null; draw(); return; }
-    if (t.closest('[data-xb-sheet]')) { if (sel) sel = null; else sheetOpen = !sheetOpen; drawSquad(); return; }
+    if (t.closest('[data-xb-sheet]')) { if (sheetDragged) { sheetDragged = false; return; } if (sel) sel = null; else sheetOpen = !sheetOpen; drawSquad(); return; }
     if (t.closest('[data-xb-best]')) { S().lineup = autoLineup(S().formation, avail); sel = null; return done(); }
     if (t.closest('[data-xb-clear]')) { S().lineup = {}; sel = null; return done(); }
   });
@@ -275,6 +280,39 @@ export function mountXI(dlg, ctx) {
       rows[(i + (e.key === 'ArrowDown' ? 1 : -1) + rows.length) % rows.length]?.focus();
     }
   });
+
+  // ---------- the squad sheet (phones) ----------
+  // Pull the bar (or the sheet's top) up to open the squad, further up for the whole screen, down to close it. A tap still opens and closes it.
+  let sheetDrag = null, sheetDragged = false;
+  const sheetEl = () => $('.xb-squad');
+  dlg.addEventListener('pointerdown', e => {
+    const h = e.target.closest('[data-xb-sheet], .xb-sq-head');
+    if (!h || (e.target.closest('button, a, input') && !e.target.closest('[data-xb-sheet]')) || getComputedStyle($('.xb-grab')).display === 'none') return;
+    sheetDrag = { y: e.clientY, h0: sheetEl().getBoundingClientRect().height, pid: e.pointerId, live: false };
+  });
+  dlg.addEventListener('pointermove', e => {
+    const d = sheetDrag; if (!d || e.pointerId !== d.pid) return;
+    if (!d.live) { if (Math.abs(e.clientY - d.y) < 6) return; d.live = true; dlg.querySelector('.xb').classList.add('sheet-moving', 'sheet-open'); }
+    e.preventDefault();
+    const max = dlg.getBoundingClientRect().height - 64;
+    sheetEl().style.height = `${Math.max(48, Math.min(max, d.h0 + d.y - e.clientY))}px`;
+  });
+  const endSheet = e => {
+    const d = sheetDrag; if (!d || e.pointerId !== d.pid) return;
+    sheetDrag = null;
+    if (!d.live) return;
+    sheetDragged = true; setTimeout(() => { sheetDragged = false; }, 400);
+    dlg.querySelector('.xb').classList.remove('sheet-moving');
+    const h = sheetEl().getBoundingClientRect().height, full = dlg.getBoundingClientRect().height, moved = d.y - e.clientY;
+    // where it settles: closed, half (the pitch still shows), or the whole screen; a flick goes on in its direction
+    const at = h / full, up = moved > 0;
+    if (at < 0.25 && !(up && moved > 40)) { sheetOpen = false; sheetFull = false; if (sel) sel = null; }
+    else if (at > 0.72 || (up && at > 0.5)) { sheetOpen = true; sheetFull = true; }
+    else { sheetOpen = true; sheetFull = false; }
+    if (!sheetOpen) draw(); else drawSquad();
+  };
+  dlg.addEventListener('pointerup', endSheet);
+  dlg.addEventListener('pointercancel', endSheet);
 
   // ---------- dragging ----------
   // From a pitch spot: onto grass moves the spot, onto a teammate swaps, onto the squad or bench drops him. From the squad or bench: onto a spot puts him in.
