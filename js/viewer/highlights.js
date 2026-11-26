@@ -1174,11 +1174,29 @@ export class HighlightsRenderer {
     const c = this.c, Y = -3, Z = 1, X0 = -5, X1 = 110, PANEL = 15;
     this.quad(cam, [[X0, Y, 0], [X1, Y, 0], [X1, Y, Z], [X0, Y, Z]], DARK);
     if (cam.C && cam.C[1] <= Y) return;   // behind the boards: their back is blank
-    for (let x = X0, i = 0; x < X1; x += PANEL, i++) this.boardPanel(cam, x, Math.min(X1, x + PANEL), Y, Z, ...(i % 2 ? ['VIRTUAL FOOTBALL', '#90caf9', DARK] : ['vLEAGUE', '#ffffff', '#1565c0']));
+    const cup = this.cupBoards();
+    for (let x = X0, i = 0; x < X1; x += PANEL, i++) {
+      if (cup) { this.boardPanel(cam, x, Math.min(X1, x + PANEL), Y, Z, cup[i % cup.length]); continue; }
+      this.boardPanel(cam, x, Math.min(X1, x + PANEL), Y, Z, ...(i % 2 ? ['VIRTUAL FOOTBALL', '#90caf9', DARK] : ['vLEAGUE', '#ffffff', '#1565c0']));
+    }
+  }
+  // A Summer Cup match (S-51) takes over the boards: the cup's own panels (a sun over a striped pitch, as on the emblem) between the league's.
+  // The Festive Summer Cup look swaps one for a Christmas panel. Each entry is a board design for boardArt.
+  cupBoards() {
+    if (!this.fx?.cup || this.fx.stage === 'EF') return null;
+    const name = (this.fx.cup_name || 'Summer Cup').toUpperCase(), festive = this.fx.look === 'summer_festive';
+    const ko = this.fx.stage === 'SF' ? 'SEMI-FINAL' : this.fx.stage === 'GF' ? 'THE FINAL' : null;
+    return [
+      { label: name, colour: '#fff3df', back: ['#0b2f3a', '#061a21'], sun: true },
+      festive ? { label: 'MERRY CHRISTMAS', colour: '#ffffff', back: ['#c4213f', '#8f1a2e'], bulbs: true }
+        : { label: ko || 'EVERY MATCH COUNTS TWICE', colour: '#061a21', back: ['#ff6b4a', '#ffb627'] },
+      { label: 'vLEAGUE', colour: '#ffffff', back: ['#1565c0', '#1565c0'] },
+      { label: name, colour: '#061a21', back: ['#22b8b0', '#1a9a93'], sun: true },
+    ];
   }
   // One panel's artwork, drawn in thin vertical strips; each strip is an affine map of the image
   // onto the projected board, which together give the perspective.
-  boardPanel(cam, xa, xb, y, z, label, colour, back = DARK) {
+  boardPanel(cam, xa, xb, y, z, label, colour, back = DARK) {   // label: the text, or a cup board design ({ label, colour, back: [left, right], sun, bulbs })
     // A panel off the side of the picture isn't drawn: the boards were a quarter of the cost of a frame, and about half of them are out of shot on the usual camera (B-36).
     const ends = [cam.p(xa, y, z), cam.p(xb, y, z), cam.p(xa, y, 0), cam.p(xb, y, 0)];
     if (ends.every(Boolean) && (ends.every(q => q[0] < -40) || ends.every(q => q[0] > W + 40))) return;
@@ -1194,12 +1212,35 @@ export class HighlightsRenderer {
     }
   }
   boardArt(label, colour, aspect, back = DARK) {
-    const key = `${label}|${colour}|${aspect}|${back}`;
+    const d = typeof label === 'object' ? label : null;
+    const key = d ? `cup|${d.label}|${d.back}|${d.sun}|${d.bulbs}|${aspect}` : `${label}|${colour}|${aspect}|${back}`;
     this._boardArt ||= new Map();
     if (this._boardArt.has(key)) return this._boardArt.get(key);
     const h = 64, w = Math.round(h * aspect), cv = document.createElement('canvas');
     cv.width = w; cv.height = h;
     const g = cv.getContext('2d');
+    if (d) {
+      const grad = g.createLinearGradient(0, 0, w, 0); grad.addColorStop(0, d.back[0]); grad.addColorStop(1, d.back[1]);
+      g.fillStyle = grad; g.fillRect(0, 0, w, h);
+      let tx = w / 2, room = w * 0.92;
+      if (d.sun) {   // the emblem's picture: a sun rising over a striped pitch, at the left of the panel
+        const cx = h * 0.95, base = h * 0.7, r = h * 0.3;
+        g.save(); g.beginPath(); g.rect(0, 0, w, base); g.clip();
+        g.strokeStyle = '#ffb627'; g.lineWidth = h * 0.06; g.lineCap = 'round';
+        for (let k = -4; k <= 4; k++) { const a = k * Math.PI / 10 - Math.PI / 2; g.beginPath(); g.moveTo(cx + Math.cos(a) * r * 1.3, base + Math.sin(a) * r * 1.3); g.lineTo(cx + Math.cos(a) * r * 1.65, base + Math.sin(a) * r * 1.65); g.stroke(); }
+        const sun = g.createLinearGradient(0, base - r, 0, base); sun.addColorStop(0, '#ffd166'); sun.addColorStop(1, '#ff6b4a');
+        g.fillStyle = sun; g.beginPath(); g.arc(cx, base, r, 0, Math.PI * 2); g.fill(); g.restore();
+        for (let k = 0; k < 2; k++) { g.fillStyle = k % 2 ? 'rgba(255,255,255,.10)' : 'rgba(255,255,255,.04)'; g.fillRect(0, base + k * (h - base) / 2, h * 1.9, (h - base) / 2); }
+        g.fillStyle = '#fff3df'; g.fillRect(0, base - 1, h * 1.9, 2);
+        tx = h * 1.9 + (w - h * 1.9) / 2; room = (w - h * 1.9) * 0.9;
+      }
+      if (d.bulbs) { const BUL = ['#ffc247', '#37c47a', '#e9e9e9', '#ffc247']; for (let x = 10, k = 0; x < w; x += 22, k++) { g.fillStyle = BUL[k % BUL.length]; g.beginPath(); g.arc(x, 7 + Math.sin(k) * 2, 3.5, 0, Math.PI * 2); g.fill(); } }
+      g.fillStyle = d.colour; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = `900 ${Math.round(h * 0.56)}px ${FONT}`;
+      g.fillText(d.label, tx, h / 2 + 3, room);
+      this._boardArt.set(key, cv);
+      return cv;
+    }
     g.fillStyle = back; g.fillRect(0, 0, w, h);
     g.fillStyle = colour; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.font = `900 ${Math.round(h * 0.62)}px ${FONT}`;
