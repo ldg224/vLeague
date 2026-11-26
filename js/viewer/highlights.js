@@ -6,6 +6,7 @@
 
 import { safeColour, onColour, logoPath } from './ui.js';
 import { resolveLook, artOf, artInk, spillOf, stageName } from '../looks.js';
+import { cupLabel } from '../summer-cup.js';
 import { drawLookArt, drawLookFx, drawLookSpill, drawMoustache } from './look-canvas.js';
 import { kickoff } from './data.js';
 import { buildEffects } from './effects.js';
@@ -1498,7 +1499,8 @@ export class HighlightsRenderer {
     const big = stage || r.name || r.label || (fx.week != null ? `Week ${fx.week}` : '');
     const small = stage ? (r.name || r.label || '') : (r.name && r.numbered && r.no ? `Round ${r.no}` : '');
     const rl = resolveLook(fx.look, row);
-    return (this._look = { key: rl.key, accent: rl.accent, banner: stage ? '' : rl.banner || '', ornament: rl.ornament || '', theme: rl.theme, big, small });   // a stage names itself: "SEMI-FINAL", not "SEMI-FINAL · FINALS"
+    const cup = !stage && fx.cup ? cupLabel(fx, S)?.toUpperCase() : null;   // a Summer Cup group match names its group: "ROUND 7 · SUMMER CUP · GROUP A" (S-51)
+    return (this._look = { key: rl.key, accent: rl.accent, banner: stage ? '' : cup || rl.banner || '', ornament: rl.ornament || '', theme: rl.theme, big, small });   // a stage names itself: "SEMI-FINAL", not "SEMI-FINAL · FINALS"
   }
 
   // The score bug in the round's design: a plate with the round's name above, then the board. Both the highlights and the

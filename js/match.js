@@ -85,6 +85,11 @@ try {
     }
   }
   fx = season?.fixtures.find(f => String(f.id) === String(id)) || (demo != null ? season.fixtures[0] : null) || null;
+  // Localhost preview of the demo only: ?look=summer_cup dresses the match in a look, &cup makes it a Summer Cup group match (S-51)
+  if (preview && demo != null && fx && q.get('look')) {
+    fx.look = q.get('look');
+    if (q.has('cup')) { fx.cup = 'summer_2026'; fx.cup_name = 'Summer Cup'; season.cups = [{ key: 'summer_2026', name: 'Summer Cup', groups: { A: ['SSF', 'TUR', 'DTP', 'LFC'], B: ['VVS', 'PRF', 'CFC', 'NGY'], C: ['LAU', 'SKS', 'CCF'] } }]; }
+  }
   if (fx && preview && q.get('look')) {   // localhost only: ?look=opening_week to see a look on the real viewer and the header (&stage=SF for a semi-final)
     fx.look = q.get('look'); fx.stage = q.get('stage') || fx.stage;
     season.looks = { [fx.look]: { key: fx.look, name: fx.look, settings: {} }, ...season.looks };
