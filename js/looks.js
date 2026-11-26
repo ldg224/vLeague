@@ -60,7 +60,7 @@ export function boardOf(look) {
   return t ? { bg: t.bg, edge: t.edge, ink: t.ink, plate: t.plate, plateInk: t.plateInk, clock: t.clock, clockInk: t.clockInk } : OLDER_BOARD[look?.key] || OLDER_BOARD.classic;
 }
 // A finals match's stage in words, or null. Every plate reads it from here.
-export const stageName = fx => ({ SF: 'Semi-final', TP: 'Third place final', GF: 'Grand Final' })[fx?.stage] || null;
+export const stageName = fx => ({ EF: 'Elimination final', SF: 'Semi-final', TP: 'Third place final', GF: 'Grand Final' })[fx?.stage] || null;
 
 // The looks that dress the match page (the user's list, 5 Nov 2026). Any other look, Classic included, leaves the page as it always was.
 export const EVENT_LOOKS = ['opening_week', 'spring_blossom', 'movember', 'derby', 'festive', 'new_year', 'australia_day', 'last_round', 'finals', 'third_place', 'grand_final', 'lunar_new_year'];

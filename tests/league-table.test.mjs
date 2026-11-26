@@ -78,8 +78,10 @@ test('Next is each club\'s first match still to play (a live one counts, a postp
   assert.equal(tableRows(postponed, { now: NOW }).find(r => r.team.code === 'AAA').next, null);
 });
 
-test('zones follow the number of clubs: Finals is the top four, Wooden spoon is last', () => {
-  assert.deepEqual(zonesFor(12), { finals: 4, spoon: true, shield: true });
+test('zones follow the number of clubs: Finals is the top six, Wooden spoon is last', () => {
+  assert.deepEqual(zonesFor(12), { finals: 6, spoon: true, shield: true });
+  assert.deepEqual(zonesFor(11), { finals: 6, spoon: true, shield: true });
+  assert.deepEqual(zonesFor(8), { finals: 6, spoon: true, shield: true });
   assert.deepEqual(zonesFor(6), { finals: 4, spoon: true, shield: true });
   assert.deepEqual(zonesFor(4), { finals: 2, spoon: true, shield: true });
   assert.deepEqual(zonesFor(2), { finals: 0, spoon: true, shield: true });

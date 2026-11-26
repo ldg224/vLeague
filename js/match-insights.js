@@ -236,7 +236,7 @@ export function insights(season, fx, { club, hide = () => false, now = new Date(
     const me = rows.find(r => r.team.code === code); if (!me || !me.p) continue;
     const after = 1 + rows.filter(r => r.team.code !== code && r.pts > me.pts + 3).length, n = name(code);
     if (me.rank > 1 && after === 1) add(code, `A win would take ${n} to the top of the table`, 8);
-    else if (me.rank > 4 && after <= 4) add(code, `A win would lift ${n} into the top four, the Finals places`, 8);
+    else if (me.rank > 6 && after <= 6) add(code, `A win would lift ${n} into the top six, the Finals places`, 8);
     if (rows.length >= 4 && me.rank === rows.length) add(code, `${n} are bottom of the table, in the wooden spoon place`, 6);
   }
   // the league's leaders (only when nobody is level with them)

@@ -27,10 +27,10 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ESC[c]);
 
 const FORM = 5;
 
-// The zones follow the number of clubs: Finals is the top four (fewer in a small league, always leaving room for last place),
+// The zones follow the number of clubs: Finals is the top six (from season 1, 26 Nov 2026; fewer in a small league, always leaving room for last place),
 // Wooden spoon is last place, and first place is marked as the vLeague Shield. Nothing else.
 export function zonesFor(n) {
-  const finals = Math.min(4, Math.max(0, n - 2));
+  const finals = Math.min(6, Math.max(0, n - 2));
   return { finals, spoon: n >= 2, shield: n >= 2 };   // the vLeague Shield is first place (S-26), which is also in the finals
 }
 
