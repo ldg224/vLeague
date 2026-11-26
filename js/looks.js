@@ -65,7 +65,7 @@ export const stageName = fx => (fx?.cup && fx?.stage ? ({ SF: `${fx.cup_name || 
   : ({ EF: 'Elimination final', SF: 'Semi-final', TP: 'Third place final', GF: 'Grand Final' })[fx?.stage] || null);
 
 // The looks that dress the match page (the user's list, 5 Nov 2026). Any other look, Classic included, leaves the page as it always was.
-export const EVENT_LOOKS = ['summer_cup', 'opening_week', 'spring_blossom', 'movember', 'derby', 'festive', 'new_year', 'australia_day', 'last_round', 'finals', 'third_place', 'grand_final', 'lunar_new_year'];
+export const EVENT_LOOKS = ['summer_cup', 'summer_festive', 'opening_week', 'spring_blossom', 'movember', 'derby', 'festive', 'new_year', 'australia_day', 'last_round', 'finals', 'third_place', 'grand_final', 'lunar_new_year'];
 export const isEventLook = key => EVENT_LOOKS.includes(key);
 
 // What stands in the bottom corners of an event's match page (assets/looks, Fluent Emoji 3D, MIT): side, height and distance from the edge in px at desktop size, later ones
@@ -84,6 +84,7 @@ export const SCENES = {
   third_place: { props: [PROP('3rd_place_medal', 'right', 150)] },
   grand_final: { props: [PROP('trophy', 'right', 230), PROP('1st_place_medal', 'left', 120)] },
   summer_cup: { props: [PROP('sun', 'right', 170), PROP('soccer_ball', 'left', 76)] },
+  summer_festive: { props: [PROP('christmas_tree', 'right', 240, 56, { lights: true }), PROP('wrapped_gift', 'right', 80, 16), PROP('sun', 'left', 120)] },
   lunar_new_year: { props: [PROP('red_paper_lantern', 'right', 170, 92), PROP('red_paper_lantern', 'right', 120, 20), PROP('firecracker', 'left', 110)] },
 };
 
@@ -104,6 +105,12 @@ export const artOf = look => look?.theme?.art || OLDER_ART[look?.key] || 'mow';
 // css/scoreboard.css and have no theme here.
 export const PRESETS = {
   // The Summer Cup (S-51): a summer sun rising over a striped pitch. Deep Ocean board, coral to gold plate, surf clock, sand text (the brand board, 26 Nov 2026).
+  // A Summer Cup match in the Festive Round (the user, 27 Nov 2026): an Aussie summer Christmas. The cup's ocean board and gold edge, Christmas red into
+  // coral on the plate, the Festive lights along the top and snow falling past the sun.
+  summer_festive: {
+    name: 'Festive Summer Cup', banner: 'SUMMER CUP', accent: '#c4213f',
+    theme: { bg: ['#0b2f3a', '#061a21'], edge: '#ffb627', ink: '#fff3df', score: ['#ffffff', '#ffe3b0'], plate: ['#c4213f', '#ff6b4a'], plateInk: '#ffffff', glow: '#ffb627', clock: '#22b8b0', clockInk: '#061a21', fx: ['lights', 'snow'], spill: 'snow' },
+  },
   summer_cup: {
     name: 'Summer Cup', banner: 'SUMMER CUP', accent: '#ff6b4a',
     theme: { bg: ['#0b2f3a', '#061a21'], edge: '#ffb627', ink: '#fff3df', score: ['#ffffff', '#ffe3b0'], plate: ['#ff6b4a', '#ffb627'], plateInk: '#061a21', glow: '#ffb627', clock: '#22b8b0', clockInk: '#061a21', fx: ['shine'], spill: 'glints' },
