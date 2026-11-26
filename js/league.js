@@ -18,6 +18,7 @@ import { statCard, hiddenLine, statPage, wireStatPage, initialsCrest } from './s
 import { demoSeason } from './demo-season.js';
 import { counts, inStats } from './scope.js';
 import { tableRows, tableCard, rowTops, reshuffle, shield, woodenSpoon } from './league-table.js';
+import { activeCup, cupCard, bracketCard, cupSwitch } from './summer-cup.js';
 import { paint, quietly, busy, snapshotInputs, restoreInputs } from './paint.js';
 import { spoilerHidden, revealScore, fmtTime } from './prefs.js';
 import { fixturesView, parseSub, roundWidget, rounds } from './league-fixtures.js';
@@ -89,6 +90,15 @@ if (ctx) {
       season.cap = { cap: 125000, over_limit: 30000 };
       season.wage_bills = Object.fromEntries(season.teams.map((t, i) => [t.code, i === 1 ? 131200 : i === 4 ? 126800 : 112000 + i * 1300]));
       if (params.get('cap') === 'applied') season.adjustments = [{ team: season.teams[1].code, points: -3, reason: 'Cap penalty' }, { team: season.teams[4].code, points: -1, reason: 'Cap penalty' }];
+    }
+    // &cup: the Summer Cup's real groups (S-51) on the demo league, every demo match between two clubs of one group counting as a cup match
+    if (params.has('cup')) {
+      const codes = new Set(season.teams.map(t => t.code)), groups = Object.fromEntries(Object.entries({ A: ['SSF', 'TUR', 'DTP', 'LFC'], B: ['VVS', 'PRF', 'CFC', 'NGY'], C: ['LAU', 'SKS', 'CCF'] }).map(([k, v]) => [k, v.filter(c => codes.has(c))]));
+      if (Object.values(groups).every(v => v.length >= 2)) {
+        season.cups = [{ key: 'summer_2026', name: 'Summer Cup', look: 'summer_cup', colours: {}, groups }];
+        const g = c => Object.keys(groups).find(k => groups[k].includes(c));
+        season.fixtures.forEach(f => { if (g(f.home) && g(f.home) === g(f.away)) { f.cup = 'summer_2026'; f.cup_name = 'Summer Cup'; } });
+      }
     }
     const preN = Number(params.get('pre') || 0);
     if (preN) season.fixtures.forEach(f => { if (f.week <= preN) { f.preseason = true; f.exhibition = true; } });
@@ -185,12 +195,22 @@ if (ctx) {
   // ---- The table (WR-11 to WR-14) ----
   let tableFilter = 'all';
   const tableNow = () => (demo != null ? new Date(params.get('now') || '2027-01-01T00:00:00') : new Date());   // demo matches are dated in the coming days: treat them as played (or pick the moment: &now=2026-10-16T12:00)
+  // The Summer Cup (S-51, js/summer-cup.js): while a cup has groups, the Table card has a vLeague | Summer Cup switch. The cup view shows the groups,
+  // the best runner-up and a second card with the knockouts. The pick is remembered on this device.
+  const VIEW_KEY = 'vl-table-view';
+  let tableView = preview && params.get('table') === 'cup' ? 'cup' : (() => { try { return localStorage.getItem(VIEW_KEY) === 'cup' ? 'cup' : 'league'; } catch { return 'league'; } })();   // ?preview&table=cup (localhost) opens on the cup
   const tableHtml = () => {
     if (!season) return tableCard([], sctx, { filter: tableFilter });
     const now = tableNow(), scope = scopeNow(), pre = scope === 'preseason', counted = season.fixtures.filter(f => f.result && counts(f, scope));
+    const cup = !pre && activeCup(season);
+    if (cup && tableView === 'cup') {
+      const hidden = new Set(season.fixtures.filter(f => f.cup === cup.key && f.result && spoilerHidden(f, season, now)).map(f => f.id));
+      const o = { now, hidden, mine: ctx.club?.code };
+      return cupCard(season, sctx, { ...o, switcher: cupSwitch('cup') }) + bracketCard(season, sctx, o);
+    }
     const hiddenIds = counted.filter(f => spoilerHidden(f, season, now)).map(f => f.id);
     return tableCard(tableRows(season, { filter: tableFilter, now, hidden: new Set(hiddenIds), scope }), { ...sctx, mine: ctx.club?.code },
-      { filter: tableFilter, hiddenCount: hiddenIds.length, scopeBar: bar(), pre, title: pre ? 'Preseason table' : 'Table' });
+      { filter: tableFilter, hiddenCount: hiddenIds.length, scopeBar: bar() + (cup ? cupSwitch('league') : ''), pre, title: pre ? 'Preseason table' : 'Table' });
   };
   // ---- The Fixtures tab (WR-15 to WR-17) ----
   let current = null;   // the tab on screen: [id, picked, sub]
@@ -402,6 +422,8 @@ if (ctx) {
     }
     const step = e.target.closest('[data-wround]');
     if (step) { widgetWeek = Number(step.dataset.wround); rerender(); main.querySelector('.fx-widget [data-wround]')?.focus({ preventScroll: true }); return; }
+    const tv = e.target.closest('[data-tview]');
+    if (tv) { tableView = tv.dataset.tview === 'cup' ? 'cup' : 'league'; try { localStorage.setItem(VIEW_KEY, tableView); } catch { /* lasts until the page changes */ } rerender(); main.querySelector(`[data-tview="${tableView}"]`)?.focus({ preventScroll: true }); return; }
     const sw = e.target.closest('[data-scope]');
     if (sw) { pickScope(season, sw.dataset.scope, tableNow()); twWeek = null; rerender(); main.querySelector(`[data-scope="${sw.dataset.scope}"]`)?.focus({ preventScroll: true }); return; }
     const pill = e.target.closest('[data-tfilter]'), all = e.target.closest('[data-reveal-all]'), go2 = e.target.closest('[data-fxgo]');

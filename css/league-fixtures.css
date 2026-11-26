@@ -145,3 +145,17 @@
 .fx-modes .fx-test { margin-left: auto; border-color: var(--amber); color: var(--amber-text); }
 .fx-modes .fx-test[aria-current="true"] { background: var(--amber); border-color: var(--amber); color: #0a0f19; }
 :root:not([data-theme="light"]) .fx-modes .fx-test[aria-current="true"] { color: #0a0f19; }
+
+/* The Summer Cup (S-51): a cup match carries a small chip under its time or score, in its group's colour (A coral, B surf, C gold).
+   Light theme uses deeper inks so the text reads on white; the dark theme uses the brand colours themselves. */
+:root { --cup-a: #c8432a; --cup-b: #0f7f79; --cup-c: #9a6500; --cup-ocean: #0b2f3a; }
+:root:not([data-theme="light"]) { --cup-a: #ff6b4a; --cup-b: #22b8b0; --cup-c: #ffb627; }
+.cup-tag { --g: var(--cup-a); display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px 2px 3px; border-radius: 999px; background: color-mix(in oklab, var(--g) 12%, transparent);
+  color: var(--text-soft); font: 600 var(--fs-xs)/1.4 var(--font); white-space: nowrap; }
+.cup-tag[data-grp="B"] { --g: var(--cup-b); } .cup-tag[data-grp="C"] { --g: var(--cup-c); }
+.cup-tag img { width: 14px; height: 14px; display: block; }
+.cup-tag b { color: var(--g); font-weight: 700; }
+.fx-modes .fx-cupmode { display: inline-flex; align-items: center; gap: 6px; }
+.fx-modes .fx-cupmode img { width: 16px; height: 16px; }
+.fx-modes .fx-cupmode[aria-current="true"] { background: var(--cup-ocean); border-color: var(--cup-ocean); color: #fff3df; }
+.fx-head.is-cup .fx-title { display: inline-flex; align-items: center; gap: 8px; }

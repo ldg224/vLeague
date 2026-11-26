@@ -19,6 +19,7 @@ import { tag } from './preseason.js';
 import { status, kickoff, shownScore, liveMinute, liveState, byKickoff, matchUrl, activeWeek } from './dashboard-data.js';
 import { addDays, mondayOf } from './roster.js';
 import { accentFor, isHex } from './club-colour.js';
+import { cupTag, activeCup, EMBLEM } from './summer-cup.js';
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ESC[c]);
@@ -29,7 +30,7 @@ const PREV = svg('m15 6-6 6 6 6'), NEXT = svg('m9 6 6 6-6 6');
 export const fixturesAddress = (mode, arg) => `#fixtures${mode === 'round' && (arg == null || arg === '') ? '' : `/${mode || 'round'}${arg != null && arg !== '' ? `/${arg}` : ''}`}`;
 export function parseSub(sub = '') {
   const [mode, ...rest] = String(sub).split('/');
-  return { mode: ['date', 'team', 'test'].includes(mode) ? mode : 'round', arg: rest.join('/') || null };
+  return { mode: ['date', 'team', 'test', 'cup'].includes(mode) ? mode : 'round', arg: rest.join('/') || null };
 }
 
 // ---------- dates ----------
@@ -115,6 +116,7 @@ export function rowHtml(fx, season, ctx, opts = {}) {
     mid = `<strong class="fx-ko">${k ? esc(ctx.time(k)) : st === 'postponed' ? '–' : 'TBA'}</strong>${st !== 'postponed' ? chanceBar(ctx.chance?.(fx)) : ''}`;
   }
   if (opts.forTeam && fx.date) mid = `<span class="fx-date">${esc(noon(fx.date).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' }))}</span>${mid}`;   // by team, rows aren't under a day heading, so each shows its own date
+  mid += cupTag(fx, season);   // a Summer Cup match says so under the time or score (S-51)
   let res = '';
   if (opts.forTeam) {
     res = st === 'ft' && !hid ? `<abbr class="fx-res res-${outcome(fx, opts.forTeam)}" title="${{ W: 'Won', D: 'Drew', L: 'Lost' }[outcome(fx, opts.forTeam)]}">${outcome(fx, opts.forTeam)}</abbr>` : '<span class="fx-res"></span>';
@@ -123,7 +125,7 @@ export function rowHtml(fx, season, ctx, opts = {}) {
   const label = `${home} against ${away}`;
   const mine = ctx.mine && (fx.home === ctx.mine || fx.away === ctx.mine);
   const ground = ctx.venue?.(fx.home);
-  return `<li class="fx-row is-${st}${fx.preseason ? ' ps-row' : ''}${mine ? ' has-mine' : ''}${opts.forTeam ? ' with-res' : ''}" style="${hues(ctx, fx)}"><a href="${esc(matchUrl(fx))}" aria-label="${esc(label)}">${ghost(fx.home, 'home', ctx)}${ghost(fx.away, 'away', ctx)}${tag}${team(fx, 'home', ctx, live, hid, edge[0], st)}<span class="fx-mid">${mid}</span>${team(fx, 'away', ctx, live, hid, edge[1], st)}<span class="fx-venue">${ground ? esc(ground) : ''}</span>${res}</a></li>`;
+  return `<li class="fx-row is-${st}${fx.preseason ? ' ps-row' : ''}${fx.cup ? ' is-cup' : ''}${mine ? ' has-mine' : ''}${opts.forTeam ? ' with-res' : ''}" style="${hues(ctx, fx)}"><a href="${esc(matchUrl(fx))}" aria-label="${esc(label)}">${ghost(fx.home, 'home', ctx)}${ghost(fx.away, 'away', ctx)}${tag}${team(fx, 'home', ctx, live, hid, edge[0], st)}<span class="fx-mid">${mid}</span>${team(fx, 'away', ctx, live, hid, edge[1], st)}<span class="fx-venue">${ground ? esc(ground) : ''}</span>${res}</a></li>`;
 }
 
 // ---------- groups ----------
@@ -195,6 +197,14 @@ export function byTest(season, ctx) {
   return `<div class="fx-head is-team"><b class="fx-title">Test matches</b></div><ul class="fx-list">${dayGroups(list, season, ctx, {})}</ul>`;
 }
 
+// The Summer Cup (S-51): every cup match, round by round, behind the "Summer Cup" pill (shown while a cup has groups).
+export function byCup(season, ctx) {
+  const cup = activeCup(season);
+  if (!cup) return none('No cup this season', 'Cup matches appear here once the office sets up a cup.');
+  const list = shown(season).filter(f => f.cup === cup.key);
+  return `<div class="fx-head is-team is-cup"><b class="fx-title"><img src="${EMBLEM}" alt="" width="22" height="22">${esc(cup.name)}</b></div>${list.length ? `<ul class="fx-list">${dayGroups(list, season, ctx, {})}</ul>` : none('No cup matches yet', 'Cup matches appear here once the office has picked them.')}`;
+}
+
 // ---------- the Overview widget (WR-20) ----------
 // "This round": the same rows as Fixtures for one round, with arrows that step through the rounds without leaving Overview
 // (buttons with data-wround, not links, so the address stays #overview). `week` is a round number; default: the current round.
@@ -218,8 +228,9 @@ export function fixturesView(season, ctx, { mode = 'round', arg = null } = {}, {
   const hiddenCount = [...(ctx.hidden || [])].length;
   const hasTests = season.fixtures.some(f => f.test);
   const pills = `<nav class="fx-modes sc-toggle" aria-label="Fixtures view">${MODES.map(([key, label]) => `<a href="${fixturesAddress(key)}" data-fxgo${key === mode ? ' aria-current="true"' : ''}>${label}</a>`).join('')}`
+    + `${activeCup(season) ? `<a class="fx-cupmode" href="${fixturesAddress('cup')}" data-fxgo${mode === 'cup' ? ' aria-current="true"' : ''}><img src="${EMBLEM}" alt="" width="16" height="16">Summer Cup</a>` : ''}`
     + `${hasTests ? `<a class="fx-test" href="${fixturesAddress('test')}" data-fxgo${mode === 'test' ? ' aria-current="true"' : ''}>Test matches</a>` : ''}</nav>`;
   const hid = hiddenCount ? `<p class="tb-hidden">${hiddenCount} result${hiddenCount === 1 ? '' : 's'} hidden. <button type="button" data-reveal-all>Show all</button></p>` : '';
-  const body = (mode === 'round' ? byRound : mode === 'team' ? byTeam : mode === 'test' && hasTests ? byTest : byDate)(season, ctx, arg);
+  const body = (mode === 'round' ? byRound : mode === 'team' ? byTeam : mode === 'test' && hasTests ? byTest : mode === 'cup' ? byCup : byDate)(season, ctx, arg);
   return `<section class="lg-card fx-card" aria-label="${esc(title)}"><div class="lg-card-head"><h2>${esc(title)}</h2>${scopeBar}</div>${pills}${hid}${body}</section>`;
 }

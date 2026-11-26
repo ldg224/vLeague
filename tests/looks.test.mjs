@@ -9,7 +9,7 @@ test('only the events change the match page: a normal week does not', () => {
   assert.equal(isEventLook('classic'), false);
   assert.equal(isEventLook('christmas'), false);
   assert.equal(isEventLook(undefined), false);
-  assert.deepEqual([...EVENT_LOOKS].sort(), ['australia_day', 'derby', 'festive', 'finals', 'grand_final', 'last_round', 'lunar_new_year', 'movember', 'new_year', 'opening_week', 'spring_blossom', 'third_place']);
+  assert.deepEqual([...EVENT_LOOKS].sort(), ['australia_day', 'derby', 'festive', 'finals', 'grand_final', 'last_round', 'lunar_new_year', 'movember', 'new_year', 'opening_week', 'spring_blossom', 'summer_cup', 'third_place']);
 });
 
 test('every event has a scene whose pictures are in the repo, and board colours', () => {

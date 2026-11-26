@@ -1,0 +1,59 @@
+/* The Summer Cup (S-51, js/summer-cup.js): the Table card's cup view (three group tables and the best runner-up) and the Knockouts card.
+   It reuses the league table's rows (css/league-table.css); only the cup's own pieces are here. Colours: the group inks from css/league-fixtures.css. */
+.cup-pills { margin-left: auto; }
+.lg-card-head:has(> .cup-pills) { flex-wrap: wrap; }
+.cup-pills button { display: inline-flex; align-items: center; gap: 6px; }
+.cup-pills img { width: 16px; height: 16px; display: block; }
+.cup-pills button[data-tview="cup"][aria-pressed="true"] { background: var(--cup-ocean); border-color: var(--cup-ocean); color: #fff3df; }
+:root:not([data-theme="light"]) .cup-pills button[data-tview="cup"][aria-pressed="true"] { background: #fff3df; border-color: #fff3df; color: var(--cup-ocean); }
+
+.cup-title { display: inline-flex; align-items: center; gap: 10px; }
+.cup-title img { width: 26px; height: 26px; display: block; }
+.cup-lede { margin: -4px 0 10px; color: var(--muted); font-size: var(--fs-s); }
+
+.cup-card { --z-winner: var(--cup-a); --z-best: var(--cup-b); }
+.cup-tb tr[data-zone="winner"] .tb-pos, .cup-ru tr[data-zone="winner"] .tb-pos { background-image: linear-gradient(var(--z-winner), var(--z-winner)); color: var(--text-strong); }
+.cup-tb tr[data-zone="best"] .tb-pos, .cup-ru tr[data-zone="best"] .tb-pos { background-image: linear-gradient(var(--z-best), var(--z-best)); color: var(--text-strong); }
+.cup-key li[data-zone="winner"]::before { background: var(--z-winner); }
+.cup-key li[data-zone="best"]::before { background: var(--z-best); }
+
+/* each group starts with a grey strip: a dot in the group's colour, its name, and how many cup matches it plays */
+.cup-tb .cup-ghead th { --g: var(--cup-a); height: 36px; padding: 0 12px; background: var(--surface-sunk); text-align: left; border-top: 1px solid var(--line); }
+.cup-tb .cup-ghead[data-grp="B"] th { --g: var(--cup-b); } .cup-tb .cup-ghead[data-grp="C"] th { --g: var(--cup-c); }
+.cup-gname { display: inline-flex; align-items: center; gap: 8px; color: var(--text-strong); font: 900 var(--fs-xs)/1 var(--font-display, var(--font)); font-stretch: 125%; letter-spacing: .06em; text-transform: uppercase; }
+.cup-gname i { width: 10px; height: 10px; border-radius: 50%; background: var(--g); }
+.cup-ghead small { margin-left: 10px; color: var(--muted); font: 400 var(--fs-xs) var(--font); }
+
+.cup-sub { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 18px 4px 4px; color: var(--text-strong); font: 900 var(--fs-xs)/1.3 var(--font-display, var(--font)); font-stretch: 125%; letter-spacing: .06em; text-transform: uppercase; }
+.cup-sub small { color: var(--muted); font: 400 var(--fs-xs) var(--font); letter-spacing: 0; text-transform: none; }
+.cup-gchip { --g: var(--cup-a); display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; background: color-mix(in oklab, var(--g) 16%, transparent); color: var(--g); font-weight: 700; font-size: var(--fs-xs); }
+.cup-gchip[data-grp="B"] { --g: var(--cup-b); } .cup-gchip[data-grp="C"] { --g: var(--cup-c); }
+
+/* Knockouts: two semi-finals and the Final, each a row of two clubs (or who will be there) */
+.ko-list { margin: 0; padding: 0; list-style: none; }
+.ko-tie { border-top: 1px solid var(--line); }
+.ko-tie > a, .ko-tie:not(:has(> a)) { display: grid; grid-template-columns: 150px minmax(0, 1fr) minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 56px; padding: 8px 4px; color: inherit; text-decoration: none; }
+@media (hover: hover) { .ko-tie > a:hover { background: var(--surface-hover); } }
+.ko-tie > a:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.ko-tie:last-child .ko-when b { color: var(--cup-c); }
+.ko-when { display: grid; gap: 2px; color: var(--muted); font-size: var(--fs-xs); }
+.ko-when b { color: var(--text-strong); font: 900 var(--fs-xs)/1.3 var(--font-display, var(--font)); font-stretch: 125%; letter-spacing: .06em; text-transform: uppercase; }
+.ko-team { display: flex; align-items: center; gap: 8px; min-width: 0; font-weight: 600; font-size: var(--fs-m); color: var(--text-strong); }
+.ko-team b { font-weight: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ko-team small { color: var(--muted); font: 400 var(--fs-xs) var(--font); white-space: nowrap; }
+.ko-team .tb-short { display: none; }
+.ko-team.is-tbc { color: var(--muted); font-weight: 400; font-size: var(--fs-s); }
+.ko-blank { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 1.5px dashed var(--line-strong, var(--faint)); }
+.ko-score { display: grid; justify-items: end; font: 900 var(--fs-l) var(--font-display, var(--font)); font-stretch: 125%; font-variant-numeric: tabular-nums; }
+.ko-score i { font-style: normal; margin: 0 4px; color: var(--muted); }
+.ko-score small { color: var(--muted); font: 400 var(--fs-xs) var(--font); }
+
+@media (max-width: 767px) {
+  .ko-tie > a, .ko-tie:not(:has(> a)) { grid-template-columns: minmax(0, 1fr) auto; row-gap: 6px; }
+  .ko-when { grid-column: 1 / -1; grid-template-columns: auto 1fr; gap: 8px; align-items: baseline; }
+  .ko-team { grid-column: 1; }
+  .ko-score { grid-column: 2; grid-row: 2 / span 2; }
+  .ko-team .tb-full { display: none; } .ko-team .tb-short { display: inline; }
+  .ko-team small { display: none; }
+  .cup-ghead small { display: none; }
+}

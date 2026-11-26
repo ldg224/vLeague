@@ -36,6 +36,7 @@ import { playerCard, MatchPlayer } from './viewer/player.js';
 import { loadKits, loadFixtureKits, matchKits } from './kits-data.js';
 import { loadHistory } from './history-data.js';
 import { resolveLook, boardOf, artOf, artInk, isEventLook, SCENES, stageName } from './looks.js';
+import { cupLabel } from './summer-cup.js';
 import { startPageLook } from './look-page.js';
 import { drawLookArt, drawLookFx } from './viewer/look-canvas.js';
 
@@ -126,6 +127,7 @@ function start() {
   };
   const plateText = () => {
     const big = stageName(fx) || season.rounds?.[fx.week]?.name || fx.round || `Round ${fx.week}`;
+    if (fx.cup && !fx.stage) return `${big} · ${cupLabel(fx, season).toUpperCase()}`;   // a Summer Cup group match: "Round 7 · SUMMER CUP · GROUP A" (S-51)
     return look.banner && !fx.stage && !big.toLowerCase().includes(look.banner.toLowerCase()) ? `${big} · ${look.banner}` : big;
   };
   // The look's artwork behind the band, drawn again only when the band changes size. Moving pieces are on the page's background (js/look-page.js), not here.

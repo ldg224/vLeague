@@ -45,15 +45,16 @@ export async function loadSeason() {
   // Points adjustments (cap penalties once applied) and the wage cap (for the pending penalty beside PTS), 0092: read softly, so the table still
   // shows before that database update is in (a missing table or column is an error result, not a throw).
   const soft = q => Promise.resolve(q).then(r => (r?.error ? null : r?.data ?? null), () => null);
-  const [cl, fx, rs, players, rd, lk, wn, adj, capRow, feeRows] = await Promise.all([
+  const [cl, fx, rs, players, rd, lk, wn, adj, capRow, feeRows, cupRows, cupGroups] = await Promise.all([
     c.from('clubs').select('code, name, short_name, colour, crest_path, manager_name, status').order('name'),
-    c.from('fixtures').select('id, week, home, away, starts_at, stage, postponed, window_id, look').order('week').order('starts_at').range(0, 1999),
+    c.from('fixtures').select('id, week, home, away, starts_at, stage, postponed, window_id, look, cup').order('week').order('starts_at').range(0, 1999),
     c.from('results').select('fixture, summary, file').range(0, 1999),
     loadPlayers().catch(() => []),
     c.from('rounds').select('*'), c.from('looks').select('key, name, settings'), c.from('match_windows').select('id, look').range(0, 1999),
     soft(c.from('points_adjustments').select('club, points, reason').is('undone_at', null).range(0, 1999)),
     soft(c.from('office_settings').select('cap, over_limit').eq('id', 1).maybeSingle()),
     soft(c.from('office_release_fees').select('club, fee').is('cleared_at', null).range(0, 1999)),   // 0096: on the wage bill too
+    soft(c.from('cups').select('key, name, settings').order('created_at', { ascending: false })), soft(c.from('cup_groups').select('cup, grp, club, seed').order('grp').order('seed')),   // the Summer Cup (0099, S-51)
   ]);
   const releaseFees = {};
   for (const f of feeRows || []) releaseFees[f.club] = (releaseFees[f.club] || 0) + (Number(f.fee) || 0);
@@ -71,10 +72,13 @@ export async function loadSeason() {
     adjustments: (adj || []).map(a => ({ team: a.club, points: Number(a.points) || 0, reason: a.reason })),
     cap: capRow?.cap != null ? { cap: Number(capRow.cap), over_limit: Number(capRow.over_limit ?? 30000) } : null,
     release_fees: releaseFees,
+    // cups (S-51): { key, name, look, colours, groups: { A: [club codes in seed order] } }, newest first; js/summer-cup.js reads them
+    cups: (cupRows || []).map(x => ({ key: x.key, name: x.name, look: x.settings?.look || null, colours: x.settings?.colours || {},
+      groups: (cupGroups || []).filter(g => g.cup === x.key).reduce((o, g) => { (o[g.grp] ??= []).push(g.club); return o; }, {}) })),
     teams: cl.data.map(x => ({ code: x.code, name: x.name, short_name: x.short_name, colour: x.colour || '#475569', manager: x.manager_name || '',
       ...(x.status === 'withdrawn' || x.status === 'pending' ? { withdrawn: true } : {}) })),
     fixtures: fx.data.map(f => ({ id: f.id, week: f.week, ...(f.week === 99 ? { test: true } : {}), look: lookOf(f), round: labels.get(f.week).label, ...(rounds.get(f.week)?.counts_for_ladder === false || rounds.get(f.week)?.kind === 'preseason' ? { exhibition: true } : {}), ...(rounds.get(f.week)?.kind === 'preseason' ? { preseason: true } : {}), ...(labels.get(f.week).name ? { round_name: labels.get(f.week).name } : {}), home: f.home, away: f.away, ...(f.starts_at ? melbParts(f.starts_at) : {}),
-      ...(f.stage ? { stage: f.stage } : {}), ...(f.postponed ? { postponed: true } : {}), ...(result.has(f.id) ? { result: result.get(f.id) } : {}) })),
+      ...(f.stage ? { stage: f.stage } : {}), ...(f.cup ? { cup: f.cup, cup_name: (cupRows || []).find(x => x.key === f.cup)?.name || 'Summer Cup' } : {}), ...(f.postponed ? { postponed: true } : {}), ...(result.has(f.id) ? { result: result.get(f.id) } : {}) })),
   };
 }
 

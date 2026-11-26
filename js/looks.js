@@ -60,10 +60,12 @@ export function boardOf(look) {
   return t ? { bg: t.bg, edge: t.edge, ink: t.ink, plate: t.plate, plateInk: t.plateInk, clock: t.clock, clockInk: t.clockInk } : OLDER_BOARD[look?.key] || OLDER_BOARD.classic;
 }
 // A finals match's stage in words, or null. Every plate reads it from here.
-export const stageName = fx => ({ EF: 'Elimination final', SF: 'Semi-final', TP: 'Third place final', GF: 'Grand Final' })[fx?.stage] || null;
+// A cup knockout (S-51: a fixture with a cup and a stage) names its cup: "Summer Cup semi-final", "Summer Cup Final".
+export const stageName = fx => (fx?.cup && fx?.stage ? ({ SF: `${fx.cup_name || 'Summer Cup'} semi-final`, GF: `${fx.cup_name || 'Summer Cup'} Final` })[fx.stage] || null
+  : ({ EF: 'Elimination final', SF: 'Semi-final', TP: 'Third place final', GF: 'Grand Final' })[fx?.stage] || null);
 
 // The looks that dress the match page (the user's list, 5 Nov 2026). Any other look, Classic included, leaves the page as it always was.
-export const EVENT_LOOKS = ['opening_week', 'spring_blossom', 'movember', 'derby', 'festive', 'new_year', 'australia_day', 'last_round', 'finals', 'third_place', 'grand_final', 'lunar_new_year'];
+export const EVENT_LOOKS = ['summer_cup', 'opening_week', 'spring_blossom', 'movember', 'derby', 'festive', 'new_year', 'australia_day', 'last_round', 'finals', 'third_place', 'grand_final', 'lunar_new_year'];
 export const isEventLook = key => EVENT_LOOKS.includes(key);
 
 // What stands in the bottom corners of an event's match page (assets/looks, Fluent Emoji 3D, MIT): side, height and distance from the edge in px at desktop size, later ones
@@ -81,6 +83,7 @@ export const SCENES = {
   finals: { props: [PROP('trophy', 'right', 170)] },
   third_place: { props: [PROP('3rd_place_medal', 'right', 150)] },
   grand_final: { props: [PROP('trophy', 'right', 230), PROP('1st_place_medal', 'left', 120)] },
+  summer_cup: { props: [PROP('sun', 'right', 170), PROP('soccer_ball', 'left', 76)] },
   lunar_new_year: { props: [PROP('red_paper_lantern', 'right', 170, 92), PROP('red_paper_lantern', 'right', 120, 20), PROP('firecracker', 'left', 110)] },
 };
 
@@ -100,6 +103,11 @@ export const artOf = look => look?.theme?.art || OLDER_ART[look?.key] || 'mow';
 // The looks that ship with the app. The five older looks (classic, finals, grand_final, christmas, derby) keep their own designs in
 // css/scoreboard.css and have no theme here.
 export const PRESETS = {
+  // The Summer Cup (S-51): a summer sun rising over a striped pitch. Deep Ocean board, coral to gold plate, surf clock, sand text (the brand board, 26 Nov 2026).
+  summer_cup: {
+    name: 'Summer Cup', banner: 'SUMMER CUP', accent: '#ff6b4a',
+    theme: { bg: ['#0b2f3a', '#061a21'], edge: '#ffb627', ink: '#fff3df', score: ['#ffffff', '#ffe3b0'], plate: ['#ff6b4a', '#ffb627'], plateInk: '#061a21', glow: '#ffb627', clock: '#22b8b0', clockInk: '#061a21', fx: ['shine'], spill: 'glints' },
+  },
   lunar_new_year: {
     name: 'Lunar New Year', banner: 'LUNAR NEW YEAR', accent: '#e8b923',
     theme: { bg: ['#8f1420', '#3c060c'], edge: '#e8b923', ink: '#fff3d6', score: ['#ffffff', '#ffe9a8'], plate: ['#f2c94c', '#c9971c'], plateInk: '#3c0a0a', glow: '#e8b923', clock: '#f2c94c', clockInk: '#3c0a0a', fx: ['shine'], spill: 'gold' },
