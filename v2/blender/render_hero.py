@@ -10,11 +10,7 @@ argv = sys.argv[sys.argv.index('--') + 1:]
 # --head <donor.fbx>: another Mixamo character's face, hair and beard on this body and kit (headswap.py)
 HEAD = argv[argv.index('--head') + 1] if '--head' in argv else None
 if HEAD: i = argv.index('--head'); argv = argv[:i] + argv[i + 2:]
-# --traits <player.json>: match the player's site portrait (v2/faces/traits.mjs): skin, hair, beard (portrait_match.py). Needs --head.
-TRAITS = None
-if '--traits' in argv:
-    i = argv.index('--traits'); import json; TRAITS = json.load(open(argv[i + 1], encoding='utf-8')); argv = argv[:i] + argv[i + 2:]
-# --studio: a front-on head-and-shoulders studio shot framed like the site portrait, in place of the night stadium
+# --studio: a front-on head-and-shoulders studio close-up, in place of the night stadium
 STUDIO = '--studio' in argv
 if STUDIO: argv.remove('--studio')
 SRC, OUT = argv[0], argv[1]
@@ -30,7 +26,7 @@ print('INSPECT', {n: [s.material.name for s in o.material_slots] for n, o in M.i
 
 # ---------- pose: frame 150 of Mixamo's soccer idle (an action stance, head up); dual-quaternion skinning keeps volume at the joints ----------
 sc.frame_set(150)
-if STUDIO:   # hold this frame's pose, with the neck and head straight so he faces the camera as in the portrait
+if STUDIO:   # hold this frame's pose, with the neck and head straight so he faces the camera
     rig.animation_data.action = None
     for b in rig.pose.bones:
         b.rotation_mode = 'QUATERNION'; b.rotation_quaternion = (1, 0, 0, 0)
@@ -66,17 +62,11 @@ print('TEXTURES', DIFF and DIFF.name, NORM and NORM.name, SPEC and SPEC.name, GL
 OURS = {'diff': DIFF, 'norm': NORM, 'gloss': GLOSS}
 
 # ---------- another face (optional) ----------
-TINT, HEADS = (1.0, 1.0, 1.0), []
+TINT, HEADS, FACE_TINT = (1.0, 1.0, 1.0), [], (1.0, 1.0, 1.0)
 if HEAD:
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import headswap
     HEADS, TINT, FACE_TONE, OUR_TONE = headswap.swap(rig, M, HEAD, lambda m: tex_of(m, 'Base Color'))
-FACE_TINT = (1.0, 1.0, 1.0)
-if TRAITS:
-    import portrait_match
-    FACE_TINT = portrait_match.tint_to(TRAITS['skin'], FACE_TONE)
-    TINT = portrait_match.tint_to(TRAITS['skin'], OUR_TONE)
-    print('PORTRAIT', TRAITS['name'], TRAITS['skin'], TRAITS['hair'], TRAITS['hairC'], TRAITS['beard'], 'face tint', [round(c, 2) for c in FACE_TINT], 'body tint', [round(c, 2) for c in TINT])
     for n in ('Ch38_Hair', 'Ch38_Eyelashes'):   # the footballer's own hair and lashes go with his face
         if n in M: M[n].hide_render = True; M[n].hide_viewport = True
     for o in HEADS:
@@ -115,8 +105,6 @@ class G:   # a small graph builder so each material reads top to bottom
         return self.img(self.T['diff'])
     def roughness_from_gloss(self, lo, hi):   # Mixamo ships glossiness; roughness is its inverse, squeezed into a believable range
         g = self.img(self.T['gloss'], True); inv = self.n('ShaderNodeMath', operation='SUBTRACT'); inv.inputs[0].default_value = 1
-        if self.T.get('is_roughness'):   # a map the importer wired straight to Roughness is roughness already: don't invert it
-            inv.operation = 'ADD'; inv.inputs[0].default_value = 0
         self.l(g, 'Color', inv, 1)
         mr = self.n('ShaderNodeMapRange'); mr.inputs['To Min'].default_value = lo; mr.inputs['To Max'].default_value = hi
         self.l(inv, 0, mr, 'Value'); return mr
@@ -136,7 +124,7 @@ def skin(T=None, tint=(1, 1, 1), name='skin'):
     # the texture's own tone, warmed slightly toward living skin
     warm = g.n('ShaderNodeMix', data_type='RGBA', blend_type='MULTIPLY'); warm.inputs['Factor'].default_value = 0.15
     warm.inputs[7].default_value = (1.0, 0.86, 0.80, 1)
-    # tint: the body's skin matched to the new face's tone (portrait_match.py sets it by its label)
+    # tint: the body's skin matched to the new face's tone (natural_head.py sets it by its label)
     tn = g.n('ShaderNodeMix', data_type='RGBA', blend_type='MULTIPLY'); tn.inputs['Factor'].default_value = 1.0; tn.label = 'TINT'
     tn.inputs[7].default_value = (*tint, 1); g.l(alb, 'Color', tn, 6); g.l(tn, 2, warm, 6)
     g.l(warm, 2, b, 'Base Color')
@@ -231,8 +219,8 @@ for o in HEADS:
     part = o.name.split('_')[-1]
     m0 = o.data.materials[0]
     if part == 'Body':
-        T = {'diff': tex_of(m0, 'Base Color'), 'norm': tex_of(m0, 'Normal'), 'gloss': tex_of(m0, 'Roughness') or GLOSS, 'is_roughness': STUDIO and bool(tex_of(m0, 'Roughness'))}
-        print('HEAD TEXTURES', {k: getattr(v, 'name', v) for k, v in T.items()})
+        T = {'diff': tex_of(m0, 'Base Color'), 'norm': tex_of(m0, 'Normal'), 'gloss': tex_of(m0, 'Roughness') or GLOSS}
+        print('HEAD TEXTURES', {k: v and v.name for k, v in T.items()})
         FACE_MAT = skin(T, tint=FACE_TINT, name='face')
         o.data.materials.clear(); o.data.materials.append(FACE_MAT)
     else:
@@ -251,15 +239,11 @@ fwd = (rig.matrix_world.to_3x3() @ head.matrix.to_3x3() @ Vector((0, 0, 1))).nor
 fwd.z = 0; fwd = fwd.normalized() if fwd.length > 1e-3 else Vector((0, -1, 0))
 EYES = H + (top - H) * 0.45 + fwd * 0.09
 print('EYES', tuple(round(c, 3) for c in EYES), 'facing', tuple(round(c, 2) for c in fwd))
-if TRAITS:
-    hands = []
-    bm_ = M['Ch38_Body']; mwb = bm_.matrix_world
-    hb = [rig.matrix_world @ b.bone.head_local for b in pb if b.name.split(':')[-1] in ('LeftHand', 'RightHand')]   # rest pose, as the mesh data
-    hands = [v.index for v in bm_.data.vertices if min(((mwb @ v.co) - h).length for h in hb) < 0.1]
-    import headswap
-    BODY_TONE = headswap._avg_skin(bm_, DIFF, hands); print('HANDS', len(hands), 'tone', BODY_TONE.round(3))
+if HEADS:   # the head keeps its own face, hair and skin; the neck and the footballer's skin are made to agree with it
+    import natural_head
     FACE_IMG = next(n.image for n in FACE_MAT.node_tree.nodes if n.type == 'TEX_IMAGE' and n.image and n.image.colorspace_settings.name != 'Non-Color')
-    portrait_match.dress(TRAITS, HEADS, EYES, fwd, FACE_MAT, FACE_IMG, None, ASSIGN['Ch38_Body'], BODY_TONE)
+    NECK_Z = (rig.matrix_world @ next(b for b in pb if b.name.endswith(':Neck')).head).z
+    natural_head.settle(HEADS, EYES, fwd, FACE_MAT, FACE_IMG, M['Ch38_Body'], ASSIGN['Ch38_Body'], DIFF, NECK_Z)
 
 # ---------- the ground: floodlit grass, out of focus ----------
 bpy.ops.mesh.primitive_plane_add(size=60, location=(0, 0, 0))
@@ -320,7 +304,7 @@ cam.rotation_euler = (look - cam.location).to_track_quat('-Z', 'Y').to_euler()
 cd.dof.focus_distance = (EYES - cam.location).length
 print('CAMERA', tuple(round(c, 2) for c in cam.location), 'focus', round(cd.dof.focus_distance, 3))
 
-# ---------- studio (optional): the site portrait's framing, front on, head and shoulders, soft key light, plain backdrop ----------
+# ---------- studio (optional): a close-up: front on, head and shoulders, soft key light, plain backdrop ----------
 if STUDIO:
     for o in list(sc.objects):
         if o.type == 'LIGHT' or (o.type == 'MESH' and o.name.startswith(('Plane', 'Sphere'))): bpy.data.objects.remove(o, do_unlink=True)
@@ -335,7 +319,7 @@ if STUDIO:
     wm = bpy.data.materials.new('backdrop'); wm.use_nodes = True; wb = wm.node_tree.nodes['Principled BSDF']
     wb.inputs['Base Color'].default_value = (0.8, 0.84, 0.89, 1); wb.inputs['Roughness'].default_value = 0.9; wall.data.materials.append(wm)
     cd.lens = 85; cd.dof.aperture_fstop = 4.0
-    mid = EYES - Vector((0, 0, 0.13))                    # the portrait frames from the crown to the upper chest, eyes a little above centre
+    mid = EYES - Vector((0, 0, 0.13))                    # from the crown to the upper chest, eyes a little above centre
     cam.location = mid + fwd * 2.35
     cam.rotation_euler = (mid - cam.location).to_track_quat('-Z', 'Y').to_euler()
     cd.dof.focus_distance = (EYES - cam.location).length

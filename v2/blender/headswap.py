@@ -30,6 +30,39 @@ def _avg_skin(obj, img, verts):
                 cols.append(px[int((v % 1) * (h - 1)), int((u % 1) * (w - 1)), :3])
     return np.median(np.array(cols), axis=0) if cols else np.array([0.5, 0.5, 0.5])
 
+def _donor_parts(drig, meshes):
+    """the donor's meshes by part name (Body, Hair, Eyelashes, Beard, ...). Mixamo characters come three ways: one mesh per part
+    ('Ch08_Hair'), numbered ('Ch42_Body1'), or one mesh with a material per part ('Ch12' with Ch12_body + Ch12_hair). A one-piece mesh is
+    split by material; parts are then named by object or material, and if two claim 'Body', the one holding the head wins."""
+    import re
+    def norm(n): return re.sub(r'[\d.]+$', '', n.split('_')[-1]).capitalize()
+    parts = []
+    for o in meshes:
+        if len(o.data.materials) > 1:
+            bpy.ops.object.select_all(action='DESELECT'); o.select_set(True); bpy.context.view_layer.objects.active = o
+            before = set(bpy.data.objects)
+            bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT')
+            bpy.ops.mesh.separate(type='MATERIAL'); bpy.ops.object.mode_set(mode='OBJECT')
+            parts += [o] + [x for x in bpy.data.objects if x not in before]
+        else:
+            parts.append(o)
+    out, heads = {}, []
+    hz = _world(drig, 'Head').z
+    for o in parts:
+        name = norm(o.name)
+        if name not in HEAD_PARTS and o.data.materials: name = norm(o.data.materials[0].name)
+        if name not in HEAD_PARTS:
+            bpy.data.objects.remove(o, do_unlink=True); continue
+        if name == 'Body':   # how much of this piece is up at the head
+            mw = o.matrix_world; heads.append(((sum(1 for v in o.data.vertices if (mw @ v.co).z > hz)), o)); continue
+        if name in out: name = name + '2'
+        out[name] = o
+    if heads:
+        heads.sort(key=lambda t: -t[0]); out['Body'] = heads[0][1]
+        for _, o in heads[1:]: bpy.data.objects.remove(o, do_unlink=True)
+    print('DONOR PARTS', {k: v.name for k, v in out.items()})
+    return out
+
 def swap(body_rig, body_meshes, donor_fbx, diffuse_of):
     """body_meshes: the footballer's meshes by name. diffuse_of(mat) -> albedo image. Returns (new head objects, skin tint for the
     footballer's own skin as an RGB ratio, the new face's texture tone, the footballer's own face tone), tones as linear RGB."""
@@ -37,7 +70,7 @@ def swap(body_rig, body_meshes, donor_fbx, diffuse_of):
     bpy.ops.import_scene.fbx(filepath=donor_fbx)
     new = [o for o in bpy.data.objects if o not in before]
     drig = next(o for o in new if o.type == 'ARMATURE')
-    dmeshes = {o.name: o for o in new if o.type == 'MESH'}
+    dmeshes = _donor_parts(drig, [o for o in new if o.type == 'MESH'])
     # rest pose for both, so the mesh data is the bind shape
     for r in (body_rig, drig): r.data.pose_position = 'REST'
     bpy.context.view_layer.update()
@@ -71,9 +104,15 @@ def swap(body_rig, body_meshes, donor_fbx, diffuse_of):
         if p.z > neck_base.z - 0.03 and (Vector((p.x, p.y)) - axis_xy).length < 0.16:
             if p.z > bh.z + 0.02: face_verts.append(v.index)
             # keep his neck up to the donor's jaw (a donor's mesh stops where his own collar was); drop the rest
-            if p.z > neck_base.z + 0.065 and not under_shirt(p, (mw.to_3x3() @ v.normal).normalized()):
+            if p.z > neck_base.z + 0.09 and not under_shirt(p, (mw.to_3x3() @ v.normal).normalized()):
                 gone.add(v.index)
     our_tone = _avg_skin(body, diffuse_of(body.data.materials[0]), face_verts)
+    # what's left of his neck above the collar line sits 4 mm inside the donor's, so where both necks overlap the donor's skin is the
+    # one seen (a scanned neck is often slimmer than the footballer's and his would show through as a band)
+    k_in = 0.004 / mw.to_scale()[0]
+    for v in bm.verts:
+        if v.index not in gone and (mw @ v.co).z > neck_base.z - 0.02 and (Vector(((mw @ v.co).x, (mw @ v.co).y)) - axis_xy).length < 0.16:
+            v.co -= v.normal * k_in
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if any(v.index in gone for v in f.verts)], context='FACES')
     bm.to_mesh(body.data); bm.free()
 
@@ -81,8 +120,7 @@ def swap(body_rig, body_meshes, donor_fbx, diffuse_of):
     # poke through our shirt)
     prefix = _bone(body_rig, 'Head').name.split(':')[0] + ':'
     heads, their_tone = [], None
-    for name, o in dmeshes.items():
-        part = name.split('_')[-1]
+    for part, o in dmeshes.items():
         if part not in HEAD_PARTS:
             bpy.data.objects.remove(o, do_unlink=True); continue
         bm = bmesh.new(); bm.from_mesh(o.data)
@@ -92,7 +130,10 @@ def swap(body_rig, body_meshes, donor_fbx, diffuse_of):
         for v in bm.verts:
             p = place @ (ow @ v.co)
             r = (Vector((p.x, p.y)) - axis_xy).length
-            keep = p.z > neck_base.z + 0.04 or (p.z > neck_base.z - 0.045 and r < 0.095)   # the whole throat: overlaps the footballer's kept neck
+            # the whole throat, under the chin too (it sits forward of the head joint; the body faces -Y in the rest pose), down
+            # into the collar, overlapping the footballer's kept neck; narrow at the sides and back so his shoulders stay inside our shirt
+            fwd_off = -(p.y - axis_xy.y)
+            keep = p.z > neck_base.z + 0.04 or (p.z > neck_base.z - 0.045 and (r < 0.095 or (fwd_off > 0.03 and r < 0.15)))
             if not keep: drop.append(v)
             elif part == 'Body' and p.z > bh.z + 0.02: face.append(v.index)
         if part == 'Body':
