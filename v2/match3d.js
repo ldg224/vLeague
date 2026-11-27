@@ -303,10 +303,11 @@ function mocapFigure(p) {
     m.roughness = n === 'shirt' ? 0.7 : 0.85; m.metalness = 0;
     o.material = m;
   });
+  let hipsBone = null; body.traverse(o => { if (o.isBone && !hipsBone && /Hips$/.test(o.name)) hipsBone = o; });
   const mixer = new THREE.AnimationMixer(body), A = {};
   for (const n of [...Object.keys(GAIT), ...Object.keys(SIDE), 'gk_idle']) if (CLIP[n]) { const a = mixer.clipAction(CLIP[n]); a.play(); a.setEffectiveWeight(0); A[n] = a; }
   scene.add(root);
-  return { root, mixer, A, gk, mocap: true, W: {}, one: null, yaw: p.side ? -Math.PI / 2 : Math.PI / 2, phase: 0, last: null };
+  return { root, mixer, A, gk, mocap: true, hipsBone, W: {}, one: null, yaw: p.side ? -Math.PI / 2 : Math.PI / 2, phase: 0, last: null };
 }
 function mocapPose(L, t, dt, sp, vx, vy, act, skip = false, snap = false) {
   // half-rate animation: a skipped frame only banks its time; the next one plays it all (position and facing still move every frame)
@@ -553,6 +554,7 @@ document.getElementById('goal').onclick = () => { const g = goals.find(e => e.t 
 // ---------- loop, with a frame-rate meter that lowers the resolution if a device struggles ----------
 const stats = { upd: 0, rend: 0, q: LOW ? 'low' : 'high' };
 // soft round shadows for the low level: one draw for all the players and the ball
+if (LOW) scene.matrixWorldAutoUpdate = false;   // the low level updates the scene's matrices itself, once a frame, before placing the blobs
 const blobs = (() => {
   const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
   gr.addColorStop(0, 'rgba(0,0,0,.55)'); gr.addColorStop(0.6, 'rgba(0,0,0,.3)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
@@ -560,7 +562,7 @@ const blobs = (() => {
   const m = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }), NP + 1);
   m.frustumCulled = false; m.renderOrder = 1; m.visible = LOW; scene.add(m); return m;
 })();
-const _m = new THREE.Matrix4(), _fr = new THREE.Frustum(), _pm = new THREE.Matrix4(), _sph = new THREE.Sphere(new THREE.Vector3(), 1.6);
+const _hp = new THREE.Vector3(), _m = new THREE.Matrix4(), _fr = new THREE.Frustum(), _pm = new THREE.Matrix4(), _sph = new THREE.Sphere(new THREE.Vector3(), 1.6);
 function blob(k, x, z, r) { _m.makeScale(r, 1, r).setPosition(x, 0.02, z); blobs.setMatrixAt(k, _m); }
 let frame = 0, lastMs = performance.now(), acc = 0, n = 0, slow = 0, lastScene = null, lastKind = '';
 const fpsEl = document.getElementById('fps'), capEl = document.getElementById('cap'), tagEl = document.getElementById('tag');
@@ -577,7 +579,7 @@ function loop(ms) {
   const B = ballAt(st), [bx, bz] = W(B.x, B.y);
   ball.position.set(bx, 0.11 + Math.max(0, B.z), bz);
   ball.rotation.x += B.vy * dtReal * speed / 0.11 * 0.5; ball.rotation.z -= B.vx * dtReal * speed / 0.11 * 0.5;
-  if (DEMO) demo(ms / 1000, dtReal);
+  if (DEMO) { demo(ms / 1000, dtReal); if (LOW) scene.updateMatrixWorld(); }
   else {
     // only players in the picture are animated and drawn (the skinned meshes can't cull themselves: their bounds don't follow the animation)
     cam.updateMatrixWorld(); _fr.setFromProjectionMatrix(_pm.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
@@ -585,12 +587,16 @@ function loop(ms) {
     let nb = 0; frame++;
     for (let i = 0; i < NP; i++) {
       const L = figs[i]; let on = onPitch(i, st);
-      if (on) { const [x, y] = sample(st, 6 + i * 2), [X, Z] = W(x, y); _sph.center.set(X, 0.9, Z); on = _fr.intersectsSphere(_sph); if (LOW && on) blob(nb++, X, Z, 1.1); }
+      if (on) { const [x, y] = sample(st, 6 + i * 2), [X, Z] = W(x, y); _sph.center.set(X, 0.9, Z); on = _fr.intersectsSphere(_sph); }
       L.root.visible = on;
       if (on) pose(L, i, st, jumped ? 1 : dtReal * Math.max(1, speed), B, half ? { skip: (i + frame) & 1 } : null);
       else L.last = null;
     }
-    if (LOW) { blob(nb++, bx, bz, 0.5 / (1 + Math.max(0, B.z) * 0.25)); blobs.count = nb; blobs.instanceMatrix.needsUpdate = true; }
+    if (LOW) {
+      // blobs go under each body's hips, not the match-file spot: one-off moves (a slide tackle, a dive) carry the body away from it
+      scene.updateMatrixWorld();
+      for (let i = 0; i < NP; i++) { const L = figs[i]; if (!L.root.visible) continue; if (L.hipsBone) { L.hipsBone.getWorldPosition(_hp); blob(nb++, _hp.x, _hp.z, 1.1); } else blob(nb++, L.root.position.x, L.root.position.z, 1.1); }
+      blob(nb++, bx, bz, 0.5 / (1 + Math.max(0, B.z) * 0.25)); blobs.count = nb; blobs.instanceMatrix.needsUpdate = true; }
   }
   tagEl.textContent = shot.label || ''; tagEl.style.display = shot.label ? 'block' : 'none';
   const sc = goals.filter(g => g.t <= t).at(-1)?.score || [0, 0];

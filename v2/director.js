@@ -20,7 +20,8 @@
 const CAM_DT = 0.1;                       // main camera path sample step (s)
 const GANTRY = { x: 0, y: 22, z: 34 + 38 }; // the main TV camera: high in the main stand at the halfway line, beyond the near touchline (Z = +34)
 const WIDTH = { base: 38, fast: 54 };     // metres across the picture: normal, and opened out for a fast ball
-const PORTRAIT_WIDTH = 24;                // a phone held upright sees a narrower strip, so the players stay a readable size
+const PORTRAIT_WIDTH = 15;                // metres across an upright phone's picture at the play
+const PORTRAIT_CAM = { y: 24, back: 18, lead: 5 }; // upright: camera height, metres behind the play (near side), aim this far beyond it                // a phone held upright sees a narrower strip, so the players stay a readable size
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const lerp = (a, b, k) => a + (b - a) * k;
 const ease = x => x * x * (3 - 2 * x);
@@ -125,10 +126,16 @@ export function makeDirector(data, { ballAt }) {
     if (aspect < 1) {
       // Upright phones see a narrow strip: a lower camera that tracks along the near side, square on to the play, with the ball kept well inside
       // the narrower picture (where the ball is now, nothing ahead).
+      // The camera follows the play across the pitch as well as along it (it stays PORTRAIT_CAM.back metres on the near side of the play), so
+      // the play is big and fills the tall picture instead of sitting high above empty near-side grass. It aims a little beyond the play, but
+      // never past the far touchline, and climbs as the play goes to the far side, so the far stand only shows as a strip at the top.
       w = Math.min(w, PORTRAIT_WIDTH) * (w > WIDTH.base + 1 ? 1.25 : 1);
       const b = ballAt(t), [bx, bz] = S(b.x, b.y), hx = w * 0.3, hz = w * 0.45;
       x = clamp(x, bx - hx, bx + hx); z = clamp(z, bz - hz, bz + hz);
-      pos = [x, 24, 34 + 13];   // high and close: an upright picture is mostly pitch, not sky
+      pos = [x, PORTRAIT_CAM.y + Math.max(0, -12 - z) * 0.6, z + PORTRAIT_CAM.back];
+      const look = [x, 0.5, Math.max(-30, z - PORTRAIT_CAM.lead)];
+      const dist = Math.hypot(pos[0] - look[0], pos[1] - look[1], pos[2] - look[2]);
+      return out(pos, look, vfov(w, dist, aspect), t, '', 'main');
     } else pos = [GANTRY.x + x * 0.12, GANTRY.y, GANTRY.z];
     const look = [x, 0.5, z];
     const dist = Math.hypot(pos[0] - look[0], pos[1] - look[1], pos[2] - look[2]);
