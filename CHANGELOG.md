@@ -3,6 +3,30 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.50.0 (2026-11-27)
+
+Headlines: A Table tab | Use last week's line-up
+
+**Added:**
+- A Table tab, after Overview, on desktop and phones (B-47). The table stays on Overview too.
+- "Use last week's line-up" on the team sheet (S-46): one tap fills in last round's XI, bench, captain, shape and kit. The boosted captain isn't copied. Players who are now suspended or released leave an empty spot marked in amber, ready to fill.
+- Stakes: $250 and $500 bets, alongside $10, $50, $100 and All in (S-41).
+- The boosted captain's name tag glows with a C badge when they have the ball (S-44).
+- A small "trouble" sign on the scoreboard while a team's boosted captain is rated under 6.0 (S-45).
+
+**Changed:**
+- Match ratings work like FotMob's (B-48): everyone starts at 6.0, and goals, assists, chances made, dribbles, defending and saves add to it, while mistakes, cards and goals conceded take away. Most players now land between 6.0 and 7.5; forwards are no longer rated higher just for playing up front. The live rating during a match uses the same sums.
+
+**Fixed:**
+- Own goals show on the side of the team they count for: on the scoreboard, in the timeline, momentum, highlights, broadcast and the matchday show (B-51, B-46). The own-goal scorer gets a red ball in the line-up.
+- A cross or pass that goes straight in now counts as a shot and a goal for the player, so it lifts their rating (B-48, Stijn Visser).
+- Shot map: no more "off target by" distance; misses are never drawn on target; a blocked shot's line stops at the block (B-50).
+- Stakes shows one round at a time instead of the next two (B-52).
+
+**Removed:** the unused Instagram card files left over from 1.49.2.
+
+Database change: no.
+
 ## 1.49.2 (2026-11-27)
 
 **Removed:** the Instagram card on Overview, and its section in Editor > News.
