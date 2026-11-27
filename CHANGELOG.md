@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.49.2 (2026-11-27)
+
+**Removed:** the Instagram card on Overview, and its section in Editor > News.
+
+**Fixed:** Team of the Week on wide screens keeps its pitch's shape. It used to stretch to end level with the left column, which made it very long once the Summer Cup tables were in.
+
+Database change: no.
+
 ## 1.49.1 (2026-11-27)
 
 **Changed:** Summer Cup matches stand out with a gold outline in Fixtures and in "This round" on Overview.
