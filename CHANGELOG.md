@@ -3,6 +3,22 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.49.0 (2026-11-27)
+
+**Added:** the Summer Cup (S-51), an in-season cup. Eleven clubs in three groups (A and B play each other once, C home and away), using chosen league matches in Rounds 6 to 14: each one counts for the league and for the cup group. The three group winners and the best runner-up (on points per game) go into cup-only semi-finals and a Final in January, which don't count for the league.
+- Table: a vLeague | Summer Cup switch. The cup view shows the three groups, the best runner-up race and a Knockouts card (who would meet if the groups ended now, then the real semi-finals and Final).
+- Fixtures: a Summer Cup view with every cup match, and a group badge on cup matches everywhere.
+- Match page and video: "Round 7 · Summer Cup · Group A", the Summer Cup scoreboard look (a festive version in the Festive Round) and Summer Cup advertising boards.
+- Stakes: cup matches carry the Summer Cup badge, a gold outline and a gold line.
+- Editor > Fixtures: a Cup choice on every match, and a cup stage (Group match, Semi-final, Final).
+- History: a Summer Cup trophy, shown once a winner is recorded.
+
+**Changed:** six clubs in the finals (S-50). The league keeps all 26 rounds. Week 27 Elimination Finals (3rd v 6th, 4th v 5th), week 28 Semi Finals (1st and 2nd come in), week 29 Grand Final; the Third Place Final goes. The table's Finals zone is now the top six, and match insights talk about "the top six". The Editor has an "Elimination final" stage.
+
+**Fixed:** in Round 7 and Round 11, two pairs of league fixtures were swapped to fit Group C's home-and-away games: SKS v Lads United and Cranbourne v Donald Trump (Round 7), SKS v Come Come and Cranbourne v Lucky (Round 11).
+
+Database change: yes (0098, 0099, 0100, already applied).
+
 ## 1.48.0 (2026-11-25)
 
 **Added:** a backup keeper. When a keeper is sent off and there's a keeper on the bench, he comes on for the lowest-rated outfield player (attack plus defence), so the team plays on with ten and a real keeper. With no keeper on the bench, an outfield player still goes in goal, as before. On the match page the keeper who came on is at the top of Substitutes with a green arrow and the minute, the player taken off wears a red arrow and the minute on the pitch, and the Events list shows the change. The match viewer brings him on at that moment. The Editor's test match has a new event, "Red card for the keeper", to try it.
