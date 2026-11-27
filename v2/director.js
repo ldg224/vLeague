@@ -141,12 +141,12 @@ export function makeDirector(data, { ballAt }) {
     return out([px + 2.5, height, pz + back], [px, 1.1, pz], vfov(aspect < 1 ? 5 : 8, Math.hypot(2.5, height - 1.1, back), aspect), t, '', 'close');
   }
   // High behind a goal, looking at the ball and leaning towards the goal (replays, corners).
-  function behindGoal(goalX, bx, by, aspect, width = 34) {
+  function behindGoal(goalX, bx, by, aspect, width = 34, height = 11) {
     const gx = goalX ? 52.5 : -52.5, sx = goalX ? 1 : -1;
-    const pos = [gx + sx * 16, 11, 0];
+    const pos = [gx + sx * 16, height, 0];
     const [lx, lz] = S(lerp(bx, goalX, 0.3), lerp(by, 34, 0.3));
     const look = [lx, 0.5, lz];
-    return { pos, look, fov: vfov(aspect < 1 ? width * 0.65 : width, Math.hypot(pos[0] - lx, 11, lz), aspect) };
+    return { pos, look, fov: vfov(aspect < 1 ? width * 0.65 : width, Math.hypot(pos[0] - lx, height, lz), aspect) };
   }
 
   function shot(t, dtReal = 0, aspect = 16 / 9) {
@@ -156,7 +156,7 @@ export function makeDirector(data, { ballAt }) {
     if (s.kind === 'refcam') return { ...closeUp(s.player, t, aspect, 5.5, 1.9), label: 'REF CAM', kind: 'refcam' };
     if (s.kind === 'foul') return { ...closeUp(s.player, t, aspect, 6, 1.6, [s.e.x, s.e.y]), kind: 'foul' };
     if (s.kind === 'replay') {
-      const st = s.r0 + (t - s.from), b = ballAt(st), c = behindGoal(s.goalX, b.x, b.y, aspect, clamp(20 + Math.hypot(b.x - s.goalX, b.y - 34) * 0.6, 26, 44));
+      const st = s.r0 + (t - s.from), b = ballAt(st), c = behindGoal(s.goalX, b.x, b.y, aspect, clamp(14 + Math.hypot(b.x - s.goalX, b.y - 34) * 0.5, 20, 40), 8);
       return out(c.pos, c.look, c.fov, st, 'REPLAY', 'replay');
     }
     if (s.kind === 'corner') { const b = ballAt(t), c = behindGoal(s.goalX, lerp(b.x, s.goalX ? 94 : 11, 0.45), lerp(b.y, 34, 0.45), aspect, 44); return out(c.pos, c.look, c.fov, t, '', 'corner'); }

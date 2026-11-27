@@ -16,10 +16,14 @@ const W = (x, y) => [x - 52.5, y - 34];   // match metres (top-left origin) -> s
 
 // ---------- renderer, scene, camera ----------
 const stage = document.getElementById('stage');
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-let pr = Math.min(devicePixelRatio, 2);
+// V2-5: two quality levels. 'low' (phones and tablets: a touch screen, or ?q=low) has no shadow maps (soft blobs under the players and ball
+// instead), no antialiasing (the screen's density hides the edges), at most 1.5 pixels per CSS pixel, and the players' animation worked out at
+// half rate in the wide shot. 'high' (desktop, or ?q=high) keeps everything.
+const LOW = q.get('q') ? q.get('q') === 'low' : matchMedia('(pointer: coarse)').matches;
+const renderer = new THREE.WebGLRenderer({ antialias: !LOW, powerPreference: 'high-performance' });
+let pr = Math.min(devicePixelRatio, LOW ? 1.5 : 2);
 renderer.setPixelRatio(pr);
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = !LOW;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
@@ -304,7 +308,11 @@ function mocapFigure(p) {
   scene.add(root);
   return { root, mixer, A, gk, mocap: true, W: {}, one: null, yaw: p.side ? -Math.PI / 2 : Math.PI / 2, phase: 0, last: null };
 }
-function mocapPose(L, t, dt, sp, vx, vy, act) {
+function mocapPose(L, t, dt, sp, vx, vy, act, skip = false, snap = false) {
+  // half-rate animation: a skipped frame only banks its time; the next one plays it all (position and facing still move every frame)
+  L.mdt = (L.mdt || 0) + dt;
+  if (skip && !snap) return;
+  dt = L.mdt; L.mdt = 0;
   // the run: blend the two gaits either side of his speed, in the direction he moves relative to where he faces
   const want = {};
   const f = vx * Math.sin(L.yaw) + vy * Math.cos(L.yaw), l = vx * Math.cos(L.yaw) - vy * Math.sin(L.yaw);
@@ -333,7 +341,7 @@ function mocapPose(L, t, dt, sp, vx, vy, act) {
   }
   if (!oneW && L.one) { L.one.a.stop(); L.one = null; }
   // ease each gait's weight towards what it should be, so changes of pace blend
-  const k = 1 - Math.exp(-dt * 8);
+  const k = snap ? 1 : 1 - Math.exp(-dt * 8);   // just appeared (a cut, or back in the picture): take up the right gait at once
   for (const [n, a] of Object.entries(L.A)) {
     L.W[n] = (L.W[n] || 0) + ((want[n] || 0) - (L.W[n] || 0)) * k;
     a.setEffectiveWeight(L.W[n] * (1 - oneW));
@@ -411,15 +419,15 @@ const ease = x => x * x * (3 - 2 * x);
 const lerp = (a, b, k) => a + (b - a) * k;
 const angDiff = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 function pose(L, i, t, dtReal, B, ov) {
-  const [x, y, vx, vy] = ov ? ov.s : sample(t, 6 + i * 2), [X, Z] = W(x, y), sp = Math.hypot(vx, vy);
+  const [x, y, vx, vy] = ov?.s ? ov.s : sample(t, 6 + i * 2), [X, Z] = W(x, y), sp = Math.hypot(vx, vy);
   L.root.position.set(X, 0, Z);
-  const act = ov ? ov.act : actAt(i, t);
+  const act = ov?.s ? ov.act : actAt(i, t);
   // facing: the way he runs when he's moving; otherwise the ball; a kick faces where it goes
   let want = sp > 1.2 ? Math.atan2(vx, vy) : Math.atan2(B.x - x, B.y - y);
   if (act?.dir && Math.abs(t - act.t) < 0.4) want = Math.atan2(act.dir[0], act.dir[1]);
-  L.yaw += angDiff(L.yaw, want) * Math.min(1, dtReal * (sp > 4 ? 6 : 4));
+  if (L.last == null) L.yaw = want; else L.yaw += angDiff(L.yaw, want) * Math.min(1, dtReal * (sp > 4 ? 6 : 4));
   L.root.rotation.y = L.yaw;
-  if (L.mocap) { mocapPose(L, t, L.last == null ? 0 : Math.min(0.25, Math.abs(t - L.last)), sp, vx, vy, act); L.last = t; return; }
+  if (L.mocap) { mocapPose(L, t, L.last == null ? 0 : Math.min(0.25, Math.abs(t - L.last)), sp, vx, vy, act, ov?.skip, L.last == null); L.last = t; return; }
   // running: the stride cycle moves with the ground he covers, so feet don't slide
   const a = Math.min(1, sp / 7.5), stride = 1.5 + 0.18 * sp;
   if (L.last != null) L.phase += Math.min(3, Math.abs(t - L.last) * sp) / stride * Math.PI * 2;
@@ -543,11 +551,23 @@ for (const b of document.querySelectorAll('[data-sp]')) b.onclick = () => { spee
 document.getElementById('goal').onclick = () => { const g = goals.find(e => e.t > t + 2) || goals[0]; if (g) { t = g.t - 9; figs.forEach(f => (f.last = null)); } };
 
 // ---------- loop, with a frame-rate meter that lowers the resolution if a device struggles ----------
-let lastMs = performance.now(), acc = 0, n = 0, slow = 0, lastScene = null, lastKind = '';
+const stats = { upd: 0, rend: 0, q: LOW ? 'low' : 'high' };
+// soft round shadows for the low level: one draw for all the players and the ball
+const blobs = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(0,0,0,.55)'); gr.addColorStop(0.6, 'rgba(0,0,0,.3)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  const geo = new THREE.PlaneGeometry(1, 1); geo.rotateX(-Math.PI / 2);
+  const m = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }), NP + 1);
+  m.frustumCulled = false; m.renderOrder = 1; m.visible = LOW; scene.add(m); return m;
+})();
+const _m = new THREE.Matrix4(), _fr = new THREE.Frustum(), _pm = new THREE.Matrix4(), _sph = new THREE.Sphere(new THREE.Vector3(), 1.6);
+function blob(k, x, z, r) { _m.makeScale(r, 1, r).setPosition(x, 0.02, z); blobs.setMatrixAt(k, _m); }
+let frame = 0, lastMs = performance.now(), acc = 0, n = 0, slow = 0, lastScene = null, lastKind = '';
 const fpsEl = document.getElementById('fps'), capEl = document.getElementById('cap'), tagEl = document.getElementById('tag');
 function loop(ms) {
   const dtReal = Math.min(0.1, (ms - lastMs) / 1000); lastMs = ms;
   if (playing) t = Math.min(T1, t + dtReal * speed);
+  const u0 = performance.now();
   // the camera first: it says which moment the scene shows (a replay shows earlier play)
   const shot = camera(t, dtReal), st = shot.sceneT;
   // a cut that jumps the scene in time (into or out of a replay): players take up their pose at once instead of blending from the old moment
@@ -558,7 +578,20 @@ function loop(ms) {
   ball.position.set(bx, 0.11 + Math.max(0, B.z), bz);
   ball.rotation.x += B.vy * dtReal * speed / 0.11 * 0.5; ball.rotation.z -= B.vx * dtReal * speed / 0.11 * 0.5;
   if (DEMO) demo(ms / 1000, dtReal);
-  else for (let i = 0; i < NP; i++) { const on = onPitch(i, st); figs[i].root.visible = on; if (on) pose(figs[i], i, st, jumped ? 1 : dtReal * Math.max(1, speed), B); }
+  else {
+    // only players in the picture are animated and drawn (the skinned meshes can't cull themselves: their bounds don't follow the animation)
+    cam.updateMatrixWorld(); _fr.setFromProjectionMatrix(_pm.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+    const half = LOW && !['celebrate', 'refcam', 'foul', 'close', 'test'].includes(shot.kind);   // close-ups keep full-rate movement
+    let nb = 0; frame++;
+    for (let i = 0; i < NP; i++) {
+      const L = figs[i]; let on = onPitch(i, st);
+      if (on) { const [x, y] = sample(st, 6 + i * 2), [X, Z] = W(x, y); _sph.center.set(X, 0.9, Z); on = _fr.intersectsSphere(_sph); if (LOW && on) blob(nb++, X, Z, 1.1); }
+      L.root.visible = on;
+      if (on) pose(L, i, st, jumped ? 1 : dtReal * Math.max(1, speed), B, half ? { skip: (i + frame) & 1 } : null);
+      else L.last = null;
+    }
+    if (LOW) { blob(nb++, bx, bz, 0.5 / (1 + Math.max(0, B.z) * 0.25)); blobs.count = nb; blobs.instanceMatrix.needsUpdate = true; }
+  }
   tagEl.textContent = shot.label || ''; tagEl.style.display = shot.label ? 'block' : 'none';
   const sc = goals.filter(g => g.t <= t).at(-1)?.score || [0, 0];
   document.getElementById('bug-s').textContent = `${sc[0]}–${sc[1]}`;
@@ -567,15 +600,20 @@ function loop(ms) {
   capEl.style.display = g ? 'block' : 'none';
   if (g) capEl.textContent = `GOAL! ${byId[g.scorer]?.name || ''} ${g.score[0]}–${g.score[1]}`;
   seek.value = (t - T0) / (T1 - T0);
+  const u1 = performance.now();
   renderer.render(scene, cam);
+  const u2 = performance.now();
+  stats.upd += ((u1 - u0) - stats.upd) * 0.05; stats.rend += ((u2 - u1) - stats.rend) * 0.05;
   acc += dtReal; n++;
   if (acc > 1) {
     const fps = n / acc; acc = 0; n = 0;
     slow = fps < 45 ? slow + 1 : 0;
     if (slow >= 2 && pr > 1) { pr = Math.max(1, pr - 0.5); renderer.setPixelRatio(pr); resize(); slow = 0; }
+    Object.assign(stats, { fps: Math.round(fps), draws: renderer.info.render.calls, tris: renderer.info.render.triangles, pr });
+    if (LOW) fpsEl.dataset.q = 'low';
     fpsEl.textContent = `${Math.round(fps)} fps · ${renderer.info.render.calls} draws · ${(renderer.info.render.triangles / 1000).toFixed(0)}k tris · ×${pr}`;
   }
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
-window.__v2 = { setT: v => { t = v; figs.forEach(f => (f.last = null)); }, pause: () => { playing = false; }, play: () => { playing = true; }, director, shots: director?.shots, get t() { return t; } };
+window.__v2 = { setT: v => { t = v; figs.forEach(f => (f.last = null)); }, pause: () => { playing = false; }, play: () => { playing = true; }, director, shots: director?.shots, stats, get t() { return t; } };
