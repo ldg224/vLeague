@@ -94,60 +94,11 @@ def _player_stats(m):
         played = sent_off_at.get(p.id, total) - on_at.get(p.id, 0.0)
         s['minutes'] = min(90, round(played / total * 90)) if total else 0
         s['xg'] = round(s['xg'], 2)
-        s['rating'] = _rating(p, s, m)
     return stats
 
 
-# Rating calibration (PLAN T-05). Volume actions (passes, tackles, shot involvement, goals conceded...) add up with minutes, so
-# the sum is measured against what a typical player in that position does over a full match. A quiet game is then no better
-# than a busy one, and the league average no longer climbs as the match goes on. Keep js/live-rating.js in step.
-RATING_BASE = 6.6
-# S-25: taken off the match rating of a player picked in a slot that wants another position, by how far apart the two are:
-# a step along defence-midfield-attack costs 0.5, a forward in defence (or the other way round) 3, an outfield player in goal 4, a keeper in the outfield 3.5.
-# Keep js/pitch.js (positionPenalty) and js/live-rating.js in step.
-OUT_OF_POSITION = {
-    'GK': {'DEF': 4.0, 'MID': 4.0, 'FWD': 4.0},
-    'DEF': {'GK': 3.5, 'MID': 0.5, 'FWD': 3.0},
-    'MID': {'GK': 3.5, 'DEF': 0.5, 'FWD': 0.5},
-    'FWD': {'GK': 4.0, 'DEF': 3.0, 'MID': 0.5},
-}
-VOLUME_NORM = {'GK': 0.85, 'DEF': 0.50, 'MID': 1.33, 'FWD': 0.78}   # mean volume score at full time, measured on simulated matches
-
-
-def shape_rating(r):
-    """Diminishing returns above 6.8: a good game is 7.5-8.3, a brace about 8.4, and 9 is nearly out of reach
-    (like FotMob, where 10 is practically never given). Below 6.8 the raw score is kept as it is."""
-    if r <= 6.8:
-        return r
-    v = 6.8 + 2.2 * (1 - math.exp(-(r - 6.8) / 1.5))   # climbs towards 9.0
-    # B-20: a freak game (a double-figure scoring spree) has to be able to reach 10. Above 8.6 the last stretch is stretched so the curve ends at 10.0 instead of 9.0;
-    # everything up to a hat-trick-sized game is as before (a brace is about 8.4).
-    return v if v <= 8.6 else min(10.0, 8.6 + (v - 8.6) * 3.5)
-
-
-def _rating(p, s, m):
-    """FotMob-style 1-10 match rating built from the player's contributions."""
-    won = m.score[p.side] > m.score[1 - p.side]
-    lost = m.score[p.side] < m.score[1 - p.side]
-    r = RATING_BASE + 1.0 * s['goals'] + 0.7 * s['assists']
-    v = 0.25 * s['key_passes'] + 0.15 * s['shots_on_target']
-    v += 0.012 * s['passes_completed'] - 0.035 * (s['passes'] - s['passes_completed'])
-    v += 0.12 * s['tackles_won'] + 0.1 * s['interceptions'] + 0.05 * s['clearances'] + 0.1 * s['blocks']
-    v += 0.1 * s['take_ons'] + 0.05 * s['aerials_won'] - 0.05 * s['miscontrols'] - 0.05 * s['fouls']
-    if p.is_gk:
-        v += 0.3 * s['saves'] - 0.25 * s['goals_conceded'] - 0.15 * max(0, s['goals_conceded'] - 4)   # B-20: a keeper shipping a dozen goals can reach 0
-    elif p.line == 'DEF':
-        v -= 0.1 * s['goals_conceded']
-    r += v - VOLUME_NORM.get(p.position, VOLUME_NORM['MID'])
-    r -= 0.3 * s['yellow'] + 1.5 * s['red'] + 0.8 * s['own_goals']
-    r += 0.2 if won else -0.2 if lost else 0.0
-    return round(max(0.0, shape_rating(r) - position_penalty(p, m)), 1)
-
-
-def position_penalty(p, m):
-    """What the rating loses because the player was picked in a slot that wants another position (S-25); 0 when he is in his place."""
-    want = slot_want((m.home if p.side == 0 else m.away).formation, getattr(p, 'slot', None))
-    return OUT_OF_POSITION.get(want, {}).get(p.position, 0.0) if want and want != p.position else 0.0
+# Ratings are worked out in rating.py from the finished match file (B-48, FotMob style), the same way js/live-rating.js does.
+from .rating import OUT_OF_POSITION, ratings as _ratings   # noqa: E402  (OUT_OF_POSITION kept here for older callers)
 
 
 def _team_stats(m, pstats):
@@ -246,6 +197,8 @@ def build(m, include_frames=True):
                   'ball_in_play_minutes': round(m.in_play_time / 60, 1)},
         'events': m.events,
     }
+    for pid, r in _ratings(out).items():   # B-48
+        out['stats']['players'][pid]['rating'] = r
     if include_frames:
         out['frames'] = {
             'fps': m.fps,
