@@ -79,6 +79,10 @@
 .xb-face svg { width: 100%; height: auto; }
 .xb-tok.empty .xb-face { place-items: center; border: 2px dashed color-mix(in oklab, var(--text) 35%, transparent); background: transparent; }
 .xb-tok.empty .xb-face svg { width: 22px; stroke: var(--muted); fill: none; stroke-width: 2; }
+/* S-46: a spot "Use last week's line-up" left empty because its player can't play now */
+.xb-tok.empty.gap .xb-face { border-color: var(--amber); background: color-mix(in oklab, var(--amber) 18%, transparent); }
+.xb-tok.empty.gap .xb-face svg { stroke: var(--amber); }
+.xb-tok.empty.gap .xb-nm small { color: var(--text-strong); }
 .xb-rt { position: absolute; top: -6px; right: 14px; font-size: var(--fs-xs); font-weight: 700; padding: 1px 6px; border-radius: 999px; color: #fff; font-variant-numeric: tabular-nums; }
 .xb-rt.hi, .xb-fb.hi { background: var(--res-w); } .xb-rt.mid, .xb-fb.mid { background: #b8860b; } .xb-rt.lo, .xb-fb.lo { background: var(--res-l); }
 .xb-nm { font-size: var(--fs-s); font-weight: 600; line-height: 1.15; text-align: center; padding: 1px 6px; border-radius: 6px; background: color-mix(in oklab, var(--surface) 80%, transparent); white-space: nowrap; }

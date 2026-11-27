@@ -214,7 +214,8 @@ export function reshape(lineup, from, to, squad) {
 }
 
 // A complete sheet from a stored row: unknown slots, players who left the squad and repeats are dropped and refilled.
-export function normaliseSheet(row, squad) {
+// keepGaps (S-46): leave a spot empty when its player is gone, instead of filling it with the best of the rest.
+export function normaliseSheet(row, squad, { keepGaps = false } = {}) {
   const ids = new Set(squad.map(p => String(p.id)));
   const formation = FORMATIONS[row?.formation] ? row.formation : DEFAULT_FORMATION;
   const lineup = {}, seen = new Set();
@@ -222,7 +223,7 @@ export function normaliseSheet(row, squad) {
     const v = String(id);
     if (slotsOf(formation)[slot] && ids.has(v) && !seen.has(v)) { lineup[slot] = v; seen.add(v); }
   }
-  const full = fill(formation, squad, lineup);
+  const full = keepGaps ? lineup : fill(formation, squad, lineup);
   const tactics = {};
   for (const t of TACTICS) {
     const v = Number(row?.tactics?.[t.key]);
@@ -235,6 +236,15 @@ export function normaliseSheet(row, squad) {
     captain: pick(row?.captain), penalties: pick(row?.penalties), freekicks: pick(row?.freekicks), corners: pick(row?.corners),
     kit: ['home', 'away', 'special', 'special2', 'special3'].includes(row?.kit) ? row.kit : null,   // the kit worn (S-23); null = automatic
   };
+}
+// S-46 "Use last week's line-up": a round's submitted sheet as the sheet to work on. Everything carries over (XI, shape, tactics, captain and
+// set-piece takers, kit) except the Boosted Captain, which is chosen per round. A player who can't play now (banned for this game, or no longer
+// at the club) leaves his spot empty: gaps lists those spots with who was there, so the page can mark them.
+export function copySheet(prev, squad) {
+  const sheet = normaliseSheet(prev, squad, { keepGaps: true });
+  const gaps = Object.entries(prev?.lineup || {}).filter(([slot, id]) => slotsOf(sheet.formation)[slot] && id != null && sheet.lineup[slot] !== String(id))
+    .map(([slot, id]) => ({ slot, id: String(id) }));
+  return { sheet, gaps };
 }
 // Everyone not in the XI, goalkeepers first.
 export const benchOf = (lineup, squad) => {

@@ -12,7 +12,7 @@ import { rating } from './places.js';
 import { suspensions } from './simulate.js';
 import { prefsNow, spoilerHidden } from './prefs.js';
 import { kitSprite, kitChest, cleanDesign, kitName, FIELD_SLOTS } from './kit.js';
-import { FORMATIONS, TACTICS, STEPS, PRESETS, POS_ORDER, normaliseSheet, benchOf } from './pitch.js';
+import { FORMATIONS, TACTICS, STEPS, PRESETS, POS_ORDER, normaliseSheet, benchOf, copySheet } from './pitch.js';
 import { mountXI } from './xi-builder.js';
 
 
@@ -142,6 +142,8 @@ async function teamSheet(box, { club, squad, userId, season }) {
   // SUBMIT (0.63): the sheet submitted for each upcoming round. Without one, the round gets a random XI (0080, user 3 Nov 2026).
   const submitted = new Map((subRes.error ? [] : subRes.data || []).map(s => [s.week, s]));
   let picking = false, pickWeek = null, subBusy = false, subMsg = '';
+  const gaps = new Map();   // S-46: slot -> why "Use last week's line-up" left it empty
+  let copyMsg = '';
   // Boosted captain (S-33): off unless a round's submitted sheet has it or the manager turns it on for that round, so it never carries over to the next one.
   const BOOST_USES = 5, boostUsed = new Set((boostRes.error ? [] : boostRes.data || []).map(r => r.week)), boostPick = new Map();
   const boostWeek = () => { const rounds = upcoming(); return picking && rounds.some(r => r.week === pickWeek) ? pickWeek : rounds[0]?.week ?? null; };
@@ -153,7 +155,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
         <div class="lg-card-head"><h2>Team sheet</h2><p class="ts-deadline" id="deadline"></p></div>
         <ul class="fm-rows" id="fm-rows"></ul>
         <div class="fm-foot">
-          ${subRes.error ? '' : '<div class="ts-submit" id="submit"></div>'}
+          ${subRes.error ? '' : '<div class="ts-copy" id="copy"></div><div class="ts-submit" id="submit"></div>'}
           <div class="ts-save" id="save" aria-live="polite"></div>
         </div>
       </section>
@@ -252,7 +254,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   const wantOf = slot => FORMATIONS[sheet.formation][slot]?.want;
   const formTot = totals(hiddenIds.size ? { ...season, fixtures: season.fixtures.map(f => (hiddenIds.has(f.id) ? { ...f, result: null } : f)) } : season);
   const xiUI = mountXI(dlg('lineup'), {
-    sheet: () => sheet, squad, avail, bans, byId, club, kits: pitchKits,
+    sheet: () => sheet, squad, avail, bans, byId, club, kits: pitchKits, gap: slot => gaps.get(slot),
     formOf: id => { const t = formTot[String(id)]; return t?.apps ? { avg: t.rsum / t.apps, apps: t.apps } : null; },
     changed: () => changed(),
   });
@@ -364,6 +366,41 @@ async function teamSheet(box, { club, squad, userId, season }) {
     drawSubmit();
     $('#submit .ts-submit-btn', box)?.focus();
   }
+  // ----- "Use last week's line-up" (S-46) -----
+  // Fills the sheet from the latest round already played that this club submitted for, in one tap; the manager then submits as normal.
+  // Nothing carries over by itself (a club that doesn't submit still gets a random XI). The Boosted Captain is never copied: it is picked
+  // per round. A player who can't play now (banned for this game, or gone from the club) leaves his spot empty and marked.
+  const openGaps = () => [...gaps.keys()].filter(sl => FORMATIONS[sheet.formation][sl] && !sheet.lineup[sl]).length;
+  const lastRound = () => {
+    const next = upcoming()[0];
+    return [...submitted.values()].filter(s => s.sheet && (!next || s.week < next.week)).sort((a, b) => b.week - a.week)[0] || null;
+  };
+  function drawCopy() {
+    const el = $('#copy', box); if (!el) return;
+    const prev = lastRound();
+    if (!prev || !upcoming().length) { el.innerHTML = ''; return; }
+    el.innerHTML = `<button type="button" class="ts-copy-btn" data-copy><b>Use last week’s line-up</b><small>${esc(wk(prev.week))}: XI, bench, captain, tactics and kit</small></button>`
+      + (copyMsg ? `<p class="ts-copy-msg${openGaps() ? ' is-gap' : ''}" role="status">${esc(openGaps() ? copyMsg : copyMsg.replace(/, with .*$/, ' and every spot is filled. Check it, then submit.'))}</p>` : '');
+  }
+  async function useLast() {
+    const prev = lastRound(); if (!prev) return;
+    const { sheet: next, gaps: missing } = copySheet(prev.sheet, avail);
+    sheet = next; gaps.clear();
+    let gone = new Map();
+    const away = missing.filter(g => !byId.has(g.id)).map(g => g.id);
+    if (away.length) { const r = await ok(c.from('players').select('id, name').in('id', away)); gone = new Map((r.error ? [] : r.data || []).map(p => [String(p.id), p.name])); }
+    const named = missing.map(g => {
+      const why = bans.has(g.id) ? 'suspended' : 'no longer at the club', name = byId.get(g.id)?.name || gone.get(g.id) || 'A player';
+      gaps.set(g.slot, `${name} is ${why}`);
+      return `${name} (${why})`;
+    });
+    copyMsg = named.length
+      ? `${wk(prev.week)}’s line-up is in, with ${named.length} empty spot${named.length === 1 ? '' : 's'}: ${named.join(', ')}. Fill ${named.length === 1 ? 'it' : 'them'} in Starting XI, then submit.`
+      : `${wk(prev.week)}’s line-up is in. Check it, then submit.`;
+    changed(); xiUI.draw(); drawKit(); drawTactics(); drawCopy();
+    $('#copy [data-copy]', box)?.focus();
+  }
+
   async function withdraw(week) {
     const { error } = await ok(c.rpc('withdraw_team_sheet', { p_week: week }));
     if (error) { subMsg = /locked/.test(error.message) ? error.message : 'That didn’t withdraw. Try again.'; drawSubmit(); return; }
@@ -379,7 +416,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
     sheet.bench = benchOf(sheet.lineup, avail);
     if (state === 'saving') { again = true; return; }
     state = saved && JSON.stringify(sheet) === saved ? 'saved' : 'dirty';
-    drawSave(); if (!picking) drawSubmit(); drawForm();
+    drawSave(); if (!picking) drawSubmit(); drawForm(); drawCopy();
     clearTimeout(timer);
     if (state === 'dirty') timer = setTimeout(save, 1200);
   }
@@ -461,6 +498,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
     else if (st) { sheet.tactics[st.dataset.tac] = Number(st.dataset.v); changed(); drawTactics(); box.querySelector(`[data-tac="${st.dataset.tac}"][data-v="${st.dataset.v}"]`)?.focus(); }
     else if (t.closest('[data-kit]')) { sheet.kit = t.closest('[data-kit]').dataset.kit || null; changed(); drawKit(); xiUI.draw(); box.querySelector(`[data-kit="${sheet.kit || ''}"]`)?.focus(); }
     else if (t.closest('[data-save]')) save();
+    else if (t.closest('[data-copy]')) useLast();
     else if (t.closest('[data-sub-open]')) { picking = true; subMsg = ''; const w = Number(t.closest('[data-sub-open]').dataset.subWeek); if (w) pickWeek = w; drawSubmit(); $('#submit input[name="sub-week"]:checked', box)?.focus(); }
     else if (t.closest('[data-sub-cancel]')) { picking = false; subMsg = ''; drawSubmit(); $('#submit .ts-submit-btn', box)?.focus(); }
     else if (t.closest('[data-sub-go]')) submitFor(pickWeek);
@@ -472,7 +510,7 @@ async function teamSheet(box, { club, squad, userId, season }) {
   // Leaving the page: send what's waiting rather than lose it.
   document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'dirty') save(); });
 
-  xiUI.draw(); drawKit(); drawTactics(); drawSave(); drawDeadline(); drawSubmit(); drawForm(); drawInfo();
+  xiUI.draw(); drawKit(); drawTactics(); drawSave(); drawDeadline(); drawCopy(); drawSubmit(); drawForm(); drawInfo();
   if (state === 'new') save();
 
   // The deadline counts down; once one passes, read the deadlines again until the database has locked that week.
@@ -483,6 +521,6 @@ async function teamSheet(box, { club, squad, userId, season }) {
       const r = await ok(c.from('deadlines').select('*').order('locks_at'));
       if (!r.error) deadlines = r.data || [];
     }
-    drawDeadline(now); if (!picking) drawSubmit(now);
+    drawDeadline(now); if (!picking) { drawSubmit(now); drawCopy(); }
   }, 30000);
 }

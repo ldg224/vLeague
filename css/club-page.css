@@ -184,6 +184,18 @@
 }
 @media (hover: hover) { .lg-sub .ts-submit-btn:not(:disabled):hover { filter: brightness(1.08); } }
 .lg-sub .ts-submit-btn:disabled { opacity: .6; cursor: progress; }
+/* S-46: "Use last week's line-up", a quiet outlined button above Submit */
+.ts-copy { display: grid; gap: 8px; }
+.ts-copy:empty { display: none; }
+.lg-sub .ts-copy-btn {
+  display: grid; gap: 2px; justify-items: center; width: 100%; min-height: 52px; padding: 8px 20px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--surface); color: var(--text-strong); cursor: pointer; font: 600 var(--fs-m)/1.2 var(--font);
+}
+.lg-sub .ts-copy-btn small { color: var(--muted); font: 400 var(--fs-s)/1.2 var(--font); }
+@media (hover: hover) { .lg-sub .ts-copy-btn:hover { background: var(--surface-hover); } }
+.lg-sub .ts-copy-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.ts-copy-msg { margin: 0; color: var(--text); font: 400 var(--fs-s)/1.45 var(--font); }
+.ts-copy-msg.is-gap { padding: 8px 12px; border-radius: var(--r-sm); background: color-mix(in oklab, var(--amber) 14%, transparent); }
 .ts-sub-line { display: block; margin: 0; color: var(--muted); font: 400 var(--fs-s)/1.45 var(--font); }
 .ts-sub-line b { color: var(--text-strong); font-weight: 700; }
 .ts-sub-line::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: var(--faint); vertical-align: 1px; }

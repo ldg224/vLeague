@@ -7,7 +7,8 @@
 // advice about the shape (checks). The engine plays the drawn lanes, and each player's place ahead of or behind his line; the whole shape
 // moves with the ball (desktop, s40-shots tactics.shape_slots).
 //   mountXI(dialog, ctx) -> { draw() }. ctx: { sheet() -> the live sheet object, squad, avail, bans (Map id -> { reason }), byId, club,
-//   kits() -> { field, gk } chest pictures, formOf(id) -> { avg, apps } | null, changed() -> saves and redraws the team sheet form }.
+//   kits() -> { field, gk } chest pictures, formOf(id) -> { avg, apps } | null, changed() -> saves and redraws the team sheet form,
+//   gap(slot) -> why a copied spot is empty, or nothing (S-46) }.
 import { esc } from './member.js';
 import { portrait } from './portrait.js';
 import { FORMATIONS, spotsOf, nameShape, cleanShape, SHAPE_AREA, BANDS, reshape, autoLineup } from './pitch.js';
@@ -103,7 +104,8 @@ export function mountXI(dlg, ctx) {
     const s = S(), id = s.lineup[slot], p = id ? byId.get(String(id)) : null, gk = slot === 'GK';
     const role = gk ? 'GK' : roleOf(sp.x, sp.y, sp.line);
     const style = `--x:${sp.x}%;--y:${sp.y}%`;
-    if (!p) return `<button type="button" class="xb-tok empty${sel?.slot === slot ? ' sel' : ''}" data-tok="${slot}" style="${style}" aria-label="Empty spot, ${role}"><span class="xb-face">${ICON.plus}</span><span class="xb-nm"><small>${esc(role)}</small></span></button>`;
+    const gap = !p && ctx.gap?.(slot);   // S-46: a spot left empty by "Use last week's line-up" (who was there can't play now)
+    if (!p) return `<button type="button" class="xb-tok empty${gap ? ' gap' : ''}${sel?.slot === slot ? ' sel' : ''}" data-tok="${slot}" style="${style}" aria-label="Empty spot, ${role}${gap ? `: ${esc(gap)}` : ''}"${gap ? ` title="${esc(gap)}"` : ''}><span class="xb-face">${ICON.plus}</span><span class="xb-nm"><small>${esc(role)}</small></span></button>`;
     const off = p.position !== wantOf(slot), cap = String(s.captain) === String(p.id);
     const cls = ['xb-tok', sel?.slot === slot && 'sel', off && 'oop', gk && 'gk'].filter(Boolean).join(' ');
     const label = `${p.name}, ${role}${off ? `, a ${POS_WORD[p.position]} out of position` : ''}${cap ? ', captain' : ''}`;
