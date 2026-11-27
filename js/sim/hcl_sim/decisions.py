@@ -323,7 +323,9 @@ def _cross_options(c):
         d = math.hypot(zx - c.ax, zy - c.ay)
         flight = 0.3 + d / 17.0
         # S-40: only teammates actually in the zone or running to it count (box runs, Match._box_role).
-        att = sum(1 for q in c.mates if _reach_time(*c.team.to_att(q.x, q.y), q.vmax(), zx, zy, 0.2) < flight + 0.4
+        # S-40: a teammate already offside counts for only cross_offside_weight of a target (the crosser can see the line).
+        att = sum((1.0 if c.team.to_att(q.x, q.y)[0] <= c.off_line + 0.1 else TUNING['cross_offside_weight'])
+                  for q in c.mates if _reach_time(*c.team.to_att(q.x, q.y), q.vmax(), zx, zy, 0.2) < flight + 0.4
                   and min(dist(*c.team.to_att(q.x, q.y), zx, zy), dist(*c.team.to_att(q.tx, q.ty), zx, zy)) < TUNING['cross_zone_near'])
         dfn = sum(1 for ox, oy, ov, o in c.opps if _reach_time(ox, oy, ov, zx, zy, 0.2) < flight + 0.2)
         gk_claim = 1.2 if zx > 99 - 1 and abs(zy - 34) < 5 else 0.0

@@ -172,6 +172,8 @@ TUNING = {
     'et_sub_energy': 0.97,       # only for an outfield player more tired than this (players are at about 0.88-0.98 after 90 minutes)
     'et_break_recovery': 0.1,    # share of lost energy back in the short break before extra time (half-time gives 0.3)
     'shootout_base': 0.76,       # chance an average taker scores against an average keeper in a shootout (real: about 75%)
+    'offside_obvious': 0.0,      # S-40: per metre offside, extra chance the passer notices his receiver is offside and holds the pass
+    'cross_offside_weight': 1.0, # S-40: how much a teammate already offside counts as a target when choosing where to cross
     'offside_blind': 0.3,        # S-40: a pass to a receiver already offside keeps 0.03 + this x (1 - vision) of its chance (the passer missed it)
     'clear_min_pressure': 0.35,  # 0.4.0: below this pressure a defender does not choose to clear
     'behind_block': 0.7,        # 0.4.0: chance a blocked cross or shot near the defender's own goal goes behind (Match._maybe_behind)

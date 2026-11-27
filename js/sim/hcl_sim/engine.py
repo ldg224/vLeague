@@ -534,7 +534,9 @@ class Match:
             line = self.offside_x(T)
             bax, _ = T.to_att(b.x, b.y)
             qax, _ = T.to_att(rcv.x, rcv.y)
-            if qax > line + 0.1 and qax > bax and qax > PITCH_LENGTH / 2 and rng.random() < 0.45 + 0.5 * p.a('vision'):
+            # S-40: the further offside he is, the more obvious it is (offside_obvious per metre).
+            if qax > line + 0.1 and qax > bax and qax > PITCH_LENGTH / 2 \
+                    and rng.random() < 0.45 + 0.5 * p.a('vision') + TUNING['offside_obvious'] * (qax - line):
                 p.action = None
                 p.decide_at = self.t + 0.3
                 return
