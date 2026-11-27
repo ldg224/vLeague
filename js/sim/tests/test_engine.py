@@ -322,12 +322,13 @@ class OutOfPosition(unittest.TestCase):
         fwd = next(i for i, p in league['players'].items() if p['team'] == 'AAA' and p['position'] == 'FWD')
         league['tactics']['AAA'] = {'formation': '4-4-2', 'lineup': {'LB': mid, 'LCB': fwd}}
         with_penalty = simulate(league, 'AAA', 'BBB', seed=3)
-        table = output.OUT_OF_POSITION
-        output.OUT_OF_POSITION = {}   # the same match (same seed) without the rule
+        from hcl_sim import rating as rating_mod
+        table = rating_mod.OUT_OF_POSITION
+        rating_mod.OUT_OF_POSITION = {}   # the same match (same seed) without the rule
         try:
             without = simulate(league, 'AAA', 'BBB', seed=3)
         finally:
-            output.OUT_OF_POSITION = table
+            rating_mod.OUT_OF_POSITION = table
         slots = {p['id']: p for p in with_penalty['players']}
         self.assertEqual((slots[mid]['slot'], slots[fwd]['slot']), ('LB', 'LCB'))
         forms = {with_penalty['teams'][side]['code']: with_penalty['teams'][side]['formation'] for side in ('home', 'away')}
@@ -338,7 +339,7 @@ class OutOfPosition(unittest.TestCase):
         for pid in slots:
             a, b = rate(with_penalty, pid), rate(without, pid)
             if pen(pid):
-                self.assertTrue(a == 0 or abs((b - a) - pen(pid)) <= 0.11, (pid, a, b, pen(pid)))
+                self.assertTrue(a <= 3.0 or abs((b - a) - pen(pid)) <= 0.11, (pid, a, b, pen(pid)))
             else:
                 self.assertEqual(a, b, pid)
 
@@ -382,13 +383,14 @@ class BoostedCaptain(unittest.TestCase):
         fast, cap_attrs = mate.vmax_base, cap.attrs
         m.t = 60.0
         m.ev('card', cap, card='yellow')
-        m.ev('card', cap, card='red')       # 6.6 - 0.3 - 1.5 is below 6.0
+        m.ev('card', cap, card='red')       # a yellow and a red take him below 6.0
         m._boost_check(home)
         self.assertTrue(b['down'])
         self.assertEqual(mate.attrs, b['low'][mate.id])
         self.assertLess(mate.vmax_base, fast)
         self.assertIs(cap.attrs, cap_attrs)
-        b['flat'] += 2.0                    # a goal and more: back above
+        for _ in range(3):                   # a hat-trick: back above 6.0
+            m.ev('goal', team=home, scorer=cap.id, own_goal=False, assist=None, score=[0, 0], shot=None)
         m.t = 120.0
         m._boost_check(home)
         self.assertFalse(b['down'])
@@ -406,6 +408,45 @@ class BoostedCaptain(unittest.TestCase):
         one = simulate(plain, 'AAA', 'BBB', seed=3, include_frames=False)
         self.assertNotIn('captain_boost', one['teams']['home'])
         self.assertEqual(one['result'], simulate(synthetic_league(), 'AAA', 'BBB', seed=3, include_frames=False)['result'])
+
+
+class Ratings48(unittest.TestCase):
+    """B-48: a goal straight from a cross is a shot and a goal; ratings are FotMob style and come from the match file."""
+
+    def test_a_cross_that_goes_in_is_a_shot_on_target(self):
+        lg = synthetic_league()
+        m = Match(teams.build_team(lg, 'AAA'), teams.build_team(lg, 'BBB'), seed=1)
+        m.period = 1
+        m.home.direction, m.away.direction = 1, -1
+        p = next(q for q in m.home.players if q.line == 'MID')
+        p.x, p.y = 88.0, 6.0
+        e = m.ev('pass', p, subtype='cross', end_x=99.0, end_y=34.0, receiver_intended=None, height='high', outcome=None)
+        m.pending_pass = e
+        m.ball.last_touch = p
+        m._goal(105.0, 33.0)
+        goal = m.events[-1]
+        self.assertEqual(goal['type'], 'goal')
+        self.assertEqual(goal['shot'], e['id'])
+        self.assertEqual((e['type'], e['subtype'], e['outcome'], e['on_target'], e['from_pass']), ('shot', 'cross', 'goal', True, 'cross'))
+        self.assertGreater(e['xg'], 0.0)
+        self.assertNotIn('receiver_intended', e)
+
+    def test_every_goal_has_a_shot_and_ratings_stay_in_range(self):
+        d = simulate(synthetic_league(), 'AAA', 'BBB', seed=11, include_frames=False)
+        shots = {e['id']: e for e in d['events'] if e['type'] == 'shot'}
+        for g in (e for e in d['events'] if e['type'] == 'goal' and not e['own_goal']):
+            self.assertIn(g['shot'], shots)
+        rs = [s['rating'] for s in d['stats']['players'].values()]
+        self.assertTrue(all(3.0 <= r <= 10.0 for r in rs), rs)
+
+    def test_goals_lift_the_rating_a_lot_and_a_hat_trick_reaches_nine(self):
+        from hcl_sim import rating
+        s = rating._blank()
+        s3 = dict(s, goals=3, sot=4, xg=1.6)
+        avg = rating.raw(dict(s, passes=20, done=16, sot=1, xg=0.4, key=1, xa=0.2, dribbles=1), 'FWD', False, False, 1.0, 0, 0, 0.0)
+        hat = rating.raw(dict(s3, passes=20, done=16, key=1, xa=0.2, dribbles=1), 'FWD', False, False, 1.0, 1, 0, 0.0)
+        self.assertLess(rating.shape(avg), 6.8)   # a quiet game sits below 6.8
+        self.assertGreaterEqual(rating.shape(hat), 9.0)
 
 
 if __name__ == '__main__':

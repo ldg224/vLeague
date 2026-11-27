@@ -15,10 +15,9 @@ from .config import (PITCH_LENGTH, PITCH_WIDTH, GOAL_Y1, GOAL_Y2, GOAL_HEIGHT, B
                      TICK, HALF_SECONDS, DEFAULT_FPS, MAX_PLAYER_SPEED, TUNING, PENALTY_SPOT, SIX_DEPTH, SIX_Y1, SIX_Y2)
 from .geometry import clamp, dist, unit, seg_point_dist, sigmoid, rotate
 from .models import Ball
-from .output import RATING_BASE, VOLUME_NORM
+from . import rating as match_rating
 
-# Boosted captain (S-33): what each simple action adds to the captain's live rating (js/live-rating.js), and about how long a match lasts on the clock.
-BOOST_ACTIONS = {'take_on': 0.1, 'clearance': 0.05, 'block': 0.1, 'aerial_duel': 0.05, 'foul': -0.05, 'miscontrol': -0.05, 'save': 0.3}
+# Boosted captain (S-33): about how long a match lasts on the clock (for the captain's live rating).
 BOOST_MATCH_SECONDS = 99 * 60
 
 KICK_TYPES = ('pass', 'shoot', 'cross', 'clear')
@@ -277,48 +276,16 @@ class Match:
 
     def _boost_check(self, team):
         """Boosted captain (S-33), once a match minute: while the captain's live rating is below 6.0, every teammate plays at -0.5.
-        The rating is js/live-rating.js's without the out-of-position penalty, read only from what has happened so far. Uses no
+        The rating is rating.py's (as js/live-rating.js) without the out-of-position penalty, read only from what has happened so far. Uses no
         random numbers, so a match without a boost plays exactly as before."""
         b = team.boost
         b['next'] += 60.0
         cap = b['captain']
-        pid = cap.id
-        for e in self.events[b['seen']:]:
-            kind, mine = e['type'], e.get('player') == pid
-            if kind == 'pass':
-                if mine:
-                    b['volume'] += 0.012 if e.get('outcome') == 'complete' else -0.035
-            elif kind == 'shot':
-                if mine and e.get('outcome') in ('goal', 'saved'):
-                    b['volume'] += 0.15
-                if e.get('assist_candidate') == pid:
-                    b['volume'] += 0.25
-            elif kind == 'goal':
-                if e.get('own_goal'):
-                    b['flat'] -= 0.8 if e.get('scorer') == pid else 0.0
-                elif e.get('scorer') == pid:
-                    b['flat'] += 1.0
-                if e.get('assist') == pid:
-                    b['flat'] += 0.7
-                if e.get('team') != team.code:
-                    b['conceded'] += 1
-                    if cap.is_gk:
-                        b['volume'] -= 0.25 + (0.15 if b['conceded'] > 4 else 0.0)
-                    elif cap.line == 'DEF':
-                        b['volume'] -= 0.1
-            elif mine:
-                if kind == 'control':
-                    b['volume'] += 0.1 if e.get('how') == 'interception' else 0.0
-                elif kind == 'tackle':
-                    b['volume'] += 0.12 if e.get('won') else 0.0
-                elif kind in BOOST_ACTIONS:
-                    b['volume'] += BOOST_ACTIONS[kind]
-                elif kind == 'card':
-                    b['flat'] -= 0.3 if e.get('card') == 'yellow' else 1.5
-        b['seen'] = len(self.events)
-        lead = self.score[team.side] - self.score[1 - team.side]
-        rating = RATING_BASE + b['flat'] + b['volume'] - VOLUME_NORM.get(cap.position, VOLUME_NORM['MID']) * min(1.0, self.t / BOOST_MATCH_SECONDS)
-        rating += 0.2 if lead > 0 else -0.2 if lead < 0 else 0.0
+        # B-48: the same FotMob-style rating as the match file's (rating.py), on the events so far, without the out-of-position penalty.
+        view = {'players': [{'id': p.id, 'team': p.team, 'slot': p.slot, 'position': p.position} for p in self.players],
+                'teams': {side: {'code': t.code, 'formation': t.formation} for side, t in (('home', self.home), ('away', self.away))},
+                'periods': self.periods, 'events': self.events}
+        rating = match_rating.ratings(view, t=self.t, end=BOOST_MATCH_SECONDS, penalty=False)[cap.id]
         down = round(rating, 1) < 6.0
         if down:
             b['low_minutes'] += 1
@@ -1300,6 +1267,32 @@ class Match:
         taker_team = self.away if (b.last_touch is None or b.last_touch.side == 0) else self.home
         self._start_restart('throw_in', taker_team, (xc, line_y), (4, 9))
 
+    def _shot_from_ball(self, scorer, team, line_x, yc):
+        """B-48: the ball went in off the scorer's own kick, but it was played as a pass or a cross (an overhit cross that drops in, a
+        pass that beats the keeper), so there is no shot. Football counts it as a shot on target and a goal (Opta does), so his shots, shots
+        on target and xG count it, as his rating does. His pass in flight becomes that shot; without one (the ball went in off him), a
+        shot is added where he is. Returns the shot event, set as pending_shot."""
+        b = self.ball
+        pp = self.pending_pass if self.pending_pass is not None and self.pending_pass.get('player') == scorer.id else None
+        x0, y0 = (pp['x'], pp['y']) if pp else (scorer.x, scorer.y)
+        ax, ay = team.to_att(x0, y0)
+        header = bool(pp and pp.get('header'))
+        xg = round(decisions.expected_goals(ax, ay, header=header), 3)
+        if pp:
+            sub = pp.get('subtype')
+            for k in ('outcome', 'receiver_intended', 'expected_success', 'height', 'end_x', 'end_y', 'header'):
+                pp.pop(k, None)
+            pp.update(type='shot', subtype='cross' if sub in ('cross', 'corner') else 'open', xg=xg, on_target=True,
+                      body='head' if header else 'foot', outcome=None, from_pass=sub or 'pass',
+                      end_y=round(yc, 2), end_z=round(min(b.z, GOAL_HEIGHT), 2))
+            self.pending_pass = None
+            self.pending_shot = pp
+            return pp
+        e = self.ev('shot', scorer, xg=xg, on_target=True, body='foot', subtype='open', outcome=None,
+                    end_y=round(yc, 2), end_z=round(min(b.z, GOAL_HEIGHT), 2))
+        self.pending_shot = e
+        return e
+
     def _goal(self, line_x, yc):
         b = self.ball
         scoring = self.home if (self.home.direction == 1) == (line_x == PITCH_LENGTH) else self.away
@@ -1320,6 +1313,8 @@ class Match:
         scorer = b.last_touch
         own_goal = scorer is not None and scorer.side != scoring.side
         shot = self.pending_shot
+        if shot is None and scorer is not None and not own_goal:
+            shot = self._shot_from_ball(scorer, scoring, line_x, yc)   # B-48: a cross or pass that went straight in is a shot and a goal
         self._resolve_shot('goal')
         if shot:
             shot['outcome'] = 'goal'     # also covers a shot that went in off the post
