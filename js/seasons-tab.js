@@ -20,12 +20,13 @@ const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ESC[c]);
 
 export function grandFinal(fixtures, { hidden = new Set() } = {}) {
-  const gf = fixtures.find(f => f.stage === 'GF' && !f.test);
+  const gf = fixtures.find(f => f.stage === 'GF' && !f.cup && !f.test);   // the league's Grand Final, not a cup final (S-51)
   if (!gf?.result || gf.result.home == null) return null;
   if (hidden.has(gf.id)) return { hiddenFinal: true };
-  const { home, away } = gf.result;
-  if (home === away) return null;   // a draw leaves it undecided here: the office records the winner in History
-  return home > away ? { winner: gf.home, runnerUp: gf.away } : { winner: gf.away, runnerUp: gf.home };
+  const { home, away, pens } = gf.result;
+  const won = home > away ? gf.home : away > home ? gf.away : pens?.winner;   // S-52: level after extra time, the shootout decides
+  if (!won) return null;   // an older draw with no shootout: the office records the winner in History
+  return won === gf.home ? { winner: gf.home, runnerUp: gf.away } : { winner: gf.away, runnerUp: gf.home };
 }
 
 const initials = n => String(n || '').split(/\s+/).filter(Boolean).slice(0, 3).map(w => w[0].toUpperCase()).join('');

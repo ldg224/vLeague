@@ -111,8 +111,18 @@ function events(fx, file, ctx) {
     } else if (e.type === 'period_end') {
       const goals = file.events.filter(g => g.type === 'goal' && g.t <= e.t), score = { home: 0, away: 0 };
       for (const g of goals) score[(g.own_goal ? g.team === fx.home : g.team === fx.away) ? 'away' : 'home']++;
-      list.push({ t: e.t + 0.01, divider: `${e.period === 1 ? 'HT' : 'FT'} ${score.home} – ${score.away}`, strong: true });
+      // S-52: a knockout level after 90 minutes goes on to extra time (periods 3 and 4).
+      const et = file.periods.length > 2, label = { 1: 'HT', 2: et ? 'End of 90 minutes' : 'FT', 3: 'Extra time HT', 4: 'After extra time' }[e.period] || 'FT';
+      list.push({ t: e.t + 0.01, divider: `${label} ${score.home} – ${score.away}`, strong: true });
     }
+  }
+  // S-52: the penalty shootout, kick by kick, once the match is over.
+  const pens = file.result?.pens, last = file.events[file.events.length - 1];
+  if (pens && last && last.t <= ctx.horizon) {
+    const t = last.t + 0.02, said = { scored: 'Scored', saved: 'Saved', missed: 'Missed' };
+    list.push({ t, divider: `Penalties ${pens.home} – ${pens.away}`, strong: true });
+    pens.kicks.forEach((k, i) => list.push({ t: t + 0.001 * (i + 1), minute: '', side: k.team === fx.home ? 'home' : 'away', icon: k.outcome === 'scored' ? 'ball' : 'miss',
+      pid: k.player, who: nameOf(file, k.player), sub: `${said[k.outcome] || k.outcome} · ${k.score[0]} – ${k.score[1]}` }));
   }
   const ic = { ball: goalMark(), own: redBallMark('Own goal'), miss: redBallMark('Penalty not scored'), yellow: cardMark('yellow'), red: cardMark('red'), wood: icon('map-pin'), sub: subMark(true) };
   const byPlayer = new Map((ctx.players || []).map(p => [String(p.id), p]));
@@ -120,7 +130,7 @@ function events(fx, file, ctx) {
   const row = it => it.divider
     ? `<li class="ev-div${it.strong ? ' is-strong' : ''}"><span>${esc(it.divider)}</span></li>`
     : `<li class="ev-row is-${it.side}${it.goal ? ' is-goal' : ''}"><div class="ev-text">${face(it)}<span class="ev-tx">${it.who ? `<b>${plink(it.pid, esc(it.who))}</b>` : ''}${it.sub ? `<small>${esc(it.sub)}</small>` : ''}</span></div>`
-      + `<span class="ev-badge">${esc(it.minute)}′</span><span class="ev-ic">${ic[it.icon]}</span></li>`;
+      + `<span class="ev-badge">${it.minute === '' ? 'Pen' : `${esc(it.minute)}′`}</span><span class="ev-ic">${ic[it.icon]}</span></li>`;
   return list.length ? `<ol class="ev-list" aria-label="Match events">${list.map(row).join('')}</ol>` : '<p class="ev-none">No goals, cards or other events yet.</p>';
 }
 

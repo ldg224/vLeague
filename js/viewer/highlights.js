@@ -439,13 +439,13 @@ export class HighlightsRenderer {
   // The clock runs on through added time (46:12, 93:56); addedAt() gives the "+4" shown under it.
   clockAt(t) {
     const p = [...this.d.periods].reverse().find(p => p.start_t <= t + 1e-6) || this.d.periods[0];
-    const el = Math.max(0, t - p.start_t), base = p.period === 2 ? 45 : 0;
+    const el = Math.max(0, t - p.start_t), base = { 1: 0, 2: 45, 3: 90, 4: 105 }[p.period] || 0;   // S-52: 3 and 4 are extra time
     const m = Math.floor(el / 60) + base, s = Math.floor(el % 60);
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   }
   addedAt(t) {
     const p = [...this.d.periods].reverse().find(p => p.start_t <= t + 1e-6) || this.d.periods[0];
-    return p && t - p.start_t >= 2700 && p.added_minutes ? p.added_minutes : 0;
+    return p && t - p.start_t >= (p.period > 2 ? 900 : 2700) && p.added_minutes ? p.added_minutes : 0;
   }
   // The fourth official's board under the clock of the score bug (x, y = the bug's corner).
   addedBoard(x, y, t) {

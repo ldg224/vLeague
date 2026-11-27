@@ -158,8 +158,10 @@ function start() {
       const sc = shownScore(fx, season, now), live = st === 'live' ? liveState(fx, season, now) : null;
       const reds = side => (live ? live.reds[side] : redsOf(side === 'home' ? fx.home : fx.away));
       const mark = n => (n ? `<span class="mh-reds" aria-label="${n === 1 ? 'Sent off' : `${n} sent off`}">${'<i></i>'.repeat(Math.min(n, 3))}</span>` : '<span></span>');
+      // S-52: a knockout decided after extra time or on penalties says so under the score once it is over.
+      const done = fx.result.pens ? `${fx.result.pens.home}-${fx.result.pens.away} on penalties` : fx.result.extra_time ? 'After extra time' : 'Full time';
       return `${reds('home') || reds('away') ? `<span class="mh-redrow">${mark(reds('home'))}${mark(reds('away'))}</span>` : ''}<strong class="mh-score${live ? ' is-live' : ''}"><b>${sc.home}</b><i>–</i><b>${sc.away}</b></strong>
-        <span class="mh-sub${live ? ' is-live' : ''}">${live ? ({ pre: 'Pre-match', half: 'Half-time', end: 'Full time' }[liveShow(fx, season, now)?.kind] || `LIVE ${liveMinute(fx, season, now) ?? ''}′`) : 'Full time'}</span>`;
+        <span class="mh-sub${live ? ' is-live' : ''}">${live ? ({ pre: 'Pre-match', half: 'Half-time', end: 'Full time' }[liveShow(fx, season, now)?.kind] || `LIVE ${liveMinute(fx, season, now) ?? ''}′`) : done}</span>`;
     }
     if (st === 'postponed') return '<strong class="mh-ko">Postponed</strong>';
     const k = kickoff(fx);

@@ -43,7 +43,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
       // a second yellow is one mark, not the first yellow as well
       ...this.cards.filter(k => !(k.colour === 'yellow' && !k.second && this.cards.some(o => o.second && o.e.player === k.e.player))).map(k => ({ t: k.e.t, type: 'card', team: k.e.team, card: k.second ? 'second_yellow' : k.colour, label: `${k.e.minute}' ${k.second ? 'Second yellow, red' : k.colour === 'yellow' ? 'Yellow' : 'Red'} card: ${this.names[k.e.player] || ''}` })),
       ...(P.length > 1 ? [{ t: P[0].end_t, type: 'ht', label: 'Half-time' }] : []),
-      { t: this.t1, type: 'ft', label: 'Full-time' },
+      { t: this.t1, type: 'ft', label: data.result.pens ? `Full-time: ${data.result.pens.home}-${data.result.pens.away} on penalties` : data.result.extra_time ? 'Full-time, after extra time' : 'Full-time' },
     ].sort((a, b) => a.t - b.t);
   }
 
@@ -519,7 +519,8 @@ export class BroadcastRenderer extends HighlightsRenderer {
     for (const k of this.cards) { const s = t - k.t - (k.second ? RED_AT : 0); if (s >= 0 && s < CARD_SHOW) this.lowerThird({ kind: k.colour, e: k.e }, s); }
     for (const ps of this.kickoffs) { const s = t - ps.t; if (s >= 0 && s < 4.5) this.kickoffTag(ps, s); }
     const ft = seg01(t, this.t1 - 4, this.t1 - 3.4);
-    if (ft > 0) this.momentPanel('FULL-TIME', [this.d.result.home, this.d.result.away], ft, true);
+    const R = this.d.result;   // S-52: after extra time, or the shootout's score
+    if (ft > 0) this.momentPanel(R.pens ? `PENS ${R.pens.home}-${R.pens.away}` : R.extra_time ? 'AFTER EXTRA TIME' : 'FULL-TIME', [R.home, R.away], ft, true);
     this.bug(t);
     const pa = this.possessionShow(t, sh);
     if (pa > 0) { this.c.save(); this.c.globalAlpha *= pa; this.possessionBar(t); this.c.restore(); }
@@ -558,7 +559,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
   kickoffTag(ps, s) {
     const c = this.c, a = seg01(s, 0.2, 0.7) * (1 - seg01(s, 3.8, 4.4));
     if (a <= 0) return;
-    const x = 70 - (1 - easeOut(a)) * 60, y = H - 150, half = ps.period === 1 ? '1ST HALF' : ps.period === 2 ? '2ND HALF' : `PERIOD ${ps.period}`;
+    const x = 70 - (1 - easeOut(a)) * 60, y = H - 150, half = { 1: '1ST HALF', 2: '2ND HALF', 3: 'EXTRA TIME', 4: 'ET 2ND HALF' }[ps.period] || `PERIOD ${ps.period}`;
     c.save(); c.globalAlpha = a;
     this.pill(x, y, 190, 54, this.limeGrad(x, y, x + 190, y + 54), 10);
     this.text(half, x + 95, y + 37, { size: 26, weight: 900, align: 'center', colour: '#fff', spacing: 2 });

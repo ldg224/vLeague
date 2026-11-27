@@ -99,14 +99,14 @@ export function rowHtml(fx, season, ctx, opts = {}) {
   const { now } = ctx, st = status(fx, season, now), k = kickoff(fx), hid = ctx.hidden?.has(fx.id) && (st === 'live' || st === 'ft');
   const live = st === 'live' && !hid ? liveState(fx, season, now) : null;
   const tag = st === 'live' ? `<span class="fx-tag is-live">${hid ? 'LIVE' : `LIVE ${liveMinute(fx, season, now) ?? ''}′`}</span>`
-    : st === 'ft' ? '<span class="fx-tag">FT</span>'
+    : st === 'ft' ? `<span class="fx-tag"${fx.result?.pens && !hid ? ` title="${fx.result.pens.home}-${fx.result.pens.away} on penalties"` : ''}>${hid ? 'FT' : fx.result?.pens ? 'Pens' : fx.result?.extra_time ? 'AET' : 'FT'}</span>`
       : st === 'postponed' ? '<span class="fx-tag is-off" title="Postponed">PPD</span>'
         : st === 'awaiting' ? '<span class="fx-tag">Soon</span>' : '<span class="fx-tag"></span>';
   let mid = '', edge = ['', ''];
   if (st === 'live' || st === 'ft') {
     const sc = hid ? null : shownScore(fx, season, now);
     if (sc) {
-      const lead = sc.home > sc.away ? 'home' : sc.home < sc.away ? 'away' : '';
+      const lead = sc.home > sc.away ? 'home' : sc.home < sc.away ? 'away' : st === 'ft' && fx.result.pens ? (fx.result.pens.winner === fx.home ? 'home' : 'away') : '';   // S-52: level, the shootout winner
       mid = `<strong class="fx-score${st === 'live' ? ' is-live' : ''}"><b${lead === 'home' ? ' class="is-lead"' : ''}>${sc.home}</b><i>–</i><b${lead === 'away' ? ' class="is-lead"' : ''}>${sc.away}</b></strong>`;
       if (st === 'ft' && lead) edge = lead === 'home' ? [' is-win', ' is-loss'] : [' is-loss', ' is-win'];   // the winner's name stands out, the loser's steps back
     } else {

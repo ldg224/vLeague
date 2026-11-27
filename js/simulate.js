@@ -265,8 +265,12 @@ export function summariseMatch(d) {
   const motm = Object.keys(players).reduce((best, id) => (!best || players[id].r > players[best].r ? id : best), null);
   const fr = d.frames.data;
   const boosted = [d.teams?.home, d.teams?.away].filter(t => t?.captain_boost).map(t => t.code);   // Boosted captain (S-33): spends a use (0082)
+  // S-52: a knockout that went to extra time, and its shootout (the kicks with names; shootout goals are not in home/away or goals).
+  const shootout = d.result.pens && { home: d.result.pens.home, away: d.result.pens.away, winner: d.result.pens.winner,
+    kicks: d.result.pens.kicks.map(k => ({ team: k.team, player: k.player, name: names[k.player] ?? null, outcome: k.outcome })) };
   return {
     home: d.result.home, away: d.result.away, duration_t: fr[fr.length - 1][0] / 10, periods: d.periods,
+    ...(d.result.extra_time ? { extra_time: true } : {}), ...(shootout ? { pens: shootout } : {}),
     goals, cards, ...(subs.length ? { subs } : {}), stats: d.stats.teams, players, motm, engine: d.engine.version, seed: d.engine.seed, ...(boosted.length ? { boosted } : {}),
   };
 }

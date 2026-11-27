@@ -68,7 +68,7 @@ export function ratingsAt(data, t) {
     v += 0.1 * s.takeOns + 0.05 * s.aerials - 0.05 * s.miscontrols - 0.05 * s.fouls;
     if (i.gk) v += 0.3 * s.saves - 0.25 * s.conceded - 0.15 * Math.max(0, s.conceded - 4);
     else if (i.def) v -= 0.1 * s.conceded;
-    r += v - (VOLUME_NORM[i.pos] ?? VOLUME_NORM.MID) * frac;
+    r += v - (VOLUME_NORM[i.pos] ?? VOLUME_NORM.MID) * frac * (data.periods.length > 2 ? 4 / 3 : 1);   // S-52: 120 minutes after extra time, as output.py
     r -= 0.3 * s.yellow + 1.5 * s.red + 0.8 * s.own;
     r += mine > theirs ? 0.2 : mine < theirs ? -0.2 : 0;
     out[id] = Math.round(Math.max(0.0, shape(r) - i.off) * 10) / 10;

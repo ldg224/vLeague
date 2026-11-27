@@ -148,16 +148,25 @@ export function liveShow(fx, s, now = new Date()) {
 export function liveSpeed(fx, s) {
   return warp(fx, s).r;
 }
-// The match clock at match-file time t ("37:12"), and the added time announced once the 45 minutes are up (else 0).
+// Each period's start on the match clock and its length, in seconds: two halves of 45, then (S-52) two halves of extra time of 15.
+// KEEP IN STEP with PERIODS in js/sim/hcl_sim/config.py.
+export const PERIOD_START = { 1: 0, 2: 2700, 3: 5400, 4: 6300 };
+export const periodLength = period => (period > 2 ? 900 : 2700);
+// The match clock at match-file time t ("37:12"), and the added time announced once the period's minutes are up (else 0).
 export function clockAt(periods, t) {
   const p = [...periods].reverse().find(p => p.start_t <= t + 1e-6) || periods[0];
-  const el = Math.max(0, t - p.start_t) + (p.period === 2 ? 2700 : 0);
+  const el = Math.max(0, t - p.start_t) + (PERIOD_START[p.period] || 0);
   return `${String(Math.floor(el / 60)).padStart(2, '0')}:${String(Math.floor(el % 60)).padStart(2, '0')}`;
 }
 export function addedAt(periods, t) {
   const p = [...periods].reverse().find(p => p.start_t <= t + 1e-6) || periods[0];
-  return p && t - p.start_t >= 2700 && p.added_minutes ? p.added_minutes : 0;
+  return p && t - p.start_t >= periodLength(p.period) && p.added_minutes ? p.added_minutes : 0;
 }
+// S-52: "1-1 (4-3 pens)" style suffix, or '' when the match was not decided on penalties.
+export const pensText = r => (r?.pens ? `${r.pens.home}-${r.pens.away} pens` : '');
+// S-52: the club that went through in a knockout (null when level with no shootout, e.g. a league match).
+export const winnerOf = (fx, r = fx.result) =>
+  !r ? null : r.home > r.away ? fx.home : r.away > r.home ? fx.away : r.pens?.winner ?? null;
 
 // The score as a viewer should see it right now (goals appear as the live broadcast reaches them).
 export function shownScore(fx, s, now = new Date()) {
@@ -193,7 +202,7 @@ export function liveMinute(fx, s, now = new Date()) {
   const t = liveSimTime(fx, s, now), periods = fx.result.periods || [];
   const p = [...periods].reverse().find(p => p.start_t <= t + 1e-6) || periods[0];
   if (!p) return null;
-  return Math.floor(Math.max(0, t - p.start_t) / 60) + (p.period === 2 ? 45 : 0) + 1;
+  return Math.floor(Math.max(0, t - p.start_t) / 60) + (PERIOD_START[p.period] || 0) / 60 + 1;
 }
 
 export const byKickoff = (a, b) => (kickoff(a) ?? Infinity) - (kickoff(b) ?? Infinity);

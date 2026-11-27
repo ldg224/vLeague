@@ -92,8 +92,10 @@ async function run() {
     const periods = data?.periods || fx.result?.periods || [];
     const p = [...periods].reverse().find(p => p.start_t <= t + 1e-6) || periods[0];
     if (!p) return '0:00';
-    const s = Math.max(0, t - p.start_t) + (p.period === 2 ? 2700 : 0), over = p.period === 1 ? s > 2700 : s > 5400;
-    return over ? `${p.period === 1 ? 45 : 90}+${Math.ceil((s - (p.period === 1 ? 2700 : 5400)) / 60)}'` : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+    // S-52: periods 3 and 4 are the two halves of extra time (90-105, 105-120).
+    const start = { 1: 0, 2: 2700, 3: 5400, 4: 6300 }[p.period] || 0, end = start + (p.period > 2 ? 900 : 2700);
+    const s = Math.max(0, t - p.start_t) + start, over = s > end;
+    return over ? `${end / 60}+${Math.ceil((s - end) / 60)}'` : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
   }
   // Team statistics counted from the events and ball holder up to t (a live match can't use the file's full-time totals).
   function statsAt(t) {
