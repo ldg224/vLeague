@@ -1300,6 +1300,32 @@ class Match:
         taker_team = self.away if (b.last_touch is None or b.last_touch.side == 0) else self.home
         self._start_restart('throw_in', taker_team, (xc, line_y), (4, 9))
 
+    def _shot_from_ball(self, scorer, team, line_x, yc):
+        """B-48: the ball went in off the scorer's own kick, but it was played as a pass or a cross (an overhit cross that drops in, a
+        pass that beats the keeper), so there is no shot. Football counts it as a shot on target and a goal (Opta does), so his shots, shots
+        on target and xG count it, as his rating does. His pass in flight becomes that shot; without one (the ball went in off him), a
+        shot is added where he is. Returns the shot event, set as pending_shot."""
+        b = self.ball
+        pp = self.pending_pass if self.pending_pass is not None and self.pending_pass.get('player') == scorer.id else None
+        x0, y0 = (pp['x'], pp['y']) if pp else (scorer.x, scorer.y)
+        ax, ay = team.to_att(x0, y0)
+        header = bool(pp and pp.get('header'))
+        xg = round(decisions.expected_goals(ax, ay, header=header), 3)
+        if pp:
+            sub = pp.get('subtype')
+            for k in ('outcome', 'receiver_intended', 'expected_success', 'height', 'end_x', 'end_y', 'header'):
+                pp.pop(k, None)
+            pp.update(type='shot', subtype='cross' if sub in ('cross', 'corner') else 'open', xg=xg, on_target=True,
+                      body='head' if header else 'foot', outcome=None, from_pass=sub or 'pass',
+                      end_y=round(yc, 2), end_z=round(min(b.z, GOAL_HEIGHT), 2))
+            self.pending_pass = None
+            self.pending_shot = pp
+            return pp
+        e = self.ev('shot', scorer, xg=xg, on_target=True, body='foot', subtype='open', outcome=None,
+                    end_y=round(yc, 2), end_z=round(min(b.z, GOAL_HEIGHT), 2))
+        self.pending_shot = e
+        return e
+
     def _goal(self, line_x, yc):
         b = self.ball
         scoring = self.home if (self.home.direction == 1) == (line_x == PITCH_LENGTH) else self.away
@@ -1320,6 +1346,8 @@ class Match:
         scorer = b.last_touch
         own_goal = scorer is not None and scorer.side != scoring.side
         shot = self.pending_shot
+        if shot is None and scorer is not None and not own_goal:
+            shot = self._shot_from_ball(scorer, scoring, line_x, yc)   # B-48: a cross or pass that went straight in is a shot and a goal
         self._resolve_shot('goal')
         if shot:
             shot['outcome'] = 'goal'     # also covers a shot that went in off the post
