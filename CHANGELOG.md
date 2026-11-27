@@ -3,6 +3,11 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.50.1 (2026-11-28)
+
+**Fixed:**
+- Simulating a match failed with "No module named 'hcl_sim.rating'": the browser match engine now loads the new ratings file added in 1.50.0.
+
 ## 1.50.0 (2026-11-27)
 
 Headlines: A Table tab | Use last week's line-up
