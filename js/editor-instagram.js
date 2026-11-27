@@ -1,3 +1,5 @@
+// UNUSED since 1.49.2 (the Instagram card was removed, user 27 Nov 2026). Kept only so a browser still holding the old page for a few minutes
+// doesn't fail to load it; delete in a later release.
 // Editor -> News -> Instagram (WR-30): the account link, the latest two posts (pasted links, shown as Instagram's own embed on the league page's
 // Overview) and two optional numbers. One row in league_social (supabase/migrations/0052_league_social.sql); the database checks the links again.
 import { postLink, accountLink, DEFAULT_ACCOUNT } from './instagram.js';

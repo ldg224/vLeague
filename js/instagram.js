@@ -1,3 +1,5 @@
+// UNUSED since 1.49.2 (the Instagram card was removed, user 27 Nov 2026). Kept only so a browser still holding the old page for a few minutes
+// doesn't fail to load it; delete in a later release.
 // The league's Instagram (WR-30): link checks and the Overview card. String builders and checks only (no page code), so the tests can run them.
 //
 //   postLink(text)        'https://www.instagram.com/p/ABC123xyz/?igsh=...' -> 'https://www.instagram.com/p/ABC123xyz/' (posts, reels and tv), or null

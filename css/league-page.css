@@ -219,17 +219,15 @@
 @media (min-width: 992px) { .lg-cols { grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); } }
 /* Overview is filled slot by slot (js/league.js): a slot is only a wrapper, its card is the real grid or flex item. */
 .lg-slot { display: contents; }
-/* One column (under 992 px): the page's order of importance, not the columns': this round, the table, the leaders, Team of the week, Instagram. */
+/* One column (under 992 px): the page's order of importance, not the columns': this round, the table, the leaders, Team of the week. */
 @media (max-width: 991px) {
   .lg-cols > .lg-main, .lg-cols > .lg-side { display: contents; }
-  [data-slot="gw"] > * { order: 0; } [data-slot="round"] > * { order: 1; } [data-slot="table"] > * { order: 2; } [data-slot="trio"] > * { order: 3; } [data-slot="tw"] > * { order: 4; } [data-slot="ig"] > * { order: 5; }
+  [data-slot="gw"] > * { order: 0; } [data-slot="round"] > * { order: 1; } [data-slot="table"] > * { order: 2; } [data-slot="trio"] > * { order: 3; } [data-slot="tw"] > * { order: 4; }
 }
-/* Two columns: both end level at the bottom: the last card of each column (Instagram on the left, Team of the week on the right) takes the spare height. */
+/* Two columns, each as tall as its own cards. Team of the week keeps its pitch's shape (it used to stretch to end level with the left column,
+   which made it very long once the Summer Cup tables were in: the user, 27 Nov 2026). */
 @media (min-width: 992px) {
   .lg-main, .lg-side { display: flex; flex-direction: column; }
-  [data-slot="ig"] > .ig, [data-slot="tw"] > .tw { flex: 1 1 auto; }
-  .tw { display: flex; flex-direction: column; }
-  .tw .tw-pitch { flex: 1 1 auto; }
 }
 /* The round widget in the narrow column: the Fixtures rows, rounds stepped by the arrows. */
 .fx-widget .fx-head { margin-top: 0; }

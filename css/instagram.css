@@ -1,3 +1,4 @@
+/* UNUSED since 1.49.2 (the Instagram card was removed). Kept for browsers holding the old page; delete in a later release. */
 /* The league's Instagram card on Overview (WR-30): see js/instagram.js. Tokens only. The account, numbers and Follow button on the left, the newest two
    posts (Instagram's own embed) on the right. On a wide screen the card grows to end level with the Team of the week beside it. */
 .ig { display: flex; flex-direction: column; }
