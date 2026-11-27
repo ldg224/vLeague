@@ -158,4 +158,5 @@
 .fx-modes .fx-cupmode { display: inline-flex; align-items: center; gap: 6px; }
 .fx-modes .fx-cupmode img { width: 16px; height: 16px; }
 .fx-modes .fx-cupmode[aria-current="true"] { background: var(--cup-ocean); border-color: var(--cup-ocean); color: #fff3df; }
+:root:not([data-theme="light"]) .fx-modes .fx-cupmode[aria-current="true"] { background: #fff3df; border-color: #fff3df; color: var(--cup-ocean); }   /* as the Table's Summer Cup pill; beats the blue pill's dark-theme ink */
 .fx-head.is-cup .fx-title { display: inline-flex; align-items: center; gap: 8px; }
