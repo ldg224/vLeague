@@ -160,3 +160,9 @@
 .fx-modes .fx-cupmode[aria-current="true"] { background: var(--cup-ocean); border-color: var(--cup-ocean); color: #fff3df; }
 :root:not([data-theme="light"]) .fx-modes .fx-cupmode[aria-current="true"] { background: #fff3df; border-color: #fff3df; color: var(--cup-ocean); }   /* as the Table's Summer Cup pill; beats the blue pill's dark-theme ink */
 .fx-head.is-cup .fx-title { display: inline-flex; align-items: center; gap: 8px; }
+
+/* A Summer Cup match stands out with a gold outline (the user, 27 Nov 2026). Drawn over the row (the hollow names and hues sit inside the link),
+   inset a little so two cup matches in a row keep two separate frames instead of one thick shared line. */
+.fx-row.is-cup { position: relative; --cup-line: #d9a21b; }   /* a brighter gold than the text gold (--cup-c), so it reads as gold on white too */
+:root:not([data-theme="light"]) .fx-row.is-cup { --cup-line: #ffb627; }
+.fx-row.is-cup::after { content: ''; position: absolute; inset: 3px 6px; border: 2px solid var(--cup-line); border-radius: var(--r-sm); pointer-events: none; z-index: 2; }
