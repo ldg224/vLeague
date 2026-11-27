@@ -118,7 +118,7 @@ class G:   # a small graph builder so each material reads top to bottom
         return b
 
 # ---------- skin ----------
-def skin(T=None, tint=(1, 1, 1), name='skin'):
+def skin(T=None, tint=(1, 1, 1), name='skin', reach=0.006):
     g = G(name, T); b = g.b
     alb = g.albedo()
     # the texture's own tone, warmed slightly toward living skin
@@ -130,8 +130,10 @@ def skin(T=None, tint=(1, 1, 1), name='skin'):
     g.l(warm, 2, b, 'Base Color')
     b.subsurface_method = 'RANDOM_WALK'
     b.inputs['Subsurface Weight'].default_value = 0.18
-    b.inputs['Subsurface Radius'].default_value = (1.0, 0.42, 0.25)   # red travels furthest: ears, nose and fingers glow when backlit
-    b.inputs['Subsurface Scale'].default_value = 0.006
+    # red travels furthest: ears and nose soften. reach is how far (6 mm on the face). The body (hands, fingers, legs) gets a short reach and a
+    # flatter red: at 6 mm a backlit hand glowed orange-red right through the fingers (27 Nov 2026).
+    b.inputs['Subsurface Radius'].default_value = (1.0, 0.42, 0.25) if reach >= 0.006 else (1.0, 0.5, 0.32)
+    b.inputs['Subsurface Scale'].default_value = reach
     g.l(alb, 'Color', b, 'Subsurface Weight') if False else None
     b.inputs['Specular IOR Level'].default_value = 0.32 if STUDIO else 0.5
     b.inputs['Coat Weight'].default_value = 0.0
@@ -210,7 +212,7 @@ def hair():
     if hasattr(h, 'surface_render_method'): h.surface_render_method = 'DITHERED'
     return h
 
-ASSIGN = {'Ch38_Body': skin(tint=TINT), 'Ch38_Shirt': fabric('jersey', 0.5), 'Ch38_Shorts': fabric('shorts', 0.6, 1600.0),
+ASSIGN = {'Ch38_Body': skin(tint=TINT, reach=0.0015), 'Ch38_Shirt': fabric('jersey', 0.5), 'Ch38_Shorts': fabric('shorts', 0.6, 1600.0),
           'Ch38_Socks': fabric('socks', 0.7, 1100.0), 'Ch38_Shoes': boots()}
 for n, m in ASSIGN.items():
     M[n].data.materials.clear(); M[n].data.materials.append(m)
