@@ -252,7 +252,7 @@
     flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 2px 0;
     color: var(--muted); font: 600 var(--fs-xs)/1.2 var(--font); text-decoration: none; -webkit-tap-highlight-color: transparent;
   }
-  .lg-bi { position: relative; display: grid; place-items: center; width: 56px; height: 30px; border-radius: 999px; transition: background-color .15s ease; }
+  .lg-bi { position: relative; display: grid; place-items: center; width: min(56px, 100%); height: 30px; border-radius: 999px; transition: background-color .15s ease; }
   .lg-bi .ic { width: 22px; height: 22px; }
   .lg-bl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .lg-bottom a[aria-current="page"] { color: var(--text-strong); font-weight: 700; }

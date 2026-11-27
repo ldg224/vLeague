@@ -427,7 +427,7 @@ if (ctx) {
     if (!pill && !all) return;
     if (pill) tableFilter = pill.dataset.tfilter;
     if (all) await revealScore(season.fixtures.filter(f => f.result && spoilerHidden(f, season, tableNow())).map(f => f.id)).catch(() => {});
-    const el = current?.[0] === 'overview' ? main.querySelector('.lg-table') : null, before = el && pill ? rowTops(el) : null;
+    const el = ['overview', 'table'].includes(current?.[0]) ? main.querySelector('.lg-table') : null, before = el && pill ? rowTops(el) : null;
     rerender();
     if (pill) {
       const fresh = main.querySelector('.lg-table');
@@ -453,6 +453,7 @@ if (ctx) {
 
   const VIEWS = {
     overview: () => SKELETON,   // filled slot by slot (showOverview, patchOverview)
+    table: () => `<div class="lg-table-page">${tableHtml()}</div>`,   // B-47
     fixtures: sub => fixturesHtml(sub),
     stats,
     seasons: seasonsHtml,

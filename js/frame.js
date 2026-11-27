@@ -19,6 +19,7 @@ import { icon } from './icons.js';
 
 export const TABS = [
   { id: 'overview', label: 'Overview', icon: 'layout-dashboard' },
+  { id: 'table', label: 'Table', icon: 'table' },   // B-47: the table on its own tab too (it stays on Overview)
   { id: 'fixtures', label: 'Fixtures', icon: 'calendar-days' },
   { id: 'stats', label: 'Stats', icon: 'chart-column' },
   { id: 'seasons', label: 'Seasons', icon: 'trophy' },
