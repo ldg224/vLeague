@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
 import * as SkeletonUtils from './vendor/utils/SkeletonUtils.js';
+import { makeDirector } from './director.js';
 
 const q = new URLSearchParams(location.search);
 const data = await (await fetch(q.get('file') || 'match.json')).json();
@@ -26,7 +27,7 @@ stage.append(renderer.domElement);
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0x0b1630, 140, 320);
 const cam = new THREE.PerspectiveCamera(26, 16 / 9, 1, 600);
-function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); cam.aspect = w / h; cam.fov = w / h < 1 ? 30 : 16; cam.updateProjectionMatrix(); }
+function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
 
 // sky: a night gradient
@@ -495,9 +496,12 @@ function demo(now, dtReal) {
   for (let k = DEMOS.length; k < NP; k++) figs[k].root.visible = false;
 }
 
-// ---------- broadcast camera ----------
+// ---------- broadcast camera: the TV director (V2-4, v2/director.js) ----------
+// The director picks the shot for match time t (main gantry, celebration, REF CAM, replays, set pieces) and the scene time to draw: during a
+// replay that is earlier play, so the players and ball are drawn at sceneT while the clock and score stay live. ?cam=follow keeps the old camera.
+const director = q.get('cam') === 'follow' ? null : makeDirector(data, { ballAt });
 const camT = new THREE.Vector3(0, 0, 0), camP = new THREE.Vector3(0, 24, 92);
-function camera(B, dtReal) {
+function followCamera(B, dtReal) {
   const [bx, bz] = W(B.x, B.y);
   const portrait = innerWidth < innerHeight;
   const tx = Math.max(-36, Math.min(36, bx + B.vx * 0.6)), tz = bz * 0.55 + 2;
@@ -506,12 +510,20 @@ function camera(B, dtReal) {
   const px = camT.x * (portrait ? 0.92 : 0.78), pz = portrait ? 70 : 92, py = portrait ? 30 : 26;
   camP.x += (px - camP.x) * k; camP.y = py; camP.z = pz;
   cam.position.copy(camP); cam.lookAt(camT);
-  if (DEMO && q.has('side')) { cam.position.set(14, 1.6, -4); cam.lookAt(0.3, 0.9, -4); cam.fov = 55; cam.updateProjectionMatrix(); return; }
-  if (DEMO) { cam.position.set(-8.5 + 8.8, 3.2, -4 + 12); cam.lookAt(-8.5 + 8.8, 0.9, -4); cam.fov = 50; cam.updateProjectionMatrix(); return; }
+}
+function setFov(f) { if (Math.abs(cam.fov - f) > 1e-3) { cam.fov = f; cam.updateProjectionMatrix(); } }
+// Returns the shot for match time t: { sceneT, label, kind }. Test views (?demo, ?close) override the camera but keep the live scene.
+function camera(t, dtReal) {
+  if (DEMO && q.has('side')) { cam.position.set(14, 1.6, -4); cam.lookAt(0.3, 0.9, -4); setFov(55); return { sceneT: t, label: '', kind: 'test' }; }
+  if (DEMO) { cam.position.set(-8.5 + 8.8, 3.2, -4 + 12); cam.lookAt(-8.5 + 8.8, 0.9, -4); setFov(50); return { sceneT: t, label: '', kind: 'test' }; }
   if (q.has('close')) {   // a close look at one player (?close=<index>), to judge the figures
     const f = figs[Number(q.get('close')) || 0].root.position;
-    cam.position.set(f.x + 4.5, 2.2, f.z + 5.5); cam.lookAt(f.x, 1.0, f.z); cam.fov = 40; cam.updateProjectionMatrix();
+    cam.position.set(f.x + 4.5, 2.2, f.z + 5.5); cam.lookAt(f.x, 1.0, f.z); setFov(40); return { sceneT: t, label: '', kind: 'test' };
   }
+  if (!director) { followCamera(ballAt(t), dtReal); setFov(innerWidth < innerHeight ? 30 : 16); return { sceneT: t, label: '', kind: 'follow' }; }
+  const s = director.shot(t, dtReal, cam.aspect);
+  cam.position.set(...s.pos); cam.lookAt(...s.look); setFov(s.fov);
+  return s;
 }
 
 // ---------- HUD, clock, controls ----------
@@ -531,21 +543,27 @@ for (const b of document.querySelectorAll('[data-sp]')) b.onclick = () => { spee
 document.getElementById('goal').onclick = () => { const g = goals.find(e => e.t > t + 2) || goals[0]; if (g) { t = g.t - 9; figs.forEach(f => (f.last = null)); } };
 
 // ---------- loop, with a frame-rate meter that lowers the resolution if a device struggles ----------
-let lastMs = performance.now(), acc = 0, n = 0, slow = 0;
-const fpsEl = document.getElementById('fps'), capEl = document.getElementById('cap');
+let lastMs = performance.now(), acc = 0, n = 0, slow = 0, lastScene = null, lastKind = '';
+const fpsEl = document.getElementById('fps'), capEl = document.getElementById('cap'), tagEl = document.getElementById('tag');
 function loop(ms) {
   const dtReal = Math.min(0.1, (ms - lastMs) / 1000); lastMs = ms;
   if (playing) t = Math.min(T1, t + dtReal * speed);
-  const B = ballAt(t), [bx, bz] = W(B.x, B.y);
+  // the camera first: it says which moment the scene shows (a replay shows earlier play)
+  const shot = camera(t, dtReal), st = shot.sceneT;
+  // a cut that jumps the scene in time (into or out of a replay): players take up their pose at once instead of blending from the old moment
+  const jumped = lastScene == null || Math.abs(st - lastScene) > 1 || (shot.kind === 'replay') !== (lastKind === 'replay');
+  if (jumped) figs.forEach(f => (f.last = null));
+  lastScene = st; lastKind = shot.kind;
+  const B = ballAt(st), [bx, bz] = W(B.x, B.y);
   ball.position.set(bx, 0.11 + Math.max(0, B.z), bz);
   ball.rotation.x += B.vy * dtReal * speed / 0.11 * 0.5; ball.rotation.z -= B.vx * dtReal * speed / 0.11 * 0.5;
   if (DEMO) demo(ms / 1000, dtReal);
-  else for (let i = 0; i < NP; i++) { const on = onPitch(i, t); figs[i].root.visible = on; if (on) pose(figs[i], i, t, dtReal * Math.max(1, speed), B); }
-  camera(B, dtReal);
+  else for (let i = 0; i < NP; i++) { const on = onPitch(i, st); figs[i].root.visible = on; if (on) pose(figs[i], i, st, jumped ? 1 : dtReal * Math.max(1, speed), B); }
+  tagEl.textContent = shot.label || ''; tagEl.style.display = shot.label ? 'block' : 'none';
   const sc = goals.filter(g => g.t <= t).at(-1)?.score || [0, 0];
   document.getElementById('bug-s').textContent = `${sc[0]}–${sc[1]}`;
   document.getElementById('bug-c').textContent = clock(t);
-  const g = goals.find(e => t >= e.t && t < e.t + 6);
+  const g = shot.kind !== 'replay' && goals.find(e => t >= e.t && t < e.t + 6);
   capEl.style.display = g ? 'block' : 'none';
   if (g) capEl.textContent = `GOAL! ${byId[g.scorer]?.name || ''} ${g.score[0]}–${g.score[1]}`;
   seek.value = (t - T0) / (T1 - T0);
@@ -560,4 +578,4 @@ function loop(ms) {
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
-window.__v2 = { setT: v => { t = v; figs.forEach(f => (f.last = null)); }, pause: () => { playing = false; } };
+window.__v2 = { setT: v => { t = v; figs.forEach(f => (f.last = null)); }, pause: () => { playing = false; }, play: () => { playing = true; }, director, shots: director?.shots, get t() { return t; } };

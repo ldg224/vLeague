@@ -21,6 +21,7 @@
   .ctl button[aria-pressed="true"] { background: #fff; color: #0b1a3a; }
   .ctl input { width: 160px; }
   .fps { position: fixed; top: 16px; right: 16px; font-size: 12px; background: rgba(0,0,0,.5); padding: 5px 9px; border-radius: 6px; font-variant-numeric: tabular-nums; }
+  .tag { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); font-size: 13px; font-weight: 900; font-stretch: 125%; letter-spacing: .08em; background: #1e88e5; padding: 5px 12px; border-radius: 6px; display: none; }
   .cap { position: fixed; left: 16px; bottom: 70px; font-size: 13px; font-weight: 700; background: rgba(10,20,45,.85); padding: 6px 10px; border-radius: 6px; display: none; }
 </style>
 </head>
@@ -29,6 +30,7 @@
 <div class="bug"><span class="tm" id="bug-h"></span><span class="sc" id="bug-s">0–0</span><span class="tm" id="bug-a"></span><span class="ck" id="bug-c">00:00</span></div>
 <div class="fps" id="fps"></div>
 <div class="cap" id="cap"></div>
+<div class="tag" id="tag"></div>
 <div class="ctl">
   <button id="play">Pause</button>
   <button data-sp="1" aria-pressed="true">1×</button><button data-sp="2">2×</button><button data-sp="4">4×</button>
