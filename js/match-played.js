@@ -24,10 +24,11 @@ function facts(fx, ctx) {
   const out = {};
   if (ctx.live && ctx.file) {
     const r = ratingsAt(ctx.file, ctx.horizon);
-    for (const p of ctx.file.players) out[p.id] = { r: r[p.id] ?? null, g: 0, a: 0, yc: 0, rc: 0, pm: 0, off: null, on: null, so: null };
+    for (const p of ctx.file.players) out[p.id] = { r: r[p.id] ?? null, g: 0, a: 0, og: 0, yc: 0, rc: 0, pm: 0, off: null, on: null, so: null };
     for (const e of ctx.file.events) {
       if (e.t > ctx.horizon) break;
       if (e.type === 'shot' && e.subtype === 'penalty' && (e.outcome === 'saved' || e.outcome === 'off_target') && out[e.player]) out[e.player].pm++;
+      if (e.type === 'goal' && e.own_goal && out[e.scorer]) out[e.scorer].og++;   // B-51: the red ball by the player who scored it
       if (e.type === 'goal' && !e.own_goal && out[e.scorer]) { out[e.scorer].g++; if (e.assist && out[e.assist]) out[e.assist].a++; }
       if (e.type === 'card' && out[e.player]) { if (e.card === 'yellow') out[e.player].yc++; else { out[e.player].rc++; out[e.player].off = e.minute; } }
       if (e.type === 'substitution') { if (out[e.player]) out[e.player].on = e.minute; if (out[e.off]) out[e.off].so = e.minute; }
@@ -35,7 +36,7 @@ function facts(fx, ctx) {
     return out;
   }
   const off = new Map((fx.result?.cards || []).filter(c => c.card !== 'yellow').map(c => [String(c.player), c.minute]));
-  for (const [id, p] of Object.entries(fx.result?.players || {})) out[id] = { r: p.r ?? null, g: p.g || 0, a: p.a || 0, yc: p.yc || 0, rc: p.rc || 0, pm: p.pm || 0, off: p.rc ? off.get(String(id)) ?? null : null, on: p.on ?? null, so: p.so ?? null };
+  for (const [id, p] of Object.entries(fx.result?.players || {})) out[id] = { r: p.r ?? null, g: p.g || 0, a: p.a || 0, og: p.og || 0, yc: p.yc || 0, rc: p.rc || 0, pm: p.pm || 0, off: p.rc ? off.get(String(id)) ?? null : null, on: p.on ?? null, so: p.so ?? null };
   return out;
 }
 
@@ -71,7 +72,8 @@ function side(fx, L, ctx, F, star, which) {
     if (ctx.view === 'rating') {   // this match: its goals, assists, missed penalties and cards go with its ratings
       if (f.a) marks += `<span class="ml-m is-a">${assistMark(f.a)}</span>`;
       if (f.g) marks += `<span class="ml-m is-g">${goalMark(f.g)}</span>`;
-      if (f.pm) marks += `<span class="ml-m is-g${f.g ? ' is-up' : ''}">${redBallMark('Penalty not scored', f.pm)}</span>`;
+      if (f.og) marks += `<span class="ml-m is-g${f.g ? ' is-up' : ''}">${redBallMark('Own goal', f.og)}</span>`;
+      if (f.pm) marks += `<span class="ml-m is-g${f.g || f.og ? ' is-up' : ''}">${redBallMark('Penalty not scored', f.pm)}</span>`;
       if (f.rc || f.yc) marks += `<span class="ml-off">${f.rc && f.off ? `<em>${esc(f.off)}′</em>` : ''}${cardMark(f.rc ? 'red' : 'yellow')}</span>`;
       else if (f.so != null) marks += `<span class="ml-off"><em>${esc(f.so)}′</em>${subMark(false)}</span>`;
     } else if (ctx.view === 'ratings' && p?.offense != null) marks += ratingBadges(p);   // S-36

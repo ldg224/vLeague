@@ -257,7 +257,7 @@ function halfTime(r, show) {
   r.text('HALF-TIME', W / 2, 110, { size: 50, weight: 900, align: 'center', colour: LIME, spacing: 12, alpha: k });
   r.scoreLine(sc, 310, k);
   const seen = r.goals.filter(g => g.t <= end);
-  const list = side => seen.filter(g => (g.team === (side ? r.away.code : r.home.code)) !== !!g.own_goal).map(g => `${lastName(r.names[g.scorer])} ${g.minute}'${g.own_goal ? ' (OG)' : ''}`);
+  const list = side => seen.filter(g => g.team === (side ? r.away.code : r.home.code)).map(g => `${lastName(r.names[g.scorer])} ${g.minute}'${g.own_goal ? ' (OG)' : ''}`);
   const a = easeOut((t - 0.6) / 0.6);
   list(0).slice(0, 4).forEach((s, i) => r.scorerLine(s, W / 2 - 700, 480 + i * 38, { alpha: a }));
   list(1).slice(0, 4).forEach((s, i) => r.scorerLine(s, W / 2 + 700, 480 + i * 38, { alpha: a }));
@@ -302,7 +302,7 @@ function fullStats(r, t) {
   r.bg(0.88); r.stripes(t, 0.4);
   r.text('FULL-TIME', W / 2, 105, { size: 46, weight: 900, align: 'center', colour: LIME, spacing: 12, alpha: k });
   r.scoreLine([r.d.result.home, r.d.result.away], 300, k);
-  const list = side => r.goals.filter(g => (g.team === (side ? r.away.code : r.home.code)) !== !!g.own_goal).map(g => `${lastName(r.names[g.scorer])} ${g.minute}'${g.own_goal ? ' (OG)' : ''}`);
+  const list = side => r.goals.filter(g => g.team === (side ? r.away.code : r.home.code)).map(g => `${lastName(r.names[g.scorer])} ${g.minute}'${g.own_goal ? ' (OG)' : ''}`);
   const a = easeOut((t - 0.6) / 0.6);
   list(0).slice(0, 5).forEach((s, i) => r.scorerLine(s, W / 2 - 700, 450 + i * 38, { alpha: a }));
   list(1).slice(0, 5).forEach((s, i) => r.scorerLine(s, W / 2 + 700, 450 + i * 38, { alpha: a }));

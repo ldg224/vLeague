@@ -25,12 +25,35 @@ test('a miss far wide of the post still shows in the little goal, pinned to its 
   assert.doesNotMatch(mouthDot(shotMapCard(fx, file, ctx, { sel: '1', period: 'all' })).cls, /is-out/);   // a save sits in the goal
 });
 
-test('the Result line says how far wide, or over the bar', () => {
+test('the Result line gives no distance, only "over the bar" (B-50)', () => {
   const s = Object.fromEntries(shotsOf(file, fx).map(x => [x.id, x]));
   assert.equal(resultText(s['1']), 'Saved');
-  assert.equal(resultText(s['2']), 'Off target, 3 m wide');
-  assert.equal(resultText(s['3']), 'Off target, 20 m wide');
+  assert.equal(resultText(s['2']), 'Off target');
+  assert.equal(resultText(s['3']), 'Off target');
   assert.equal(resultText(s['4']), 'Off target, over the bar');
+});
+
+test('a narrow miss, or one the data put inside the frame, is drawn clear of the goal (B-50)', () => {
+  // goal frame in the picture: x 0..73.2, y 0..24.4 (tenths of a metre)
+  const near = { ...file, events: [shot(5, 88, 34, 34 + 3.7, 0.5, 'off_target', true), shot(6, 88, 34, 33.9, 0.6, 'off_target')] };
+  for (const sel of ['5', '6']) {
+    const d = mouthDot(shotMapCard(fx, near, ctx, { sel, period: 'all' }));
+    const clear = d.cx + d.r < 0 || d.cx - d.r > 73.2 || d.cy + d.r < 0;
+    assert.ok(clear, `shot ${sel} at ${d.cx},${d.cy} is clear of the frame`);
+  }
+  const s = shotsOf(near, fx)[0];
+  assert.equal(s.xgot, null, 'a miss has no xGOT even if flagged on target');
+});
+
+test('a blocked shot: its line stops at the block, and no dot in the little goal (B-50)', () => {
+  const blk = { ...file, events: [shot(7, 85, 30, 34, 0.2, 'blocked', true), { id: 8, type: 'block', t: 107.3, x: 88, y: 31, team: 'AAA' }] };
+  const html = shotMapCard(fx, blk, ctx, { sel: '7', period: 'all' });
+  assert.doesNotMatch(html, /class="sm-md /);
+  const line = html.match(/class="sm-trail" x1="([-\d.]+)" y1="([-\d.]+)" x2="([-\d.]+)" y2="([-\d.]+)"/);
+  assert.ok(line, 'a line to the block');
+  assert.ok(Math.abs(+line[3] - +line[1]) < 4, `the line is short (${line[1]} -> ${line[3]}), not to the goal line`);
+  const none = shotMapCard(fx, { ...blk, events: [blk.events[0]] }, ctx, { sel: '7', period: 'all' });
+  assert.doesNotMatch(none, /class="sm-trail"/, 'no block spot known: no line at all');
 });
 
 test('the player map widens to show a shot from far out', () => {
