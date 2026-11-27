@@ -54,7 +54,7 @@ function momentum(fx, file, ctx) {
   const marks = [];
   for (const e of file.events) {
     if (e.t > ctx.horizon || (e.type !== 'goal' && !(e.type === 'card' && e.card !== 'yellow'))) continue;   // goals and red cards only, as FotMob
-    const credit = e.type === 'goal' && e.own_goal ? (e.team === fx.home ? fx.away : fx.home) : e.team, top = credit === fx.home;
+    const top = e.team === fx.home;   // B-51: a goal's team is the side it counts for, own goals included (the engine records an own goal under the team that benefits)
     const at = `left:${(x(e.t) / W * 100).toFixed(2)}%;top:${(top ? (e.type === 'goal' ? 13 : 38) : H - (e.type === 'goal' ? 13 : 38)).toFixed(0)}px`;   // the same chips as the lineup and the events (js/match-marks.js)
     marks.push(`<span class="mo-mk" style="${at}">${e.type === 'goal' ? (e.own_goal ? redBallMark('Own goal') : goalMark()) : cardMark('red')}</span>`);
   }
@@ -94,7 +94,7 @@ function events(fx, file, ctx) {
   for (const e of file.events) {
     if (e.t > ctx.horizon) break;
     if (e.type === 'goal') {
-      const own = e.own_goal, side = (own ? e.team === fx.home : e.team === fx.away) ? 'away' : 'home', s = shots.get(e.shot), pen = s?.subtype === 'penalty';
+      const own = e.own_goal, side = e.team === fx.home ? 'home' : 'away', s = shots.get(e.shot), pen = s?.subtype === 'penalty';
       const assist = !own && e.assist ? `Assist: ${surname(nameOf(file, e.assist))}` : '';
       list.push({ t: e.t, minute: e.minute, side, icon: own ? 'own' : 'ball', pid: e.scorer, who: nameOf(file, e.scorer), sub: [Array.isArray(e.score) ? `${e.score[0]} – ${e.score[1]}` : '', own ? 'Own goal' : pen ? 'Penalty' : '', assist].filter(Boolean).join(' · '), goal: true });
     } else if (e.type === 'shot' && e.subtype === 'penalty' && (e.outcome === 'saved' || e.outcome === 'off_target')) {   // a penalty that did not go in (one that hit the post has its own row)
@@ -110,7 +110,7 @@ function events(fx, file, ctx) {
       list.push({ t: e.t, divider: `+${e.minutes} ${e.minutes === 1 ? 'minute' : 'minutes'} added` });
     } else if (e.type === 'period_end') {
       const goals = file.events.filter(g => g.type === 'goal' && g.t <= e.t), score = { home: 0, away: 0 };
-      for (const g of goals) score[(g.own_goal ? g.team === fx.home : g.team === fx.away) ? 'away' : 'home']++;
+      for (const g of goals) score[g.team === fx.home ? 'home' : 'away']++;
       list.push({ t: e.t + 0.01, divider: `${e.period === 1 ? 'HT' : 'FT'} ${score.home} – ${score.away}`, strong: true });
     }
   }

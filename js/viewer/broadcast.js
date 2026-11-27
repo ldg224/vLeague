@@ -13,6 +13,7 @@
 
 import { HighlightsRenderer, RED_AT, SECOND_EXTRA, W, H, makeCam, makeCamAt, RIG, lerpCam, clamp, lerp, easeOut, easeInOut, seg01, lastName, LIME, DARK } from './highlights.js';
 import { drawShow } from './matchday-show.js';
+import { ratingsAt } from '../live-rating.js';   // S-45
 
 const REF_DT = 0.2;        // referee path sample step (sim seconds)
 const CAM_DT = 0.1;        // camera path sample step
@@ -578,6 +579,21 @@ export class BroadcastRenderer extends HighlightsRenderer {
     if (this.A.league && Math.abs(k - 0.5) < 0.3) { c.save(); c.globalAlpha = 1 - Math.abs(k - 0.5) / 0.3; this.leagueFit((W / 2 - 80) + (160) / 2, (H / 2 - 80) + (160) / 2, 160, 160); c.restore(); }
   }
 
+  // S-45: a small sign on the score bug, beside that team's red cards, while its boosted captain's live rating is under 6.0: the boost
+  // badge, dimmed, with a red arrow down. Nothing more (the user: "don't force it"). Ratings are worked out once a match second.
+  captainTrouble(t, side, x, y) {
+    const tm = this.d.teams?.[side];
+    if (!tm?.captain_boost || !tm.captain || !this.d.events) return;
+    const s = Math.floor(t);
+    if (this._rtAt !== s) { this._rtAt = s; this._rt = ratingsAt(this.d, t); }
+    const r = this._rt?.[tm.captain];
+    if (r == null || r >= 6) return;
+    const c = this.c, n = this.cards.filter(k => k.colour === 'red' && k.e.team === tm.code && k.t <= t).length, cx = x + n * 14 + 12, cy = y + 6;
+    c.save(); c.globalAlpha = 0.9; this.boostBadge(cx, cy, 11);
+    c.fillStyle = '#ff6b6b'; c.beginPath(); c.moveTo(cx + 14, cy - 5); c.lineTo(cx + 26, cy - 5); c.lineTo(cx + 20, cy + 5); c.closePath(); c.fill();
+    c.restore();
+  }
+
   // Small red cards above a team's name on the score bug, one per player sent off so far.
   redCards(t, code, x, y) {
     const n = this.cards.filter(k => k.colour === 'red' && k.e.team === code && k.t <= t).length, c = this.c;
@@ -594,6 +610,8 @@ export class BroadcastRenderer extends HighlightsRenderer {
     this.scoreBoard(x, y, sc, t >= this.t1 ? 'FT' : this.clockAt(t));
     this.redCards(t, this.home.code, x + 88, y + 4);
     this.redCards(t, this.away.code, x + 322, y + 4);
+    this.captainTrouble(t, 'home', x + 88, y + 4);
+    this.captainTrouble(t, 'away', x + 322, y + 4);
     if (t < this.t1) this.addedBoard(x, y, t);
     if (this.A.league) { c.globalAlpha = 0.75; this.leagueFit((W - 110) + (60) / 2, (H - 110) + (60) / 2, 60, 60); c.globalAlpha = 1; }
   }
@@ -609,7 +627,8 @@ export class BroadcastRenderer extends HighlightsRenderer {
     this.scoreLine(sc, 580, k);
     c.globalAlpha = a;   // scoreLine resets it
     if (scorers) {
-      const list = side => this.goals.filter(g => (g.team === (side ? this.away.code : this.home.code)) !== !!g.own_goal)
+      const list = side => this.goals.filter(g => g.team === (side ? this.away.code : this.home.code))   // B-51: own goals count for the team in g.team
+       
         .map(g => `${lastName(this.names[g.scorer])} ${g.minute}'${g.own_goal ? ' (OG)' : ''}`);
       list(0).slice(0, 4).forEach((s, i) => this.scorerLine(s, W / 2 - 520, 760 + i * 38));
       list(1).slice(0, 4).forEach((s, i) => this.scorerLine(s, W / 2 + 520, 760 + i * 38));

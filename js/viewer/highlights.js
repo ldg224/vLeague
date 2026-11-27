@@ -648,7 +648,8 @@ export class HighlightsRenderer {
     this.text('FULL-TIME', W / 2, 150, { size: 50, weight: 900, align: 'center', colour: LIME, spacing: 12, alpha: k });
     this.scoreLine([this.d.result.home, this.d.result.away], 380, k);
     // Scorers
-    const list = side => this.goals.filter(g => (g.team === (side ? this.away.code : this.home.code)) !== !!g.own_goal)
+    const list = side => this.goals.filter(g => g.team === (side ? this.away.code : this.home.code))   // B-51: own goals count for the team in g.team
+       
       .map(g => `${lastName(this.names[g.scorer])} ${g.minute}'${g.own_goal ? ' (OG)' : ''}`);
     const a = easeOut((t - 0.6) / 0.6);
     list(0).slice(0, 4).forEach((s, i) => this.scorerLine(s, W / 2 - 520, 555 + i * 38, { alpha: a }));
@@ -1365,11 +1366,26 @@ export class HighlightsRenderer {
     if (tilt) c.restore();
     if (holder) {
       const name = lastName(pl.name).toUpperCase(), fs = 24;
-      c.font = `900 ${fs}px ${FONT}`; const w = c.measureText(name).width + 28;
-      this.pill(bx - w / 2, top - 46, w, 36, 'rgba(6,26,56,0.88)', 10);
-      c.fillStyle = (side ? this.kitArt?.away?.field?.main : this.kitArt?.home?.field?.main) || (side ? this.ac : this.hc); c.fillRect(bx - w / 2, top - 46, 6, 36);   // the team's colour, not the goalkeeper's own shirt (B-22)
-      this.text(name, bx + 3, top - 20, { size: fs, weight: 900, align: 'center' });
+      // S-44: the boosted captain's tag glows in the boost colours and carries a small C badge
+      const tm = this.d.teams?.[side ? 'away' : 'home'], boosted = !!tm?.captain_boost && String(tm.captain) === String(pl.id), B = boosted ? 30 : 0;
+      c.font = `900 ${fs}px ${FONT}`; const w = c.measureText(name).width + 28 + B, x0 = bx - w / 2;
+      if (boosted) { c.save(); c.shadowColor = 'rgba(144,90,255,.95)'; c.shadowBlur = 18; this.pill(x0, top - 46, w, 36, 'rgba(6,26,56,0.88)', 10); c.restore(); }
+      this.pill(x0, top - 46, w, 36, 'rgba(6,26,56,0.88)', 10);
+      c.fillStyle = (side ? this.kitArt?.away?.field?.main : this.kitArt?.home?.field?.main) || (side ? this.ac : this.hc); c.fillRect(x0, top - 46, 6, 36);   // the team's colour, not the goalkeeper's own shirt (B-22)
+      this.text(name, bx + 3 - B / 2, top - 20, { size: fs, weight: 900, align: 'center' });
+      if (boosted) {
+        c.save(); c.lineWidth = 2; c.strokeStyle = '#a04dff'; c.beginPath(); c.roundRect(x0, top - 46, w, 36, 10); c.stroke();
+        this.boostBadge(x0 + w - 22, top - 28, 12); c.restore();
+      }
     }
+  }
+
+  // The boosted captain's badge (S-44, S-45): a C on the boost gradient, as on the line-up (css/match-lineup.css .mk-cap.is-boost).
+  boostBadge(cx, cy, r) {
+    const c = this.c, g = c.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+    g.addColorStop(0, '#4080ff'); g.addColorStop(1, '#a04dff');
+    c.fillStyle = g; c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.fill();
+    this.text('C', cx, cy + r * 0.45, { size: Math.round(r * 1.3), weight: 900, align: 'center', colour: '#fff' });
   }
 
   // A player's body for one turn: the kit sprite plus his print, drawn once and kept (22 players x 24 turns at most), so a frame is just a stamp.

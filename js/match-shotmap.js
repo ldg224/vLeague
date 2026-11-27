@@ -15,7 +15,8 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 // xG after the shot is on target, from where it crossed the line (end_y across the goal, end_z up it).
 export function xgot(e) {
-  if (!(e.on_target || e.outcome === 'goal' || e.outcome === 'saved') || e.end_y == null) return null;
+  const on = e.outcome ? e.outcome === 'goal' || e.outcome === 'saved' : e.on_target;   // B-50: the outcome decides (a miss can carry on_target)
+  if (!on || e.end_y == null) return null;
   const lat = clamp(Math.abs(e.end_y - MID) / (GOAL_W / 2), 0, 1), up = clamp((e.end_z ?? 0.8) / GOAL_H, 0, 1);
   const q = Math.min(1, Math.hypot(lat * 0.8, Math.max(0, up - 0.2) * 1.2));
   return clamp((e.xg || 0) * (0.7 + 1.8 * q), (e.xg || 0) * 0.6, 0.97);
@@ -38,10 +39,14 @@ export function shotsOf(file, fx, horizon = Infinity) {
     const home = e.team === fx.home, right = per(e.period)?.home_attacks, flip = right ? (right === 'right') !== home : e.x <= HALF, nx = flip ? 105 - e.x : e.x, ny = flip ? 68 - e.y : e.y;
     const ey = e.end_y == null ? null : flip ? 68 - e.end_y : e.end_y;   // where it crossed the goal line, turned the same way as X and Y
     const head = e.body === 'head' || e.subtype === 'header';
+    // B-50: a blocked shot stops where it was blocked (the block event just after it), so its line on the map ends there
+    const blk = e.outcome === 'blocked' ? ev.find(b => b.type === 'block' && b.t >= e.t && b.t - e.t < 2 && b.x != null) : null;
+    const bx = blk ? (flip ? 105 - blk.x : blk.x) : null, by = blk ? (flip ? 68 - blk.y : blk.y) : null;
     out.push({
       id: String(e.id), e, team: e.team, home, period: e.period, minute: e.minute, xg: e.xg || 0, xgot: xgot(e), result: e.outcome || (e.on_target ? 'saved' : 'off_target'),
       situation: situationOf(e, ev), type: e.subtype === 'penalty' ? 'Penalty' : e.subtype === 'free_kick' ? 'Free kick' : head ? 'Header' : e.subtype === 'volley' ? 'Volley' : 'Foot',
       X: home ? 105 - nx : nx, Y: home ? 68 - ny : ny, endY: ey == null ? null : home ? 68 - ey : ey,
+      blockX: bx == null ? null : home ? 105 - bx : bx, blockY: by == null ? null : home ? 68 - by : by,
     });
   }
   return out;
@@ -65,22 +70,36 @@ const PITCH = '<g class="sm-lines"><rect x="0" y="0" width="105" height="68" rx=
 
 // The goal as the shooter sees it, standing on the pitch facing it, with the shot where it crossed the line (the home club shoots at the left goal of the map, the away club at the right).
 // The picture runs 2.6 m past each post and 1.4 m over the bar (in tenths of a metre). Most misses go wider than that, some by 20 m or more, so a shot beyond the picture
-// is pinned to its edge with a dashed ring, and the Result line says how far wide it went (B-44: misses used to fall outside the picture and not show at all).
+// is pinned to its edge with a dashed ring (B-44: misses used to fall outside the picture and not show at all). A blocked shot has no dot: it never reached the goal (B-50).
 const MOUTH = { x0: -26, x1: 99.2, y0: -14, y1: 30 }, MD_R = 4.6;
 function mouth(s) {
-  const e = s.e, has = e.end_y != null, x = (has ? (s.home ? MID + GOAL_W / 2 - s.endY : s.endY - (MID - GOAL_W / 2)) : 0) * 10, y = (GOAL_H - Math.max(0, e.end_z ?? 0)) * 10;
+  const e = s.e, has = e.end_y != null && s.result !== 'blocked';
+  let x = (has ? (s.home ? MID + GOAL_W / 2 - s.endY : s.endY - (MID - GOAL_W / 2)) : 0) * 10, y = (GOAL_H - Math.max(0, e.end_z ?? 0)) * 10;
+  // B-50: a miss never looks on target. One that crossed (or nearly crossed) inside the frame is drawn clear of it: over the bar if it went high,
+  // otherwise just outside the nearer post (the dot is half a metre wide, so a narrow miss used to sit on the post)
+  if (s.result === 'off_target' && x > -MD_R - 1 && x < 73.2 + MD_R + 1 && y > -MD_R - 1) {
+    if ((e.end_z ?? 0) >= GOAL_H - 0.2) y = Math.min(y, -MD_R - 1);
+    else x = x < 36.6 ? Math.min(x, -MD_R - 1) : Math.max(x, 73.2 + MD_R + 1);
+  }
   const px = clamp(x, MOUTH.x0 + MD_R, MOUTH.x1 - MD_R), py = clamp(y, MOUTH.y0 + MD_R, MOUTH.y1 - MD_R), out = px !== x || py !== y;
   const net = Array.from({ length: 7 }, (_, i) => `M${(i + 1) * 9.15} 0V24.4`).join('') + Array.from({ length: 3 }, (_, i) => `M0 ${(i + 1) * 6.1}H73.2`).join('');
   return `<svg class="sm-mouth" viewBox="${MOUTH.x0} ${MOUTH.y0} ${MOUTH.x1 - MOUTH.x0} ${MOUTH.y1 - MOUTH.y0}" aria-hidden="true"><path class="sm-ground" d="M${MOUTH.x0} 24.4H${MOUTH.x1}"/><path class="sm-net" d="${net}"/><path class="sm-frame" d="M0 24.4V0h73.2v24.4"/>${has ? `<circle class="sm-md ${kind(s)}${out ? ' is-out' : ''}" cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${MD_R}"/>` : ''}</svg>`;
 }
 
-// The Result line: an off-target shot also says how far wide it went, or that it went over.
+// The Result line: an off-target shot that went high says so (B-50: no "X m wide", the users didn't want the distance).
 export function resultText(s) {
   const e = s.e, base = RESULT[s.result] || s.result;
   if (s.result !== 'off_target' || e.end_y == null) return base;
-  const wide = Math.abs(e.end_y - MID) - GOAL_W / 2, over = (e.end_z ?? 0) - GOAL_H;
-  if (wide > 0.05) return `${base}, ${wide < 1 ? wide.toFixed(1) : Math.round(wide)} m wide`;
-  return over > 0 ? `${base}, over the bar` : base;
+  return Math.abs(e.end_y - MID) <= GOAL_W / 2 && (e.end_z ?? 0) >= GOAL_H - 0.2 ? `${base}, over the bar` : base;
+}
+
+// The picked shot's line on the pitch: to the block for a blocked shot, otherwise to where it crossed the goal line (gx), a miss kept outside the posts.
+function trail(s, gx) {
+  let ex = gx, ey = s.endY;
+  if (s.result === 'blocked') { if (s.blockX == null) return ''; ex = s.blockX; ey = s.blockY; }
+  else if (ey == null) return '';
+  else if (s.result === 'off_target' && Math.abs(ey - MID) < GOAL_W / 2 + 0.6 && (s.e.end_z ?? 0) < GOAL_H - 0.2) ey = MID + Math.sign(ey - MID || 1) * (GOAL_W / 2 + 0.6);
+  return `<line class="sm-trail" x1="${s.X.toFixed(2)}" y1="${s.Y.toFixed(2)}" x2="${ex.toFixed(2)}" y2="${ey.toFixed(2)}"/>`;
 }
 
 export function shotMapCard(fx, file, ctx, st) {
@@ -98,7 +117,7 @@ export function shotMapCard(fx, file, ctx, st) {
       : `<circle ${common} cx="${s.X.toFixed(2)}" cy="${s.Y.toFixed(2)}" r="${r.toFixed(2)}"/>`;
   }).join('');
   // The picked shot: a ring round it and a line to where it crossed the goal line.
-  const ring = sel ? `${sel.endY != null ? `<line class="sm-trail" x1="${sel.X.toFixed(2)}" y1="${sel.Y.toFixed(2)}" x2="${sel.home ? 0 : 105}" y2="${sel.endY.toFixed(2)}"/>` : ''}<circle class="sm-ring${sel.result === 'goal' ? ' is-goal' : ''}" cx="${sel.X.toFixed(2)}" cy="${sel.Y.toFixed(2)}" r="${(radius(sel) + 1.3).toFixed(2)}"/>` : '';
+  const ring = sel ? `${trail(sel, sel.home ? 0 : 105)}<circle class="sm-ring${sel.result === 'goal' ? ' is-goal' : ''}" cx="${sel.X.toFixed(2)}" cy="${sel.Y.toFixed(2)}" r="${(radius(sel) + 1.3).toFixed(2)}"/>` : '';
   const who = sel ? `${ctx.crest(ctx.team(sel.team), 28)}<b>${esc(nameOf(sel) || ctx.club(sel.team)?.short_name || ctx.team(sel.team).name)}</b>` : '';
   const head = sel ? `<div class="sm-pick"><span class="sm-who">${who}</span><span class="sm-step"><button type="button" class="sm-arrow" data-sm-step="-1" aria-label="Previous shot"${idx <= 0 ? ' disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button><b>${esc(sel.minute)}′</b><button type="button" class="sm-arrow" data-sm-step="1" aria-label="Next shot"${idx >= list.length - 1 ? ' disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button></span></div>
       <div class="sm-detail"><dl class="sm-facts"><div><dt>Shot type</dt><dd>${esc(sel.type)}</dd></div><div><dt>Situation</dt><dd>${esc(sel.situation)}</dd></div><div><dt>Result</dt><dd>${esc(resultText(sel))}</dd></div></dl>
@@ -134,7 +153,7 @@ export function playerShotMap(list, st, o) {
     return s.result === 'goal' ? `<g ${common} transform="translate(${s.X.toFixed(2)} ${s.Y.toFixed(2)}) scale(${r.toFixed(2)})"><circle r="1" class="sm-ball"/>${BALL}</g>`
       : `<circle ${common} cx="${s.X.toFixed(2)}" cy="${s.Y.toFixed(2)}" r="${r.toFixed(2)}"/>`;
   }).join('');
-  const ring = `${sel.endY != null ? `<line class="sm-trail" x1="${sel.X.toFixed(2)}" y1="${sel.Y.toFixed(2)}" x2="105" y2="${sel.endY.toFixed(2)}"/>` : ''}<circle class="sm-ring${sel.result === 'goal' ? ' is-goal' : ''}" cx="${sel.X.toFixed(2)}" cy="${sel.Y.toFixed(2)}" r="${(radius(sel) + 1.3).toFixed(2)}"/>`;
+  const ring = `${trail(sel, 105)}<circle class="sm-ring${sel.result === 'goal' ? ' is-goal' : ''}" cx="${sel.X.toFixed(2)}" cy="${sel.Y.toFixed(2)}" r="${(radius(sel) + 1.3).toFixed(2)}"/>`;
   const arrowBtn = (d, dis, path) => `<button type="button" class="sm-arrow" data-sm-step="${d}" aria-label="${d < 0 ? 'Previous' : 'Next'} shot"${dis ? ' disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${path}"/></svg></button>`;
   const goals = list.filter(s => s.result === 'goal').length, xg = list.reduce((a, s) => a + s.xg, 0), on = list.filter(s => s.result === 'goal' || s.result === 'saved').length;
   const chip = (k, v) => `<span><b>${v}</b>${k}</span>`;

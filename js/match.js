@@ -104,7 +104,11 @@ try {
   if (!fx) main.innerHTML = '<div class="mh"><section class="lg-card"><p class="empty">That match couldn’t be found. <a href="league.html#fixtures">See all matches</a></p></section></div>';
   else {
     // Localhost preview only: ?file=_t/match.json lays a real engine match file (clubs AAA and BBB) over this demo match, to look at the match viewer.
-    if (preview && q.get('file') && fx) { const txt = (await (await fetch(q.get('file'))).text()).replaceAll('"AAA"', JSON.stringify(fx.home)).replaceAll('"BBB"', JSON.stringify(fx.away)); fx.demoFile = prepareMatchFile(JSON.parse(txt)); }
+    if (preview && q.get('file') && fx) { const txt = (await (await fetch(q.get('file'))).text()).replaceAll('"AAA"', JSON.stringify(fx.home)).replaceAll('"BBB"', JSON.stringify(fx.away)); fx.demoFile = prepareMatchFile(JSON.parse(txt));
+      // the header shows the same match as the file (its score and scorers), not the made-up result
+      const d = fx.demoFile, nm = Object.fromEntries((d.players || []).map(p => [p.id, p.name])), pens = new Set(d.events.filter(e => e.type === 'shot' && e.subtype === 'penalty').map(e => e.id));
+      if (fx.result && d.result) fx.result = { ...fx.result, home: d.result.home, away: d.result.away, goals: d.events.filter(e => e.type === 'goal').map(e => ({ t: e.t, minute: e.minute, team: e.team, scorer: e.scorer, scorer_name: nm[e.scorer] ?? null, own_goal: !!e.own_goal, pen: pens.has(e.shot) })) };
+    }
     start();
   }
 } catch (e) {
@@ -172,7 +176,8 @@ function start() {
     if (!played || hid) return '';
     const goals = shownGoals(fx, season, now);
     if (!goals.length) return '';
-    const side = code => goals.filter(g => (g.own_goal ? g.team !== code : g.team === code)).sort((a, b) => a.t - b.t);
+    const side = code => goals.filter(g => g.team === code)   // B-51: an own goal's team is the side it counts for
+      .sort((a, b) => a.t - b.t);
     // One line per scorer with every minute after the name (Grimaldo 53′ (pen), 71′), as FotMob does.
     const lines = list => {
       const by = new Map();
