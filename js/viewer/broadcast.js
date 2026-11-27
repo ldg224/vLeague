@@ -416,6 +416,17 @@ export class BroadcastRenderer extends HighlightsRenderer {
     return this.cv;
   }
 
+  // V2-5: only the broadcast graphics (score bug, goal banners, cards, half-time and full-time, REF CAM, the replay tag and its wipes) on a clear
+  // picture, laid over the 3D match (v2/match3d-core.js). shots: the 3D director's placed shots; its replays carry from, to and e as these do.
+  graphicsFrame(tSim, shots) {
+    const t = clamp(+tSim || 0, this.t0, this.t1), c = this.c, sh = shots.find(s => s.from <= t && t < s.to) || null;
+    c.setTransform(this.scale, 0, 0, this.scale, 0, 0);
+    c.clearRect(0, 0, W, H);
+    if (sh?.kind === 'refcam') this.drawRefCamOverlay(t - sh.from);
+    this.overlays(t, sh?.kind === 'replay' ? sh : null, shots);
+    return this.cv;
+  }
+
   // The matchday show on the live broadcast (js/viewer/matchday-show.js).
   showFrame(show, t) {
     this.c.setTransform(this.scale, 0, 0, this.scale, 0, 0);
@@ -505,7 +516,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
 
   // ------------------------------------------------ overlays
 
-  overlays(t, sh) {
+  overlays(t, sh, shots = this.shots) {
     const P = this.d.periods;
     if (sh?.kind === 'replay') this.replayTag(t - sh.from, sh);
     // Half-time and full-time scorelines.
@@ -523,7 +534,7 @@ export class BroadcastRenderer extends HighlightsRenderer {
     const pa = this.possessionShow(t, sh);
     if (pa > 0) { this.c.save(); this.c.globalAlpha *= pa; this.possessionBar(t); this.c.restore(); }
     // Branded wipe into and out of replays.
-    for (const s of this.shots) {
+    for (const s of shots) {
       if (s.kind !== 'replay') continue;
       for (const b of [s.from, s.to]) if (Math.abs(t - b) < WIPE) this.wipe((t - b + WIPE) / (2 * WIPE));
       if (s.from > t + WIPE) break;

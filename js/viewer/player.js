@@ -8,6 +8,7 @@ import { liveSimTime, liveSpeed, liveShow, clockAt, addedAt } from './data.js';
 import { esc, statusPill } from './ui.js';
 import { Replay } from './replay.js';
 import { icon } from '../icons.js';
+import { support3d, mark3dSlow } from './support3d.js';
 
 const W = 1920, H = 1080;
 const mmss = s => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
@@ -34,6 +35,7 @@ export function playerCard(st) {
 </div>
     <div class="mp-screen" id="mp-screen">
     <div class="mp-stage" id="mp-stage">
+      <div class="mp-3d" id="mp-3d" hidden></div>
       <canvas class="mp-canvas" id="mp-canvas" width="1280" height="720" aria-label="Match video"></canvas>
       <canvas class="mp-tactical" id="pitch" width="1110" height="740" aria-label="Tactical view" hidden></canvas>
       <div class="replay-caption" id="caption"></div>
@@ -100,6 +102,7 @@ export class MatchPlayer {
       console.warn('Match graphics unavailable', e);
     }
     if (!this.bc?.BroadcastRenderer) this.el.querySelector('[data-view="broadcast"]').hidden = true;
+    this.use3d = !!this.bc?.BroadcastRenderer && !!this.hl && support3d().ok;   // V2-5: the broadcast view in 3D where the device can run it
     if (!this.hl) this.el.querySelector('[data-view="highlights"]')?.setAttribute('hidden', '');
     const first = [...this.el.querySelectorAll('[data-view]')].find(b => !b.hidden)?.dataset.view || 'tactical';
     this.show(first);
@@ -107,9 +110,35 @@ export class MatchPlayer {
     this._raf = requestAnimationFrame(ts => this.loop(ts));
   }
 
-  destroy() { document.documentElement.classList.remove('mp-playing'); this._napping = false; clearTimeout(this._nap); cancelAnimationFrame(this._raf); clearTimeout(this._idle); this.tactical?.destroy(); this.ro?.disconnect(); this._off?.abort(); remember({ open: false }); }
+  destroy() { this.drop3d(); document.documentElement.classList.remove('mp-playing'); this._napping = false; clearTimeout(this._nap); cancelAnimationFrame(this._raf); clearTimeout(this._idle); this.tactical?.destroy(); this.ro?.disconnect(); this._off?.abort(); remember({ open: false }); }
 
   // ---------- renderers ----------
+
+  // V2-5: the 3D match picture for the broadcast view (v2/match3d-core.js), under the 2D canvas, which then draws only the broadcast graphics
+  // (BroadcastRenderer.graphicsFrame). Loaded the first time the broadcast view is shown. If it can't be made, loses its picture, or runs too
+  // slow, this device goes back to the 2D broadcast (and stays there for a week: js/viewer/support3d.js).
+  async make3d() {
+    if (this.m3 || this._m3load || !this.use3d) return;
+    const box = this.$('#mp-3d');
+    this._m3load = import(new URL('../../v2/match3d-core.js', import.meta.url).href)
+      .then(({ createMatch3D }) => { box.hidden = false; return createMatch3D({ data: this.data, parent: box }); })
+      .then(m3 => {
+        if (!this.el.isConnected || !this.use3d) return m3.destroy();
+        this.m3 = m3; this.slow3d = 0;
+        m3.canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); this.fall2d('lost its picture'); });
+        this.stage3d(); this.dirty = true;
+      })
+      .catch(e => { console.warn('3D match unavailable', e); this.fall2d('failed to load'); });
+  }
+  drop3d() { this.m3?.destroy(); this.m3 = null; const box = this.$('#mp-3d'); if (box) box.hidden = true; this.stage3d(); }
+  fall2d(why) { mark3dSlow(why); this.use3d = false; this.drop3d(); this.dirty = true; }
+  // The 3D layer shows in the broadcast view once it's ready, and not during the live matchday show (a 2D programme).
+  stage3d(show = false) {
+    const on = !!this.m3 && this.view === 'broadcast' && !show;
+    this.$('#mp-stage')?.classList.toggle('mp-3d-on', on);
+    const box = this.$('#mp-3d'); if (box) box.hidden = !on;
+    return on;
+  }
 
   renderer(view) {
     const have = this.r[view];
@@ -143,6 +172,8 @@ export class MatchPlayer {
     const tac = view === 'tactical';
     this.cv.hidden = tac; this.$('#pitch').hidden = !tac; this.$('#caption').hidden = !tac;
     this.$('#mp-msg').hidden = true;
+    if (view === 'broadcast') this.make3d();
+    this.stage3d();
     if (tac) {
       if (!this.tactical) this.makeTactical();
       if (prevT != null) this.tactical.seek(prevT);
@@ -259,7 +290,7 @@ export class MatchPlayer {
     if (this.view === 'tactical') { this.tactical.seek(t); this.t = this.tactical.t; return this.syncUi(); }
     const [a, b] = this.range();
     this.holdUntil = performance.now() + 1500; this.cost = [];   // the first frames after a jump are slow; don't judge by them
-    this.t = Math.max(a, Math.min(t, b)); this.dirty = true;
+    this.t = Math.max(a, Math.min(t, b)); this.dirty = true; this.m3?.reset();
     this.follow = this.st === 'live' && this.view !== 'highlights' && this.t >= liveSimTime(this.FX, this.S) - 2;   // seeking back stops following live
     this.syncUi();
   }
@@ -387,6 +418,15 @@ export class MatchPlayer {
     this.dirty = false;
     const r = this.renderer(this.view), t0 = performance.now();
     const show = this.view === 'broadcast' && this.follow && this.st === 'live' ? liveShow(this.FX, this.S) : null;   // the matchday show (S-34), for whoever is watching live
+    if (this.view === 'broadcast' && this.stage3d(!!show)) {
+      // 3D: the match picture on its own canvas, the broadcast graphics on this one over it
+      this.m3.frame(this.t, this.playing ? dt : 0, this.videoRate());
+      this.g.clearRect(0, 0, this.cv.width, this.cv.height);
+      this.g.drawImage(r.graphicsFrame(this.t, this.m3.shots), 0, 0, this.cv.width, this.cv.height);
+      this.watch3d();
+      this.tickUi();
+      return;
+    }
     const src = show ? r.showFrame(show, this.t) : r.frame(this.t);
     this.g.drawImage(src, 0, 0, this.cv.width, this.cv.height);
     const cost = performance.now() - t0;
@@ -418,6 +458,15 @@ export class MatchPlayer {
     } else if (js < 9 && g < this.want * 1.2 && i > 0 && LADDER[i - 1] <= this.bestScale + 1e-6 && this.minGap < FRAME_30) {
       if (++this.fast >= 3) { this.raisedAt = now; this.setQuality(LADDER[i - 1]); }
     } else this.fast = 0;
+  }
+  // The 3D sets its own resolution (it steps its pixel ratio down when frames are slow). If it still can't hold 24 frames a second for about
+  // eight seconds of play at its lowest, this device watches in 2D.
+  watch3d() {
+    const s = this.m3?.stats; if (!s?.fps || !this.playing || document.hidden || performance.now() < this.holdUntil) return;
+    if (s.fps === this._fps3d) return;   // the 3D measures once a second
+    this._fps3d = s.fps;
+    this.slow3d = s.fps < 24 && s.pr <= 1 ? (this.slow3d || 0) + 1 : 0;
+    if (this.slow3d >= 8) this.fall2d('too slow');
   }
   setQuality(s) {
     this.scale = s; this.fast = 0; this.holdUntil = performance.now() + 2000; this.cost = []; this.gaps = [];

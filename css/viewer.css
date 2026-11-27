@@ -73,3 +73,9 @@ body.mp-fs-open { overflow: hidden; }
 .ctl.live.behind { opacity: 1; background: var(--live-fg, #ff5252); color: #fff; }
 .mp-live .mp-tabs { }
 .gc-card.replay-card { padding: 14px; }
+
+/* V2-5: the 3D match picture (js/viewer/player.js make3d) sits under the 2D canvas, which then carries only the broadcast graphics */
+.mp-3d { position: absolute; inset: 0; }
+.mp-3d[hidden] { display: none; }
+.mp-3d canvas { width: 100%; height: 100%; display: block; }
+.mp-stage.mp-3d-on .mp-canvas { position: relative; z-index: 1; background: transparent; }
