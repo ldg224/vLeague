@@ -53,7 +53,9 @@ test('the tour has a step for the wallet, a line, the sides, the stake and the b
 });
 
 test('the stake buttons follow the settings', () => {
-  assert.deepEqual(stakeChips(DEFAULTS, 1000), [10, 50, 100, 1000]);
+  assert.deepEqual(stakeChips(DEFAULTS, 1000), [10, 50, 100, 250, 500, 1000]);           // S-41: 250 and 500 too
+  assert.deepEqual(stakeChips(DEFAULTS, 500), [10, 50, 100, 250, 500]);                   // all in is the 500 chip itself
+  assert.deepEqual(stakeChips(DEFAULTS, 300), [10, 50, 100, 250, 300]);
   assert.deepEqual(stakeChips({ ...DEFAULTS, max_stake: 100 }, 1000), [10, 50, 100]);
   assert.deepEqual(stakeChips({ ...DEFAULTS, min_stake: 20 }, 150), [20, 100, 150]);
   assert.deepEqual(stakeChips(DEFAULTS, 5), []);
@@ -226,4 +228,21 @@ test('a Summer Cup match wears the cup badge and outline; other matches do not (
   assert.match(html, /summer-cup\.svg/);
   assert.match(html, /<i>Group A<\/i>/);
   assert.doesNotMatch(stakesView(state(), o), /st-cup/);   // no cup lookup at all: no badge
+});
+
+test('B-52: only one round shows: the one under way or next, never the round after it too', () => {
+  const r1 = { ...line(1), week: 9, starts_at: '2026-11-28T08:00:00Z' }, r2 = { ...line(2), week: 10, starts_at: '2026-12-01T08:00:00Z' };
+  const res = { ...line(3), kind: 'result', week: 10, starts_at: '2026-12-01T08:00:00Z', mult_home: 2, mult_draw: 3, mult_away: 2 };
+  const html = stakesView(state({ slate: [r2, res, r1] }), { ...o, round: w => `Round ${w}` });
+  assert.match(html, /Round 9 stakes/);
+  assert.doesNotMatch(html, /Round 10/);
+  assert.doesNotMatch(html, /Game predictors/);
+  // a pick still riding on the later round is still counted in the wallet
+  const mine = stakesView(state({ slate: [r1, { ...r2, my_side: 'over', my_stake: 250, my_status: 'open' }] }), o);
+  assert.match(mine, /1 pick riding · 250 Coins/);
+});
+test('S-41: the stake row offers 250 and 500, and All in only when it is a different amount', () => {
+  const html = stakesView(state({ wallet: { coins: 800 }, picked: { line: 1, side: 'over', stake: 50 } }), o);
+  for (const n of [10, 50, 100, 250, 500]) assert.match(html, new RegExp(`data-n="${n}"`));
+  assert.match(html, /All in · 800/);
 });

@@ -18,9 +18,11 @@ export const DEFAULTS = { result_win_mult: 2.2, result_draw_mult: 3, multiplier:
 const STAT = { sv: ['Saves', 'saves'], pas: ['Passes', 'passes'], sot: ['Shots on target', 'shots on target'], tk: ['Tackles won', 'tackles won'], g: ['Goals', 'goals'], sh: ['Shots', 'shots'] };
 const POS = { GK: 'GK', DEF: 'DEF', MID: 'MID', FWD: 'FWD' };
 export const payout = (stake, mult = DEFAULTS.multiplier) => Math.floor(stake * Number(mult));
-// The stake buttons: the smallest stake, five times and ten times that (10, 50, 100 by default), within the biggest stake and what you hold, then everything you may stake.
+// The stake buttons: the smallest stake and 5, 10, 25 and 50 times it (10, 50, 100, 250, 500 by default; S-41), within the biggest stake and what you hold, then
+// everything you may stake.
+export const STAKE_STEPS = [1, 5, 10, 25, 50];
 export function stakeChips(cfg, bal) {
-  const lo = cfg.min_stake, cap = cfg.max_stake > 0 ? Math.min(cfg.max_stake, bal) : bal, chips = [lo, lo * 5, lo * 10].filter(c => c <= cap);
+  const lo = cfg.min_stake, cap = cfg.max_stake > 0 ? Math.min(cfg.max_stake, bal) : bal, chips = STAKE_STEPS.map(k => lo * k).filter(c => c <= cap);
   if (cap >= lo && !chips.includes(cap)) chips.push(cap);
   return chips;
 }
@@ -110,7 +112,7 @@ function stakeCard(l, st, o) {
   </article>`;
 }
 
-const chipHtml = (chips, cfg, bal, on, attrs) => chips.map(c => `<button type="button" class="st-chip${on === c ? ' on' : ''}" ${attrs} data-n="${c}" aria-pressed="${on === c}">${c === chips.at(-1) && c !== cfg.min_stake && c !== cfg.min_stake * 5 && c !== cfg.min_stake * 10 ? (c === bal ? 'All in · ' : 'Biggest · ') : ''}${coins(c)}</button>`).join('');
+const chipHtml = (chips, cfg, bal, on, attrs) => chips.map(c => `<button type="button" class="st-chip${on === c ? ' on' : ''}" ${attrs} data-n="${c}" aria-pressed="${on === c}">${c === chips.at(-1) && !STAKE_STEPS.some(k => c === cfg.min_stake * k) ? (c === bal ? 'All in · ' : 'Biggest · ') : ''}${coins(c)}</button>`).join('');
 const canStake = (cfg, bal, stake) => stake >= cfg.min_stake && (cfg.max_stake <= 0 || stake <= cfg.max_stake) && stake <= bal;
 
 function stakePanel(l, st) {
@@ -196,9 +198,13 @@ export function stakesView(st, o) {
   if (st.error && !st.wallet) return `<section class="lg-card st-card"><div class="lg-card-head"><h2>Stakes</h2></div><p class="st-empty">${esc(st.error)}</p></section>`;
   if (!st.wallet) return '<section class="lg-card st-card"><div class="lg-card-head"><h2>Stakes</h2></div><p class="st-empty">Opening your wallet…</p></section>';
   const open = st.slate.filter(l => l.my_status === 'open'), riding = open.reduce((s, l) => s + l.my_stake, 0);
-  const cards = st.slate.filter(l => l.kind === 'player' || l.kind == null);
+  // One round at a time (B-52): lines open a week ahead, and with two rounds a week that let the next two rounds show at once. Show the round that is under
+  // way or comes next (the one with the earliest game still on the slate); the following round appears once its games are all done.
+  const cur = st.slate.reduce((a, l) => (!a || new Date(l.starts_at) < new Date(a.starts_at) ? l : a), null)?.week;
+  const slate = st.slate.filter(l => l.week === cur);
+  const cards = slate.filter(l => l.kind === 'player' || l.kind == null);
   const rounds = [...cards.reduce((m, l) => m.set(l.week, [...(m.get(l.week) || []), l]), new Map()).values()];
-  const everyGame = st.slate.filter(l => l.kind === 'result');
+  const everyGame = slate.filter(l => l.kind === 'result');
   const closedNote = st.cfg && !st.cfg.betting_open ? '<p class="st-note" role="status">Stakes is closed for now. You can look, but picks are paused until the league opens it again.</p>' : '';
   const note = closedNote + (st.msg ? `<p class="st-note${st.msg.bad ? ' bad' : ''}" role="status">${esc(st.msg.text)}</p>` : '');
   return `<div class="st">
