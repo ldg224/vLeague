@@ -32,7 +32,7 @@ def _avg_skin(obj, img, verts):
 
 def swap(body_rig, body_meshes, donor_fbx, diffuse_of):
     """body_meshes: the footballer's meshes by name. diffuse_of(mat) -> albedo image. Returns (new head objects, skin tint for the
-    footballer's own skin as an RGB ratio)."""
+    footballer's own skin as an RGB ratio, the new face's texture tone, the footballer's own face tone), tones as linear RGB."""
     before = set(bpy.data.objects)
     bpy.ops.import_scene.fbx(filepath=donor_fbx)
     new = [o for o in bpy.data.objects if o not in before]
@@ -70,7 +70,8 @@ def swap(body_rig, body_meshes, donor_fbx, diffuse_of):
         p = mw @ v.co
         if p.z > neck_base.z - 0.03 and (Vector((p.x, p.y)) - axis_xy).length < 0.16:
             if p.z > bh.z + 0.02: face_verts.append(v.index)
-            if not under_shirt(p, (mw.to_3x3() @ v.normal).normalized()):
+            # keep his neck up to the donor's jaw (a donor's mesh stops where his own collar was); drop the rest
+            if p.z > neck_base.z + 0.065 and not under_shirt(p, (mw.to_3x3() @ v.normal).normalized()):
                 gone.add(v.index)
     our_tone = _avg_skin(body, diffuse_of(body.data.materials[0]), face_verts)
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if any(v.index in gone for v in f.verts)], context='FACES')
@@ -91,7 +92,7 @@ def swap(body_rig, body_meshes, donor_fbx, diffuse_of):
         for v in bm.verts:
             p = place @ (ow @ v.co)
             r = (Vector((p.x, p.y)) - axis_xy).length
-            keep = p.z > neck_base.z + 0.04 or (p.z > neck_base.z - 0.045 and r < 0.075)
+            keep = p.z > neck_base.z + 0.04 or (p.z > neck_base.z - 0.045 and r < 0.095)   # the whole throat: overlaps the footballer's kept neck
             if not keep: drop.append(v)
             elif part == 'Body' and p.z > bh.z + 0.02: face.append(v.index)
         if part == 'Body':
@@ -113,4 +114,4 @@ def swap(body_rig, body_meshes, donor_fbx, diffuse_of):
     bpy.context.view_layer.update()
     tint = np.clip(their_tone / np.maximum(our_tone, 1e-3), 0.2, 2.5) if their_tone is not None else np.ones(3)
     print('HEADSWAP kept', [h.name for h in heads], 'tone ours', our_tone.round(3), 'theirs', None if their_tone is None else their_tone.round(3), 'tint', tint.round(3))
-    return heads, tuple(float(c) for c in tint)
+    return heads, tuple(float(c) for c in tint), (None if their_tone is None else tuple(float(c) for c in their_tone)), tuple(float(c) for c in our_tone)

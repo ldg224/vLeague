@@ -127,12 +127,16 @@ def scalp_hair(body, hair_mesh, style, seed=1):
         me.materials.append(sm)
         so = bpy.data.objects.new(body.name + '_scalp', me); bpy.context.scene.collection.objects.link(so)
     roots = roots + nr * 0.0004
+    length = style['length']
+    if style.get('len_profile'):   # a cut: long on top, short at the sides and back (height over the eyes, in metres)
+        lp = style['len_profile']; h = (roots - np.array(lp['eyes'])) @ np.array(lp['up'])
+        length = style['length'] * (lp['side'] + (1 - lp['side']) * np.clip((h - lp['low']) / (lp['high'] - lp['low']), 0, 1))
     comb = np.tile(np.array(style['comb'], dtype=float), (len(roots), 1))
     if style.get('comb_from'):   # comb away from a point (a crown or a parting)
         d = roots - np.array(style['comb_from']); d[:, 2] *= style.get('comb_from_z', 0.3)
         comb = comb + d / np.linalg.norm(d, axis=1)[:, None] * style.get('comb_from_w', 1.0)
     surf = BVHTree.FromPolygons([tuple(v) for v in verts], [tuple(t) for t in tris]) if style.get('volume') else None
-    pts = _grow(roots, nr, style['length'], comb, style['lift'], style['curl'], style['segs'], rng, style.get('gravity', 0.0), surf, style.get('volume', 0.0))
+    pts = _grow(roots, nr, length, comb, style['lift'], style['curl'], style['segs'], rng, style.get('gravity', 0.0), surf, style.get('volume', 0.0))
     mat = hair_material(body.name + '_hair', style['melanin'], style['redness'], style.get('roughness', 0.32))
     hair_mesh.hide_render = True; hair_mesh.hide_viewport = True
     return _curves(body.name + '_strands', pts, style['root_r'], style['tip_r'], mat)
