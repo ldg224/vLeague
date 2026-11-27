@@ -1410,7 +1410,7 @@ class Match:
         ready = self.t + self.rng.uniform(delay[0], delay[1])
         self.restart = {'kind': kind, 'team': team, 'spot': spot, 'taker': taker,
                         'ready_at': ready, 'max_at': ready + 8, **extra}
-        self.restart_targets = tactics.setpiece_targets(kind, team, self.other(team), spot, taker, self.offside_x(team))
+        self.restart_targets = tactics.setpiece_targets(kind, team, self.other(team), spot, taker, self.offside_x(team), offside=bool(extra.get('offside')))
         for p in self.players:
             p.action = None
             p.chasing = False
@@ -1594,7 +1594,7 @@ class Match:
         # Offside awareness: most players hold the line; less aware ones drift offside sometimes.
         # The misjudgement persists for a few seconds, like a player who has lost track of the line.
         if t >= p.oe_until:
-            p.oe = rng.gauss(1.6, 1.0 * (1.15 - p.a('positioning')))
+            p.oe = rng.gauss(TUNING['offside_hold'], 1.0 * (1.15 - p.a('positioning')))
             p.oe_until = t + rng.uniform(4, 8)
         line = off_line - p.oe
         ax, ay = tactics.shape_target(p, team, bx, by, in_poss, line)
@@ -1630,7 +1630,7 @@ class Match:
                 ax, ay = p.tx_att_run
                 urgency = 3
             elif (p.line in ('FWD', 'AM') or (p.slot in tactics.WIDE_SLOTS and hax > 55)) and hax > 28 \
-                    and pax < off_line - 0.5 and abs(pax - off_line) < 10 and t > p.run_until + 2.5 \
+                    and pax < off_line - TUNING['run_start_gap'] and abs(pax - off_line) < 10 and t > p.run_until + 2.5 \
                     and rng.random() < 0.2 * (0.5 + p.a('positioning')) * (0.6 + p.a('work_rate')):
                 # Run in behind. Timing is imperfect: some runs start slightly offside.
                 p.run_until = t + rng.uniform(2.0, 3.2)

@@ -161,6 +161,10 @@ TUNING = {
     'mood_protect': 0.6,         # a team ahead leans this much (as a fraction of a full -1) toward protecting the lead
     'chase_shot': 1.0,
     'cross_overshoot': 4.5,      # 0.4.0: metres past the target zone a cross comes down, so it is at head height there
+    'clear_max_x': 35.0,         # S-40: metres from his own goal line beyond which a defender never chooses to clear
+    'offside_hold': 1.6,         # S-40: metres an attacker means to stay onside of the line (each misjudges it by up to about a metre, less with positioning)
+    'run_start_gap': 0.5,        # S-40: a run in behind starts only from at least this far onside
+    'offside_blind': 0.3,        # S-40: a pass to a receiver already offside keeps 0.03 + this x (1 - vision) of its chance (the passer missed it)
     'clear_min_pressure': 0.35,  # 0.4.0: below this pressure a defender does not choose to clear
     'behind_block': 0.7,        # 0.4.0: chance a blocked cross or shot near the defender's own goal goes behind (Match._maybe_behind)
     'behind_miscue': 0.55,       # and a defender's mis-hit of a cross, corner or shot there

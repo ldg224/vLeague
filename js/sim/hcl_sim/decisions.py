@@ -210,7 +210,7 @@ def _pass_option(c, r, loft_angle=0.0, subtype=None, z0=0.0, max_speed=None):
     # hold the pass (or release it earlier); poor vision misses it.
     rx_kick = rx + max(rvx, 0.0) * (windup + 0.15)
     if subtype not in ('throw', 'goal_kick', 'corner') and rx_kick > c.off_line + 0.1 and rx_kick > c.ax and rx_kick > PITCH_LENGTH / 2:
-        ps *= 0.03 + 0.3 * (1 - p.a('vision'))
+        ps *= 0.03 + TUNING['offside_blind'] * (1 - p.a('vision'))
 
     # A tightly marked receiver (usually the striker between two centre-backs) is worth less
     # than the pitch position alone suggests: he'll have little time to do anything with it.
@@ -348,7 +348,7 @@ def _cross_options(c):
 
 
 def _clear_option(c):
-    if c.ax > 35:
+    if c.ax > TUNING['clear_max_x']:
         return None
     if c.pressure < TUNING['clear_min_pressure']:
         return None   # 0.4.0: a defender with time on the ball plays it out; clearing is for when he is pressed (clearances were about twice real)

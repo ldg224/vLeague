@@ -284,7 +284,7 @@ def _keep_distance(x, y, sx, sy, d=CENTRE_CIRCLE + 0.5):
     return sx + ux * d, sy + uy * d
 
 
-def setpiece_targets(kind, attacking, defending, spot, taker, off_line_att):
+def setpiece_targets(kind, attacking, defending, spot, taker, off_line_att, offside=False):
     """Targets {player: (x, y)} in pitch coords for every player, for a restart of `kind`
     taken by `attacking` at pitch spot (x, y)."""
     targets = {}
@@ -388,10 +388,29 @@ def setpiece_targets(kind, attacking, defending, spot, taker, off_line_att):
 
     # Free kicks and throw-ins: normal shape around the ball, opponents at 9.15 m for free kicks.
     direct = kind == 'free_kick' and dist(sx_a, sy_a, 105, 34) < 32
+    shaped = {}
     for p in attacking.active():
         ax, ay = shape_target(p, attacking, sx_a, sy_a, True, off_line_att)
         if direct and p.line in ('DEF', 'MID', 'FWD', 'AM') and p.slot not in WIDE_SLOTS and not p.is_gk:
             ax = max(ax, min(off_line_att - 1, 92))
+        shaped[p] = (ax, ay)
+    if offside and kind == 'free_kick' and not direct:
+        # An offside free kick (B-43, Sreehari 25 Nov 2026): only the taker, the keeper and the two most central defenders stay behind the
+        # ball; everyone else moves up together (keeping their shape) into the attacking half, ready for the ball forward, and stays onside.
+        outfield = [p for p in shaped if p is not taker and not p.is_gk]
+        defs = sorted((p for p in outfield if p.line == 'DEF'), key=lambda p: abs(shaped[p][1] - 34))
+        stay = set(defs[:2]) if len(defs) >= 2 else set(sorted(outfield, key=lambda p: shaped[p][0])[:2])
+        up = [p for p in outfield if p not in stay]
+        if up:
+            want = max(sx_a + 8.0, 56.0)
+            shift = max(0.0, want - min(shaped[p][0] for p in up))
+            for p in up:
+                ax, ay = shaped[p]
+                shaped[p] = (min(ax + shift, max(off_line_att - 1.0, ax)), ay)
+        for p in stay:
+            ax, ay = shaped[p]
+            shaped[p] = (min(ax, max(sx_a - 4.0, 8.0)), ay)
+    for p, (ax, ay) in shaped.items():
         put(attacking, p, ax, ay)
     for p in defending.active():
         bx_d, by_d = defending.to_att(*spot)
