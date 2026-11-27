@@ -3,6 +3,14 @@
 Every published version of the vLeague app. Newest first. How versions work and how to roll back:
 `docs/RELEASING.md`.
 
+## 1.49.1 (2026-11-27)
+
+**Changed:** Summer Cup matches stand out with a gold outline in Fixtures and in "This round" on Overview.
+
+**Fixed:** the selected Summer Cup pill on Fixtures is easy to read in dark mode.
+
+Database change: no.
+
 ## 1.49.0 (2026-11-27)
 
 **Added:** the Summer Cup (S-51), an in-season cup. Eleven clubs in three groups (A and B play each other once, C home and away), using chosen league matches in Rounds 6 to 14: each one counts for the league and for the cup group. The three group winners and the best runner-up (on points per game) go into cup-only semi-finals and a Final in January, which don't count for the league.
