@@ -255,9 +255,22 @@ function modelFigure(p) {
 const mocap = q.get('v') === 'blender' || q.has('shapes') ? null : await new GLTFLoader().loadAsync(new URL('./models/footballer.glb', import.meta.url).href).catch(e => { console.warn('footballer', e); return null; });
 const CLIP = {};
 if (mocap) {
+  // the hips' place at rest (the bind pose), in the hips track's own units, and which of the track's axes is up: the Mixamo armature is Z-up
+  // inside a turned parent, so its hips track carries forward travel in Y and height in Z
+  let rest = null, up = 1; mocap.scene.updateMatrixWorld(true);
+  mocap.scene.traverse(o => {
+    if (rest || !o.isBone || !/Hips$/.test(o.name)) return;
+    rest = o.position.clone();
+    const m = new THREE.Matrix4().copy(o.parent.matrixWorld).invert(), u = new THREE.Vector3(0, 1, 0).transformDirection(m);
+    up = [Math.abs(u.x), Math.abs(u.y), Math.abs(u.z)].reduce((k, v, i, A) => (v > A[k] ? i : k), 0);
+  });
   for (const c of mocap.animations) {
-    // the runs are in place already; one-off moves keep their rise and fall but not their travel, since the match file says where he is
-    for (const tr of c.tracks) if (/Hips\.position$/.test(tr.name)) { const v = tr.values; for (let k = 0; k < v.length; k += 3) { v[k] = v[0]; v[k + 2] = v[2]; } }
+    // the runs are in place already; one-off moves keep their rise and fall but not their travel, since the match file says where he is. The hips
+    // stay over the body's rest spot (not the clip's first frame, which put a shot's or a throw-in's body up to 2.7 m off the player's place)
+    for (const tr of c.tracks) if (/Hips\.position$/.test(tr.name)) {
+      const v = tr.values, keep = rest ? rest.toArray() : [v[0], v[1], v[2]];
+      for (let k = 0; k < v.length; k += 3) for (let ax = 0; ax < 3; ax++) if (ax !== up) v[k + ax] = keep[ax];
+    }
     CLIP[c.name] = c;
   }
 }
@@ -267,24 +280,25 @@ const SIDE = { jog_back: 2.6, run_back: 4.2, jog_left: 2.8, jog_right: 2.8 };
 let MOCAP_H = 1.8;
 if (mocap) { const bb = new THREE.Box3().setFromObject(mocap.scene); MOCAP_H = bb.max.y - bb.min.y; }
 // when in each kick, header or dive the touch happens: the moment the foot (or head) moves fastest
-const CONTACT = {};
+const CONTACT = {}, CONTACT_AT = {};   // when the touch happens in each move, and where the touching foot (or head) is then, in body axes (unscaled)
 if (mocap) {
   const probe = SkeletonUtils.clone(mocap.scene), mx = new THREE.AnimationMixer(probe), wp = new THREE.Vector3();
   const bone = n => { let b = null; probe.traverse(o => { if (o.isBone && o.name.endsWith(n)) b = o; }); return b; };
   const RF = bone('RightFoot'), LF = bone('LeftFoot'), HD = bone('Head');
   for (const n of ['pass', 'shot', 'shot_run', 'chip', 'header', 'header_jump', 'tackle', 'tackle2', 'gk_dive', 'gk_dive2', 'gk_catch', 'gk_catch2', 'gk_drop_kick', 'gk_throw', 'throw_in', 'bicycle', 'receive']) {
     const c = CLIP[n]; if (!c) continue;
-    const a = mx.clipAction(c); a.play(); let best = 0, at = c.duration / 2;
+    const a = mx.clipAction(c); a.play(); let best = 0, at = c.duration / 2, part = null;
     const parts = /header|gk_|throw/.test(n) ? [HD] : [RF, LF];
     for (const B of parts) {
       let prev = null;
       for (let tt = 0; tt <= c.duration; tt += 1 / 30) {
         a.time = tt; mx.update(0); probe.updateMatrixWorld(true); B.getWorldPosition(wp);
-        if (prev) { const v = wp.distanceTo(prev) * 30; if (v > best) { best = v; at = tt; } }
+        if (prev) { const v = wp.distanceTo(prev) * 30; if (v > best) { best = v; at = tt; part = B; } }
         prev = wp.clone();
       }
     }
-    a.stop(); CONTACT[n] = at;
+    a.time = at; mx.update(0); probe.updateMatrixWorld(true); part?.getWorldPosition(wp);
+    a.stop(); CONTACT[n] = at; if (part) CONTACT_AT[n] = { x: wp.x, z: wp.z };
   }
 }
 const ONE = { header: 'header', throw: 'throw_in', dive: 'gk_dive', tackle: 'tackle', celebrate: 'celebrate' };
@@ -297,11 +311,27 @@ function oneShot(act, sp) {   // which clip plays for an action
   if (act.kind === 'dive') return CLIP.gk_dive ? 'gk_dive' : null;
   return CLIP[ONE[act.kind]] ? ONE[act.kind] : null;
 }
+const CLIP2 = {};
+// Where the body must move so this move's touch lands on the ball: the ball at the event, less where the foot (or head) is at that moment for a
+// body on his match-file spot facing the way he kicks. Worked out once per move; at most 1.2 m (beyond that the data disagree, so leave it).
+function contactShift(L, act, clip) {
+  if (act.shift !== undefined) return act.shift;
+  act.shift = null;
+  const off = CONTACT_AT[clip]; if (!off || !['kick', 'header'].includes(act.kind)) return null;
+  const i = figs.indexOf(L); if (i < 0) return null;
+  const [px, py, vx, vy] = sample(act.t, 6 + i * 2), b = ballAt(act.t), [PX, PZ] = W(px, py), [BX, BZ] = W(b.x, b.y);
+  const yaw = act.dir ? Math.atan2(act.dir[0], act.dir[1]) : Math.hypot(vx, vy) > 1.2 ? Math.atan2(vx, vy) : Math.atan2(b.x - px, b.y - py);
+  const ox = off.x * L.bodyScale, oz = off.z * L.bodyScale, c = Math.cos(yaw), s = Math.sin(yaw);
+  const fx = PX + ox * c + oz * s, fz = PZ - ox * s + oz * c, dx = BX - fx, dz = BZ - fz;
+  if (Math.hypot(dx, dz) <= 1.2) act.shift = [dx, dz];
+  return act.shift;
+}
 function mocapFigure(p) {
   const h = hash(p.id), gk = p.slot === 'GK';
   const root = new THREE.Group(), body = SkeletonUtils.clone(mocap.scene);
   root.add(body);
-  body.scale.multiplyScalar(1.8 / MOCAP_H * (0.95 + ((h >> 6) % 10) / 100));
+  const bodyScale = 1.8 / MOCAP_H * (0.95 + ((h >> 6) % 10) / 100);
+  body.scale.multiplyScalar(bodyScale);
   const skinTone = SKINS[h % 5].color, hairTone = HAIR[(h >> 3) % 5].color;
   const kit = gk ? GK_KITS[p.side] : kitColours(p.side);
   body.traverse(o => {
@@ -319,12 +349,12 @@ function mocapFigure(p) {
   const mixer = new THREE.AnimationMixer(body), A = {};
   for (const n of [...Object.keys(GAIT), ...Object.keys(SIDE), 'gk_idle']) if (CLIP[n]) { const a = mixer.clipAction(CLIP[n]); a.play(); a.setEffectiveWeight(0); A[n] = a; }
   scene.add(root);
-  return { root, mixer, A, gk, mocap: true, hipsBone, W: {}, one: null, yaw: p.side ? -Math.PI / 2 : Math.PI / 2, phase: 0, last: null };
+  return { root, mixer, A, gk, mocap: true, hipsBone, bodyScale, ones: new Map(), W: {}, yaw: p.side ? -Math.PI / 2 : Math.PI / 2, phase: 0, last: null };
 }
-function mocapPose(L, t, dt, sp, vx, vy, act, skip = false, snap = false) {
+function mocapPose(L, t, dt, sp, vx, vy, list, skip = false, snap = false) {
   // half-rate animation: a skipped frame only banks its time; the next one plays it all (position and facing still move every frame)
   L.mdt = (L.mdt || 0) + dt;
-  if (skip && !snap) return;
+  if (skip && !snap) { L.root.position.x += L.sx || 0; L.root.position.z += L.sz || 0; return; }
   dt = L.mdt; L.mdt = 0;
   // the run: blend the two gaits either side of his speed, in the direction he moves relative to where he faces
   const want = {};
@@ -340,19 +370,33 @@ function mocapPose(L, t, dt, sp, vx, vy, act, skip = false, snap = false) {
     want[n0] = 1 - u; want[n1] = u;
     rate = sp / ((v0 * (1 - u) + v1 * u) || 1);
   }
-  // a one-off move (kick, header, dive...) takes over the body around the moment it happens, timed so the touch lands on the event
-  let oneW = 0;
-  const clip = act && oneShot(act, sp);
-  if (clip && CLIP[clip]) {
-    const c = CLIP[clip], local = t - (act.t - (CONTACT[clip] ?? 0.4));
-    if (local >= 0 && local <= c.duration) {
-      if (!L.one || L.one.clip !== clip) { if (L.one) L.one.a.stop(); const a = L.mixer.clipAction(c); a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; a.play(); a.timeScale = 0; L.one = { clip, a }; }
-      L.one.a.time = local;
-      oneW = Math.max(0, Math.min(1, local / 0.15, (c.duration - local) / 0.3));
-      L.one.a.setEffectiveWeight(oneW);
+  // One-off moves (kick, header, dive...) take over the body around the moment they happen, timed so the touch lands on the event. Moves that
+  // overlap (a touch, then a pass straight after) cross-fade: the later one fades in over the earlier, which fades out, never a cut.
+  let oneW = 0, sx = 0, sz = 0;
+  const live = new Set();
+  for (let j = list.length - 1; j >= 0 && oneW < 0.999; j--) {   // latest first: it takes what it needs, earlier moves share the rest
+    const act = list[j], clip = oneShot(act, sp), c = clip && CLIP[clip]; if (!c) continue;
+    const local = t - (act.t - (CONTACT[clip] ?? 0.4));
+    if (local < 0 || local > c.duration) continue;
+    let slot = L.ones.get(act);
+    if (!slot) {
+      // each move gets its own copy of the clip (a pass straight after a pass needs two playing at once)
+      const used = new Set([...L.ones.values()].map(o => o.a));
+      const pool = CLIP2[clip] || (CLIP2[clip] = [c, c.clone(), c.clone()]);
+      const a = pool.map(k => L.mixer.clipAction(k)).find(x => !used.has(x)); if (!a) continue;
+      a.reset(); a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; a.play(); a.timeScale = 0;
+      slot = { a, clip }; L.ones.set(act, slot);
     }
+    live.add(act);
+    slot.a.time = local;
+    const w = Math.max(0, Math.min(1, local / 0.25, (c.duration - local) / 0.35)) * (1 - oneW);
+    slot.a.setEffectiveWeight(w); oneW += w;
+    // the touch: shift the body so the foot (or head) meets the ball at the moment of the event, eased in and out with the move
+    const sh = contactShift(L, act, clip);
+    if (sh) { sx += sh[0] * w; sz += sh[1] * w; }
   }
-  if (!oneW && L.one) { L.one.a.stop(); L.one = null; }
+  for (const [act, slot] of L.ones) if (!live.has(act)) { slot.a.stop(); L.ones.delete(act); }
+  L.root.position.x += sx; L.root.position.z += sz; L.sx = sx; L.sz = sz;
   // ease each gait's weight towards what it should be, so changes of pace blend
   const k = snap ? 1 : 1 - Math.exp(-dt * 8);   // just appeared (a cut, or back in the picture): take up the right gait at once
   for (const [n, a] of Object.entries(L.A)) {
@@ -413,18 +457,30 @@ const ON_AT = players.map(p => (p.sub ? Infinity : -Infinity)), OFF_AT = players
 }
 const onPitch = (i, t) => t >= ON_AT[i] && t < OFF_AT[i];
 const KICKS = ['pass', 'shot', 'clearance', 'goal_kick', 'corner', 'free_kick', 'penalty', 'kickoff'];
+// When the ball really leaves his foot (or head): the match file stamps a pass or shot up to a second after the ball has gone, so a kick timed
+// to the event would land when the ball is already 2 or 3 m away. The last moment, in the second before the event, that the ball is at his
+// feet (within 0.8 m); the event time if it never is.
+function touchAt(te, i) {
+  for (let t = te; t >= te - 1.2; t -= 0.04) {
+    const [bx, by] = sample(t, 1), [px, py] = sample(t, 6 + i * 2);
+    if (Math.hypot(bx - px, by - py) < 0.8) return t;
+  }
+  return te;
+}
 const acts = players.map(() => []);
 for (const e of data.events) {
   const i = idx[e.player]; if (i == null) continue;
   if (KICKS.includes(e.type) && !(e.type === 'pass' && e.subtype === 'throw_in')) {
     const head = e.header || e.body === 'head';
     const dir = e.end_x != null ? [e.end_x - e.x, (e.end_y ?? e.y) - e.y] : null;
-    acts[i].push({ t: e.t, kind: head ? 'header' : 'kick', ev: e.type, high: e.height === 'high' || e.subtype === 'lob', dir, power: e.type === 'shot' || e.type === 'clearance' || e.height === 'high' ? 1 : 0.6 });
+    acts[i].push({ t: touchAt(e.t, i), kind: head ? 'header' : 'kick', ev: e.type, high: e.height === 'high' || e.subtype === 'lob', dir, power: e.type === 'shot' || e.type === 'clearance' || e.height === 'high' ? 1 : 0.6 });
   } else if (e.type === 'throw_in') acts[i].push({ t: e.t, kind: 'throw' });
   else if (e.type === 'save') acts[i].push({ t: e.t, kind: 'dive', caught: e.result === 'caught' });
   else if (e.type === 'tackle') acts[i].push({ t: e.t, kind: 'tackle' });
 }
 for (const e of data.events) if (e.type === 'goal' && !e.own_goal && idx[e.scorer] != null) acts[idx[e.scorer]].push({ t: e.t + 0.6, kind: 'celebrate' });
+// every move whose clip could be playing at t, oldest first (the 3D cross-fades overlapping moves)
+const actsAt = (i, t) => acts[i].filter(a => t > a.t - 1.6 && t < a.t + (a.kind === 'celebrate' ? 5 : a.kind === 'dive' ? 1.6 : 1.4));
 const actAt = (i, t) => acts[i].find(a => t > a.t - (mocap ? 1.6 : 0.45) && t < a.t + (a.kind === 'celebrate' ? 5 : a.kind === 'dive' ? 1.6 : mocap ? 1.4 : 0.5));
 
 // ---------- animating a figure ----------
@@ -440,7 +496,7 @@ function pose(L, i, t, dtReal, B, ov) {
   if (act?.dir && Math.abs(t - act.t) < 0.4) want = Math.atan2(act.dir[0], act.dir[1]);
   if (L.last == null) L.yaw = want; else L.yaw += angDiff(L.yaw, want) * Math.min(1, dtReal * (sp > 4 ? 6 : 4));
   L.root.rotation.y = L.yaw;
-  if (L.mocap) { mocapPose(L, t, L.last == null ? 0 : Math.min(0.25, Math.abs(t - L.last)), sp, vx, vy, act, ov?.skip, L.last == null); L.last = t; return; }
+  if (L.mocap) { mocapPose(L, t, L.last == null ? 0 : Math.min(0.25, Math.abs(t - L.last)), sp, vx, vy, ov?.s ? (act ? [act] : []) : actsAt(i, t), ov?.skip, L.last == null); L.last = t; return; }
   // running: the stride cycle moves with the ground he covers, so feet don't slide
   const a = Math.min(1, sp / 7.5), stride = 1.5 + 0.18 * sp;
   if (L.last != null) L.phase += Math.min(3, Math.abs(t - L.last) * sp) / stride * Math.PI * 2;
@@ -538,8 +594,8 @@ function camera(t, dtReal) {
   if (DEMO && q.has('side')) { cam.position.set(14, 1.6, -4); cam.lookAt(0.3, 0.9, -4); setFov(55); return { sceneT: t, label: '', kind: 'test' }; }
   if (DEMO) { cam.position.set(-8.5 + 8.8, 3.2, -4 + 12); cam.lookAt(-8.5 + 8.8, 0.9, -4); setFov(50); return { sceneT: t, label: '', kind: 'test' }; }
   if (q.has('close')) {   // a close look at one player (?close=<index>), to judge the figures
-    const f = figs[Number(q.get('close')) || 0].root.position;
-    cam.position.set(f.x + 4.5, 2.2, f.z + 5.5); cam.lookAt(f.x, 1.0, f.z); setFov(40); return { sceneT: t, label: '', kind: 'test' };
+    const [px, py] = sample(t, 6 + (Number(q.get('close')) || 0) * 2), [fx, fz] = W(px, py);   // where the match file has him (off-screen figures aren't posed)
+    cam.position.set(fx + 4.5, 2.2, fz + 5.5); cam.lookAt(fx, 1.0, fz); setFov(40); return { sceneT: t, label: '', kind: 'test' };
   }
   if (!director) { followCamera(ballAt(t), dtReal); setFov(cam.aspect < 1 ? 30 : 16); return { sceneT: t, label: '', kind: 'follow' }; }
   const s = director.shot(t, dtReal, cam.aspect);
@@ -578,7 +634,8 @@ function draw(t, dtReal, speed = 1) {
   else {
     // only players in the picture are animated and drawn (the skinned meshes can't cull themselves: their bounds don't follow the animation)
     cam.updateMatrixWorld(); _fr.setFromProjectionMatrix(_pm.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
-    const half = LOW && !['celebrate', 'refcam', 'foul', 'close', 'test'].includes(shot.kind);   // close-ups keep full-rate movement
+    // half-rate animation only when this device is short of time (under 50 fps), and never in close-ups
+    const half = LOW && stats.fps > 0 && stats.fps < 50 && !['celebrate', 'refcam', 'foul', 'close', 'test'].includes(shot.kind);
     let nb = 0; frame++;
     for (let i = 0; i < NP; i++) {
       const L = figs[i]; let on = onPitch(i, st);
@@ -611,5 +668,5 @@ function destroy() {
   scene.traverse(o => { o.geometry?.dispose?.(); const m = o.material; for (const x of Array.isArray(m) ? m : m ? [m] : []) { x.map?.dispose?.(); x.dispose?.(); } });
   renderer.dispose(); renderer.forceContextLoss(); renderer.domElement.remove();
 }
-return { canvas: renderer.domElement, frame: draw, reset, resize, destroy, director, shots: director?.shots || [], stats, scene, cam, T0, T1, low: LOW };
+return { canvas: renderer.domElement, frame: draw, reset, resize, destroy, director, shots: director?.shots || [], stats, scene, cam, T0, T1, low: LOW, debug: { figs, ball, players, CLIP, mocap, ballAt, acts } };
 }

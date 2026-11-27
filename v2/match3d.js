@@ -46,4 +46,4 @@ function loop(ms) {
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
-window.__v2 = { setT: v => { t = v; m3.reset(); }, pause: () => { playing = false; }, play: () => { playing = true; }, director: m3.director, shots: m3.shots, stats, scene: m3.scene, cam: m3.cam, get t() { return t; } };
+window.__v2 = { setT: v => { t = v; m3.reset(); }, pause: () => { playing = false; }, play: () => { playing = true; }, director: m3.director, shots: m3.shots, stats, scene: m3.scene, cam: m3.cam, m3, get t() { return t; } };

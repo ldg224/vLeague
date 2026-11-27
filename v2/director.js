@@ -19,8 +19,8 @@
 
 const CAM_DT = 0.1;                       // main camera path sample step (s)
 const GANTRY = { x: 0, y: 22, z: 34 + 38 }; // the main TV camera: high in the main stand at the halfway line, beyond the near touchline (Z = +34)
-const WIDTH = { base: 38, fast: 54 };     // metres across the picture: normal, and opened out for a fast ball
-const PORTRAIT_WIDTH = 15;                // metres across an upright phone's picture at the play
+const WIDTH = { base: 42, fast: 56 };     // metres across the picture: normal, and opened out for a fast ball
+const PORTRAIT_WIDTH = 19;                // metres across an upright phone's picture at the play
 const PORTRAIT_CAM = { y: 24, back: 18, lead: 5, across: 2.5 }; // upright: camera height; metres on the near side of the play; aim this far beyond
                                           // the ball, so it sits a little below the middle; how far the aim may trail the ball across the pitch
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
