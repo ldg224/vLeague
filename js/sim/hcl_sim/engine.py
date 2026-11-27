@@ -12,7 +12,7 @@ import random
 
 from . import physics, tactics, decisions
 from .config import (PITCH_LENGTH, PITCH_WIDTH, GOAL_Y1, GOAL_Y2, GOAL_HEIGHT, BOX_DEPTH, BOX_Y1, BOX_Y2,
-                     TICK, HALF_SECONDS, DEFAULT_FPS, MAX_PLAYER_SPEED, TUNING, PENALTY_SPOT, SIX_DEPTH, SIX_Y1, SIX_Y2)
+                     TICK, HALF_SECONDS, PERIODS, DEFAULT_FPS, MAX_PLAYER_SPEED, TUNING, PENALTY_SPOT, SIX_DEPTH, SIX_Y1, SIX_Y2)
 from .geometry import clamp, dist, unit, seg_point_dist, sigmoid, rotate
 from .models import Ball
 from .output import RATING_BASE, VOLUME_NORM
@@ -53,6 +53,7 @@ class Match:
         self.possession = None
         self.poss_id = 0
         self.score = [0, 0]
+        self.shootout = None            # S-52: the penalty shootout of a knockout match level after extra time
         self.events = []
         self.frames = []
         self.periods = []
@@ -92,7 +93,8 @@ class Match:
         a little (the opposite, at TUNING['mood_protect'] of the strength). Level, nothing changes."""
         if not self.period:
             return
-        gm = ((0 if self.period == 1 else HALF_SECONDS) + min(max(0.0, self.t - self.period_start), HALF_SECONDS)) / 60
+        base, length, _ = PERIODS[self.period]
+        gm = base + min(max(0.0, self.t - self.period_start), length) / 60
         late = clamp((gm - TUNING['mood_from_min']) / (90 - TUNING['mood_from_min']), 0.0, 1.0)
         for team in (self.home, self.away):
             d = self.score[team.side] - self.score[1 - team.side]
@@ -103,13 +105,12 @@ class Match:
 
     def clock(self):
         el = self.t - self.period_start
-        base = 0 if self.period == 1 else HALF_SECONDS
-        if el <= HALF_SECONDS:
-            secs = base + el
+        start_min, length, _ = PERIODS.get(self.period, PERIODS[1])
+        secs = start_min * 60 + el
+        if el <= length:
             minute = str(int(secs // 60) + 1)
         else:
-            secs = base + el
-            minute = f'{(45 if self.period == 1 else 90)}+{int((el - HALF_SECONDS) // 60) + 1}'
+            minute = f'{start_min + length // 60}+{int((el - length) // 60) + 1}'
         return f'{int(secs // 60):02d}:{int(secs % 60):02d}', minute
 
     def ev(self, kind, p=None, team=None, x=None, y=None, **fields):
@@ -138,22 +139,119 @@ class Match:
         """Play the match. `on_progress(fraction)` is called now and then with 0..1."""
         first_home_dir = self.rng.choice((1, -1))
         first_kick = self.rng.choice((self.home, self.away))
-        for period in (1, 2):
-            self.home.direction = first_home_dir if period == 1 else -first_home_dir
+        # S-52: a knockout match (info['knockout']) level after 90 minutes plays two halves of extra time, then a penalty shootout.
+        # A league match draws a fresh random number only when it is a knockout, so league results are unchanged.
+        # A fixture with a stage (league finals EF/SF/GF/TP, cup SF/GF) is a knockout; info['knockout'] forces it either way.
+        knockout = bool(self.info.get('knockout', self.info.get('stage')))
+        period = 0
+        while True:
+            period += 1
+            if period == 3:
+                if not knockout or self.score[0] != self.score[1]:
+                    break
+                first_home_dir = self.rng.choice((1, -1))   # a new toss for extra time
+                first_kick = self.rng.choice((self.home, self.away))
+                for team in (self.home, self.away):
+                    self._extra_time_subs(team)
+            if period == 5:
+                if self.score[0] == self.score[1]:
+                    self._shootout()
+                break
+            self.home.direction = first_home_dir if period % 2 == 1 else -first_home_dir
             self.away.direction = -self.home.direction
-            kicker = first_kick if period == 1 else self.other(first_kick)
+            kicker = first_kick if period % 2 == 1 else self.other(first_kick)
             self._start_period(period, kicker)
+            length = PERIODS[period][1]
             while not self._period_over():
                 self._tick()
                 if on_progress and self.tick % 500 == 0:
                     el = self.t - self.period_start
-                    on_progress(min(0.99, (period - 1) * 0.5 + 0.5 * el / (HALF_SECONDS + 180)))
+                    done = PERIODS[period][0] * 60 + min(el, length)
+                    on_progress(min(0.99, done / (120 * 60 if period > 2 else 90 * 60 + 180)))
             self._resolve_pass('end_of_period')
             self._record_frame(force=True)
             self.ev('period_end', team=None, x=self.ball.x, y=self.ball.y)
             self.periods[-1]['end_t'] = round(self.t, 2)
             self.periods[-1]['added_minutes'] = self.added
         return self
+
+    def _extra_time_subs(self, team):
+        """S-52: before extra time each team brings on up to TUNING['et_subs'] fresh players from its bench for its most tired outfield
+        players, like for like (same position), so a tired side is not stuck for 30 more minutes. The engine makes no substitutions in
+        the 90 minutes."""
+        bench = [p for p in team.bench if p.position != 'GK']
+        tired = sorted((p for p in team.active() if not p.is_gk and p.energy < TUNING['et_sub_energy']), key=lambda p: (p.energy, p.id))
+        made = 0
+        for out in tired:
+            if made >= TUNING['et_subs']:
+                break
+            sub = max((p for p in bench if p.position == out.position), key=lambda p: (p.ability, p.id), default=None)
+            if sub is None:
+                continue
+            bench.remove(sub)
+            team.bench.remove(sub)
+            out.sent_off = True     # off the pitch for good (output counts his minutes from the substitution event)
+            out.chasing = False
+            sub.slot, sub.line, sub.side = out.slot, out.line, team.side
+            sub.idx = len(self.players)
+            sub.seat = (52.5 + (-4 if team.side == 0 else 4), -1.5)
+            sub.x, sub.y = sub.seat
+            sub.setup_physical()
+            team.players.append(sub)
+            self.players.append(sub)
+            self.ev('substitution', sub, off=out.id, reason='extra_time')
+            made += 1
+
+    def _shootout(self):
+        """S-52: a penalty shootout. Five kicks each, then sudden death; it ends as soon as one side cannot be caught. Each side uses as
+        many takers as the side with fewer players on the pitch has (the best by finishing and composure; its named penalty taker first,
+        the keeper last), and goes round them again if it gets that far. The kicks are worked out, not played on the pitch: they are
+        listed in the result (shootout goals are not goals: they don't change the score or any player's goals)."""
+        rng = self.rng
+        n = min(len(self.home.active()), len(self.away.active()))
+
+        def order(team):
+            ps = team.active()
+            named = next((p for p in ps if p.id == team.takers.get('penalty')), None)
+            out = sorted((p for p in ps if not p.is_gk and p is not named),
+                         key=lambda p: (-(p.a('finishing') + 0.6 * p.a('composure')), p.id))
+            out = ([named] if named and not named.is_gk else []) + out
+            gks = [p for p in ps if p.is_gk]
+            return (out + gks)[:n] if len(out) >= n else out + gks[:n - len(out)]
+
+        takers = {0: order(self.home), 1: order(self.away)}
+        keeper = {s: next((p for p in t.active() if p.is_gk), None) for s, t in ((0, self.home), (1, self.away))}
+        first = rng.choice((0, 1))
+        goals, taken, kicks = [0, 0], [0, 0], []
+        rnd = 0
+        while True:
+            rnd += 1
+            for side in (first, 1 - first):
+                p = takers[side][(taken[side]) % len(takers[side])]
+                gk = keeper[1 - side]
+                save = (gk.a('reflexes') + gk.a('diving')) / 2 if gk else 0.0
+                score = (TUNING['shootout_base'] + 0.16 * (p.a('finishing') - 0.5) + 0.12 * (p.a('composure') - 0.5)
+                         - 0.14 * (save - 0.5) - 0.05 * (1 - p.energy) - (0.25 if p.is_gk else 0.0))
+                r = rng.random()
+                outcome = 'scored' if r < score else 'saved' if gk and r < score + 0.7 * (1 - score) else 'missed'
+                taken[side] += 1
+                goals[side] += outcome == 'scored'
+                kicks.append({'round': rnd, 'team': (self.home, self.away)[side].code, 'player': p.id, 'keeper': gk.id if gk else None,
+                              'outcome': outcome, 'score': [goals[0], goals[1]]})
+                # Decided: one side can't catch up even scoring all its remaining kicks of the first five.
+                if rnd <= 5:
+                    left = [5 - taken[0], 5 - taken[1]]
+                    if goals[0] + left[0] < goals[1] or goals[1] + left[1] < goals[0]:
+                        break
+            else:
+                if rnd >= 5 and taken[0] == taken[1] and goals[0] != goals[1]:
+                    break
+                continue
+            break
+        winner = 0 if goals[0] > goals[1] else 1
+        self.shootout = {'home': goals[0], 'away': goals[1], 'winner': (self.home, self.away)[winner].code, 'first': (self.home, self.away)[first].code,
+                         'kicks': kicks}
+        self.ev('shootout_end', team=(self.home, self.away)[winner], x=52.5, y=34, home=goals[0], away=goals[1])
 
     def _start_period(self, period, kicker):
         self.period = period
@@ -163,8 +261,8 @@ class Match:
         self.periods.append({'period': period, 'start_t': round(self.t, 2),
                              'home_attacks': 'right' if self.home.direction == 1 else 'left'})
         for p in self.players:
-            if period == 2:
-                p.energy = min(1.0, p.energy + 0.3 * (1 - p.energy))
+            if period in (2, 3):   # half-time, and the short break before extra time (S-52)
+                p.energy = min(1.0, p.energy + (0.3 if period == 2 else TUNING['et_break_recovery']) * (1 - p.energy))
             p.vx = p.vy = 0.0
             p.action = None
             p.run_until = 0
@@ -187,13 +285,13 @@ class Match:
 
     def _period_over(self):
         el = self.t - self.period_start
-        if el < HALF_SECONDS:
+        _, length, (least, most) = PERIODS[self.period]
+        if el < length:
             return False
         if self.added is None:
-            base = 1 if self.period == 1 else 2
-            self.added = int(clamp(base + self.stoppages / 60 + self.rng.uniform(0, 1.5), base, 5 if self.period == 1 else 8))
+            self.added = int(clamp(least + self.stoppages / 60 * length / HALF_SECONDS + self.rng.uniform(0, 1.5), least, most))
             self.ev('added_time', team=None, minutes=self.added)
-        limit = HALF_SECONDS + self.added * 60
+        limit = length + self.added * 60
         if el < limit:
             return False
         if self.phase == 'dead' and self.restart and self.restart['kind'] != 'penalty':
@@ -205,7 +303,7 @@ class Match:
     # ---------- scripted events (test matches) ----------
 
     def _minute_now(self):
-        return (0 if self.period == 1 else 45) + int((self.t - self.period_start) // 60) + 1
+        return PERIODS[self.period][0] + int((self.t - self.period_start) // 60) + 1
 
     def _script_tick(self):
         if self.phase != 'play' or self.restart_kind == 'penalty':

@@ -408,5 +408,59 @@ class BoostedCaptain(unittest.TestCase):
         self.assertEqual(one['result'], simulate(synthetic_league(), 'AAA', 'BBB', seed=3, include_frames=False)['result'])
 
 
+class Knockout(unittest.TestCase):
+    """S-52: a knockout match level after 90 minutes plays extra time, then a penalty shootout."""
+
+    @classmethod
+    def setUpClass(cls):
+        # only_script_goals: no goals at all, so the match is sure to be level after 90 and 120 minutes.
+        cls.ko = simulate(synthetic_league(), 'AAA', 'BBB', seed=4, info={'stage': 'SF', 'only_script_goals': True})
+
+    def test_level_knockout_plays_extra_time_and_penalties(self):
+        r = self.ko['result']
+        self.assertEqual((r['home'], r['away']), (0, 0))   # shootout goals are not goals
+        self.assertTrue(r['extra_time'])
+        self.assertEqual([p['period'] for p in self.ko['periods']], [1, 2, 3, 4])
+        pens = r['pens']
+        self.assertNotEqual(pens['home'], pens['away'])
+        self.assertEqual(pens['winner'], 'AAA' if pens['home'] > pens['away'] else 'BBB')
+        kicks = pens['kicks']
+        self.assertEqual(kicks[-1]['score'], [pens['home'], pens['away']])
+        self.assertGreaterEqual(len(kicks), 6)
+        self.assertTrue(all(k['outcome'] in ('scored', 'saved', 'missed') for k in kicks))
+        self.assertTrue(all(abs(sum(k['team'] == 'AAA' for k in kicks[:i]) - sum(k['team'] == 'BBB' for k in kicks[:i])) <= 1
+                            for i in range(len(kicks) + 1)))   # the sides take turns
+        self.assertEqual(max(s['minutes'] for s in self.ko['stats']['players'].values()), 120)
+        self.assertEqual(sum(s['goals'] for s in self.ko['stats']['players'].values()), 0)
+
+    def test_extra_time_clock(self):
+        et = [e for e in self.ko['events'] if e['period'] in (3, 4) and e['type'] != 'added_time']
+        self.assertTrue(et)
+        mins = [int(e['minute'].split('+')[0]) for e in et]
+        self.assertTrue(all(91 <= m <= 120 for m in mins), (min(mins), max(mins)))
+
+    def test_knockout_match_file_is_valid(self):
+        # Seed 20 is 1-1 after 90 and 120 minutes, in normal play. (Exact-score test matches have their own, older keeper-speed
+        # glitch, so self.ko is not used here.)
+        d = simulate(synthetic_league(), 'AAA', 'BBB', seed=20, info={'stage': 'SF'})
+        self.assertTrue(d['result']['extra_time'])
+        self.assertIn('pens', d['result'])
+        self.assertTrue(validate(d)['ok'], validate(d)['problems'][:3])
+        self.assertEqual(len([g for g in d['result']['goals']]), d['result']['home'] + d['result']['away'])
+
+    def test_league_match_level_after_90_stays_a_draw(self):
+        d = simulate(synthetic_league(), 'AAA', 'BBB', seed=4, info={'only_script_goals': True}, include_frames=False)
+        self.assertEqual([p['period'] for p in d['periods']], [1, 2])
+        self.assertNotIn('pens', d['result'])
+        self.assertNotIn('extra_time', d['result'])
+
+    def test_knockout_decided_in_90_is_the_same_match_as_a_league_one(self):
+        a = simulate(synthetic_league(), 'AAA', 'BBB', seed=11, include_frames=False)
+        if a['result']['home'] == a['result']['away']:
+            self.skipTest('this seed is a draw')
+        b = simulate(synthetic_league(), 'AAA', 'BBB', seed=11, info={'stage': 'GF'}, include_frames=False)
+        self.assertEqual(a['result'], b['result'])
+
+
 if __name__ == '__main__':
     unittest.main()

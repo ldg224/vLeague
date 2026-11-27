@@ -8,6 +8,11 @@ from .config import PITCH_LENGTH, PITCH_WIDTH, GOAL_WIDTH, GOAL_HEIGHT, TICK, HA
 from .tactics import slot_want
 
 
+def match_minutes(m):
+    """90, or 120 after extra time (S-52)."""
+    return 120 if any(p['period'] > 2 for p in m.periods) else 90
+
+
 def _player_stats(m):
     # Who was on the pitch when (a goal is conceded only by those on it): off at a red card or a substitution, on at a substitution.
     left = {e['player']: e['t'] for e in m.events if e['type'] == 'card' and e['card'] in ('red', 'second_yellow')}
@@ -84,6 +89,7 @@ def _player_stats(m):
             s['saves'] += 1
 
     total = m.t
+    full = match_minutes(m)
     sent_off_at = {e['player']: e['t'] for e in m.events if e['type'] == 'card' and e['card'] in ('red', 'second_yellow')}
     for e in m.events:
         if e['type'] == 'substitution':
@@ -92,7 +98,7 @@ def _player_stats(m):
     for p in m.players:
         s = stats[p.id]
         played = sent_off_at.get(p.id, total) - on_at.get(p.id, 0.0)
-        s['minutes'] = min(90, round(played / total * 90)) if total else 0
+        s['minutes'] = min(full, round(played / total * full)) if total else 0
         s['xg'] = round(s['xg'], 2)
         s['rating'] = _rating(p, s, m)
     return stats
@@ -138,7 +144,8 @@ def _rating(p, s, m):
         v += 0.3 * s['saves'] - 0.25 * s['goals_conceded'] - 0.15 * max(0, s['goals_conceded'] - 4)   # B-20: a keeper shipping a dozen goals can reach 0
     elif p.line == 'DEF':
         v -= 0.1 * s['goals_conceded']
-    r += v - VOLUME_NORM.get(p.position, VOLUME_NORM['MID'])
+    # S-52: after extra time a full match is 120 minutes, so the typical volume is a third more (else every rating rises).
+    r += v - VOLUME_NORM.get(p.position, VOLUME_NORM['MID']) * match_minutes(m) / 90
     r -= 0.3 * s['yellow'] + 1.5 * s['red'] + 0.8 * s['own_goals']
     r += 0.2 if won else -0.2 if lost else 0.0
     return round(max(0.0, shape_rating(r) - position_penalty(p, m)), 1)
@@ -241,6 +248,9 @@ def build(m, include_frames=True):
             'home': m.score[0], 'away': m.score[1],
             'goals': [{'minute': g['minute'], 'team': g['team'], 'scorer': g['scorer'], 'assist': g.get('assist'),
                        'own_goal': g['own_goal']} for g in goals],
+            # S-52: present only for a knockout that went to extra time / penalties. home/away above never include shootout goals.
+            **({'extra_time': True} if match_minutes(m) == 120 else {}),
+            **({'pens': m.shootout} if m.shootout else {}),
         },
         'stats': {'teams': _team_stats(m, pstats), 'players': pstats,
                   'ball_in_play_minutes': round(m.in_play_time / 60, 1)},
