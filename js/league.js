@@ -18,7 +18,7 @@ import { statCard, hiddenLine, statPage, wireStatPage, initialsCrest } from './s
 import { demoSeason } from './demo-season.js';
 import { counts, inStats } from './scope.js';
 import { tableRows, tableCard, rowTops, reshuffle, shield, woodenSpoon } from './league-table.js';
-import { activeCup, cupCard, bracketCard, cupSwitch } from './summer-cup.js';
+import { activeCup, cupCard, bracketCard, cupSwitch, cupInfo } from './summer-cup.js';
 import { paint, quietly, busy, snapshotInputs, restoreInputs } from './paint.js';
 import { spoilerHidden, revealScore, fmtTime } from './prefs.js';
 import { fixturesView, parseSub, roundWidget, rounds } from './league-fixtures.js';
@@ -340,7 +340,8 @@ if (ctx) {
   let stakesApi = null;
   const showStakes = () => {
     paint(main, '<div class="lg-stakes"></div>');
-    stakesApi = mountStakes(main.querySelector('.lg-stakes'), { crest: (c, px) => sctx.crest(c, px), name: c => { const t = sctx.club(c); return t.short_name || t.name || c; }, club: c => { const t = sctx.club(c); return { colour: t.colour, colour2: t.colour2 }; }, round: w => { const r = season.rounds?.[w]; return !r ? '' : r.code && !/^(SF|GF)$/.test(r.code) ? `Round ${r.code}` : r.label; } });
+    stakesApi = mountStakes(main.querySelector('.lg-stakes'), { crest: (c, px) => sctx.crest(c, px), name: c => { const t = sctx.club(c); return t.short_name || t.name || c; }, club: c => { const t = sctx.club(c); return { colour: t.colour, colour2: t.colour2 }; }, round: w => { const r = season.rounds?.[w]; return !r ? '' : r.code && !/^(SF|GF)$/.test(r.code) ? `Round ${r.code}` : r.label; },
+      cup: id => cupInfo(season.fixtures.find(f => f.id === id), season) });   // a Summer Cup match's stakes wear the cup badge (S-51)
   };
   let draftApi = null;
   const showDraft = sub => {

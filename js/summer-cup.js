@@ -5,6 +5,7 @@
 //   groupOf(cup, code)                   'A' | 'B' | ... or null
 //   cupTag(fx, season)                   the small "Summer Cup · Group A" chip for a match row ('' for a match not in a cup)
 //   cupLabel(fx, season)                 'Summer Cup · Group A' | 'Summer Cup semi-final' | 'Summer Cup Final' | null
+//   cupInfo(fx, season)                  { name, short, group, emblem } for a badge, or null
 //   groupTables(season, cup, opts)       { A: rows, ... } in group order; a row: { team, rank, p, w, d, l, gf, ga, gd, pts, ppg, next }
 //   runnersUp(tables)                    the runners-up, best first (points per game, goal difference per game, goals), the first marked `through`
 //   qualifiers(tables)                   the four going through, seeded 1 to 4 (group winners and the best runner-up, by the same order)
@@ -44,6 +45,14 @@ export function cupLabel(fx, season) {
   if (fx.stage === 'GF') return `${cup.name} Final`;
   const g = groupOf(cup, fx.home);
   return g ? `${cup.name} · Group ${g}` : cup.name;
+}
+
+// The cup a match is in, for a badge (the Stakes cards): { name, short: 'Group A' | 'Semi-final' | 'Final' | '', group, emblem } or null.
+export function cupInfo(fx, season) {
+  const cup = cupFor(fx, season);
+  if (!cup) return null;
+  const group = fx.stage ? null : groupOf(cup, fx.home);
+  return { name: cup.name, short: fx.stage === 'SF' ? 'Semi-final' : fx.stage === 'GF' ? 'Final' : group ? `Group ${group}` : '', group, emblem: EMBLEM };
 }
 
 export function cupTag(fx, season) {

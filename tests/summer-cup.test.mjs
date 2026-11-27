@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 globalThis.location ??= { hostname: '', search: '', href: 'http://localhost/' };   // dashboard-data.js reads location when it loads
-const { groupTables, runnersUp, qualifiers, cupLabel, cupTag, cupCard, bracketCard, activeCup } = await import('../js/summer-cup.js');
+const { groupTables, runnersUp, qualifiers, cupLabel, cupTag, cupCard, bracketCard, activeCup, cupInfo } = await import('../js/summer-cup.js');
 const { tableOf } = await import('../js/scope.js');
 const { stageName } = await import('../js/looks.js');
 
@@ -75,4 +75,13 @@ test('the cards draw, and say who would meet if the groups ended now', () => {
   assert.match(ko, /If the groups ended now/);
   assert.match(ko, /Semi-final 1/); assert.match(ko, /Final/);
   assert.equal(cupCard({ ...s, cups: [] }, ctx, { now: NOW }), '');
+});
+
+test('cupInfo: the badge text for a group match, a semi-final and the Final; null for a league match', () => {
+  const s = season([]);
+  assert.deepEqual(cupInfo(fx('B1', 'B2'), s), { name: 'Summer Cup', short: 'Group B', group: 'B', emblem: 'assets/summer-cup.svg' });
+  assert.equal(cupInfo(fx('A1', 'B1', null, null, { stage: 'SF' }), s).short, 'Semi-final');
+  assert.equal(cupInfo(fx('A1', 'B1', null, null, { stage: 'GF' }), s).short, 'Final');
+  assert.equal(cupInfo(fx('A1', 'B1', null, null, { cup: undefined }), s), null);
+  assert.equal(cupInfo(undefined, s), null);
 });

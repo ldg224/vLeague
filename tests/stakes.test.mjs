@@ -216,3 +216,14 @@ test('history names a result pick and the final score', () => {
   const html = stakesView(state({ history: [{ kind: 'result', home: 'AAA', away: 'BBB', result: 'home', stake: 100, status: 'won', payout: 220, act_home: 2, act_away: 1 }], slate: [line(1)] }), o);
   assert.match(html, /AAA v BBB/); assert.match(html, /AAA win · it finished 2–1/);
 });
+
+test('a Summer Cup match wears the cup badge and outline; other matches do not (S-51)', () => {
+  const s = state({ slate: [{ ...line(1), fixture: 'cupfx' }, line(2)] });
+  const cup = { name: 'Summer Cup', short: 'Group A', emblem: 'assets/summer-cup.svg' };
+  const html = stakesView(s, { ...o, cup: id => (id === 'cupfx' ? cup : null) });
+  assert.equal((html.match(/st-stake is-cup/g) || []).length, 1);
+  assert.equal((html.match(/class="st-cup"/g) || []).length, 1);
+  assert.match(html, /summer-cup\.svg/);
+  assert.match(html, /<i>Group A<\/i>/);
+  assert.doesNotMatch(stakesView(state(), o), /st-cup/);   // no cup lookup at all: no badge
+});

@@ -79,6 +79,10 @@ export function averageText(l) {
 const expectedHtml = (l, pid) => l.usual == null ? '' : `<div class="st-exp"${pid}><span class="st-exp-k">Expected</span><b>${Number(l.usual).toFixed(1)}</b></div><p class="st-basis"${pid}>${esc(averageText(l))}</p>`;
 // A round's name for a heading: the league's round code (Round 1, Round P1, SF...), passed in by the league page; the week number only as a last resort.
 const roundName = (o, w) => o.round?.(w) || `Round ${w}`;
+// A cup match (S-51): o.cup(fixture id) -> { name: 'Summer Cup', short: 'Group A' | 'Semi-final' | 'Final', emblem } or null. Its stakes wear the cup's
+// badge, outline and ink (the brief: "cup stakes lines carry the Summer Cup logo, outline and text colour"), at the same size as every other card.
+const cupOf = (o, l) => (l.fixture && o.cup?.(l.fixture)) || null;
+export const cupBadge = cup => (cup ? `<span class="st-cup" title="${esc(`${cup.name}${cup.short ? ` · ${cup.short}` : ''}`)}"><img src="${esc(cup.emblem)}" alt="" width="16" height="16"><b>${esc(cup.name)}</b>${cup.short ? `<i>${esc(cup.short)}</i>` : ''}</span>` : '');
 const colourOf = (o, code) => { const c = o.club?.(code)?.colour; return /^#[0-9a-f]{6}$/i.test(c || '') ? c : '#4a6fa5'; };
 
 function stakeCard(l, st, o) {
@@ -86,13 +90,13 @@ function stakeCard(l, st, o) {
   const face = o.face?.(l.player_id, l.team, 132) || o.crest(l.team, 96);
   const opp = l.team === l.home ? l.away : l.home;
   const pid = ` data-pid="${esc(l.player_id)}"`;   // a tap on the photo, the name or the numbers opens his player popup (js/player-link.js)
-  const label = `${l.player_name}: open player stats`;
+  const label = `${l.player_name}: open player stats`, cup = cupOf(o, l);
   const SETTLED = { won: 'Won', lost: 'Lost', void: 'Refunded' };
   const foot = mine
     ? `<p class="st-pickline"><b class="is-${mine}">${mine === 'over' ? 'Over' : 'Under'} ${l.line}</b> · ${coins(l.my_stake)} Coins · ${SETTLED[l.my_status] ? `<b>${SETTLED[l.my_status]}</b>` : `pays <b>${coins(payout(l.my_stake, l.my_mult))}</b>`}${l.my_status === 'open' && !locked ? ` <button type="button" class="st-link" data-st="take" data-line="${l.line_id}">Take back</button>` : ''}</p>` : '';
-  return `<article class="lg-card st-stake${mine ? ' has-pick' : ''}${open ? ' is-open' : ''}${locked ? ' is-locked' : ''}" data-line-card="${l.line_id}" style="--cc:${colourOf(o, l.team)}">
+  return `<article class="lg-card st-stake${cup ? ' is-cup' : ''}${mine ? ' has-pick' : ''}${open ? ' is-open' : ''}${locked ? ' is-locked' : ''}" data-line-card="${l.line_id}" style="--cc:${colourOf(o, l.team)}">
     <div class="st-top"${pid} role="link" tabindex="0" aria-label="${esc(label)}"><span class="st-pos">${POS[l.pos] || ''}</span><div class="st-photo">${face}</div>
-      <em class="st-close" data-closes="${esc(l.locks_at || l.starts_at)}">${lockLabel(l.locks_at || l.starts_at)}</em></div>
+      <em class="st-close" data-closes="${esc(l.locks_at || l.starts_at)}">${lockLabel(l.locks_at || l.starts_at)}</em>${cupBadge(cup)}</div>
     <div class="st-info">
       <h3 class="st-pname">${plink(l.player_id, esc(l.player_name))}</h3>
       <p class="st-vs"${pid}>${o.crest(l.team, 18)}<b>${esc(o.name(l.team))}</b><i>v</i><span>${esc(o.name(opp))}</span></p>
@@ -133,7 +137,7 @@ function predictRow(l, st, o) {
   const cfg = st.cfg || DEFAULTS, bal = st.wallet?.coins ?? 0, mine = l.my_status != null && l.my_result != null;
   const rs = st.rs?.[l.line_id] || { pick: null, stake: defaultStakeFor(cfg, bal) };
   const locked = l.locks_at ? new Date(l.locks_at) <= Date.now() : false, closed = (st.cfg ? !st.cfg.betting_open : false) || locked, chosen = mine ? l.my_result : rs.pick;
-  const hn = o.name(l.home), an = o.name(l.away), pcts = chancePcts(l);
+  const hn = o.name(l.home), an = o.name(l.away), pcts = chancePcts(l), cup = cupOf(o, l);
   const choice = which => {
     const on = chosen === which, mult = mine ? Number(l.my_mult) : resultMult(cfg, which, l);
     const crest = which === 'home' ? o.crest(l.home, 40) : which === 'away' ? o.crest(l.away, 40) : `<span class="st-rr-draw" aria-hidden="true">=</span>`;
@@ -144,8 +148,8 @@ function predictRow(l, st, o) {
     ? `<div class="st-pr-act is-mine"><p><b>Locked in: ${esc(resultLabel(l.my_result, hn, an))}</b> · ${coins(l.my_stake)} Coins<br>Pays <b>${coins(payout(l.my_stake, l.my_mult))}</b> if you are right</p>${locked ? '' : `<button type="button" class="st-link" data-st="take" data-line="${l.line_id}">Take back</button>`}</div>`
     : `<div class="st-pr-act"><button type="button" class="st-pr-stake" data-st="stakecycle" data-line="${l.line_id}" aria-label="Stake ${rs.stake} Coins, tap to change">${icon('coins')}<span>Stake</span><b>${coins(rs.stake)}</b></button>
         <button type="button" class="st-pr-go" data-st="placeresult" data-line="${l.line_id}"${st.busy || closed || !rs.pick || !canStake(cfg, bal, rs.stake) ? ' disabled' : ''}>${st.busy ? 'Placing…' : rs.pick ? `Lock in: ${esc(resultLabel(rs.pick, hn, an))}` : 'Pick a result'}</button></div>`;
-  return `<li class="st-pr st-rrow${mine ? ' has-pick' : ''}" data-line-card="${l.line_id}" style="--cc:${colourOf(o, l.home)};--ca:${colourOf(o, l.away)}">
-    <div class="st-pr-when"><b>${esc(kick(l.starts_at))}</b><em class="st-close" data-closes="${esc(l.locks_at || l.starts_at)}">${closesIn(l.locks_at || l.starts_at)}</em></div>
+  return `<li class="st-pr st-rrow${cup ? ' is-cup' : ''}${mine ? ' has-pick' : ''}" data-line-card="${l.line_id}" style="--cc:${colourOf(o, l.home)};--ca:${colourOf(o, l.away)}">
+    <div class="st-pr-when"><b>${esc(kick(l.starts_at))}</b><em class="st-close" data-closes="${esc(l.locks_at || l.starts_at)}">${closesIn(l.locks_at || l.starts_at)}</em>${cupBadge(cup)}</div>
     <div class="st-rr-wrap"><span class="st-pr-hint${chosen ? ' is-set' : ''}">${chosen ? (mine ? 'Your pick' : 'You picked') : 'Tap a result to pick it'}</span>
       <div class="st-rrs" role="group" aria-label="${esc(hn)} v ${esc(an)}, result">${RESULTS.map(choice).join('')}</div></div>
     ${act}

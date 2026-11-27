@@ -233,3 +233,18 @@ html.st-intro-open { overflow: hidden; }
 .st-rr:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .st-rr { transition: none; } }
 @media (max-width: 560px) { .st-rr { min-height: 84px; padding: 8px 4px; } .st-rr b { font-size: var(--fs-s); } }
+
+/* A Summer Cup match (S-51): the cup's badge, a gold outline and the stat line in the cup's ink. Same size as every other card, so a round's grid still lines up.
+   Gold and ocean from the brand board; --cup-c is the theme-safe gold (css/league-fixtures.css). */
+.st-cup { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px 0 5px; border-radius: 999px; background: var(--cup-ocean); color: #fff3df;
+  font: 700 var(--fs-xs) var(--font); white-space: nowrap; box-shadow: inset 0 0 0 1px color-mix(in oklab, #ffb627 70%, transparent); }
+.st-cup img { width: 16px; height: 16px; display: block; }
+.st-cup i { font-style: normal; font-weight: 400; color: #ffd98a; }
+.st-cup i::before { content: '·'; margin-right: 6px; color: color-mix(in oklab, #fff3df 55%, transparent); }
+.st-top .st-cup { position: absolute; left: 12px; bottom: 10px; }
+.st-pr-when .st-cup { justify-self: start; max-width: 100%; }
+.st-pr-when .st-cup b { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }   /* the narrow column: the emblem and "Group A"; the name stays for screen readers */
+.st-pr-when .st-cup i { color: #fff3df; font-weight: 700; } .st-pr-when .st-cup i::before { content: none; }
+.lg-card.st-stake.is-cup, .st-pr.is-cup { border-color: var(--cup-c); box-shadow: inset 0 0 0 1px var(--cup-c); }
+.lg-card.st-stake.is-cup.has-pick { box-shadow: inset 0 0 0 1px var(--cup-c), 0 0 0 2px color-mix(in oklab, var(--blue-400) 55%, transparent); }
+.st-stake.is-cup .st-linenum, .st-stake.is-cup .st-statname { color: var(--cup-c); }

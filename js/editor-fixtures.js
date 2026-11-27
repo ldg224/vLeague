@@ -25,6 +25,8 @@ const TEST_WEEK = 99;   // test matches live here (js/simulate.js); they never c
 const LOCKS = [[0, 'At the first kick-off'], [30, '30 minutes'], [60, '1 hour'], [180, '3 hours'], [360, '6 hours'], [720, '12 hours'], [1440, '1 day'], [2880, '2 days'], [4320, '3 days'], [10080, '1 week']];
 const KINDS = [['regular', 'Regular'], ['preseason', 'Preseason'], ['special', 'Special'], ['finals', 'Finals']];   // Preseason: its own purple table and stats, never the real season (js/preseason.js)
 const STAGES = [['', 'Regular'], ['EF', 'Elimination final'], ['SF', 'Semi-final'], ['TP', 'Third place final'], ['GF', 'Grand Final']];
+// A cup match (S-51, db 0099): a group match is a league match that also counts for its cup group; a semi-final or Final is cup-only and never counts for the table.
+const CUP_STAGES = [['', 'Group match'], ['SF', 'Semi-final'], ['GF', 'Final']];
 // When the games of a round kick off: blocks of games. games 0 = "all the rest".
 const PATTERNS = {
   saturday: ['Saturday night', [{ day: 6, time: '19:00', games: 0, gap: 90 }]],
@@ -43,7 +45,7 @@ export async function mountFixtures(ctx) {
 
   // ---------------------------------------------------------------- state
   let fixtures = [], results = new Map(), rounds = [], looks = [], deadlines = new Map(), sheets = [];
-  let busy = false, msg = '', msgKind = '', hasRoster = true, hasLadder = true, hasByes = true, hasFxLook = false;
+  let busy = false, msg = '', msgKind = '', hasRoster = true, hasLadder = true, hasByes = true, hasFxLook = false, hasCup = false, cups = [];
   const open = new Set();   // rounds the office has opened (the next round to play opens on its own)
   const setOpen = new Set(); let moreOpen = false, plan = null;   // which round-settings panels and the More menu are open, so a redraw leaves them as they were
 
@@ -84,6 +86,9 @@ export async function mountFixtures(ctx) {
     hasFxLook = !fl.error;
     if (hasFxLook) { const m = new Map(fl.data.map(r => [r.id, r.look])); for (const f of fixtures) f.look = m.get(f.id) ?? null; }
     hasByes = !(await c.from('rounds').select('byes').limit(1)).error;   // false until 0028_byes.sql is run
+    const [cf, cl] = await Promise.all([c.from('fixtures').select('id, cup').range(0, 1999), c.from('cups').select('key, name, settings').order('created_at', { ascending: false })]);   // cups (0099_summer_cup.sql)
+    hasCup = !cf.error && !cl.error; cups = hasCup ? cl.data : [];
+    if (hasCup) { const m = new Map(cf.data.map(r => [r.id, r.cup])); for (const f of fixtures) f.cup = m.get(f.id) ?? null; }
   }
 
   const real = () => fixtures.filter(f => f.week !== TEST_WEEK);
@@ -176,7 +181,7 @@ export async function mountFixtures(ctx) {
     if (!list.length) return;
     const dead = played(list);
     if (dead.length) { const sim = await import('./simulate.js'), c = await ctx.db(); for (const f of dead) await sim.removeResult(c, f); }
-    const keep = list.map(f => ({ id: f.id, week: f.week, home: f.home, away: f.away, starts_at: f.starts_at, stage: f.stage, postponed: f.postponed, ...(hasFxLook ? { look: f.look ?? null } : {}) }));
+    const keep = list.map(f => ({ id: f.id, week: f.week, home: f.home, away: f.away, starts_at: f.starts_at, stage: f.stage, postponed: f.postponed, ...(hasFxLook ? { look: f.look ?? null } : {}), ...(hasCup ? { cup: f.cup ?? null } : {}) }));
     await step(tx, async () => walk(keep, 100, async part => (await ctx.db()).from('fixtures').delete().in('id', part.map(f => f.id))),
       async () => walk(keep, 100, async part => (await ctx.db()).from('fixtures').insert(part)));
   }
@@ -241,7 +246,9 @@ export async function mountFixtures(ctx) {
       <span class="fx-teams"><select data-k="home" aria-label="Home club">${clubOpts(f.home)}</select><span class="fx-v">v</span><select data-k="away" aria-label="Away club">${clubOpts(f.away)}</select></span>
       <label class="fx-ko"><span>Kick-off</span><input type="datetime-local" value="${toLocalInput(f.starts_at)}" aria-label="Kick-off (Melbourne time)"></label>
       ${hasKitPick && (kits[f.home] || kits[f.away]) ? `<span class="fx-kits"><label>${esc(name(f.home))} kit <select data-k="home_kit">${kitOpts(f.home, f.home_kit)}</select></label><label>${esc(name(f.away))} kit <select data-k="away_kit">${kitOpts(f.away, f.away_kit)}</select></label></span>` : ''}
-      ${r.kind === 'finals' ? `<select data-k="stage" aria-label="Stage">${opts(STAGES, f.stage || '')}</select>` : ''}
+      ${hasCup && cups.length ? `<select data-k="cup" aria-label="Cup">${opts([['', 'League only'], ...cups.map(c => [c.key, c.name])], f.cup || '')}</select>` : ''}
+      ${f.cup && r.kind !== 'finals' ? `<select data-k="stage" aria-label="Cup stage">${opts(CUP_STAGES, f.stage || '')}</select>` : r.kind === 'finals' ? `<select data-k="stage" aria-label="Stage">${opts(STAGES, f.stage || '')}</select>` : ''}
+      ${f.cup && f.stage ? '<span class="fx-hint">Cup only: doesn’t count for the table</span>' : ''}
       <span class="fx-btns">
         ${f.postponed ? '' : done ? '<button class="btn ghost small" type="button" data-act="again">Play again</button><button class="btn ghost small" type="button" data-act="unplay">Remove result</button>' : '<button class="btn small" type="button" data-act="sim">Simulate</button>'}
         <button class="btn ghost small" type="button" data-act="postpone">${f.postponed ? 'Restore' : 'Postpone'}</button>
@@ -713,6 +720,14 @@ export async function mountFixtures(ctx) {
     // the teams, or the stage of a final
     if (t.dataset.k === 'home_kit' || t.dataset.k === 'away_kit') return run('Set the kit', async tx => setFx(tx, f, { [t.dataset.k]: t.value || null }));
     if (t.dataset.k === 'stage') return run('Set the stage', async tx => setFx(tx, f, { stage: t.value || null }));
+    // a cup: tagging a match gives it the cup's look (unless it has its own); taking it out of the cup drops that look and any cup stage
+    if (t.dataset.k === 'cup') {
+      const cup = cups.find(c => c.key === t.value), was = cups.find(c => c.key === f.cup), cupLook = c => c?.settings?.look || null;
+      const patch = { cup: cup ? cup.key : null };
+      if (hasFxLook) { if (cup && (!f.look || f.look === cupLook(was))) patch.look = cupLook(cup) || f.look || null; else if (!cup && f.look && f.look === cupLook(was)) patch.look = null; }
+      if (!cup && f.stage && round(f.week).kind !== 'finals') patch.stage = null;
+      return run(cup ? `Put the match in the ${cup.name}` : 'Take the match out of the cup', async tx => setFx(tx, f, patch));
+    }
     if (t.dataset.k === 'home' || t.dataset.k === 'away') {
       const h = row.querySelector('[data-k="home"]').value, a = row.querySelector('[data-k="away"]').value;
       if (h === a) { notify('Pick two different clubs.', 'bad'); return draw(); }
