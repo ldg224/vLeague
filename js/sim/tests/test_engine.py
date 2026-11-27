@@ -440,9 +440,9 @@ class Knockout(unittest.TestCase):
         self.assertTrue(all(91 <= m <= 120 for m in mins), (min(mins), max(mins)))
 
     def test_knockout_match_file_is_valid(self):
-        # Seed 20 is 1-1 after 90 and 120 minutes, in normal play. (Exact-score test matches have their own, older keeper-speed
+        # Seed 21 is 1-1 after 90 and 120 minutes, in normal play. (Exact-score test matches have their own, older keeper-speed
         # glitch, so self.ko is not used here.)
-        d = simulate(synthetic_league(), 'AAA', 'BBB', seed=20, info={'stage': 'SF'})
+        d = simulate(synthetic_league(), 'AAA', 'BBB', seed=21, info={'stage': 'SF'})
         self.assertTrue(d['result']['extra_time'])
         self.assertIn('pens', d['result'])
         self.assertTrue(validate(d)['ok'], validate(d)['problems'][:3])

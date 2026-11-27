@@ -165,17 +165,17 @@ TUNING = {
     'mood_protect': 0.6,         # a team ahead leans this much (as a fraction of a full -1) toward protecting the lead
     'chase_shot': 1.0,
     'cross_overshoot': 4.5,      # 0.4.0: metres past the target zone a cross comes down, so it is at head height there
-    'clear_max_x': 35.0,         # S-40: metres from his own goal line beyond which a defender never chooses to clear
-    'offside_hold': 1.6,         # S-40: metres an attacker means to stay onside of the line (each misjudges it by up to about a metre, less with positioning)
-    'run_start_gap': 0.5,        # S-40: a run in behind starts only from at least this far onside
+    'clear_max_x': 26.0,         # S-40: metres from his own goal line beyond which a defender never chooses to clear
+    'offside_hold': 2.2,         # S-40: metres an attacker means to stay onside of the line (each misjudges it by up to about a metre, less with positioning)
+    'run_start_gap': 1.5,        # S-40: a run in behind starts only from at least this far onside
     'et_subs': 2,                # S-52: fresh players each team brings on before extra time (like for like, from the bench)
     'et_sub_energy': 0.97,       # only for an outfield player more tired than this (players are at about 0.88-0.98 after 90 minutes)
     'et_break_recovery': 0.1,    # share of lost energy back in the short break before extra time (half-time gives 0.3)
     'shootout_base': 0.76,       # chance an average taker scores against an average keeper in a shootout (real: about 75%)
-    'offside_obvious': 0.0,      # S-40: per metre offside, extra chance the passer notices his receiver is offside and holds the pass
-    'cross_offside_weight': 1.0, # S-40: how much a teammate already offside counts as a target when choosing where to cross
+    'offside_obvious': 0.04,     # S-40: per metre offside, extra chance the passer notices his receiver is offside and holds the pass
+    'cross_offside_weight': 0.3, # S-40: how much a teammate already offside counts as a target when choosing where to cross
     'offside_blind': 0.3,        # S-40: a pass to a receiver already offside keeps 0.03 + this x (1 - vision) of its chance (the passer missed it)
-    'clear_min_pressure': 0.35,  # 0.4.0: below this pressure a defender does not choose to clear
+    'clear_min_pressure': 0.6,   # S-40 (was 0.35): below this pressure a defender does not choose to clear
     'behind_block': 0.7,        # 0.4.0: chance a blocked cross or shot near the defender's own goal goes behind (Match._maybe_behind)
     'behind_miscue': 0.55,       # and a defender's mis-hit of a cross, corner or shot there
 }
