@@ -31,7 +31,16 @@ stage.append(renderer.domElement);
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0x0b1630, 140, 320);
 const cam = new THREE.PerspectiveCamera(26, 16 / 9, 1, 600);
-function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
+// On phones the control bar covers the bottom of the screen, so every shot is framed for the picture above it (SAFE px): the camera's
+// picture is the screen less that strip, and the strip shows a little more of what's below.
+let SAFE = 0;
+function resize() {
+  const w = innerWidth, h = innerHeight; SAFE = w <= 600 ? 90 : 0;
+  renderer.setSize(w, h, false);
+  cam.aspect = w / (h - SAFE);
+  if (SAFE) cam.setViewOffset(w, h - SAFE, 0, 0, w, h); else cam.clearViewOffset();
+  cam.updateProjectionMatrix();
+}
 addEventListener('resize', resize); resize();
 
 // sky: a night gradient

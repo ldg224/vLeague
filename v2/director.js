@@ -155,8 +155,8 @@ export function makeDirector(data, { ballAt }) {
       // Upright: from just behind and above the goal, looking down the pitch at the ball (sideways halfway to it), so the tall picture is pitch
       // and players, with the crossbar at the bottom edge rather than a third of the screen of goal, and only a strip of stand at the top.
       const [lx, lz] = S(lerp(bx, goalX, 0.12), lerp(by, 34, 0.12));
-      const pos = [gx + sx * 5, 15, lz * 0.5], look = [lx, 0.5, lz];
-      return { pos, look, fov: vfov(width * 0.5, Math.hypot(pos[0] - lx, 14.5, lz - pos[2]), aspect) };
+      const pos = [gx + sx * 8, 16, lz * 0.5], look = [lx, 0.5, lz];   // far enough back that the keeper on his line is in the picture, not under the controls
+      return { pos, look, fov: vfov(width * 0.5, Math.hypot(pos[0] - lx, 15.5, lz - pos[2]), aspect) };
     }
     const pos = [gx + sx * 16, height, 0];
     const [lx, lz] = S(lerp(bx, goalX, 0.3), lerp(by, 34, 0.3));
@@ -173,6 +173,15 @@ export function makeDirector(data, { ballAt }) {
     if (s.kind === 'replay') {
       const st = s.r0 + (t - s.from), b = ballAt(st), c = behindGoal(s.goalX, b.x, b.y, aspect, clamp(14 + Math.hypot(b.x - s.goalX, b.y - 34) * 0.5, 20, 40), 8);
       return out(c.pos, c.look, c.fov, st, 'REPLAY', 'replay');
+    }
+    // upright phones: a corner stays on the tall wide shot (it follows the ball at the flag and the box together; behind the goal it can't)
+    if (s.kind === 'corner' && aspect < 1) {
+      // upright phones: high on the near side of the line from the flag to the penalty spot, aimed halfway along it, so the taker sits low in
+      // the picture and the box above him (behind the goal can't hold both in a tall picture)
+      const b = ballAt(t), [cx, cz] = S(lerp(b.x, s.goalX ? 94 : 11, 0.5), lerp(b.y, 34, 0.5));
+      const near = (s.e.y ?? b.y) > 34 ? 6 : 0;   // a flag on the near side: aim nearer it, or the taker sits under the controls
+      const pos = [cx, 27, cz + 19 + near], look = [cx, 0.5, cz - 1 + near];
+      return out(pos, look, vfov(19, Math.hypot(26.5, 20), aspect), t, '', 'corner');
     }
     if (s.kind === 'corner') { const b = ballAt(t), c = behindGoal(s.goalX, lerp(b.x, s.goalX ? 94 : 11, 0.45), lerp(b.y, 34, 0.45), aspect, 44); return out(c.pos, c.look, c.fov, t, '', 'corner'); }
     if (s.kind === 'kicker') {
