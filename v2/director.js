@@ -21,7 +21,8 @@ const CAM_DT = 0.1;                       // main camera path sample step (s)
 const GANTRY = { x: 0, y: 22, z: 34 + 38 }; // the main TV camera: high in the main stand at the halfway line, beyond the near touchline (Z = +34)
 const WIDTH = { base: 38, fast: 54 };     // metres across the picture: normal, and opened out for a fast ball
 const PORTRAIT_WIDTH = 15;                // metres across an upright phone's picture at the play
-const PORTRAIT_CAM = { y: 24, back: 18, lead: 5 }; // upright: camera height, metres behind the play (near side), aim this far beyond it                // a phone held upright sees a narrower strip, so the players stay a readable size
+const PORTRAIT_CAM = { y: 24, back: 18, lead: 5, across: 2.5 }; // upright: camera height; metres on the near side of the play; aim this far beyond
+                                          // the ball, so it sits a little below the middle; how far the aim may trail the ball across the pitch
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const lerp = (a, b, k) => a + (b - a) * k;
 const ease = x => x * x * (3 - 2 * x);
@@ -130,7 +131,7 @@ export function makeDirector(data, { ballAt }) {
       // the play is big and fills the tall picture instead of sitting high above empty near-side grass. It aims a little beyond the play, but
       // never past the far touchline, and climbs as the play goes to the far side, so the far stand only shows as a strip at the top.
       w = Math.min(w, PORTRAIT_WIDTH) * (w > WIDTH.base + 1 ? 1.25 : 1);
-      const b = ballAt(t), [bx, bz] = S(b.x, b.y), hx = w * 0.3, hz = w * 0.45;
+      const b = ballAt(t), [bx, bz] = S(b.x, b.y), hx = w * 0.3, hz = PORTRAIT_CAM.across;
       x = clamp(x, bx - hx, bx + hx); z = clamp(z, bz - hz, bz + hz);
       pos = [x, PORTRAIT_CAM.y + Math.max(0, -12 - z) * 0.6, z + PORTRAIT_CAM.back];
       const look = [x, 0.5, Math.max(-30, z - PORTRAIT_CAM.lead)];
@@ -150,10 +151,17 @@ export function makeDirector(data, { ballAt }) {
   // High behind a goal, looking at the ball and leaning towards the goal (replays, corners).
   function behindGoal(goalX, bx, by, aspect, width = 34, height = 11) {
     const gx = goalX ? 52.5 : -52.5, sx = goalX ? 1 : -1;
+    if (aspect < 1) {
+      // Upright: from just behind and above the goal, looking down the pitch at the ball (sideways halfway to it), so the tall picture is pitch
+      // and players, with the crossbar at the bottom edge rather than a third of the screen of goal, and only a strip of stand at the top.
+      const [lx, lz] = S(lerp(bx, goalX, 0.12), lerp(by, 34, 0.12));
+      const pos = [gx + sx * 5, 15, lz * 0.5], look = [lx, 0.5, lz];
+      return { pos, look, fov: vfov(width * 0.5, Math.hypot(pos[0] - lx, 14.5, lz - pos[2]), aspect) };
+    }
     const pos = [gx + sx * 16, height, 0];
     const [lx, lz] = S(lerp(bx, goalX, 0.3), lerp(by, 34, 0.3));
     const look = [lx, 0.5, lz];
-    return { pos, look, fov: vfov(aspect < 1 ? width * 0.65 : width, Math.hypot(pos[0] - lx, height, lz), aspect) };
+    return { pos, look, fov: vfov(width, Math.hypot(pos[0] - lx, height, lz), aspect) };
   }
 
   function shot(t, dtReal = 0, aspect = 16 / 9) {

@@ -69,12 +69,12 @@ function pitchTexture() {
   g.strokeRect(0, 0, 105, 68);
   g.beginPath(); g.moveTo(52.5, 0); g.lineTo(52.5, 68); g.stroke();
   g.beginPath(); g.arc(52.5, 34, 9.15, 0, Math.PI * 2); g.stroke();
-  g.beginPath(); g.arc(52.5, 34, 0.25, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.arc(52.5, 34, 0.11, 0, Math.PI * 2); g.fill();
   for (const r of [false, true]) {
     const x0 = r ? 105 : 0, s = r ? -1 : 1;
     g.strokeRect(r ? 105 - 16.5 : 0, 34 - 20.16, 16.5, 40.32);
     g.strokeRect(r ? 105 - 5.5 : 0, 34 - 9.16, 5.5, 18.32);
-    g.beginPath(); g.arc(x0 + s * 11, 34, 0.25, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.arc(x0 + s * 11, 34, 0.11, 0, Math.PI * 2); g.fill();
     g.beginPath(); g.arc(x0 + s * 11, 34, 9.15, r ? Math.PI - 0.927 : -0.927, r ? Math.PI + 0.927 : 0.927); g.stroke();
     for (const y of [0, 68]) { g.beginPath(); g.arc(x0, y, 1, 0, Math.PI * 2); g.stroke(); }
   }
@@ -141,14 +141,16 @@ function crowdTexture() {
   const stand = (len, depth, rise, x, z, ry) => {
     const g = new THREE.Group();
     const tier = new THREE.Mesh(new THREE.PlaneGeometry(len, Math.hypot(depth, rise)), standMat(len / 25, 3));
-    tier.rotation.x = -Math.atan2(rise, depth); tier.position.set(0, rise / 2 + 1.2, -depth / 2); g.add(tier);
+    // the tier lies along the slope: a plane stands upright, so it turns back by 90 degrees less the slope; its front edge meets the ground at the
+    // stand's front (it used to stand at 56 degrees with its front edge under the ground, leaving bare ground behind the boards)
+    tier.rotation.x = -(Math.PI / 2 - Math.atan2(rise, depth)); tier.position.set(0, rise / 2 + 0.4, -depth / 2); g.add(tier);
     const back = new THREE.Mesh(new THREE.BoxGeometry(len, rise + 6, 1), new THREE.MeshLambertMaterial({ color: 0x1a2438 })); back.position.set(0, (rise + 6) / 2, -depth - 0.5); g.add(back);
     const roof = new THREE.Mesh(new THREE.BoxGeometry(len + 2, 0.6, depth * 0.8), new THREE.MeshLambertMaterial({ color: 0x2a3550 })); roof.position.set(0, rise + 6, -depth * 0.55); g.add(roof);
     g.position.set(x, 0, z); g.rotation.y = ry; scene.add(g);
   };
-  stand(130, 24, 16, 0, -42, 0);
-  stand(84, 20, 13, -61, 0, Math.PI / 2);
-  stand(84, 20, 13, 61, 0, -Math.PI / 2);
+  stand(130, 24, 16, 0, -40, 0);   // fronts just behind the boards (39.5 and 58.5 m out)
+  stand(84, 20, 13, -59, 0, Math.PI / 2);
+  stand(84, 20, 13, 59, 0, -Math.PI / 2);
   // floodlight towers with glowing heads
   const glow = new THREE.MeshBasicMaterial({ color: 0xfff6d8 });
   for (const [x, z] of [[-70, -50], [70, -50], [-70, 52], [70, 52]]) {
@@ -565,6 +567,8 @@ const blobs = (() => {
 const _hp = new THREE.Vector3(), _m = new THREE.Matrix4(), _fr = new THREE.Frustum(), _pm = new THREE.Matrix4(), _sph = new THREE.Sphere(new THREE.Vector3(), 1.6);
 function blob(k, x, z, r) { _m.makeScale(r, 1, r).setPosition(x, 0.02, z); blobs.setMatrixAt(k, _m); }
 let frame = 0, lastMs = performance.now(), acc = 0, n = 0, slow = 0, lastScene = null, lastKind = '';
+// the frame-rate readout is for testing only: shown with ?debug or ?perf
+const DEBUG = q.has('debug') || q.has('perf');
 const fpsEl = document.getElementById('fps'), capEl = document.getElementById('cap'), tagEl = document.getElementById('tag');
 function loop(ms) {
   const dtReal = Math.min(0.1, (ms - lastMs) / 1000); lastMs = ms;
@@ -617,9 +621,9 @@ function loop(ms) {
     if (slow >= 2 && pr > 1) { pr = Math.max(1, pr - 0.5); renderer.setPixelRatio(pr); resize(); slow = 0; }
     Object.assign(stats, { fps: Math.round(fps), draws: renderer.info.render.calls, tris: renderer.info.render.triangles, pr });
     if (LOW) fpsEl.dataset.q = 'low';
-    fpsEl.textContent = `${Math.round(fps)} fps · ${renderer.info.render.calls} draws · ${(renderer.info.render.triangles / 1000).toFixed(0)}k tris · ×${pr}`;
+    if (DEBUG) fpsEl.textContent = `${Math.round(fps)} fps · ${renderer.info.render.calls} draws · ${(renderer.info.render.triangles / 1000).toFixed(0)}k tris · ×${pr}`;
   }
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
-window.__v2 = { setT: v => { t = v; figs.forEach(f => (f.last = null)); }, pause: () => { playing = false; }, play: () => { playing = true; }, director, shots: director?.shots, stats, get t() { return t; } };
+window.__v2 = { setT: v => { t = v; figs.forEach(f => (f.last = null)); }, pause: () => { playing = false; }, play: () => { playing = true; }, director, shots: director?.shots, stats, scene, cam, get t() { return t; } };
